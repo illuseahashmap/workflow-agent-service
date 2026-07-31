@@ -8,8 +8,10 @@ public record RejectTaskRequest(
         @NotBlank String taskId,
         @NotBlank String currentAssignee,
         List<String> currentCandidateGroups,
-        @NotBlank String targetActivityId,
+        String targetActivityId,
         String comment,
+        List<String> targetAssignees,
+        List<String> targetCandidateGroups,
         Map<String, Object> variables
 ) {
 }

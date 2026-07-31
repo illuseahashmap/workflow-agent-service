@@ -7,8 +7,18 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowAdministrationService;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionSummaryView;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessDiagramDataView;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessInstanceDetailView;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessInstanceSummaryView;
+import io.github.illuseahashmap.workflow.process.application.dto.TerminateProcessRequest;
+import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,9 +31,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkflowManagementController {
 
     private final WorkflowDefinitionService workflowDefinitionService;
+    private final WorkflowAdministrationService administrationService;
 
-    public WorkflowManagementController(WorkflowDefinitionService workflowDefinitionService) {
+    public WorkflowManagementController(WorkflowDefinitionService workflowDefinitionService,
+                                        WorkflowAdministrationService administrationService) {
         this.workflowDefinitionService = workflowDefinitionService;
+        this.administrationService = administrationService;
     }
 
     @PostMapping("/deploy")
@@ -56,5 +69,66 @@ public class WorkflowManagementController {
     public ApiResponse<ProcessDefinitionView> detail(@RequestParam String processDefinitionKey,
                                                      @RequestParam(required = false) Integer version) {
         return ApiResponse.ok(workflowDefinitionService.getDefinition(processDefinitionKey, version));
+    }
+
+    @GetMapping(value = "/diagram", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> processDiagram(@RequestParam String processInstanceId) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(administrationService.generateProcessDiagram(processInstanceId));
+    }
+
+    @GetMapping("/diagram-data")
+    public ApiResponse<ProcessDiagramDataView> processDiagramData(@RequestParam String processInstanceId) {
+        return ApiResponse.ok(administrationService.getProcessDiagramData(processInstanceId));
+    }
+
+    @GetMapping("/definitions/page")
+    public ApiResponse<PageResult<ProcessDefinitionSummaryView>> pageDefinitions(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String processDefinitionKey,
+            @RequestParam(required = false) String processDefinitionName,
+            @RequestParam(defaultValue = "all") String publishStatus) {
+        return ApiResponse.ok(administrationService.pageProcessDefinitions(
+                pageNum, pageSize, processDefinitionKey, processDefinitionName, publishStatus));
+    }
+
+    @GetMapping("/instances/page")
+    public ApiResponse<PageResult<ProcessInstanceSummaryView>> pageInstances(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String processDefinitionKey,
+            @RequestParam(required = false) String processDefinitionName,
+            @RequestParam(required = false) String processInstanceId,
+            @RequestParam(required = false) String businessKey,
+            @RequestParam(defaultValue = "all") String status) {
+        return ApiResponse.ok(administrationService.pageProcessInstances(
+                pageNum, pageSize, processDefinitionKey, processDefinitionName,
+                processInstanceId, businessKey, status));
+    }
+
+    @GetMapping("/instance/detail")
+    public ApiResponse<ProcessInstanceDetailView> instanceDetail(@RequestParam String processInstanceId) {
+        return ApiResponse.ok(administrationService.getProcessInstanceDetail(processInstanceId));
+    }
+
+    @PostMapping("/instance/terminate")
+    public ApiResponse<Void> terminate(@Valid @RequestBody TerminateProcessRequest request) {
+        administrationService.terminateProcessInstance(request);
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/definition")
+    public ApiResponse<Void> deleteDefinitions(@RequestParam String processDefinitionKey) {
+        administrationService.deleteProcessDefinitions(processDefinitionKey);
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/definition/version")
+    public ApiResponse<Void> deleteDefinitionVersion(@RequestParam String processDefinitionKey,
+                                                     @RequestParam Integer version) {
+        administrationService.deleteProcessDefinitionVersion(processDefinitionKey, version);
+        return ApiResponse.ok();
     }
 }

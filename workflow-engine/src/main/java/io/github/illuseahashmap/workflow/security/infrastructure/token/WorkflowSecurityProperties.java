@@ -13,6 +13,8 @@ public class WorkflowSecurityProperties {
 
     private long replayWindowSeconds = 300;
 
+    private long clockSkewSeconds = 30;
+
     private List<String> publicPaths = new ArrayList<>();
 
     public boolean isEnabled() {
@@ -37,6 +39,14 @@ public class WorkflowSecurityProperties {
 
     public void setReplayWindowSeconds(long replayWindowSeconds) {
         this.replayWindowSeconds = replayWindowSeconds;
+    }
+
+    public long getClockSkewSeconds() {
+        return clockSkewSeconds;
+    }
+
+    public void setClockSkewSeconds(long clockSkewSeconds) {
+        this.clockSkewSeconds = clockSkewSeconds;
     }
 
     public List<String> getPublicPaths() {

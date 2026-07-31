@@ -26,13 +26,25 @@ CREATE TABLE IF NOT EXISTS workflow_service_client (
     id BIGSERIAL PRIMARY KEY,
     client_code VARCHAR(64) NOT NULL,
     client_name VARCHAR(128) NOT NULL,
+    secret_key_ref VARCHAR(256),
+    secret_ciphertext TEXT,
+    secret_version INTEGER NOT NULL DEFAULT 1,
+    allowed_tenant_codes TEXT NOT NULL DEFAULT '*',
+    allowed_paths TEXT NOT NULL DEFAULT '*',
     enabled SMALLINT NOT NULL DEFAULT 1,
-    token_version INTEGER NOT NULL DEFAULT 1,
+    expires_at TIMESTAMPTZ,
     description VARCHAR(512),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_workflow_service_client_code UNIQUE (client_code)
 );
+
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS secret_key_ref VARCHAR(256);
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS secret_ciphertext TEXT;
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS secret_version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS allowed_tenant_codes TEXT NOT NULL DEFAULT '*';
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS allowed_paths TEXT NOT NULL DEFAULT '*';
+ALTER TABLE workflow_service_client ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS workflow_service_token_nonce (
     id BIGSERIAL PRIMARY KEY,
@@ -98,6 +110,9 @@ INSERT INTO workflow_tenant (tenant_id, tenant_code, tenant_name, description)
 VALUES ('default', 'default', 'Default Tenant', 'Local development tenant')
 ON CONFLICT (tenant_code) DO NOTHING;
 
-INSERT INTO workflow_service_client (client_code, client_name, description)
-VALUES ('local-dev', 'Local Development Client', 'Default local development client')
+INSERT INTO workflow_service_client
+    (client_code, client_name, secret_key_ref, allowed_tenant_codes, allowed_paths, description)
+VALUES
+    ('local-dev', 'Local Development Client', 'env:WORKFLOW_LOCAL_DEV_SECRET', 'default', '*',
+     'Default local development client')
 ON CONFLICT (client_code) DO NOTHING;

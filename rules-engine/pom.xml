@@ -14,4 +14,12 @@
     <artifactId>rules-engine</artifactId>
     <name>rules-engine</name>
     <description>Reusable rule engine for workflow and agent capabilities.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

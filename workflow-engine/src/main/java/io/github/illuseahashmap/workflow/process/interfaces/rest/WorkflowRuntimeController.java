@@ -10,6 +10,8 @@ import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRes
 import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowAdministrationService;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionDiagramView;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,9 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkflowRuntimeController {
 
     private final WorkflowRuntimeService workflowRuntimeService;
+    private final WorkflowAdministrationService administrationService;
 
-    public WorkflowRuntimeController(WorkflowRuntimeService workflowRuntimeService) {
+    public WorkflowRuntimeController(WorkflowRuntimeService workflowRuntimeService,
+                                     WorkflowAdministrationService administrationService) {
         this.workflowRuntimeService = workflowRuntimeService;
+        this.administrationService = administrationService;
     }
 
     @PostMapping("/process/start")
@@ -56,5 +61,14 @@ public class WorkflowRuntimeController {
     @PostMapping("/task/transfer")
     public ApiResponse<TaskView> transfer(@Valid @RequestBody TransferTaskRequest request) {
         return ApiResponse.ok(workflowRuntimeService.transfer(request));
+    }
+
+    @GetMapping("/process/definition/diagram")
+    public ApiResponse<ProcessDefinitionDiagramView> definitionDiagram(
+            @RequestParam String processDefinitionKey,
+            @RequestParam(required = false) Integer version,
+            @RequestParam(required = false) String processDefinitionId) {
+        return ApiResponse.ok(administrationService.getProcessDefinitionDiagram(
+                processDefinitionKey, version, processDefinitionId));
     }
 }

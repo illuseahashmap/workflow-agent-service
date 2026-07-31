@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.process.application.assembler;
+package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import java.time.OffsetDateTime;

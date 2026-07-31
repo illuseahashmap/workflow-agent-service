@@ -1,0 +1,77 @@
+package io.github.illuseahashmap.workflow.process.infrastructure.lock;
+
+import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanceLock;
+import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
+import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
+import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Supplier;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Component
+public class RedisProcessInstanceLock implements ProcessInstanceLock {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RedisProcessInstanceLock.class);
+    private static final long RETRY_INTERVAL_MILLIS = 100L;
+    private static final DefaultRedisScript<Long> RELEASE_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            Long.class);
+
+    private final StringRedisTemplate redisTemplate;
+    private final WorkflowLockProperties properties;
+
+    public RedisProcessInstanceLock(StringRedisTemplate redisTemplate, WorkflowLockProperties properties) {
+        this.redisTemplate = redisTemplate;
+        this.properties = properties;
+    }
+
+    @Override
+    public <T> T execute(String processInstanceId, Supplier<T> operation) {
+        if (!StringUtils.hasText(processInstanceId)) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "Process instance does not exist");
+        }
+        String key = normalizePrefix(properties.getKeyPrefix()) + ":workflow:process-lock:" + processInstanceId;
+        String value = UUID.randomUUID().toString();
+        acquire(key, value);
+        try {
+            return operation.get();
+        } finally {
+            try {
+                redisTemplate.execute(RELEASE_SCRIPT, List.of(key), value);
+            } catch (RuntimeException exception) {
+                LOGGER.warn("Failed to release workflow process lock: key={}", key, exception);
+            }
+        }
+    }
+
+    private void acquire(String key, String value) {
+        long deadline = System.nanoTime() + Duration.ofSeconds(properties.getWaitSeconds()).toNanos();
+        Duration ttl = Duration.ofSeconds(properties.getTtlSeconds());
+        do {
+            if (Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, ttl))) {
+                return;
+            }
+            try {
+                Thread.sleep(RETRY_INTERVAL_MILLIS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new BusinessException(ErrorCode.CONFLICT, "Process instance operation was interrupted");
+            }
+        } while (System.nanoTime() < deadline);
+        throw new BusinessException(ErrorCode.CONFLICT, "Another process instance operation is in progress");
+    }
+
+    private String normalizePrefix(String prefix) {
+        String normalized = StringUtils.hasText(prefix) ? prefix.trim() : "workflow-agent-service:dev";
+        while (normalized.endsWith(":")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+}

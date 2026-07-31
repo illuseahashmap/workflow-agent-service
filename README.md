@@ -1,6 +1,6 @@
 # workflow-agent-service
 
-Open workflow platform backend based on Spring Boot, Flowable and PostgreSQL.
+Open workflow platform backend based on Spring Boot, Flowable, PostgreSQL, and Redis.
 
 ## Baseline
 
@@ -9,48 +9,65 @@ Open workflow platform backend based on Spring Boot, Flowable and PostgreSQL.
 - Spring Boot 4.x
 - Flowable 8.0.0
 - PostgreSQL
+- Redis
+- Flyway
 
-## Architecture
-
-The project uses a lightweight DDD package structure.
+## Modules
 
 ```text
 workflow-agent-service
-├── pom.xml
-├── workflow-engine     # Spring Boot application and Flowable integration
-├── rules-engine        # reusable rule engine library
-└── agent-engine        # reserved for future agent and LLM capabilities
+|-- pom.xml
+|-- workflow-engine   Spring Boot application and Flowable adapter
+|-- rules-engine      Reusable condition and priority rule engine
+`-- agent-engine      Reserved for future agent and LLM capabilities
 ```
 
-`workflow-engine` uses lightweight DDD packages:
+`workflow-engine` follows bounded-context-oriented lightweight DDD:
 
 ```text
 io.github.illuseahashmap.workflow
-├── shared
-├── process
-│   ├── interfaces
-│   │   └── rest
-│   ├── application
-│   │   ├── dto
-│   │   ├── assembler
-│   │   └── impl
-│   └── infrastructure
-├── tenant
-├── security
-│   ├── domain
-│   └── infrastructure
-│       ├── token
-│       └── web
-└── config
+|-- process
+|   |-- interfaces.rest
+|   |-- application
+|   `-- infrastructure.flowable / infrastructure.lock
+|-- assignment
+|   |-- interfaces.rest
+|   |-- application
+|   |-- domain
+|   `-- infrastructure.flowable / infrastructure.persistence
+|-- tenant
+|   |-- interfaces.rest
+|   |-- application
+|   |-- domain
+|   `-- infrastructure.persistence
+|-- security
+|   |-- application.port
+|   |-- domain
+|   `-- infrastructure.persistence / infrastructure.token / infrastructure.web
+|-- shared
+`-- config
 ```
 
-Flowable is treated as infrastructure, not as the domain model. Application services expose workflow use cases and keep Flowable APIs behind the service boundary. Rules that should be reused by workflow and future agent capabilities belong in `rules-engine`.
+Flowable, JDBC, Redis, and servlet APIs remain in infrastructure adapters. Application contracts describe use cases, and domain packages contain workflow-independent concepts and repository ports.
+
+## Capabilities
+
+- process deployment, version activation, definition queries, diagrams, and deletion
+- process start, status, task approval, rejection, transfer, and automatic completion
+- process instance paging, detail, variables, termination, and highlighted diagrams
+- tenant management and Flowable tenant isolation
+- conditional node assignment rules, historical-version inheritance, and assignee resolution
+- per-client encrypted service tokens with tenant/path authorization, request binding, expiration, and replay protection
 
 ## Security Contract
 
-Service APIs use `X-Workflow-Token`. The token is the only tenant source for service calls.
+Service APIs use one `X-Workflow-Token` header. The token envelope is:
 
-The decrypted token payload must contain:
+```text
+clientCode.base64Url(aesGcm(clientSecret, payloadJson))
+```
+
+The payload is:
 
 ```json
 {
@@ -65,25 +82,41 @@ The decrypted token payload must contain:
 }
 ```
 
-Validation rules:
+Each client has an independent secret, allowed tenant codes, allowed paths, a secret version, and an optional expiration time. `X-Tenant-Code` is not accepted. BPMN XML is transported as a plain JSON string and is never Base64 encoded.
 
-- decrypt token with AES-GCM using `workflow.security.master-key-base64`
-- reject expired timestamps
-- reject reused `clientCode + nonce`
-- reject method, path or body hash mismatch
-- reject disabled service clients
-- resolve tenant only from `tenantCode` in token
+## Assignment expressions
 
-`X-Tenant-Code` is intentionally not used by service APIs.
+Assignment rules are exposed to BPMN through the `assigneeService` bean:
 
-## BPMN XML Contract
+- `${assigneeService.getAssignee(execution)}`
+- `${assigneeService.getCandidates(execution)}`
+- `${assigneeService.getCandidateGroups(execution)}`
+- `${assigneeService.getAssigneeList(execution)}`
 
-BPMN XML is sent and returned as a plain JSON string. No Base64 transport field is used.
+To apply `TO_ASSIGNEE`, `AUTO_COMPLETE`, or `AUTO_REJECT` when no handler is resolved, add a `create` task listener to the relevant user task with delegate expression `${assignmentFallbackTaskListener}`. Automatic completion and rejection run after the process transaction commits, preventing conflicts with timer boundary event persistence.
 
-```json
-{
-  "processDefinitionKey": "leave_approval",
-  "processDefinitionName": "Leave Approval",
-  "bpmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
-}
+## Local Configuration
+
+Required environment variables:
+
+```text
+WORKFLOW_LOCAL_DEV_SECRET=<local client secret>
+WORKFLOW_MASTER_KEY_BASE64=<base64 encoded 256-bit key for database-encrypted client secrets>
+```
+
+Optional database variables:
+
+```text
+WORKFLOW_DB_URL=jdbc:postgresql://localhost:5432/workflow_agent
+WORKFLOW_DB_USERNAME=workflow_agent
+WORKFLOW_DB_PASSWORD=workflow_agent
+```
+
+Redis defaults to `localhost:6379`. Database migrations are managed by Flyway; Flowable manages its own engine tables.
+
+## Build
+
+```shell
+mvn test
+mvn package
 ```

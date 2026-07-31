@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.process.application.impl;
+package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;

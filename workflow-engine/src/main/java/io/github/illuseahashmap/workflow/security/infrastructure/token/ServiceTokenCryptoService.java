@@ -1,9 +1,11 @@
 package io.github.illuseahashmap.workflow.security.infrastructure.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.illuseahashmap.workflow.security.domain.ServiceClient;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
 import javax.crypto.Cipher;
@@ -19,36 +21,48 @@ public class ServiceTokenCryptoService {
     private static final int GCM_TAG_LENGTH_BITS = 128;
 
     private final ObjectMapper objectMapper;
-    private final WorkflowSecurityProperties properties;
+    private final ServiceClientSecretResolver secretResolver;
 
-    public ServiceTokenCryptoService(ObjectMapper objectMapper, WorkflowSecurityProperties properties) {
+    public ServiceTokenCryptoService(ObjectMapper objectMapper, ServiceClientSecretResolver secretResolver) {
         this.objectMapper = objectMapper;
-        this.properties = properties;
+        this.secretResolver = secretResolver;
     }
 
-    public ServiceTokenPayload decrypt(String token) {
+    public ServiceTokenEnvelope parse(String token) {
         if (!StringUtils.hasText(token)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "Missing X-Workflow-Token");
         }
-        if (!StringUtils.hasText(properties.getMasterKeyBase64())) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Workflow token master key is not configured");
+        int separatorIndex = token.indexOf('.');
+        if (separatorIndex <= 0 || separatorIndex == token.length() - 1) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Invalid workflow token envelope");
         }
+        return new ServiceTokenEnvelope(
+                token.substring(0, separatorIndex).trim(),
+                token.substring(separatorIndex + 1).trim());
+    }
+
+    public ServiceTokenPayload decrypt(ServiceTokenEnvelope envelope, ServiceClient client) {
         try {
-            byte[] tokenBytes = Base64.getUrlDecoder().decode(token);
+            byte[] tokenBytes = Base64.getUrlDecoder().decode(envelope.encryptedToken());
             if (tokenBytes.length <= GCM_IV_LENGTH) {
-                throw new BusinessException(ErrorCode.UNAUTHORIZED, "Invalid workflow token");
+                throw new IllegalArgumentException("Invalid encrypted token");
             }
             byte[] iv = Arrays.copyOfRange(tokenBytes, 0, GCM_IV_LENGTH);
             byte[] ciphertext = Arrays.copyOfRange(tokenBytes, GCM_IV_LENGTH, tokenBytes.length);
-            byte[] key = Base64.getDecoder().decode(properties.getMasterKeyBase64());
+            byte[] key = MessageDigest.getInstance("SHA-256")
+                    .digest(secretResolver.resolve(client).getBytes(StandardCharsets.UTF_8));
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv));
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
+                    new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv));
             byte[] plainText = cipher.doFinal(ciphertext);
-            return objectMapper.readValue(new String(plainText, StandardCharsets.UTF_8), ServiceTokenPayload.class);
+            return objectMapper.readValue(plainText, ServiceTokenPayload.class);
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "Invalid workflow token");
         }
+    }
+
+    public record ServiceTokenEnvelope(String clientCode, String encryptedToken) {
     }
 }

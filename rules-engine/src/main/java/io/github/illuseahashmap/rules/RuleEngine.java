@@ -1,6 +1,8 @@
 package io.github.illuseahashmap.rules;
 
-public interface RuleEngine<R> {
+import java.util.Collection;
 
-    RuleEvaluationResult evaluate(R rule, RuleContext context);
+public interface RuleEngine {
+
+    RuleEvaluationResult evaluate(Collection<RuleDefinition> rules, RuleContext context);
 }

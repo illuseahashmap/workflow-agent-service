@@ -19,6 +19,8 @@ public interface WorkflowRuntimeService {
 
     ApproveTaskResult approve(ApproveTaskRequest request);
 
+    ApproveTaskResult autoComplete(ApproveTaskRequest request);
+
     ApproveTaskResult reject(RejectTaskRequest request);
 
     TaskView transfer(TransferTaskRequest request);

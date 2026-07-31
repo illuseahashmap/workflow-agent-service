@@ -1,6 +1,10 @@
 package io.github.illuseahashmap.workflow.security.infrastructure.token;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.illuseahashmap.workflow.security.domain.ServiceClient;
 import io.github.illuseahashmap.workflow.security.domain.ServiceTokenContext;
+import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
+import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
 import io.github.illuseahashmap.workflow.security.infrastructure.web.CachedBodyHttpServletRequest;
 import jakarta.servlet.FilterChain;
@@ -23,14 +27,17 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
     private final WorkflowSecurityProperties properties;
     private final ServiceTokenCryptoService cryptoService;
     private final ServiceTokenValidationService validationService;
+    private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public ServiceTokenAuthenticationFilter(WorkflowSecurityProperties properties,
                                             ServiceTokenCryptoService cryptoService,
-                                            ServiceTokenValidationService validationService) {
+                                            ServiceTokenValidationService validationService,
+                                            ObjectMapper objectMapper) {
         this.properties = properties;
         this.cryptoService = cryptoService;
         this.validationService = validationService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -49,16 +56,37 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
         CachedBodyHttpServletRequest wrappedRequest = new CachedBodyHttpServletRequest(request);
         try {
             String bodySha256 = sha256Hex(wrappedRequest.getCachedBody());
-            ServiceTokenPayload payload = cryptoService.decrypt(request.getHeader(TOKEN_HEADER));
+            ServiceTokenCryptoService.ServiceTokenEnvelope envelope =
+                    cryptoService.parse(request.getHeader(TOKEN_HEADER));
+            ServiceClient client = validationService.loadClient(envelope.clientCode());
+            ServiceTokenPayload payload = cryptoService.decrypt(envelope, client);
             ServiceTokenValidationService.ClientValidationResult result = validationService.validate(
-                    payload, request.getMethod(), request.getRequestURI(), bodySha256);
+                    payload, client, request.getMethod(), request.getRequestURI(), bodySha256);
             TenantContext.set(result.tenantInfo());
             ServiceTokenContext.set(new ServiceTokenContext.ServiceTokenPrincipal(result.clientCode(), result.tokenVersion()));
             filterChain.doFilter(wrappedRequest, response);
+        } catch (BusinessException exception) {
+            writeError(response, exception);
         } finally {
             TenantContext.clear();
             ServiceTokenContext.clear();
         }
+    }
+
+    private void writeError(HttpServletResponse response, BusinessException exception) throws IOException {
+        if (response.isCommitted()) {
+            return;
+        }
+        int status = switch (exception.getErrorCode()) {
+            case FORBIDDEN -> HttpServletResponse.SC_FORBIDDEN;
+            case INTERNAL_ERROR -> HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+            default -> HttpServletResponse.SC_UNAUTHORIZED;
+        };
+        response.setStatus(status);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail(
+                exception.getErrorCode().code(), exception.getMessage())));
     }
 
     private String sha256Hex(byte[] body) {
