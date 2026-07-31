@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: workflow-agent-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/workflow_agent
+    username: workflow_agent
+    password: workflow_agent
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+
+server:
+  port: 8080
+
+flowable:
+  database-schema-update: true
+  async-executor-activate: true
+  check-process-definitions: false
+
+workflow:
+  security:
+    enabled: true
+    # Base64-encoded 256-bit AES key. Replace before running outside local development.
+    master-key-base64: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+    replay-window-seconds: 300
+    public-paths:
+      - /actuator/health
+      - /actuator/info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
