@@ -15,23 +15,28 @@ Open workflow platform backend based on Spring Boot, Flowable and PostgreSQL.
 The project uses a lightweight DDD package structure.
 
 ```text
+workflow-agent-service
+├── pom.xml
+├── workflow-engine     # Spring Boot application and Flowable integration
+├── rules-engine        # reusable rule engine library
+└── agent-engine        # reserved for future agent and LLM capabilities
+```
+
+`workflow-engine` uses lightweight DDD packages:
+
+```text
 io.github.illuseahashmap.workflow
 ├── shared
-│   ├── exception
-│   └── response
 ├── process
-│   ├── interfaces      # REST controllers and request/response DTOs
-│   ├── application     # use-case services and orchestration
-│   └── infrastructure  # Flowable and persistence adapters, added as needed
-├── tenant
-│   └── domain
-├── security
-│   ├── domain
+│   ├── interfaces
+│   ├── application
 │   └── infrastructure
+├── tenant
+├── security
 └── config
 ```
 
-Flowable is treated as infrastructure, not as the domain model. Application services expose workflow use cases and keep Flowable APIs behind the service boundary.
+Flowable is treated as infrastructure, not as the domain model. Application services expose workflow use cases and keep Flowable APIs behind the service boundary. Rules that should be reused by workflow and future agent capabilities belong in `rules-engine`.
 
 ## Security Contract
 
