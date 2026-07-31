@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.security.infrastructure.serviceauth;
+package io.github.illuseahashmap.workflow.security.infrastructure.token;
 
 import java.util.ArrayList;
 import java.util.List;

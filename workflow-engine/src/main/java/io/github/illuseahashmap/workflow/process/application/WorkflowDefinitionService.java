@@ -1,10 +1,10 @@
 package io.github.illuseahashmap.workflow.process.application;
 
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ActivateProcessVersionRequest;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ActiveProcessVersionResult;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.DeployProcessRequest;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.DeployProcessResult;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ProcessDefinitionView;
+import io.github.illuseahashmap.workflow.process.application.dto.ActivateProcessVersionRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.ActiveProcessVersionResult;
+import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import java.util.List;
 
 public interface WorkflowDefinitionService {

@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.security.infrastructure.serviceauth;
+package io.github.illuseahashmap.workflow.security.infrastructure.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;

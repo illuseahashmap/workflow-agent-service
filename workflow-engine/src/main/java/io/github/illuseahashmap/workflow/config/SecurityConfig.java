@@ -1,6 +1,6 @@
 package io.github.illuseahashmap.workflow.config;
 
-import io.github.illuseahashmap.workflow.security.infrastructure.serviceauth.ServiceTokenAuthenticationFilter;
+import io.github.illuseahashmap.workflow.security.infrastructure.token.ServiceTokenAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

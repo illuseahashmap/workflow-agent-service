@@ -1,6 +1,6 @@
 package io.github.illuseahashmap.workflow.process.application.assembler;
 
-import io.github.illuseahashmap.workflow.process.interfaces.dto.TaskView;
+import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;

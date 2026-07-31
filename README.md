@@ -29,10 +29,18 @@ io.github.illuseahashmap.workflow
 ├── shared
 ├── process
 │   ├── interfaces
+│   │   └── rest
 │   ├── application
+│   │   ├── dto
+│   │   ├── assembler
+│   │   └── impl
 │   └── infrastructure
 ├── tenant
 ├── security
+│   ├── domain
+│   └── infrastructure
+│       ├── token
+│       └── web
 └── config
 ```
 

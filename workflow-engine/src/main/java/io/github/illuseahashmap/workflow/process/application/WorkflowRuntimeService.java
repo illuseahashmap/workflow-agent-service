@@ -1,13 +1,13 @@
 package io.github.illuseahashmap.workflow.process.application;
 
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ApproveTaskRequest;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ApproveTaskResult;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.ProcessStatusView;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.RejectTaskRequest;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.StartProcessRequest;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.StartProcessResult;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.TaskView;
-import io.github.illuseahashmap.workflow.process.interfaces.dto.TransferTaskRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskResult;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessStatusView;
+import io.github.illuseahashmap.workflow.process.application.dto.RejectTaskRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.StartProcessResult;
+import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
+import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
 
 public interface WorkflowRuntimeService {
 

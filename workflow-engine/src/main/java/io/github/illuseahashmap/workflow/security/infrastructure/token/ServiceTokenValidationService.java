@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.security.infrastructure.serviceauth;
+package io.github.illuseahashmap.workflow.security.infrastructure.token;
 
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;

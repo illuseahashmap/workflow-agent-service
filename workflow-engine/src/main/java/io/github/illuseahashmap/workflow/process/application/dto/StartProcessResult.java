@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.process.interfaces.dto;
+package io.github.illuseahashmap.workflow.process.application.dto;
 
 import java.util.List;
 

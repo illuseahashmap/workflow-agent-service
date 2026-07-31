@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.rules;
+package io.github.illuseahashmap.rules;
 
 import java.util.Map;
 
