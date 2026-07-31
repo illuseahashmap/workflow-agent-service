@@ -10,6 +10,29 @@ Open workflow platform backend based on Spring Boot, Flowable and PostgreSQL.
 - Flowable 8.0.0
 - PostgreSQL
 
+## Architecture
+
+The project uses a lightweight DDD package structure.
+
+```text
+io.github.illuseahashmap.workflow
+├── shared
+│   ├── exception
+│   └── response
+├── process
+│   ├── interfaces      # REST controllers and request/response DTOs
+│   ├── application     # use-case services and orchestration
+│   └── infrastructure  # Flowable and persistence adapters, added as needed
+├── tenant
+│   └── domain
+├── security
+│   ├── domain
+│   └── infrastructure
+└── config
+```
+
+Flowable is treated as infrastructure, not as the domain model. Application services expose workflow use cases and keep Flowable APIs behind the service boundary.
+
 ## Security Contract
 
 Service APIs use `X-Workflow-Token`. The token is the only tenant source for service calls.
