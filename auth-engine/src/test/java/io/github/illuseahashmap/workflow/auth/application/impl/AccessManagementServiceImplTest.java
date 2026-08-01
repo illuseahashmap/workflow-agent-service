@@ -16,6 +16,7 @@ import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -60,5 +61,42 @@ class AccessManagementServiceImplTest {
         verify(authorizationRepository, never()).replaceRolePermissions(
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anySet());
+    }
+
+    @Test
+    void cannotRemoveTheLastEnabledTenantAdministratorRole() {
+        prepareTenantAdministratorMembership("user-2");
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "USER", "User", null, true, Set.of()),
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "TENANT_ADMIN", "Tenant Administrator", null, true, Set.of())));
+
+        assertThatThrownBy(() -> service.updateMemberRoles("user-2", Set.of("USER")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("At least one enabled tenant administrator must remain");
+
+        verify(authorizationRepository, never()).replaceUserRoles("user-2", "tenant-a", Set.of("USER"));
+    }
+
+    @Test
+    void cannotDisableTheLastEnabledTenantAdministrator() {
+        prepareTenantAdministratorMembership("user-2");
+
+        assertThatThrownBy(() -> service.updateMemberEnabled("user-2", false))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("At least one enabled tenant administrator must remain");
+
+        verify(membershipRepository, never()).updateEnabled("user-2", "tenant-a", false);
+    }
+
+    private void prepareTenantAdministratorMembership(String userId) {
+        when(membershipRepository.find(userId, "tenant-a")).thenReturn(Optional.of(
+                new AuthMembershipRepository.TenantMembership(
+                        userId, "tenant-a-id", "tenant-a", "Tenant A", true, true, null)));
+        when(membershipRepository.isEnabledMemberWithRole(userId, "tenant-a", "TENANT_ADMIN"))
+                .thenReturn(true);
+        when(membershipRepository.countEnabledMembersWithRole("tenant-a", "TENANT_ADMIN"))
+                .thenReturn(1L);
     }
 }

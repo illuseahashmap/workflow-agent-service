@@ -8,7 +8,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.ProcessDiagramD
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessInstanceDetailView;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessInstanceSummaryView;
 import io.github.illuseahashmap.workflow.process.application.dto.TerminateProcessRequest;
-import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanceLock;
+import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
@@ -30,7 +30,7 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
     private final RuntimeService runtimeService;
     private final HistoryService historyService;
     private final JdbcTemplate jdbcTemplate;
-    private final ProcessInstanceLock processInstanceLock;
+    private final ProcessInstanceTransactionExecutor transactionExecutor;
     private final WorkflowDefinitionReadService definitionReadService;
     private final WorkflowInstanceReadService instanceReadService;
     private final TenantProvider tenantProvider;
@@ -40,7 +40,7 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
                                              RuntimeService runtimeService,
                                              HistoryService historyService,
                                              JdbcTemplate jdbcTemplate,
-                                             ProcessInstanceLock processInstanceLock,
+                                             ProcessInstanceTransactionExecutor transactionExecutor,
                                              WorkflowDefinitionReadService definitionReadService,
                                              WorkflowInstanceReadService instanceReadService,
                                              TenantProvider tenantProvider,
@@ -49,7 +49,7 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
         this.runtimeService = runtimeService;
         this.historyService = historyService;
         this.jdbcTemplate = jdbcTemplate;
-        this.processInstanceLock = processInstanceLock;
+        this.transactionExecutor = transactionExecutor;
         this.definitionReadService = definitionReadService;
         this.instanceReadService = instanceReadService;
         this.tenantProvider = tenantProvider;
@@ -86,10 +86,9 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void terminateProcessInstance(TerminateProcessRequest request) {
         String processInstanceId = request.processInstanceId().trim();
-        processInstanceLock.execute(processInstanceId, () -> {
+        transactionExecutor.execute(processInstanceId, () -> {
             String tenantId = tenantProvider.current().tenantId();
             ProcessInstance instance = runtimeService.createProcessInstanceQuery()
                     .processInstanceTenantId(tenantId)

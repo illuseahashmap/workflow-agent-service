@@ -17,7 +17,7 @@ public class FlywayMigrationConfig {
                                  @Value("${spring.flyway.baseline-version:0}") String baselineVersion) {
         return Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration/workflow", "classpath:db/migration/auth")
+                .locations("classpath:db/migration/platform")
                 .baselineOnMigrate(baselineOnMigrate)
                 .baselineVersion(baselineVersion)
                 .load();

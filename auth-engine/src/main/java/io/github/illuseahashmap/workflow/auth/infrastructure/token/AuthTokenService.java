@@ -9,6 +9,7 @@ import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -112,7 +113,7 @@ public class AuthTokenService implements AuthTokenIssuer {
             mac.init(new SecretKeySpec(properties.getSecret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
             return Base64.getUrlEncoder().withoutPadding()
                     .encodeToString(mac.doFinal(payloadPart.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception exception) {
+        } catch (GeneralSecurityException exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Failed to sign bearer token");
         }
     }

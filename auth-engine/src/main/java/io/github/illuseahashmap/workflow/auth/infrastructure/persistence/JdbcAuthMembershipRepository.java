@@ -123,6 +123,70 @@ public class JdbcAuthMembershipRepository implements AuthMembershipRepository {
                 .update();
     }
 
+    @Override
+    public void lockTenantMemberships(String tenantCode) {
+        jdbcClient.sql("""
+                        SELECT user_id
+                        FROM auth_user_tenant
+                        WHERE tenant_code = :tenantCode
+                        FOR UPDATE
+                        """)
+                .param("tenantCode", tenantCode)
+                .query(String.class)
+                .list();
+    }
+
+    @Override
+    public boolean isEnabledMemberWithRole(String userId, String tenantCode, String roleCode) {
+        return Boolean.TRUE.equals(jdbcClient.sql("""
+                        SELECT EXISTS (
+                            SELECT 1
+                            FROM auth_user_tenant membership
+                            JOIN auth_user users ON users.user_id = membership.user_id AND users.enabled = 1
+                            JOIN auth_user_role assignment
+                              ON assignment.user_id = membership.user_id
+                             AND assignment.tenant_code = membership.tenant_code
+                            JOIN auth_role role
+                              ON role.tenant_code = assignment.tenant_code
+                             AND role.role_code = assignment.role_code
+                             AND role.enabled = 1
+                            WHERE membership.user_id = :userId
+                              AND membership.tenant_code = :tenantCode
+                              AND membership.enabled = 1
+                              AND assignment.role_code = :roleCode
+                        )
+                        """)
+                .param("userId", userId)
+                .param("tenantCode", tenantCode)
+                .param("roleCode", roleCode)
+                .query(Boolean.class)
+                .single());
+    }
+
+    @Override
+    public long countEnabledMembersWithRole(String tenantCode, String roleCode) {
+        Long count = jdbcClient.sql("""
+                        SELECT COUNT(*)
+                        FROM auth_user_tenant membership
+                        JOIN auth_user users ON users.user_id = membership.user_id AND users.enabled = 1
+                        JOIN auth_user_role assignment
+                          ON assignment.user_id = membership.user_id
+                         AND assignment.tenant_code = membership.tenant_code
+                        JOIN auth_role role
+                          ON role.tenant_code = assignment.tenant_code
+                         AND role.role_code = assignment.role_code
+                         AND role.enabled = 1
+                        WHERE membership.tenant_code = :tenantCode
+                          AND membership.enabled = 1
+                          AND assignment.role_code = :roleCode
+                        """)
+                .param("tenantCode", tenantCode)
+                .param("roleCode", roleCode)
+                .query(Long.class)
+                .single();
+        return count == null ? 0 : count;
+    }
+
     private TenantMembership mapRow(ResultSet resultSet, int rowNumber) throws SQLException {
         return new TenantMembership(
                 resultSet.getString("user_id"),

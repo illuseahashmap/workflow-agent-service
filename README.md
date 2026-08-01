@@ -22,6 +22,7 @@ workflow-agent-service
 |-- workflow-engine  Workflow domain, use cases, and Flowable adapters
 |-- rules-engine      Reusable condition and priority rule engine
 |-- agent-engine      Reserved for future agent and LLM capabilities
+|-- platform-migrations Ordered platform schema and cross-context integrity migrations
 `-- workflow-boot    Executable application and module composition root
 ```
 
@@ -30,11 +31,13 @@ Module dependency direction:
 ```text
 workflow-boot --> auth-engine --> shared-kernel
 workflow-boot --> workflow-engine --> shared-kernel
+workflow-boot --> platform-migrations
 workflow-engine --> rules-engine
 ```
 
 `auth-engine` and `workflow-engine` follow bounded-context-oriented DDD. The executable application,
 HTTP security chain, global exception translation, and Flyway composition live only in `workflow-boot`.
+All ordered schema changes live in `platform-migrations`; business modules do not coordinate global Flyway versions.
 
 ```text
 io.github.illuseahashmap.workflow
@@ -156,5 +159,7 @@ mvn test
 mvn verify
 ```
 
-`verify` enforces the JDK/Maven baseline and Java naming/import conventions. ArchUnit tests prevent domain-to-framework,
-application-to-infrastructure, and cross-bounded-context infrastructure dependencies.
+`verify` enforces the JDK/Maven baseline, Java conventions, SpotBugs high-priority findings, and a minimum tested-code
+coverage floor. ArchUnit tests prevent domain-to-framework, application-to-infrastructure, direct REST-to-domain,
+and cross-bounded-context infrastructure dependencies. Docker-enabled environments additionally run PostgreSQL,
+Redis, Flyway, Flowable, and HTTP security integration tests through Testcontainers.

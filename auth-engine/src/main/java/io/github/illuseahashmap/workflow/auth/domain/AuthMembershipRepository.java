@@ -17,6 +17,12 @@ public interface AuthMembershipRepository {
 
     void updateEnabled(String userId, String tenantCode, boolean enabled);
 
+    void lockTenantMemberships(String tenantCode);
+
+    boolean isEnabledMemberWithRole(String userId, String tenantCode, String roleCode);
+
+    long countEnabledMembersWithRole(String tenantCode, String roleCode);
+
     record TenantMembership(
             String userId,
             String tenantId,

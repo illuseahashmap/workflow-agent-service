@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,7 @@ class DomainArchitectureTest {
     @BeforeAll
     static void importProductionClasses() {
         productionClasses = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
                 .importPackages("io.github.illuseahashmap.workflow");
     }
 
@@ -43,6 +45,14 @@ class DomainArchitectureTest {
         noClasses().that().resideOutsideOfPackage("..auth..")
                 .should().dependOnClassesThat().resideInAPackage("..auth.infrastructure..")
                 .because("auth infrastructure is private to the authentication bounded context")
+                .check(productionClasses);
+    }
+
+    @Test
+    void restInterfacesDoNotExposeDomainTypesDirectly() {
+        noClasses().that().resideInAPackage("..interfaces.rest..")
+                .should().dependOnClassesThat().resideInAPackage("..domain..")
+                .because("REST contracts must use application DTOs instead of exposing domain models")
                 .check(productionClasses);
     }
 }

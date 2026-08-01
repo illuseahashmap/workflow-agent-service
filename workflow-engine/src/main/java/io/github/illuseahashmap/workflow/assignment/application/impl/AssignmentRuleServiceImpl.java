@@ -12,6 +12,9 @@ import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleSe
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentConditionCommand;
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleCommand;
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleInheritResult;
+import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentConditionView;
+import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleView;
+import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentTargetView;
 import io.github.illuseahashmap.workflow.assignment.application.port.ProcessDefinitionCatalog;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentCondition;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentTarget;
@@ -55,17 +58,19 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
     }
 
     @Override
-    public PageResult<NodeAssignmentRule> page(Integer pageNum, Integer pageSize,
+    public PageResult<AssignmentRuleView> page(Integer pageNum, Integer pageSize,
                                                String processDefinitionKey, String processDefinitionId,
                                                Integer version, String taskDefinitionKey, String variableName,
-                                               AssignmentType assignmentType, EmptyUserStrategy emptyUserStrategy) {
+                                               String assignmentType, String emptyUserStrategy) {
         int normalizedPageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
         int normalizedPageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
         PageSlice<NodeAssignmentRule> page = ruleRepository.page(new NodeAssignmentRuleRepository.RulePageCriteria(
                 normalizedPageNum, normalizedPageSize, tenantProvider.current().tenantId(),
                 processDefinitionKey, processDefinitionId, version, taskDefinitionKey,
-                variableName, assignmentType, emptyUserStrategy));
-        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(), page.items());
+                variableName, parseEnum(assignmentType, AssignmentType.class),
+                parseEnum(emptyUserStrategy, EmptyUserStrategy.class)));
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
+                page.items().stream().map(this::toView).toList());
     }
 
     @Override
@@ -83,9 +88,9 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public NodeAssignmentRule create(AssignmentRuleCommand command) {
+    public AssignmentRuleView create(AssignmentRuleCommand command) {
         String tenantId = tenantProvider.current().tenantId();
-        return ruleRepository.save(toRule(null, tenantId, command));
+        return toView(ruleRepository.save(toRule(null, tenantId, command)));
     }
 
     @Override
@@ -295,5 +300,33 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
 
     private String normalize(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private <E extends Enum<E>> E parseEnum(String value, Class<E> enumType) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(enumType, value.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Unsupported " + enumType.getSimpleName() + ": " + value);
+        }
+    }
+
+    private AssignmentRuleView toView(NodeAssignmentRule rule) {
+        List<AssignmentConditionView> conditions = rule.conditions().stream()
+                .map(condition -> new AssignmentConditionView(
+                        condition.id(), condition.variableName(), condition.operator(),
+                        condition.variableValue(), condition.sortOrder()))
+                .toList();
+        List<AssignmentTargetView> targets = rule.targets().stream()
+                .map(target -> new AssignmentTargetView(
+                        target.id(), target.targetType(), target.targetValue(), target.sortOrder()))
+                .toList();
+        return new AssignmentRuleView(
+                rule.id(), rule.tenantId(), rule.processDefinitionId(), rule.processDefinitionKey(), rule.version(),
+                rule.taskDefinitionKey(), rule.priority(), rule.assignmentType(), rule.emptyUserStrategy(),
+                rule.enabled(), rule.description(), conditions, targets, rule.createdAt(), rule.updatedAt());
     }
 }

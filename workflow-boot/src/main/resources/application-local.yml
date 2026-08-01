@@ -6,3 +6,8 @@ spring:
 
 flowable:
   database-schema-update: true
+
+workflow:
+  auth:
+    self-registration:
+      enabled: true

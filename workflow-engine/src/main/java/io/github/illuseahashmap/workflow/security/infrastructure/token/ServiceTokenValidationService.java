@@ -159,7 +159,6 @@ public class ServiceTokenValidationService {
 
     private void validateNonce(ServiceTokenPayload payload) {
         Instant expiresAt = Instant.now().plusSeconds(properties.getReplayWindowSeconds());
-        jdbcTemplate.update("DELETE FROM workflow_service_token_nonce WHERE expires_at < CURRENT_TIMESTAMP");
         try {
             jdbcTemplate.update("""
                     INSERT INTO workflow_service_token_nonce (client_code, nonce, expires_at)

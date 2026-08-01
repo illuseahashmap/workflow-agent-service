@@ -9,6 +9,7 @@ import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantReques
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionResponse;
 import io.github.illuseahashmap.workflow.auth.application.port.AuthTokenIssuer;
 import io.github.illuseahashmap.workflow.auth.application.port.PasswordHasher;
+import io.github.illuseahashmap.workflow.auth.application.port.SelfRegistrationPolicy;
 import io.github.illuseahashmap.workflow.auth.domain.AuthAuthorizationRepository;
 import io.github.illuseahashmap.workflow.auth.domain.AuthMembershipRepository;
 import io.github.illuseahashmap.workflow.auth.domain.AuthTenantRepository;
@@ -28,7 +29,6 @@ import org.springframework.util.StringUtils;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    private static final String DEFAULT_TENANT_CODE = "default";
     private static final String DEFAULT_ROLE_CODE = "USER";
 
     private final AuthUserRepository userRepository;
@@ -38,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordHasher passwordHasher;
     private final AuthTokenIssuer tokenIssuer;
     private final CurrentPrincipalProvider principalProvider;
+    private final SelfRegistrationPolicy selfRegistrationPolicy;
 
     public AuthServiceImpl(AuthUserRepository userRepository,
                            AuthTenantRepository tenantRepository,
@@ -45,7 +46,8 @@ public class AuthServiceImpl implements AuthService {
                            AuthAuthorizationRepository authorizationRepository,
                            PasswordHasher passwordHasher,
                            AuthTokenIssuer tokenIssuer,
-                           CurrentPrincipalProvider principalProvider) {
+                           CurrentPrincipalProvider principalProvider,
+                           SelfRegistrationPolicy selfRegistrationPolicy) {
         this.userRepository = userRepository;
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
@@ -53,13 +55,17 @@ public class AuthServiceImpl implements AuthService {
         this.passwordHasher = passwordHasher;
         this.tokenIssuer = tokenIssuer;
         this.principalProvider = principalProvider;
+        this.selfRegistrationPolicy = selfRegistrationPolicy;
     }
 
     @Override
     @Transactional
     public AuthTokenResponse register(RegisterRequest request) {
+        if (!selfRegistrationPolicy.enabled()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Self-registration is disabled");
+        }
         String username = normalizeUsername(request.username());
-        String tenantCode = DEFAULT_TENANT_CODE;
+        String tenantCode = selfRegistrationPolicy.tenantCode().trim();
         String displayName = StringUtils.hasText(request.displayName()) ? request.displayName().trim() : username;
 
         AuthTenantRepository.AuthTenant tenant = tenantRepository.findByTenantCode(tenantCode)
@@ -178,7 +184,7 @@ public class AuthServiceImpl implements AuthService {
 
     private String normalizeTenantCode(String tenantCode) {
         if (!StringUtils.hasText(tenantCode)) {
-            return DEFAULT_TENANT_CODE;
+            return selfRegistrationPolicy.tenantCode().trim();
         }
         return tenantCode.trim();
     }

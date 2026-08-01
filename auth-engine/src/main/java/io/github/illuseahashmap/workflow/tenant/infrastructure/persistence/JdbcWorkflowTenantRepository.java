@@ -72,12 +72,17 @@ public class JdbcWorkflowTenantRepository implements WorkflowTenantRepository {
                         (tenant_id, tenant_code, tenant_name, description, enabled, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """, new String[]{"id"});
-            statement.setString(1, tenant.tenantId());
-            statement.setString(2, tenant.tenantCode());
-            statement.setString(3, tenant.tenantName());
-            statement.setString(4, tenant.description());
-            statement.setInt(5, tenant.enabled() ? 1 : 0);
-            return statement;
+            try {
+                statement.setString(1, tenant.tenantId());
+                statement.setString(2, tenant.tenantCode());
+                statement.setString(3, tenant.tenantName());
+                statement.setString(4, tenant.description());
+                statement.setInt(5, tenant.enabled() ? 1 : 0);
+                return statement;
+            } catch (java.sql.SQLException exception) {
+                statement.close();
+                throw exception;
+            }
         }, keyHolder);
         Number id = keyHolder.getKey();
         return findById(id.longValue()).orElseThrow();

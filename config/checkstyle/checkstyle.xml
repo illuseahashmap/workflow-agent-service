@@ -24,5 +24,10 @@
         <module name="ConstantName"/>
         <module name="EqualsHashCode"/>
         <module name="NoFinalizer"/>
+        <module name="NeedBraces"/>
+        <module name="ModifierOrder"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="EmptyStatement"/>
+        <module name="FallThrough"/>
     </module>
 </module>

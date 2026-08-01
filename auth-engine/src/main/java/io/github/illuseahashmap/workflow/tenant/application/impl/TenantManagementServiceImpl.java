@@ -8,6 +8,7 @@ import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.tenant.application.TenantManagementService;
 import io.github.illuseahashmap.workflow.tenant.application.dto.TenantCommand;
+import io.github.illuseahashmap.workflow.tenant.application.dto.TenantView;
 import io.github.illuseahashmap.workflow.tenant.domain.WorkflowTenant;
 import io.github.illuseahashmap.workflow.tenant.domain.WorkflowTenantRepository;
 import java.util.List;
@@ -31,27 +32,28 @@ public class TenantManagementServiceImpl implements TenantManagementService {
     }
 
     @Override
-    public PageResult<WorkflowTenant> page(Integer pageNum, Integer pageSize, String keyword, Boolean enabled) {
+    public PageResult<TenantView> page(Integer pageNum, Integer pageSize, String keyword, Boolean enabled) {
         int normalizedPageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
         int normalizedPageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
         PageSlice<WorkflowTenant> page = tenantRepository.page(
                 normalizedPageNum, normalizedPageSize, normalize(keyword), enabled);
-        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(), page.items());
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
+                page.items().stream().map(this::toView).toList());
     }
 
     @Override
-    public List<WorkflowTenant> listEnabled() {
-        return tenantRepository.findEnabled();
+    public List<TenantView> listEnabled() {
+        return tenantRepository.findEnabled().stream().map(this::toView).toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public WorkflowTenant create(TenantCommand command) {
+    public TenantView create(TenantCommand command) {
         try {
             WorkflowTenant tenant = tenantRepository.save(toTenant(null, command));
             tenantProvisioningService.provision(
                     tenant.tenantCode(), principalProvider.current().principalId());
-            return tenant;
+            return toView(tenant);
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(ErrorCode.CONFLICT, "Tenant id or code already exists");
         }
@@ -98,5 +100,11 @@ public class TenantManagementServiceImpl implements TenantManagementService {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private TenantView toView(WorkflowTenant tenant) {
+        return new TenantView(
+                tenant.id(), tenant.tenantId(), tenant.tenantCode(), tenant.tenantName(), tenant.description(),
+                tenant.enabled(), tenant.createdAt(), tenant.updatedAt());
     }
 }

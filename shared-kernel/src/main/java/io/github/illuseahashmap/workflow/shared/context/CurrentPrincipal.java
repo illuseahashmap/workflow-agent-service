@@ -11,4 +11,19 @@ public record CurrentPrincipal(
         Set<String> roles,
         Set<String> permissions
 ) {
+
+    public CurrentPrincipal {
+        roles = Set.copyOf(roles);
+        permissions = Set.copyOf(permissions);
+    }
+
+    @Override
+    public Set<String> roles() {
+        return Set.copyOf(roles);
+    }
+
+    @Override
+    public Set<String> permissions() {
+        return Set.copyOf(permissions);
+    }
 }

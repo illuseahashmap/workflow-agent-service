@@ -32,12 +32,16 @@ workflow:
     master-key-base64: ${WORKFLOW_MASTER_KEY_BASE64:}
     replay-window-seconds: 300
     clock-skew-seconds: 30
+    nonce-cleanup-interval-ms: 600000
     public-paths:
       - /actuator/health
       - /actuator/info
       - /auth/register
       - /auth/login
   auth:
+    self-registration:
+      enabled: ${WORKFLOW_SELF_REGISTRATION_ENABLED:false}
+      tenant-code: ${WORKFLOW_SELF_REGISTRATION_TENANT_CODE:default}
     bootstrap-admin:
       enabled: ${WORKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
       username: ${WORKFLOW_BOOTSTRAP_ADMIN_USERNAME:}

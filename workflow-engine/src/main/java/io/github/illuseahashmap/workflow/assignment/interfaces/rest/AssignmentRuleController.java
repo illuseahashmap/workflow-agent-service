@@ -4,9 +4,7 @@ import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleSe
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleCommand;
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleInheritCommand;
 import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleInheritResult;
-import io.github.illuseahashmap.workflow.assignment.domain.AssignmentType;
-import io.github.illuseahashmap.workflow.assignment.domain.EmptyUserStrategy;
-import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
+import io.github.illuseahashmap.workflow.assignment.application.dto.AssignmentRuleView;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
@@ -32,7 +30,7 @@ public class AssignmentRuleController {
     }
 
     @GetMapping
-    public ApiResponse<PageResult<NodeAssignmentRule>> page(
+    public ApiResponse<PageResult<AssignmentRuleView>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize,
             @RequestParam(required = false) String processDefinitionKey,
@@ -40,15 +38,15 @@ public class AssignmentRuleController {
             @RequestParam(required = false) Integer version,
             @RequestParam(required = false) String taskDefinitionKey,
             @RequestParam(required = false) String variableName,
-            @RequestParam(required = false) AssignmentType assignmentType,
-            @RequestParam(required = false) EmptyUserStrategy emptyUserStrategy) {
+            @RequestParam(required = false) String assignmentType,
+            @RequestParam(required = false) String emptyUserStrategy) {
         return ApiResponse.ok(assignmentRuleService.page(
                 pageNum, pageSize, processDefinitionKey, processDefinitionId, version,
                 taskDefinitionKey, variableName, assignmentType, emptyUserStrategy));
     }
 
     @PostMapping
-    public ApiResponse<NodeAssignmentRule> create(@Valid @RequestBody AssignmentRuleCommand command) {
+    public ApiResponse<AssignmentRuleView> create(@Valid @RequestBody AssignmentRuleCommand command) {
         return ApiResponse.ok(assignmentRuleService.create(command));
     }
 

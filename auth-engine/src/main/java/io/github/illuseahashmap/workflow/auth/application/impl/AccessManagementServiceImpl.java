@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccessManagementServiceImpl implements AccessManagementService {
 
     private static final Set<String> BUILT_IN_ROLE_CODES = Set.of("USER", "TENANT_ADMIN");
+    private static final String TENANT_ADMIN_ROLE_CODE = "TENANT_ADMIN";
 
     private final AuthUserRepository userRepository;
     private final AuthMembershipRepository membershipRepository;
@@ -71,7 +72,10 @@ public class AccessManagementServiceImpl implements AccessManagementService {
     public void updateMemberRoles(String userId, Set<String> roleCodes) {
         String tenantCode = currentTenantCode();
         requireMembership(userId, tenantCode);
-        authorizationRepository.replaceUserRoles(userId, tenantCode, normalizeRoles(roleCodes));
+        Set<String> normalizedRoles = normalizeRoles(roleCodes);
+        membershipRepository.lockTenantMemberships(tenantCode);
+        assertTenantAdministratorRemains(userId, tenantCode, normalizedRoles.contains(TENANT_ADMIN_ROLE_CODE));
+        authorizationRepository.replaceUserRoles(userId, tenantCode, normalizedRoles);
     }
 
     @Override
@@ -82,6 +86,10 @@ public class AccessManagementServiceImpl implements AccessManagementService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Cannot disable the current membership");
         }
         requireMembership(userId, tenantCode);
+        membershipRepository.lockTenantMemberships(tenantCode);
+        if (!enabled) {
+            assertTenantAdministratorRemains(userId, tenantCode, false);
+        }
         membershipRepository.updateEnabled(userId, tenantCode, enabled);
     }
 
@@ -129,6 +137,20 @@ public class AccessManagementServiceImpl implements AccessManagementService {
     private void requireMembership(String userId, String tenantCode) {
         membershipRepository.find(userId, tenantCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Tenant membership does not exist"));
+    }
+
+    private void assertTenantAdministratorRemains(String userId,
+                                                  String tenantCode,
+                                                  boolean remainsTenantAdministrator) {
+        if (remainsTenantAdministrator
+                || !membershipRepository.isEnabledMemberWithRole(
+                        userId, tenantCode, TENANT_ADMIN_ROLE_CODE)) {
+            return;
+        }
+        if (membershipRepository.countEnabledMembersWithRole(tenantCode, TENANT_ADMIN_ROLE_CODE) <= 1) {
+            throw new BusinessException(
+                    ErrorCode.CONFLICT, "At least one enabled tenant administrator must remain");
+        }
     }
 
     private Set<String> normalizeRoles(Set<String> roles) {

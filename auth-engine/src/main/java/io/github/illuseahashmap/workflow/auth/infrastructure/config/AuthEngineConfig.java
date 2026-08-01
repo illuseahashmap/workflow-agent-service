@@ -11,7 +11,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
-@EnableConfigurationProperties({AuthTokenProperties.class, PlatformAdminBootstrapProperties.class})
+@EnableConfigurationProperties({
+        AuthTokenProperties.class,
+        PlatformAdminBootstrapProperties.class,
+        SelfRegistrationProperties.class
+})
 public class AuthEngineConfig {
 
     @Bean

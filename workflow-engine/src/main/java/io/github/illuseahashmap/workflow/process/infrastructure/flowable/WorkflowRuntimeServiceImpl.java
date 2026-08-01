@@ -2,6 +2,7 @@ package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
 import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeService;
+import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessStatusView;
@@ -10,12 +11,13 @@ import io.github.illuseahashmap.workflow.process.application.dto.StartProcessReq
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
-import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanceLock;
+import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
-import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +53,9 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private final RepositoryService repositoryService;
     private final WorkflowDefinitionService definitionService;
     private final TaskViewAssembler taskViewAssembler;
-    private final ProcessInstanceLock processInstanceLock;
+    private final ProcessInstanceTransactionExecutor transactionExecutor;
     private final CurrentPrincipalProvider principalProvider;
+    private final TenantProvider tenantProvider;
 
     public WorkflowRuntimeServiceImpl(RuntimeService runtimeService,
                                       TaskService taskService,
@@ -60,22 +63,24 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                                       RepositoryService repositoryService,
                                       WorkflowDefinitionService definitionService,
                                       TaskViewAssembler taskViewAssembler,
-                                      ProcessInstanceLock processInstanceLock,
-                                      CurrentPrincipalProvider principalProvider) {
+                                      ProcessInstanceTransactionExecutor transactionExecutor,
+                                      CurrentPrincipalProvider principalProvider,
+                                      TenantProvider tenantProvider) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
         this.historyService = historyService;
         this.repositoryService = repositoryService;
         this.definitionService = definitionService;
         this.taskViewAssembler = taskViewAssembler;
-        this.processInstanceLock = processInstanceLock;
+        this.transactionExecutor = transactionExecutor;
         this.principalProvider = principalProvider;
+        this.tenantProvider = tenantProvider;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StartProcessResult start(StartProcessRequest request) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         String processDefinitionId;
         if (StringUtils.hasText(request.processDefinitionId())) {
             processDefinitionId = request.processDefinitionId().trim();
@@ -87,7 +92,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         ProcessInstance instance = runtimeService.startProcessInstanceById(
                 processDefinitionId,
                 request.businessKey(),
-                enrichVariables(request.variables(), tenant));
+                ProcessVariablePolicy.enrichWithTenant(request.variables(), tenant));
         return new StartProcessResult(
                 instance.getProcessInstanceId(),
                 instance.getProcessDefinitionId(),
@@ -98,7 +103,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
 
     @Override
     public ProcessStatusView getProcessStatus(String processInstanceId) {
-        String tenantId = TenantContext.current().tenantId();
+        String tenantId = tenantProvider.current().tenantId();
         ProcessInstance runningInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceTenantId(tenantId)
                 .processInstanceId(processInstanceId)
@@ -144,40 +149,37 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ApproveTaskResult approve(ApproveTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
-        return processInstanceLock.execute(processInstanceId, () -> {
+        return transactionExecutor.execute(processInstanceId, () -> {
             CurrentPrincipal actor = principalProvider.current();
             Task task = getActiveTaskForOperation(request.taskId(), actor);
             taskViewAssembler.claimIfNeeded(task, actor.username());
             addComment(task, "agree", request.comment());
-            taskService.complete(task.getId(), safeVariables(request.variables()));
+            taskService.complete(task.getId(), ProcessVariablePolicy.clientVariables(request.variables()));
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ApproveTaskResult autoComplete(ApproveTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
-        return processInstanceLock.execute(processInstanceId, () -> {
+        return transactionExecutor.execute(processInstanceId, () -> {
             Task task = getActiveTask(request.taskId());
             if (StringUtils.hasText(request.currentAssignee())
                     && !Objects.equals(request.currentAssignee(), task.getAssignee())) {
                 taskService.setAssignee(task.getId(), request.currentAssignee());
             }
             addComment(task, "autoComplete", request.comment());
-            taskService.complete(task.getId(), safeVariables(request.variables()));
+            taskService.complete(task.getId(), ProcessVariablePolicy.clientVariables(request.variables()));
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ApproveTaskResult reject(RejectTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
-        return processInstanceLock.execute(processInstanceId, () -> {
+        return transactionExecutor.execute(processInstanceId, () -> {
             CurrentPrincipal actor = principalProvider.current();
             Task task = getActiveTaskForOperation(request.taskId(), actor);
             String targetActivityId = resolveRejectTarget(task, request.targetActivityId());
@@ -207,10 +209,9 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public TaskView transfer(TransferTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
-        return processInstanceLock.execute(processInstanceId, () -> {
+        return transactionExecutor.execute(processInstanceId, () -> {
             CurrentPrincipal actor = principalProvider.current();
             Task task = getActiveTaskForOperation(request.taskId(), actor);
             validateTransferTarget(request);
@@ -287,7 +288,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private Map<String, Object> buildRejectVariables(RejectTaskRequest request,
                                                      String processDefinitionId,
                                                      String targetActivityId) {
-        Map<String, Object> variables = new HashMap<>(safeVariables(request.variables()));
+        Map<String, Object> variables = new HashMap<>(ProcessVariablePolicy.clientVariables(request.variables()));
         List<String> targetAssignees = normalizeList(request.targetAssignees());
         if (!targetAssignees.isEmpty()) {
             UserTask targetTask = findUserTask(processDefinitionId, targetActivityId);
@@ -349,17 +350,6 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         taskService.addComment(task.getId(), task.getProcessInstanceId(), "transfer", message);
     }
 
-    private Map<String, Object> enrichVariables(Map<String, Object> variables, TenantContext.TenantInfo tenant) {
-        Map<String, Object> enriched = new HashMap<>(safeVariables(variables));
-        enriched.put("tenantId", tenant.tenantId());
-        enriched.put("tenantCode", tenant.tenantCode());
-        return enriched;
-    }
-
-    private Map<String, Object> safeVariables(Map<String, Object> variables) {
-        return variables == null ? Map.of() : variables;
-    }
-
     private List<String> normalizeList(List<String> values) {
         if (values == null) {
             return List.of();
@@ -407,7 +397,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     }
 
     private void assertTenant(String tenantId) {
-        if (!TenantContext.current().tenantId().equals(tenantId)) {
+        if (!tenantProvider.current().tenantId().equals(tenantId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "Cross-tenant workflow access is forbidden");
         }
     }

@@ -4,7 +4,7 @@ import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import io.github.illuseahashmap.workflow.tenant.application.TenantManagementService;
 import io.github.illuseahashmap.workflow.tenant.application.dto.TenantCommand;
-import io.github.illuseahashmap.workflow.tenant.domain.WorkflowTenant;
+import io.github.illuseahashmap.workflow.tenant.application.dto.TenantView;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +28,7 @@ public class WorkflowTenantController {
     }
 
     @GetMapping
-    public ApiResponse<PageResult<WorkflowTenant>> page(
+    public ApiResponse<PageResult<TenantView>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize,
             @RequestParam(required = false) String keyword,
@@ -37,12 +37,12 @@ public class WorkflowTenantController {
     }
 
     @GetMapping("/enabled")
-    public ApiResponse<List<WorkflowTenant>> listEnabled() {
+    public ApiResponse<List<TenantView>> listEnabled() {
         return ApiResponse.ok(tenantManagementService.listEnabled());
     }
 
     @PostMapping
-    public ApiResponse<WorkflowTenant> create(@Valid @RequestBody TenantCommand command) {
+    public ApiResponse<TenantView> create(@Valid @RequestBody TenantCommand command) {
         return ApiResponse.ok(tenantManagementService.create(command));
     }
 

@@ -9,8 +9,9 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
-import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalContext;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
@@ -32,16 +33,23 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
     private final RepositoryService repositoryService;
     private final JdbcTemplate jdbcTemplate;
+    private final TenantProvider tenantProvider;
+    private final CurrentPrincipalProvider principalProvider;
 
-    public WorkflowDefinitionServiceImpl(RepositoryService repositoryService, JdbcTemplate jdbcTemplate) {
+    public WorkflowDefinitionServiceImpl(RepositoryService repositoryService,
+                                         JdbcTemplate jdbcTemplate,
+                                         TenantProvider tenantProvider,
+                                         CurrentPrincipalProvider principalProvider) {
         this.repositoryService = repositoryService;
         this.jdbcTemplate = jdbcTemplate;
+        this.tenantProvider = tenantProvider;
+        this.principalProvider = principalProvider;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DeployProcessResult deploy(DeployProcessRequest request) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         String resourceName = request.processDefinitionKey() + ".bpmn20.xml";
         Deployment deployment = repositoryService.createDeployment()
                 .name(request.processDefinitionName())
@@ -71,7 +79,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ActiveProcessVersionResult activate(ActivateProcessVersionRequest request) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         ProcessDefinition definition = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenant.tenantId())
                 .processDefinitionKey(request.processDefinitionKey())
@@ -80,7 +88,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
         if (definition == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Process definition version does not exist");
         }
-        CurrentPrincipal principal = CurrentPrincipalContext.current();
+        CurrentPrincipal principal = principalProvider.current();
         String activatedBy = StringUtils.hasText(principal.username())
                 ? principal.username()
                 : principal.principalId();
@@ -100,7 +108,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
     @Override
     public ActiveProcessVersionResult getActiveVersion(String processDefinitionKey) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         List<ActiveProcessVersionResult> results = jdbcTemplate.query("""
                 SELECT tenant_id, process_definition_key, process_definition_id, version, activated_by, activated_at
                 FROM workflow_active_version
@@ -114,7 +122,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
     @Override
     public boolean exists(String processDefinitionKey) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         return repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenant.tenantId())
                 .processDefinitionKey(processDefinitionKey)
@@ -123,7 +131,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
     @Override
     public List<ProcessDefinitionView> list(String processDefinitionKey) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         var query = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenant.tenantId())
                 .orderByProcessDefinitionKey()
@@ -142,7 +150,7 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
 
     @Override
     public ProcessDefinitionView getDefinition(String processDefinitionKey, Integer version) {
-        TenantContext.TenantInfo tenant = TenantContext.current();
+        TenantContext.TenantInfo tenant = tenantProvider.current();
         var query = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenant.tenantId())
                 .processDefinitionKey(processDefinitionKey);
