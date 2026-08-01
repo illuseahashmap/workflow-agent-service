@@ -6,7 +6,7 @@ import java.util.Map;
 
 public record RejectTaskRequest(
         @NotBlank String taskId,
-        @NotBlank String currentAssignee,
+        String currentAssignee,
         List<String> currentCandidateGroups,
         String targetActivityId,
         String comment,

@@ -14,6 +14,8 @@ import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanc
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private final WorkflowDefinitionService definitionService;
     private final TaskViewAssembler taskViewAssembler;
     private final ProcessInstanceLock processInstanceLock;
+    private final CurrentPrincipalProvider principalProvider;
 
     public WorkflowRuntimeServiceImpl(RuntimeService runtimeService,
                                       TaskService taskService,
@@ -57,7 +60,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                                       RepositoryService repositoryService,
                                       WorkflowDefinitionService definitionService,
                                       TaskViewAssembler taskViewAssembler,
-                                      ProcessInstanceLock processInstanceLock) {
+                                      ProcessInstanceLock processInstanceLock,
+                                      CurrentPrincipalProvider principalProvider) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
         this.historyService = historyService;
@@ -65,6 +69,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         this.definitionService = definitionService;
         this.taskViewAssembler = taskViewAssembler;
         this.processInstanceLock = processInstanceLock;
+        this.principalProvider = principalProvider;
     }
 
     @Override
@@ -143,9 +148,9 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     public ApproveTaskResult approve(ApproveTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
         return processInstanceLock.execute(processInstanceId, () -> {
-            Task task = getActiveTaskForOperation(
-                    request.taskId(), request.currentAssignee(), request.currentCandidateGroups());
-            taskViewAssembler.claimIfNeeded(task, request.currentAssignee());
+            CurrentPrincipal actor = principalProvider.current();
+            Task task = getActiveTaskForOperation(request.taskId(), actor);
+            taskViewAssembler.claimIfNeeded(task, actor.username());
             addComment(task, "agree", request.comment());
             taskService.complete(task.getId(), safeVariables(request.variables()));
             return buildApproveResult(task.getId(), processInstanceId);
@@ -173,8 +178,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     public ApproveTaskResult reject(RejectTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
         return processInstanceLock.execute(processInstanceId, () -> {
-            Task task = getActiveTaskForOperation(
-                    request.taskId(), request.currentAssignee(), request.currentCandidateGroups());
+            CurrentPrincipal actor = principalProvider.current();
+            Task task = getActiveTaskForOperation(request.taskId(), actor);
             String targetActivityId = resolveRejectTarget(task, request.targetActivityId());
             Map<String, Object> variables = buildRejectVariables(request, task.getProcessDefinitionId(), targetActivityId);
             if (!variables.isEmpty()) {
@@ -206,13 +211,13 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     public TaskView transfer(TransferTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
         return processInstanceLock.execute(processInstanceId, () -> {
-            Task task = getActiveTaskForOperation(
-                    request.taskId(), request.currentAssignee(), request.currentCandidateGroups());
+            CurrentPrincipal actor = principalProvider.current();
+            Task task = getActiveTaskForOperation(request.taskId(), actor);
             validateTransferTarget(request);
             String previousAssignee = task.getAssignee();
             clearCandidates(task.getId());
             applyTransferTarget(task.getId(), request);
-            addTransferComment(task, request, previousAssignee);
+            addTransferComment(task, request, previousAssignee, actor.username());
             return taskViewAssembler.fromActiveTask(getActiveTask(task.getId()));
         });
     }
@@ -239,9 +244,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         return task;
     }
 
-    private Task getActiveTaskForOperation(String taskId, String currentAssignee, List<String> currentCandidateGroups) {
+    private Task getActiveTaskForOperation(String taskId, CurrentPrincipal actor) {
         Task task = getActiveTask(taskId);
-        if (!taskViewAssembler.canOperate(task, currentAssignee, currentCandidateGroups)) {
+        boolean servicePrincipal = "SERVICE".equals(actor.principalType());
+        if (!servicePrincipal && !taskViewAssembler.canOperate(task, actor.username())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "Current assignee cannot operate this task");
         }
         return task;
@@ -330,7 +336,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         }
     }
 
-    private void addTransferComment(Task task, TransferTaskRequest request, String previousAssignee) {
+    private void addTransferComment(Task task, TransferTaskRequest request, String previousAssignee, String operator) {
         String target = StringUtils.hasText(request.targetAssignee())
                 ? "assignee:" + request.targetAssignee().trim()
                 : !normalizeList(request.targetCandidateUsers()).isEmpty()
@@ -338,7 +344,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                     : "candidateGroups:" + String.join("|", normalizeList(request.targetCandidateGroups()));
         String message = "from=" + Objects.toString(previousAssignee, "")
                 + ", to=" + target
-                + ", operator=" + request.currentAssignee()
+                + ", operator=" + operator
                 + (StringUtils.hasText(request.comment()) ? ", comment=" + request.comment().trim() : "");
         taskService.addComment(task.getId(), task.getProcessInstanceId(), "transfer", message);
     }

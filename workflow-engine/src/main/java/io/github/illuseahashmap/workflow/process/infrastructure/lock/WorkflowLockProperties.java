@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "workflow.lock")
 public class WorkflowLockProperties {
 
-    private String keyPrefix = "workflow-agent-service:dev";
+    private String keyPrefix = "workflow-agent-service";
     private long waitSeconds = 3;
     private long ttlSeconds = 30;
 

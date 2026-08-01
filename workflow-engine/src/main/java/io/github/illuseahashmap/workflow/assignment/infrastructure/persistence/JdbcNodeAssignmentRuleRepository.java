@@ -8,7 +8,7 @@ import io.github.illuseahashmap.workflow.assignment.domain.AssignmentType;
 import io.github.illuseahashmap.workflow.assignment.domain.EmptyUserStrategy;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRuleRepository;
-import io.github.illuseahashmap.workflow.shared.response.PageResult;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public class JdbcNodeAssignmentRuleRepository implements NodeAssignmentRuleRepos
     }
 
     @Override
-    public PageResult<NodeAssignmentRule> page(RulePageCriteria criteria) {
+    public PageSlice<NodeAssignmentRule> page(RulePageCriteria criteria) {
         SqlCriteria sqlCriteria = buildCriteria(criteria);
         Long total = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM workflow_node_assignment_rule r" + sqlCriteria.where(),
@@ -52,7 +52,7 @@ public class JdbcNodeAssignmentRuleRepository implements NodeAssignmentRuleRepos
                         + sqlCriteria.where() + " ORDER BY priority ASC, id ASC LIMIT ? OFFSET ?",
                 this::mapRule,
                 pageArguments.toArray());
-        return new PageResult<>(total == null ? 0 : total, criteria.pageNum(), criteria.pageSize(), hydrate(rules));
+        return new PageSlice<>(total == null ? 0 : total, criteria.pageNum(), criteria.pageSize(), hydrate(rules));
     }
 
     @Override
@@ -118,6 +118,22 @@ public class JdbcNodeAssignmentRuleRepository implements NodeAssignmentRuleRepos
     @Override
     public void delete(String tenantId, long id) {
         jdbcTemplate.update("DELETE FROM workflow_node_assignment_rule WHERE tenant_id = ? AND id = ?", tenantId, id);
+    }
+
+    @Override
+    public void deleteByProcessDefinition(String tenantId, String processDefinitionId) {
+        jdbcTemplate.update("""
+                DELETE FROM workflow_node_assignment_rule
+                WHERE tenant_id = ? AND process_definition_id = ?
+                """, tenantId, processDefinitionId);
+    }
+
+    @Override
+    public void deleteByProcessDefinitionKey(String tenantId, String processDefinitionKey) {
+        jdbcTemplate.update("""
+                DELETE FROM workflow_node_assignment_rule
+                WHERE tenant_id = ? AND process_definition_key = ?
+                """, tenantId, processDefinitionKey);
     }
 
     @Override

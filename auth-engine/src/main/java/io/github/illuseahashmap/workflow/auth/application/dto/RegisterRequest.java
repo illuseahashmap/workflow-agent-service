@@ -9,13 +9,10 @@ public record RegisterRequest(
         String username,
 
         @NotBlank
-        @Size(min = 5, max = 128)
+        @Size(min = 8, max = 128)
         String password,
 
         @Size(max = 128)
-        String displayName,
-
-        @Size(max = 64)
-        String tenantCode
+        String displayName
 ) {
 }

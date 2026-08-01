@@ -24,5 +24,9 @@ public interface AssignmentRuleService {
 
     void delete(long id);
 
+    void deleteByProcessDefinition(String processDefinitionId);
+
+    void deleteByProcessDefinitionKey(String processDefinitionKey);
+
     AssignmentRuleInheritResult inherit(String processDefinitionId);
 }

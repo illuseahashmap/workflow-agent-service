@@ -58,7 +58,7 @@ public class TaskViewAssembler {
         );
     }
 
-    public boolean canOperate(Task task, String currentAssignee, List<String> currentCandidateGroups) {
+    public boolean canOperate(Task task, String currentAssignee) {
         if (!StringUtils.hasText(currentAssignee)) {
             return false;
         }
@@ -67,9 +67,7 @@ public class TaskViewAssembler {
         }
         List<IdentityLink> identityLinks = taskService.getIdentityLinksForTask(task.getId());
         boolean candidateUserMatched = candidateUsers(identityLinks).contains(currentAssignee);
-        boolean candidateGroupMatched = candidateGroups(identityLinks).stream()
-                .anyMatch(group -> currentCandidateGroups != null && currentCandidateGroups.contains(group));
-        return candidateUserMatched || candidateGroupMatched;
+        return candidateUserMatched;
     }
 
     public void claimIfNeeded(Task task, String currentAssignee) {

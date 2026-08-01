@@ -1,12 +1,23 @@
 package io.github.illuseahashmap.workflow.auth.infrastructure.token;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "workflow.auth.token")
+@Validated
 public class AuthTokenProperties {
 
+    @NotBlank
     private String issuer = "workflow-agent-service";
-    private String secret = "local-dev-auth-token-secret-change-me";
+
+    @NotBlank
+    @Size(min = 32)
+    private String secret;
+
+    @Min(300)
     private long ttlSeconds = 7200;
 
     public String getIssuer() {

@@ -3,6 +3,7 @@ package io.github.illuseahashmap.workflow.auth.infrastructure.token;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.workflow.auth.application.dto.AuthTokenResponse;
+import io.github.illuseahashmap.workflow.auth.application.port.AuthTokenIssuer;
 import io.github.illuseahashmap.workflow.auth.domain.AuthUser;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
-public class AuthTokenService {
+public class AuthTokenService implements AuthTokenIssuer {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final String TOKEN_TYPE = "Bearer";
@@ -33,6 +34,11 @@ public class AuthTokenService {
     }
 
     public AuthTokenResponse issue(AuthUser user, Set<String> roles, Set<String> permissions) {
+        return issue(user, user.tenantCode(), roles, permissions);
+    }
+
+    @Override
+    public AuthTokenResponse issue(AuthUser user, String tenantCode, Set<String> roles, Set<String> permissions) {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(properties.getTtlSeconds());
         AuthTokenPayload payload = new AuthTokenPayload(
@@ -40,7 +46,7 @@ public class AuthTokenService {
                 user.userId(),
                 user.username(),
                 user.displayName(),
-                user.tenantCode(),
+                tenantCode,
                 now.getEpochSecond(),
                 expiresAt.getEpochSecond(),
                 roles,
@@ -55,7 +61,7 @@ public class AuthTokenService {
                 user.userId(),
                 user.username(),
                 user.displayName(),
-                user.tenantCode(),
+                tenantCode,
                 roles,
                 permissions
         );

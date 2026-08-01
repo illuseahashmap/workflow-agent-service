@@ -1,10 +1,10 @@
 package io.github.illuseahashmap.workflow.assignment.application.impl;
 
 import io.github.illuseahashmap.rules.ConditionNode;
-import io.github.illuseahashmap.rules.DefaultRuleEngine;
 import io.github.illuseahashmap.rules.LogicalCondition;
 import io.github.illuseahashmap.rules.RuleContext;
 import io.github.illuseahashmap.rules.RuleDefinition;
+import io.github.illuseahashmap.rules.RuleEngine;
 import io.github.illuseahashmap.rules.RuleEvaluationResult;
 import io.github.illuseahashmap.rules.RuleLogicOperator;
 import io.github.illuseahashmap.rules.VariableCondition;
@@ -20,14 +20,18 @@ import io.github.illuseahashmap.workflow.assignment.domain.AssignmentType;
 import io.github.illuseahashmap.workflow.assignment.domain.EmptyUserStrategy;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRuleRepository;
+import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
-import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,12 +41,17 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
 
     private final NodeAssignmentRuleRepository ruleRepository;
     private final ProcessDefinitionCatalog definitionCatalog;
-    private final DefaultRuleEngine ruleEngine = new DefaultRuleEngine();
+    private final RuleEngine ruleEngine;
+    private final TenantProvider tenantProvider;
 
     public AssignmentRuleServiceImpl(NodeAssignmentRuleRepository ruleRepository,
-                                     ProcessDefinitionCatalog definitionCatalog) {
+                                     ProcessDefinitionCatalog definitionCatalog,
+                                     RuleEngine ruleEngine,
+                                     TenantProvider tenantProvider) {
         this.ruleRepository = ruleRepository;
         this.definitionCatalog = definitionCatalog;
+        this.ruleEngine = ruleEngine;
+        this.tenantProvider = tenantProvider;
     }
 
     @Override
@@ -52,10 +61,11 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
                                                AssignmentType assignmentType, EmptyUserStrategy emptyUserStrategy) {
         int normalizedPageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
         int normalizedPageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
-        return ruleRepository.page(new NodeAssignmentRuleRepository.RulePageCriteria(
-                normalizedPageNum, normalizedPageSize, TenantContext.current().tenantId(),
+        PageSlice<NodeAssignmentRule> page = ruleRepository.page(new NodeAssignmentRuleRepository.RulePageCriteria(
+                normalizedPageNum, normalizedPageSize, tenantProvider.current().tenantId(),
                 processDefinitionKey, processDefinitionId, version, taskDefinitionKey,
                 variableName, assignmentType, emptyUserStrategy));
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(), page.items());
     }
 
     @Override
@@ -74,23 +84,24 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NodeAssignmentRule create(AssignmentRuleCommand command) {
-        String tenantId = TenantContext.current().tenantId();
+        String tenantId = tenantProvider.current().tenantId();
         return ruleRepository.save(toRule(null, tenantId, command));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(long id, AssignmentRuleCommand command) {
-        String tenantId = TenantContext.current().tenantId();
-        ruleRepository.findById(tenantId, id)
+        String tenantId = tenantProvider.current().tenantId();
+        NodeAssignmentRule existingRule = ruleRepository.findById(tenantId, id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Assignment rule does not exist"));
+        validateBindingUnchanged(existingRule, command);
         ruleRepository.update(toRule(id, tenantId, command));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(long id) {
-        String tenantId = TenantContext.current().tenantId();
+        String tenantId = tenantProvider.current().tenantId();
         ruleRepository.findById(tenantId, id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Assignment rule does not exist"));
         ruleRepository.delete(tenantId, id);
@@ -98,12 +109,23 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void deleteByProcessDefinition(String processDefinitionId) {
+        String tenantId = tenantProvider.current().tenantId();
+        ruleRepository.deleteByProcessDefinition(tenantId, processDefinitionId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteByProcessDefinitionKey(String processDefinitionKey) {
+        String tenantId = tenantProvider.current().tenantId();
+        ruleRepository.deleteByProcessDefinitionKey(tenantId, processDefinitionKey);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public AssignmentRuleInheritResult inherit(String processDefinitionId) {
-        String tenantId = TenantContext.current().tenantId();
+        String tenantId = tenantProvider.current().tenantId();
         ProcessDefinitionCatalog.DefinitionInfo target = requireDefinition(tenantId, processDefinitionId);
-        if (ruleRepository.count(tenantId, processDefinitionId) > 0) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Target process definition already has assignment rules");
-        }
         ProcessDefinitionCatalog.DefinitionInfo source = definitionCatalog.findVersions(tenantId, target.key()).stream()
                 .filter(candidate -> candidate.version() < target.version())
                 .filter(candidate -> ruleRepository.count(tenantId, candidate.id()) > 0)
@@ -112,7 +134,14 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
                         "No historical assignment rule version exists"));
         int copied = 0;
         List<String> skippedReasons = new ArrayList<>();
+        Set<String> configuredTaskKeys = ruleRepository.findByProcessDefinition(tenantId, target.id()).stream()
+                .map(NodeAssignmentRule::taskDefinitionKey)
+                .collect(Collectors.toCollection(HashSet::new));
         for (NodeAssignmentRule sourceRule : ruleRepository.findByProcessDefinition(tenantId, source.id())) {
+            if (configuredTaskKeys.contains(sourceRule.taskDefinitionKey())) {
+                skippedReasons.add(sourceRule.taskDefinitionKey() + ": target task already has assignment rules");
+                continue;
+            }
             try {
                 validateAssignmentType(target.id(), sourceRule.taskDefinitionKey(), sourceRule.assignmentType());
                 ruleRepository.save(copyForDefinition(sourceRule, target));
@@ -138,6 +167,14 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
                 command.assignmentType(), command.emptyUserStrategy(),
                 command.enabled() == null || command.enabled(), normalize(command.description()),
                 conditions, targets, null, null);
+    }
+
+    private void validateBindingUnchanged(NodeAssignmentRule existingRule, AssignmentRuleCommand command) {
+        if (!existingRule.processDefinitionId().equals(command.processDefinitionId().trim())
+                || !existingRule.taskDefinitionKey().equals(command.taskDefinitionKey().trim())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Process definition version and task binding cannot be changed; create a new rule instead");
+        }
     }
 
     private ProcessDefinitionCatalog.DefinitionInfo requireDefinition(String tenantId, String processDefinitionId) {

@@ -5,7 +5,7 @@ import java.util.List;
 
 public record TransferTaskRequest(
         @NotBlank String taskId,
-        @NotBlank String currentAssignee,
+        String currentAssignee,
         List<String> currentCandidateGroups,
         String targetAssignee,
         List<String> targetCandidateUsers,

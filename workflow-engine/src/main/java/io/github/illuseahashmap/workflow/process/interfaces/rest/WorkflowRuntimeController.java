@@ -13,6 +13,7 @@ import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeServ
 import io.github.illuseahashmap.workflow.process.application.WorkflowAdministrationService;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionDiagramView;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,36 +35,43 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/process/start")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
     public ApiResponse<StartProcessResult> start(@Valid @RequestBody StartProcessRequest request) {
         return ApiResponse.ok(workflowRuntimeService.start(request));
     }
 
     @GetMapping("/process/status")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:read')")
     public ApiResponse<ProcessStatusView> processStatus(@RequestParam String processInstanceId) {
         return ApiResponse.ok(workflowRuntimeService.getProcessStatus(processInstanceId));
     }
 
     @GetMapping("/task/status")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:read')")
     public ApiResponse<TaskView> taskStatus(@RequestParam String taskId) {
         return ApiResponse.ok(workflowRuntimeService.getTaskStatus(taskId));
     }
 
     @PostMapping("/task/approve")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
     public ApiResponse<ApproveTaskResult> approve(@Valid @RequestBody ApproveTaskRequest request) {
         return ApiResponse.ok(workflowRuntimeService.approve(request));
     }
 
     @PostMapping("/task/reject")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
     public ApiResponse<ApproveTaskResult> reject(@Valid @RequestBody RejectTaskRequest request) {
         return ApiResponse.ok(workflowRuntimeService.reject(request));
     }
 
     @PostMapping("/task/transfer")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
     public ApiResponse<TaskView> transfer(@Valid @RequestBody TransferTaskRequest request) {
         return ApiResponse.ok(workflowRuntimeService.transfer(request));
     }
 
     @GetMapping("/process/definition/diagram")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
     public ApiResponse<ProcessDefinitionDiagramView> definitionDiagram(
             @RequestParam String processDefinitionKey,
             @RequestParam(required = false) Integer version,

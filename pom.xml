@@ -24,13 +24,13 @@
         <module>rules-engine</module>
         <module>agent-engine</module>
         <module>workflow-engine</module>
+        <module>workflow-boot</module>
     </modules>
 
     <properties>
         <java.version>25</java.version>
         <flowable.version>8.0.0</flowable.version>
-        <mybatis.version>3.0.5</mybatis.version>
-        <lombok.version>1.18.42</lombok.version>
+        <archunit.version>1.4.2</archunit.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -42,20 +42,56 @@
                 <artifactId>flowable-spring-boot-starter-process</artifactId>
                 <version>${flowable.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.mybatis.spring.boot</groupId>
-                <artifactId>mybatis-spring-boot-starter</artifactId>
-                <version>${mybatis.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>${lombok.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>enforce-build-environment</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,26)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.9,4)</version>
+                                </requireMavenVersion>
+                                <banDuplicatePomDependencyVersions/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>verify-java-conventions</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                            <failOnViolation>true</failOnViolation>
+                            <consoleOutput>true</consoleOutput>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

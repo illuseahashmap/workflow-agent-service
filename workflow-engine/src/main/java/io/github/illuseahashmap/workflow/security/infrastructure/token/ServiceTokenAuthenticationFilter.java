@@ -21,6 +21,8 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -73,7 +75,7 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
                     payload, client, request.getMethod(), request.getRequestURI(), bodySha256);
             TenantContext.set(result.tenantInfo());
             ServiceTokenContext.set(new ServiceTokenContext.ServiceTokenPrincipal(result.clientCode(), result.tokenVersion()));
-            CurrentPrincipalContext.set(new CurrentPrincipal(
+            CurrentPrincipal principal = new CurrentPrincipal(
                     "SERVICE",
                     result.clientCode(),
                     result.clientCode(),
@@ -81,7 +83,10 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
                     result.tenantInfo().tenantCode(),
                     Set.of(),
                     Set.of()
-            ));
+            );
+            CurrentPrincipalContext.set(principal);
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    principal, null, java.util.List.of(new SimpleGrantedAuthority("ROLE_SERVICE"))));
             filterChain.doFilter(wrappedRequest, response);
         } catch (BusinessException exception) {
             writeError(response, exception);
@@ -89,6 +94,7 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
             TenantContext.clear();
             ServiceTokenContext.clear();
             CurrentPrincipalContext.clear();
+            SecurityContextHolder.clearContext();
         }
     }
 
