@@ -1,4 +1,4 @@
-package io.github.illuseahashmap.workflow.tenant.domain;
+package io.github.illuseahashmap.workflow.shared.context;
 
 public final class TenantContext {
 

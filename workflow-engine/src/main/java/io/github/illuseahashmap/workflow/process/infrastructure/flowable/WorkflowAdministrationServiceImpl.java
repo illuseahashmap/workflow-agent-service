@@ -14,7 +14,7 @@ import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanc
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;

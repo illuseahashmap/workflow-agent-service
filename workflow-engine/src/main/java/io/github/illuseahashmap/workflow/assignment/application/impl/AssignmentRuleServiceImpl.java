@@ -23,7 +23,7 @@ import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRuleRep
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

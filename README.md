@@ -17,9 +17,18 @@ Open workflow platform backend based on Spring Boot, Flowable, PostgreSQL, and R
 ```text
 workflow-agent-service
 |-- pom.xml
+|-- shared-kernel    Shared response, exception, context, and principal contracts
+|-- auth-engine      User login, registration, tenant membership, roles, menus, and permissions
 |-- workflow-engine   Spring Boot application and Flowable adapter
 |-- rules-engine      Reusable condition and priority rule engine
 `-- agent-engine      Reserved for future agent and LLM capabilities
+```
+
+Module dependency direction:
+
+```text
+workflow-engine --> auth-engine --> shared-kernel
+workflow-engine --> rules-engine
 ```
 
 `workflow-engine` follows bounded-context-oriented lightweight DDD:
@@ -44,11 +53,14 @@ io.github.illuseahashmap.workflow
 |   |-- application.port
 |   |-- domain
 |   `-- infrastructure.persistence / infrastructure.token / infrastructure.web
-|-- shared
 `-- config
 ```
 
 Flowable, JDBC, Redis, and servlet APIs remain in infrastructure adapters. Application contracts describe use cases, and domain packages contain workflow-independent concepts and repository ports.
+
+`shared-kernel` contains dependency-light contracts that can be used by multiple engines, such as API responses, business exceptions, tenant context, and current principal models.
+
+`auth-engine` is the long-term boundary for browser/user authentication and authorization: registration, login, tenant membership, roles, menus, and permission checks. The existing `workflow-engine.security.infrastructure.token` package remains the service-to-service token adapter until a dedicated gateway or service-auth module is introduced.
 
 ## Capabilities
 

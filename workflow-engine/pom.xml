@@ -18,6 +18,16 @@
     <dependencies>
         <dependency>
             <groupId>io.github.illuseahashmap</groupId>
+            <artifactId>shared-kernel</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.illuseahashmap</groupId>
+            <artifactId>auth-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.illuseahashmap</groupId>
             <artifactId>rules-engine</artifactId>
             <version>${project.version}</version>
         </dependency>

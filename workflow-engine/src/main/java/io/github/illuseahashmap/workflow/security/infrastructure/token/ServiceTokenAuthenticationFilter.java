@@ -3,9 +3,11 @@ package io.github.illuseahashmap.workflow.security.infrastructure.token;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.workflow.security.domain.ServiceClient;
 import io.github.illuseahashmap.workflow.security.domain.ServiceTokenContext;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalContext;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import io.github.illuseahashmap.workflow.security.infrastructure.web.CachedBodyHttpServletRequest;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,8 +17,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -45,6 +50,10 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
         if (!properties.isEnabled() || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return true;
+        }
         String path = request.getRequestURI();
         return properties.getPublicPaths().stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
@@ -64,12 +73,22 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
                     payload, client, request.getMethod(), request.getRequestURI(), bodySha256);
             TenantContext.set(result.tenantInfo());
             ServiceTokenContext.set(new ServiceTokenContext.ServiceTokenPrincipal(result.clientCode(), result.tokenVersion()));
+            CurrentPrincipalContext.set(new CurrentPrincipal(
+                    "SERVICE",
+                    result.clientCode(),
+                    result.clientCode(),
+                    result.clientCode(),
+                    result.tenantInfo().tenantCode(),
+                    Set.of(),
+                    Set.of()
+            ));
             filterChain.doFilter(wrappedRequest, response);
         } catch (BusinessException exception) {
             writeError(response, exception);
         } finally {
             TenantContext.clear();
             ServiceTokenContext.clear();
+            CurrentPrincipalContext.clear();
         }
     }
 

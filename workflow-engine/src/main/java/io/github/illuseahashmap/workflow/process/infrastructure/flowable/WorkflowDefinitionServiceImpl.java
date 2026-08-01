@@ -8,13 +8,15 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
-import io.github.illuseahashmap.workflow.security.domain.ServiceTokenContext;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Deployment;
@@ -78,7 +80,10 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
         if (definition == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Process definition version does not exist");
         }
-        String activatedBy = ServiceTokenContext.current().clientCode();
+        CurrentPrincipal principal = CurrentPrincipalContext.current();
+        String activatedBy = StringUtils.hasText(principal.username())
+                ? principal.username()
+                : principal.principalId();
         jdbcTemplate.update("""
                 INSERT INTO workflow_active_version
                     (tenant_id, process_definition_key, process_definition_id, version, activated_by, activated_at)
@@ -158,10 +163,21 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
                 definition.getName(),
                 definition.getVersion(),
                 definition.getDeploymentId(),
+                getDeploymentTime(definition.getDeploymentId()),
                 definition.getTenantId(),
                 active,
                 includeXml ? readBpmnXml(definition) : null
         );
+    }
+
+    private OffsetDateTime getDeploymentTime(String deploymentId) {
+        Deployment deployment = repositoryService.createDeploymentQuery()
+                .deploymentId(deploymentId)
+                .singleResult();
+        if (deployment == null || deployment.getDeploymentTime() == null) {
+            return null;
+        }
+        return deployment.getDeploymentTime().toInstant().atOffset(ZoneOffset.UTC);
     }
 
     private boolean isActive(ProcessDefinition definition) {

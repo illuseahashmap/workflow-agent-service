@@ -19,6 +19,8 @@
     <description>Open workflow platform service based on Flowable.</description>
 
     <modules>
+        <module>shared-kernel</module>
+        <module>auth-engine</module>
         <module>rules-engine</module>
         <module>agent-engine</module>
         <module>workflow-engine</module>

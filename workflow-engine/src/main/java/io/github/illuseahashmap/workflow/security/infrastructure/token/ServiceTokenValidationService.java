@@ -6,7 +6,7 @@ import io.github.illuseahashmap.workflow.security.application.port.ServiceClient
 import io.github.illuseahashmap.workflow.security.domain.ServiceClient;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;

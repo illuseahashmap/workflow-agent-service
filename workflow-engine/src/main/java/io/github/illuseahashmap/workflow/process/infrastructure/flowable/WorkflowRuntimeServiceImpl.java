@@ -13,7 +13,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskReq
 import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanceLock;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
-import io.github.illuseahashmap.workflow.tenant.domain.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

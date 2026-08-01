@@ -1,6 +1,9 @@
 spring:
   application:
     name: workflow-agent-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: ${WORKFLOW_DB_URL:jdbc:postgresql://localhost:5432/workflow_agent}
     username: ${WORKFLOW_DB_USERNAME:workflow_agent}
@@ -33,6 +36,13 @@ workflow:
     public-paths:
       - /actuator/health
       - /actuator/info
+      - /auth/register
+      - /auth/login
+  auth:
+    token:
+      issuer: workflow-agent-service
+      secret: ${WORKFLOW_AUTH_TOKEN_SECRET:local-dev-auth-token-secret-change-me}
+      ttl-seconds: ${WORKFLOW_AUTH_TOKEN_TTL_SECONDS:7200}
 
 management:
   endpoints:
