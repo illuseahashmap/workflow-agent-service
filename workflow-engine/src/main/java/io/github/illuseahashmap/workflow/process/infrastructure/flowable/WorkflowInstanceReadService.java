@@ -1,5 +1,6 @@
 package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
+import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
 import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleService;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentTargetType;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
@@ -346,10 +347,12 @@ class WorkflowInstanceReadService {
     private List<ProcessInstanceDetailView.VariableItem> queryVariables(String processInstanceId) {
         Map<String, ProcessInstanceDetailView.VariableItem> variables = new HashMap<>();
         historyService.createHistoricVariableInstanceQuery().processInstanceId(processInstanceId).list().stream()
+                .filter(variable -> !ProcessVariablePolicy.isInternalVariable(variable.getVariableName()))
                 .map(this::toVariableItem)
                 .forEach(variable -> variables.put(variableKey(variable), variable));
         if (runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).count() > 0) {
             runtimeService.createVariableInstanceQuery().processInstanceId(processInstanceId).list().stream()
+                    .filter(variable -> !ProcessVariablePolicy.isInternalVariable(variable.getName()))
                     .map(this::toVariableItem)
                     .forEach(variable -> variables.put(variableKey(variable), variable));
         }

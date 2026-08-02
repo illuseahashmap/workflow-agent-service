@@ -29,4 +29,12 @@ class ProcessVariablePolicyTest {
                 .containsEntry("tenantId", "tenant-id")
                 .containsEntry("tenantCode", "tenant-code");
     }
+
+    @Test
+    void rejectsTechnicalParticipantVariablesProvidedByClient() {
+        assertThatThrownBy(() -> ProcessVariablePolicy.clientVariables(
+                Map.of("managerApproval_assignee", "alice")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("participantAssignments");
+    }
 }

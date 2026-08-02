@@ -5,11 +5,16 @@ import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeServ
 import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskResult;
+import io.github.illuseahashmap.workflow.process.application.dto.ParticipantAssignment;
+import io.github.illuseahashmap.workflow.process.application.dto.ParticipantRequirementView;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessParticipantRequirementsRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessStatusView;
 import io.github.illuseahashmap.workflow.process.application.dto.RejectTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
+import io.github.illuseahashmap.workflow.process.application.dto.TaskParticipantAction;
+import io.github.illuseahashmap.workflow.process.application.dto.TaskParticipantRequirementsRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
 import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
@@ -26,6 +31,7 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.HistoryService;
+import org.flowable.engine.IdentityService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -50,9 +56,11 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private final RuntimeService runtimeService;
     private final TaskService taskService;
     private final HistoryService historyService;
+    private final IdentityService identityService;
     private final RepositoryService repositoryService;
     private final WorkflowDefinitionService definitionService;
     private final TaskViewAssembler taskViewAssembler;
+    private final FlowableParticipantAssignmentCoordinator participantCoordinator;
     private final ProcessInstanceTransactionExecutor transactionExecutor;
     private final CurrentPrincipalProvider principalProvider;
     private final TenantProvider tenantProvider;
@@ -60,18 +68,22 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     public WorkflowRuntimeServiceImpl(RuntimeService runtimeService,
                                       TaskService taskService,
                                       HistoryService historyService,
+                                      IdentityService identityService,
                                       RepositoryService repositoryService,
                                       WorkflowDefinitionService definitionService,
                                       TaskViewAssembler taskViewAssembler,
+                                      FlowableParticipantAssignmentCoordinator participantCoordinator,
                                       ProcessInstanceTransactionExecutor transactionExecutor,
                                       CurrentPrincipalProvider principalProvider,
                                       TenantProvider tenantProvider) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
         this.historyService = historyService;
+        this.identityService = identityService;
         this.repositoryService = repositoryService;
         this.definitionService = definitionService;
         this.taskViewAssembler = taskViewAssembler;
+        this.participantCoordinator = participantCoordinator;
         this.transactionExecutor = transactionExecutor;
         this.principalProvider = principalProvider;
         this.tenantProvider = tenantProvider;
@@ -81,24 +93,39 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     @Transactional(rollbackFor = Exception.class)
     public StartProcessResult start(StartProcessRequest request) {
         TenantContext.TenantInfo tenant = tenantProvider.current();
-        String processDefinitionId;
-        if (StringUtils.hasText(request.processDefinitionId())) {
-            processDefinitionId = request.processDefinitionId().trim();
-            validateProcessDefinitionTenant(processDefinitionId, tenant.tenantId());
-        } else {
-            processDefinitionId = definitionService.getActiveVersion(request.processDefinitionKey())
-                    .processDefinitionId();
+        String processDefinitionId = resolveProcessDefinitionId(
+                request.processDefinitionKey(), request.processDefinitionId(), tenant.tenantId());
+        Map<String, Object> variables = ProcessVariablePolicy.clientVariables(request.variables());
+        variables.putAll(participantCoordinator.prepareForStart(
+                tenant.tenantId(), processDefinitionId, variables, request.participantAssignments()));
+        CurrentPrincipal actor = principalProvider.current();
+        ProcessInstance instance;
+        identityService.setAuthenticatedUserId(actor.username());
+        try {
+            instance = runtimeService.startProcessInstanceById(
+                    processDefinitionId,
+                    request.businessKey(),
+                    ProcessVariablePolicy.enrichTrustedWithTenant(variables, tenant));
+        } finally {
+            identityService.setAuthenticatedUserId(null);
         }
-        ProcessInstance instance = runtimeService.startProcessInstanceById(
-                processDefinitionId,
-                request.businessKey(),
-                ProcessVariablePolicy.enrichWithTenant(request.variables(), tenant));
         return new StartProcessResult(
                 instance.getProcessInstanceId(),
                 instance.getProcessDefinitionId(),
                 instance.getProcessDefinitionKey(),
                 instance.getBusinessKey(),
                 activeTasks(instance.getProcessInstanceId()));
+    }
+
+    @Override
+    public List<ParticipantRequirementView> getStartParticipantRequirements(
+            ProcessParticipantRequirementsRequest request) {
+        TenantContext.TenantInfo tenant = tenantProvider.current();
+        String processDefinitionId = resolveProcessDefinitionId(
+                request.processDefinitionKey(), request.processDefinitionId(), tenant.tenantId());
+        return participantCoordinator.requirementsForStart(
+                tenant.tenantId(), processDefinitionId,
+                ProcessVariablePolicy.clientVariables(request.variables()));
     }
 
     @Override
@@ -149,6 +176,17 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     }
 
     @Override
+    public List<ParticipantRequirementView> getTaskParticipantRequirements(
+            TaskParticipantRequirementsRequest request) {
+        Task task = getActiveTask(request.taskId());
+        Map<String, Object> variables = processVariablesWithClientOverrides(
+                task.getProcessInstanceId(), request.variables());
+        return participantCoordinator.requirementsForTask(
+                tenantProvider.current().tenantId(), task, request.action(),
+                request.targetActivityId(), variables);
+    }
+
+    @Override
     public ApproveTaskResult approve(ApproveTaskRequest request) {
         String processInstanceId = getProcessInstanceIdForTask(request.taskId());
         return transactionExecutor.execute(processInstanceId, () -> {
@@ -156,7 +194,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
             Task task = getActiveTaskForOperation(request.taskId(), actor);
             taskViewAssembler.claimIfNeeded(task, actor.username());
             addComment(task, "agree", request.comment());
-            taskService.complete(task.getId(), ProcessVariablePolicy.clientVariables(request.variables()));
+            Map<String, Object> variables = completionVariables(
+                    task, TaskParticipantAction.APPROVE, null,
+                    request.variables(), request.participantAssignments());
+            taskService.complete(task.getId(), variables);
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
@@ -171,7 +212,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                 taskService.setAssignee(task.getId(), request.currentAssignee());
             }
             addComment(task, "autoComplete", request.comment());
-            taskService.complete(task.getId(), ProcessVariablePolicy.clientVariables(request.variables()));
+            Map<String, Object> variables = completionVariables(
+                    task, TaskParticipantAction.APPROVE, null,
+                    request.variables(), request.participantAssignments());
+            taskService.complete(task.getId(), variables);
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
@@ -184,6 +228,14 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
             Task task = getActiveTaskForOperation(request.taskId(), actor);
             String targetActivityId = resolveRejectTarget(task, request.targetActivityId());
             Map<String, Object> variables = buildRejectVariables(request, task.getProcessDefinitionId(), targetActivityId);
+            Map<String, Object> contextVariables = processVariablesWithClientOverrides(
+                    processInstanceId, request.variables());
+            if (CollectionUtils.isEmpty(request.targetAssignees())
+                    && CollectionUtils.isEmpty(request.targetCandidateGroups())) {
+                variables.putAll(participantCoordinator.prepareForTask(
+                        tenantProvider.current().tenantId(), task, TaskParticipantAction.REJECT,
+                        targetActivityId, contextVariables, request.participantAssignments()));
+            }
             if (!variables.isEmpty()) {
                 runtimeService.setVariables(processInstanceId, variables);
             }
@@ -230,6 +282,35 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         if (definition == null || !Objects.equals(tenantId, definition.getTenantId())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Process definition does not exist");
         }
+    }
+
+    private String resolveProcessDefinitionId(
+            String processDefinitionKey, String requestedDefinitionId, String tenantId) {
+        if (StringUtils.hasText(requestedDefinitionId)) {
+            String processDefinitionId = requestedDefinitionId.trim();
+            validateProcessDefinitionTenant(processDefinitionId, tenantId);
+            return processDefinitionId;
+        }
+        return definitionService.getActiveVersion(processDefinitionKey).processDefinitionId();
+    }
+
+    private Map<String, Object> completionVariables(
+            Task task, TaskParticipantAction action, String targetActivityId,
+            Map<String, Object> clientVariables, List<ParticipantAssignment> participantAssignments) {
+        Map<String, Object> completionVariables = ProcessVariablePolicy.clientVariables(clientVariables);
+        Map<String, Object> contextVariables = processVariablesWithClientOverrides(
+                task.getProcessInstanceId(), completionVariables);
+        completionVariables.putAll(participantCoordinator.prepareForTask(
+                tenantProvider.current().tenantId(), task, action,
+                targetActivityId, contextVariables, participantAssignments));
+        return completionVariables;
+    }
+
+    private Map<String, Object> processVariablesWithClientOverrides(
+            String processInstanceId, Map<String, Object> clientVariables) {
+        Map<String, Object> variables = new HashMap<>(runtimeService.getVariables(processInstanceId));
+        variables.putAll(ProcessVariablePolicy.clientVariables(clientVariables));
+        return variables;
     }
 
     private String getProcessInstanceIdForTask(String taskId) {

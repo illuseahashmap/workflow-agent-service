@@ -1,8 +1,10 @@
 package io.github.illuseahashmap.workflow.auth.infrastructure.persistence;
 
 import io.github.illuseahashmap.workflow.auth.domain.AuthMembershipRepository;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Arrays;
@@ -95,6 +97,64 @@ public class JdbcAuthMembershipRepository implements AuthMembershipRepository {
                         readStringSet(resultSet, "global_role_codes"),
                         resultSet.getObject("joined_at", java.time.OffsetDateTime.class)))
                 .list();
+    }
+
+    @Override
+    public PageSlice<TenantMember> pageEnabledMembers(
+            String tenantCode, String keyword, int pageNumber, int pageSize) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        String filter = """
+                FROM auth_user_tenant membership
+                JOIN auth_user users ON users.user_id = membership.user_id
+                WHERE membership.tenant_code = :tenantCode
+                  AND membership.enabled = 1
+                  AND users.enabled = 1
+                  AND (:keyword = '' OR users.username ILIKE :pattern OR users.display_name ILIKE :pattern)
+                """;
+        long total = jdbcClient.sql("SELECT COUNT(*) " + filter)
+                .param("tenantCode", tenantCode)
+                .param("keyword", normalizedKeyword)
+                .param("pattern", "%" + normalizedKeyword + "%")
+                .query(Long.class)
+                .single();
+        List<TenantMember> records = jdbcClient.sql("""
+                        SELECT users.user_id, users.username, users.display_name,
+                               users.enabled AS user_enabled, membership.enabled AS membership_enabled,
+                               ARRAY[]::VARCHAR[] AS tenant_role_codes,
+                               ARRAY[]::VARCHAR[] AS global_role_codes,
+                               membership.joined_at
+                        """ + filter + """
+                        ORDER BY users.display_name, users.username
+                        LIMIT :pageSize OFFSET :offset
+                        """)
+                .param("tenantCode", tenantCode)
+                .param("keyword", normalizedKeyword)
+                .param("pattern", "%" + normalizedKeyword + "%")
+                .param("pageSize", pageSize)
+                .param("offset", (pageNumber - 1) * pageSize)
+                .query(this::mapMember)
+                .list();
+        return new PageSlice<>(total, pageNumber, pageSize, records);
+    }
+
+    @Override
+    public Set<String> findEnabledUsernames(String tenantCode, Collection<String> usernames) {
+        if (usernames == null || usernames.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(jdbcClient.sql("""
+                        SELECT users.username
+                        FROM auth_user_tenant membership
+                        JOIN auth_user users ON users.user_id = membership.user_id
+                        WHERE membership.tenant_code = :tenantCode
+                          AND membership.enabled = 1
+                          AND users.enabled = 1
+                          AND users.username IN (:usernames)
+                        """)
+                .param("tenantCode", tenantCode)
+                .param("usernames", usernames)
+                .query(String.class)
+                .list());
     }
 
     @Override
@@ -197,6 +257,18 @@ public class JdbcAuthMembershipRepository implements AuthMembershipRepository {
                 resultSet.getInt("tenant_enabled") == 1,
                 resultSet.getObject("joined_at", java.time.OffsetDateTime.class)
         );
+    }
+
+    private TenantMember mapMember(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new TenantMember(
+                resultSet.getString("user_id"),
+                resultSet.getString("username"),
+                resultSet.getString("display_name"),
+                resultSet.getInt("user_enabled") == 1,
+                resultSet.getInt("membership_enabled") == 1,
+                readStringSet(resultSet, "tenant_role_codes"),
+                readStringSet(resultSet, "global_role_codes"),
+                resultSet.getObject("joined_at", java.time.OffsetDateTime.class));
     }
 
     private Set<String> readStringSet(ResultSet resultSet, String column) throws SQLException {

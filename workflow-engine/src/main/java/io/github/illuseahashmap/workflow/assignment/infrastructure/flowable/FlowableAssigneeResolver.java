@@ -34,19 +34,23 @@ public class FlowableAssigneeResolver {
         if (configured != null) {
             return configured.toString();
         }
+        NodeAssignmentRule rule = matchRule(execution, taskKey);
+        if (rule != null) {
+            List<String> assignees = rule.targetValues(AssignmentTargetType.ASSIGNEE);
+            if (!assignees.isEmpty()) {
+                return assignees.getFirst();
+            }
+            String fallback = rule.targetValues(AssignmentTargetType.FALLBACK_ASSIGNEE)
+                    .stream().findFirst().orElse(null);
+            if (fallback != null) {
+                return fallback;
+            }
+        }
         List<String> personnel = resolvePersonnel(execution, taskKey);
         if (!personnel.isEmpty()) {
             return personnel.getFirst();
         }
-        NodeAssignmentRule rule = matchRule(execution, taskKey);
-        if (rule == null) {
-            return null;
-        }
-        List<String> assignees = rule.targetValues(AssignmentTargetType.ASSIGNEE);
-        if (!assignees.isEmpty()) {
-            return assignees.getFirst();
-        }
-        return rule.targetValues(AssignmentTargetType.FALLBACK_ASSIGNEE).stream().findFirst().orElse(null);
+        return null;
     }
 
     public String getCandidates(DelegateExecution execution) {
@@ -55,12 +59,18 @@ public class FlowableAssigneeResolver {
         if (configured != null) {
             return join(configured);
         }
+        NodeAssignmentRule rule = matchRule(execution, taskKey);
+        if (rule != null) {
+            List<String> candidates = rule.targetValues(AssignmentTargetType.CANDIDATE_USER);
+            if (!candidates.isEmpty()) {
+                return String.join(",", candidates);
+            }
+        }
         List<String> personnel = resolvePersonnel(execution, taskKey);
         if (!personnel.isEmpty()) {
             return String.join(",", personnel);
         }
-        NodeAssignmentRule rule = matchRule(execution, taskKey);
-        return rule == null ? null : String.join(",", rule.targetValues(AssignmentTargetType.CANDIDATE_USER));
+        return null;
     }
 
     public String getCandidateGroups(DelegateExecution execution) {
@@ -72,7 +82,13 @@ public class FlowableAssigneeResolver {
             return join(configured);
         }
         NodeAssignmentRule rule = matchRule(execution, taskKey);
-        return rule == null ? null : String.join(",", rule.targetValues(AssignmentTargetType.CANDIDATE_GROUP));
+        if (rule != null) {
+            List<String> groups = rule.targetValues(AssignmentTargetType.CANDIDATE_GROUP);
+            if (!groups.isEmpty()) {
+                return String.join(",", groups);
+            }
+        }
+        return null;
     }
 
     public List<String> getAssigneeList(DelegateExecution execution) {
@@ -83,12 +99,18 @@ public class FlowableAssigneeResolver {
         if (configured instanceof Collection<?> collection) {
             return collection.stream().map(Object::toString).filter(StringUtils::hasText).toList();
         }
+        NodeAssignmentRule rule = matchRule(execution, taskKey);
+        if (rule != null) {
+            List<String> countersignUsers = rule.targetValues(AssignmentTargetType.COUNTERSIGN_USER);
+            if (!countersignUsers.isEmpty()) {
+                return countersignUsers;
+            }
+        }
         List<String> personnel = resolvePersonnel(execution, taskKey);
         if (!personnel.isEmpty()) {
             return personnel;
         }
-        NodeAssignmentRule rule = matchRule(execution, taskKey);
-        return rule == null ? List.of() : rule.targetValues(AssignmentTargetType.COUNTERSIGN_USER);
+        return List.of();
     }
 
     private NodeAssignmentRule matchRule(DelegateExecution execution, String taskKey) {
