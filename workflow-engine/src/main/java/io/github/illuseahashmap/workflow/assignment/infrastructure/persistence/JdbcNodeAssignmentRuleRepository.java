@@ -10,7 +10,6 @@ import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRuleRepository;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,7 +88,7 @@ public class JdbcNodeAssignmentRuleRepository implements NodeAssignmentRuleRepos
                          task_definition_key, priority, assignment_type, empty_user_strategy,
                          enabled, description, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """, Statement.RETURN_GENERATED_KEYS);
+                    """, new String[] {"id"});
             bindRule(statement, rule, false);
             return statement;
         }, keyHolder);

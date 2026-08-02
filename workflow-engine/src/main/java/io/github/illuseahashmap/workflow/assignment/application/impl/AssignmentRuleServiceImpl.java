@@ -190,7 +190,7 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
     private void validateAssignmentType(String processDefinitionId, String taskDefinitionKey, AssignmentType actual) {
         try {
             AssignmentType expected = definitionCatalog.expectedAssignmentType(processDefinitionId, taskDefinitionKey);
-            if (expected != actual) {
+            if (!isCompatibleAssignmentType(expected, actual)) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST,
                         "Task " + taskDefinitionKey + " requires assignment type " + expected);
             }
@@ -312,6 +312,19 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                     "Unsupported " + enumType.getSimpleName() + ": " + value);
         }
+    }
+
+    private boolean isCompatibleAssignmentType(AssignmentType expected, AssignmentType actual) {
+        if (expected == actual) {
+            return true;
+        }
+        return isCandidateAssignment(expected) && isCandidateAssignment(actual);
+    }
+
+    private boolean isCandidateAssignment(AssignmentType type) {
+        return type == AssignmentType.CANDIDATE_USERS
+                || type == AssignmentType.CANDIDATE_GROUPS
+                || type == AssignmentType.MIXED;
     }
 
     private AssignmentRuleView toView(NodeAssignmentRule rule) {

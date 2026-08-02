@@ -83,6 +83,36 @@ class AssignmentRuleServiceImplTest {
     }
 
     @Test
+    void shouldTreatCandidateAssignmentVariantsAsTheSameUserTaskMode() {
+        AssignmentRuleCommand command = new AssignmentRuleCommand(
+                "expense:1:100",
+                "approve",
+                100,
+                AssignmentType.CANDIDATE_USERS,
+                List.of(),
+                List.of("reviewer"),
+                List.of(),
+                List.of(),
+                EmptyUserStrategy.AUTO_COMPLETE,
+                null,
+                true,
+                null,
+                List.of());
+        when(definitionCatalog.findById(TENANT_ID, "expense:1:100"))
+                .thenReturn(Optional.of(new ProcessDefinitionCatalog.DefinitionInfo("expense:1:100", "expense", 1)));
+        when(definitionCatalog.expectedAssignmentType("expense:1:100", "approve"))
+                .thenReturn(AssignmentType.MIXED);
+        when(ruleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.create(command);
+
+        ArgumentCaptor<NodeAssignmentRule> captor = ArgumentCaptor.forClass(NodeAssignmentRule.class);
+        verify(ruleRepository).save(captor.capture());
+        assertEquals(AssignmentType.CANDIDATE_USERS, captor.getValue().assignmentType());
+        assertEquals(List.of("reviewer"), captor.getValue().targetValues(AssignmentTargetType.CANDIDATE_USER));
+    }
+
+    @Test
     void shouldInheritOnlyTasksNotConfiguredOnTargetVersion() {
         ProcessDefinitionCatalog.DefinitionInfo target =
                 new ProcessDefinitionCatalog.DefinitionInfo("expense:2:200", "expense", 2);
