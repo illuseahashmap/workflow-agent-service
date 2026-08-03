@@ -53,26 +53,26 @@ public class WorkflowManagementController {
     }
 
     @GetMapping("/definition/active")
-    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
+    @PreAuthorize("hasRole('SERVICE') or hasAnyAuthority('workflow:definition:read','workflow:instance:operate','assignment:manage')")
     public ApiResponse<ActiveProcessVersionResult> active(@RequestParam String processDefinitionKey) {
         return ApiResponse.ok(workflowDefinitionService.getActiveVersion(processDefinitionKey));
     }
 
     @GetMapping("/definition/exists")
-    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
+    @PreAuthorize("hasRole('SERVICE') or hasAnyAuthority('workflow:definition:read','workflow:instance:operate','assignment:manage')")
     public ApiResponse<Boolean> exists(@RequestParam String processDefinitionKey) {
         return ApiResponse.ok(workflowDefinitionService.exists(processDefinitionKey));
     }
 
     @GetMapping("/definitions")
-    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
+    @PreAuthorize("hasRole('SERVICE') or hasAnyAuthority('workflow:definition:read','workflow:instance:operate','assignment:manage')")
     public ApiResponse<List<ProcessDefinitionView>> list(
             @RequestParam(required = false) String processDefinitionKey) {
         return ApiResponse.ok(workflowDefinitionService.list(processDefinitionKey));
     }
 
     @GetMapping("/definition")
-    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
+    @PreAuthorize("hasRole('SERVICE') or hasAnyAuthority('workflow:definition:read','workflow:instance:operate','assignment:manage')")
     public ApiResponse<ProcessDefinitionView> detail(@RequestParam String processDefinitionKey,
                                                      @RequestParam(required = false) Integer version) {
         return ApiResponse.ok(workflowDefinitionService.getDefinition(processDefinitionKey, version));
@@ -93,7 +93,7 @@ public class WorkflowManagementController {
     }
 
     @GetMapping("/definitions/page")
-    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:definition:read')")
+    @PreAuthorize("hasRole('SERVICE') or hasAnyAuthority('workflow:definition:read','workflow:instance:operate','assignment:manage')")
     public ApiResponse<PageResult<ProcessDefinitionSummaryView>> pageDefinitions(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize,

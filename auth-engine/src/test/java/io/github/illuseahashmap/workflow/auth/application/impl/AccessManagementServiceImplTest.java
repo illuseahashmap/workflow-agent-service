@@ -7,6 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.illuseahashmap.workflow.auth.application.dto.SaveTenantRoleRequest;
+import io.github.illuseahashmap.workflow.auth.application.dto.AddTenantMemberRequest;
+import io.github.illuseahashmap.workflow.auth.domain.AuthUser;
 import io.github.illuseahashmap.workflow.auth.domain.AuthAuthorizationRepository;
 import io.github.illuseahashmap.workflow.auth.domain.AuthMembershipRepository;
 import io.github.illuseahashmap.workflow.auth.domain.AuthUserRepository;
@@ -88,6 +90,72 @@ class AccessManagementServiceImplTest {
                 .hasMessage("At least one enabled tenant administrator must remain");
 
         verify(membershipRepository, never()).updateEnabled("user-2", "tenant-a", false);
+    }
+
+    @Test
+    void memberManagerCannotGrantTenantAdministratorRole() {
+        CurrentPrincipalProvider memberManager = () -> new CurrentPrincipal(
+                "USER", "manager-id", "manager", "Manager", "tenant-a",
+                Set.of("CUSTOM_MANAGER"), Set.of("member:manage"));
+        AccessManagementServiceImpl managerService = new AccessManagementServiceImpl(
+                userRepository, membershipRepository, authorizationRepository, memberManager);
+        when(userRepository.findByUsername("new-user")).thenReturn(Optional.of(
+                new AuthUser(1L, "new-id", "new-user", "New User", "hash",
+                        "tenant-a", true, null, null)));
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "TENANT_ADMIN", "Tenant Administrator", null, true, Set.of())));
+
+        assertThatThrownBy(() -> managerService.addMember(
+                new AddTenantMemberRequest("new-user", Set.of("TENANT_ADMIN"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Only an administrator can grant or revoke the tenant administrator role");
+
+        verify(authorizationRepository, never()).replaceUserRoles(
+                "new-id", "tenant-a", Set.of("TENANT_ADMIN"));
+    }
+
+    @Test
+    void userCannotElevateSelfToTenantAdministrator() {
+        CurrentPrincipalProvider selfManager = () -> new CurrentPrincipal(
+                "USER", "user-2", "self", "Self", "tenant-a",
+                Set.of("CUSTOM_MANAGER"), Set.of("member:manage"));
+        AccessManagementServiceImpl selfService = new AccessManagementServiceImpl(
+                userRepository, membershipRepository, authorizationRepository, selfManager);
+        when(membershipRepository.find("user-2", "tenant-a")).thenReturn(Optional.of(
+                new AuthMembershipRepository.TenantMembership(
+                        "user-2", "tenant-id", "tenant-a", "Tenant", true, true, null)));
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "TENANT_ADMIN", "Tenant Administrator", null, true, Set.of())));
+
+        assertThatThrownBy(() -> selfService.updateMemberRoles("user-2", Set.of("TENANT_ADMIN")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Users cannot grant the tenant administrator role to themselves");
+    }
+
+    @Test
+    void memberManagerCannotGrantCustomRoleBeyondOwnPermissionBoundary() {
+        CurrentPrincipalProvider memberManager = () -> new CurrentPrincipal(
+                "USER", "manager-id", "manager", "Manager", "tenant-a",
+                Set.of("MEMBER_MANAGER"), Set.of("member:manage"));
+        AccessManagementServiceImpl managerService = new AccessManagementServiceImpl(
+                userRepository, membershipRepository, authorizationRepository, memberManager);
+        when(membershipRepository.find("user-2", "tenant-a")).thenReturn(Optional.of(
+                new AuthMembershipRepository.TenantMembership(
+                        "user-2", "tenant-id", "tenant-a", "Tenant", true, true, null)));
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "WORKFLOW_DESIGNER", "Workflow Designer", null, true,
+                        Set.of("workflow:definition:write"))));
+
+        assertThatThrownBy(() -> managerService.updateMemberRoles(
+                "user-2", Set.of("WORKFLOW_DESIGNER")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Cannot grant or revoke roles outside the operator permission boundary");
+
+        verify(authorizationRepository, never()).replaceUserRoles(
+                "user-2", "tenant-a", Set.of("WORKFLOW_DESIGNER"));
     }
 
     private void prepareTenantAdministratorMembership(String userId) {

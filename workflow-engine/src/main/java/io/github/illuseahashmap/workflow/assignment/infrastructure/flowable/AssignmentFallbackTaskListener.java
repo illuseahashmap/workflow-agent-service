@@ -1,6 +1,8 @@
 package io.github.illuseahashmap.workflow.assignment.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleService;
+import io.github.illuseahashmap.workflow.assignment.domain.AssignmentFallbackAction;
+import io.github.illuseahashmap.workflow.assignment.domain.AssignmentFallbackCommandRepository;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentTargetType;
 import io.github.illuseahashmap.workflow.assignment.domain.NodeAssignmentRule;
 import java.util.List;
@@ -9,21 +11,19 @@ import org.flowable.engine.delegate.TaskListener;
 import org.flowable.identitylink.api.IdentityLink;
 import org.flowable.task.service.delegate.DelegateTask;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Component("assignmentFallbackTaskListener")
 public class AssignmentFallbackTaskListener implements TaskListener {
 
     private final AssignmentRuleService assignmentRuleService;
-    private final AssignmentFallbackExecutor fallbackExecutor;
+    private final AssignmentFallbackCommandRepository fallbackCommandRepository;
     private final TaskService taskService;
 
     public AssignmentFallbackTaskListener(AssignmentRuleService assignmentRuleService,
-                                          AssignmentFallbackExecutor fallbackExecutor,
+                                          AssignmentFallbackCommandRepository fallbackCommandRepository,
                                           TaskService taskService) {
         this.assignmentRuleService = assignmentRuleService;
-        this.fallbackExecutor = fallbackExecutor;
+        this.fallbackCommandRepository = fallbackCommandRepository;
         this.taskService = taskService;
     }
 
@@ -42,10 +42,8 @@ public class AssignmentFallbackTaskListener implements TaskListener {
         }
         switch (rule.emptyUserStrategy()) {
             case TO_ASSIGNEE -> assignFallback(delegateTask, rule);
-            case AUTO_COMPLETE -> afterCommit(() -> fallbackExecutor.autoComplete(
-                    delegateTask.getId(), delegateTask.getProcessInstanceId()));
-            case AUTO_REJECT -> afterCommit(() -> fallbackExecutor.autoReject(
-                    delegateTask.getId(), delegateTask.getProcessInstanceId()));
+            case AUTO_COMPLETE -> enqueue(delegateTask, AssignmentFallbackAction.AUTO_COMPLETE);
+            case AUTO_REJECT -> enqueue(delegateTask, AssignmentFallbackAction.AUTO_REJECT);
             default -> throw new IllegalStateException("Unsupported empty user strategy: " + rule.emptyUserStrategy());
         }
     }
@@ -66,16 +64,11 @@ public class AssignmentFallbackTaskListener implements TaskListener {
         delegateTask.setAssignee(fallbackAssignees.getFirst());
     }
 
-    private void afterCommit(Runnable operation) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            operation.run();
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                operation.run();
-            }
-        });
+    private void enqueue(DelegateTask delegateTask, AssignmentFallbackAction action) {
+        fallbackCommandRepository.enqueue(
+                delegateTask.getTenantId(),
+                delegateTask.getId(),
+                delegateTask.getProcessInstanceId(),
+                action);
     }
 }

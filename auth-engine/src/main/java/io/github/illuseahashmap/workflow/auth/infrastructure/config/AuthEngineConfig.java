@@ -14,7 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableConfigurationProperties({
         AuthTokenProperties.class,
         PlatformAdminBootstrapProperties.class,
-        SelfRegistrationProperties.class
+        SelfRegistrationProperties.class,
+        AuthenticationProtectionProperties.class
 })
 public class AuthEngineConfig {
 

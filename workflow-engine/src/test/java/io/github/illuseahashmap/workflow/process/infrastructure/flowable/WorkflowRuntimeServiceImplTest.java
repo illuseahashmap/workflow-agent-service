@@ -3,11 +3,13 @@ package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
 import io.github.illuseahashmap.workflow.process.application.dto.ActiveProcessVersionResult;
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRequest;
 import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
+import io.github.illuseahashmap.workflow.process.application.port.ParticipantDirectory;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
@@ -22,6 +24,9 @@ import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.engine.repository.ProcessDefinition;
+import org.flowable.engine.repository.ProcessDefinitionQuery;
+import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import org.flowable.task.api.TaskQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,24 +60,19 @@ class WorkflowRuntimeServiceImplTest {
     @Mock
     private TenantProvider tenantProvider;
     @Mock
+    private ParticipantDirectory participantDirectory;
+    @Mock
     private ProcessInstance processInstance;
     @Mock
     private TaskQuery taskQuery;
+    @Mock
+    private ProcessDefinitionQuery processDefinitionQuery;
+    @Mock
+    private ProcessDefinition processDefinition;
 
     @Test
     void recordsAuthenticatedUserWhileStartingProcess() {
-        WorkflowRuntimeServiceImpl service = new WorkflowRuntimeServiceImpl(
-                runtimeService,
-                taskService,
-                historyService,
-                identityService,
-                repositoryService,
-                definitionService,
-                taskViewAssembler,
-                participantCoordinator,
-                transactionExecutor,
-                principalProvider,
-                tenantProvider);
+        WorkflowRuntimeServiceImpl service = service();
         when(tenantProvider.current()).thenReturn(
                 new TenantContext.TenantInfo("tenant-1", "tenant-one", "租户一"));
         when(principalProvider.current()).thenReturn(new CurrentPrincipal(
@@ -115,5 +115,29 @@ class WorkflowRuntimeServiceImplTest {
                 org.mockito.ArgumentMatchers.eq("LEAVE-001"),
                 anyMap());
         ordered.verify(identityService).setAuthenticatedUserId(null);
+    }
+
+    @Test
+    void rejectsMismatchedProcessDefinitionIdAndKey() {
+        when(tenantProvider.current()).thenReturn(
+                new TenantContext.TenantInfo("tenant-1", "tenant-one", "Tenant One"));
+        when(repositoryService.createProcessDefinitionQuery()).thenReturn(processDefinitionQuery);
+        when(processDefinitionQuery.processDefinitionId("expense:2:200")).thenReturn(processDefinitionQuery);
+        when(processDefinitionQuery.singleResult()).thenReturn(processDefinition);
+        when(processDefinition.getTenantId()).thenReturn("tenant-1");
+        when(processDefinition.getKey()).thenReturn("expense");
+
+        assertThatThrownBy(() -> service().start(new StartProcessRequest(
+                "leave", "expense:2:200", null, Map.of(), List.of())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Process definition id does not match the requested process definition key");
+    }
+
+    private WorkflowRuntimeServiceImpl service() {
+        return new WorkflowRuntimeServiceImpl(
+                runtimeService, taskService, historyService, identityService,
+                repositoryService, definitionService, taskViewAssembler,
+                participantCoordinator, transactionExecutor, principalProvider,
+                tenantProvider, participantDirectory);
     }
 }

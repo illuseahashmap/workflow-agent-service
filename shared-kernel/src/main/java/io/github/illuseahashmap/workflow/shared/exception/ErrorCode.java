@@ -7,6 +7,7 @@ public enum ErrorCode {
     FORBIDDEN("FORBIDDEN", "Forbidden request"),
     NOT_FOUND("NOT_FOUND", "Resource not found"),
     CONFLICT("CONFLICT", "Resource conflict"),
+    RATE_LIMITED("RATE_LIMITED", "Too many requests"),
     WORKFLOW_ERROR("WORKFLOW_ERROR", "Workflow operation failed"),
     INTERNAL_ERROR("INTERNAL_ERROR", "Internal server error");
 

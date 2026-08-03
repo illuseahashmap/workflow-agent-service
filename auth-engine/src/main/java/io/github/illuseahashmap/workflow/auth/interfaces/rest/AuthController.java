@@ -9,6 +9,7 @@ import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantReques
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionResponse;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,13 +28,15 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ApiResponse<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ApiResponse.ok(authService.register(request));
+    public ApiResponse<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                   HttpServletRequest servletRequest) {
+        return ApiResponse.ok(authService.register(request, servletRequest.getRemoteAddr()));
     }
 
     @PostMapping("/login")
-    public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.ok(authService.login(request));
+    public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
+                                                HttpServletRequest servletRequest) {
+        return ApiResponse.ok(authService.login(request, servletRequest.getRemoteAddr()));
     }
 
     @GetMapping("/me")

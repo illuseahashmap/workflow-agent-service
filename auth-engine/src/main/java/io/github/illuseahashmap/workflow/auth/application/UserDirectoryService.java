@@ -10,4 +10,6 @@ public interface UserDirectoryService {
     PageResult<DirectoryUserView> search(String keyword, Integer pageNum, Integer pageSize);
 
     Set<String> validateSelectableUsernames(Collection<String> usernames);
+
+    void requireTransferableUsernames(Collection<String> usernames);
 }

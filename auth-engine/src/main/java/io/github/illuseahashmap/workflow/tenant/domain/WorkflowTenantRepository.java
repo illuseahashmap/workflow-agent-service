@@ -12,6 +12,10 @@ public interface WorkflowTenantRepository {
 
     Optional<WorkflowTenant> findById(long id);
 
+    void lockAll();
+
+    long countEnabled();
+
     WorkflowTenant save(WorkflowTenant tenant);
 
     void update(WorkflowTenant tenant);

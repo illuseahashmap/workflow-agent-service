@@ -16,6 +16,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import io.github.illuseahashmap.workflow.process.application.dto.TaskParticipantAction;
 import io.github.illuseahashmap.workflow.process.application.dto.TaskParticipantRequirementsRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
+import io.github.illuseahashmap.workflow.process.application.port.ParticipantDirectory;
 import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
@@ -51,7 +52,6 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
 
     private static final String ASSIGNEE_SUFFIX = "_assignee";
     private static final String ASSIGNEE_LIST_SUFFIX = "_assigneeList";
-    private static final String CANDIDATE_GROUP_LIST_SUFFIX = "_candidateGroupList";
 
     private final RuntimeService runtimeService;
     private final TaskService taskService;
@@ -64,6 +64,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private final ProcessInstanceTransactionExecutor transactionExecutor;
     private final CurrentPrincipalProvider principalProvider;
     private final TenantProvider tenantProvider;
+    private final ParticipantDirectory participantDirectory;
 
     public WorkflowRuntimeServiceImpl(RuntimeService runtimeService,
                                       TaskService taskService,
@@ -75,7 +76,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                                       FlowableParticipantAssignmentCoordinator participantCoordinator,
                                       ProcessInstanceTransactionExecutor transactionExecutor,
                                       CurrentPrincipalProvider principalProvider,
-                                      TenantProvider tenantProvider) {
+                                      TenantProvider tenantProvider,
+                                      ParticipantDirectory participantDirectory) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
         this.historyService = historyService;
@@ -87,6 +89,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         this.transactionExecutor = transactionExecutor;
         this.principalProvider = principalProvider;
         this.tenantProvider = tenantProvider;
+        this.participantDirectory = participantDirectory;
     }
 
     @Override
@@ -275,23 +278,32 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         });
     }
 
-    private void validateProcessDefinitionTenant(String processDefinitionId, String tenantId) {
+    private ProcessDefinition requireProcessDefinition(String processDefinitionId, String tenantId) {
         ProcessDefinition definition = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionId(processDefinitionId)
                 .singleResult();
         if (definition == null || !Objects.equals(tenantId, definition.getTenantId())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Process definition does not exist");
         }
+        return definition;
     }
 
     private String resolveProcessDefinitionId(
             String processDefinitionKey, String requestedDefinitionId, String tenantId) {
+        if (!StringUtils.hasText(processDefinitionKey)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Process definition key is required");
+        }
+        String normalizedDefinitionKey = processDefinitionKey.trim();
         if (StringUtils.hasText(requestedDefinitionId)) {
             String processDefinitionId = requestedDefinitionId.trim();
-            validateProcessDefinitionTenant(processDefinitionId, tenantId);
+            ProcessDefinition definition = requireProcessDefinition(processDefinitionId, tenantId);
+            if (!Objects.equals(normalizedDefinitionKey, definition.getKey())) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST,
+                        "Process definition id does not match the requested process definition key");
+            }
             return processDefinitionId;
         }
-        return definitionService.getActiveVersion(processDefinitionKey).processDefinitionId();
+        return definitionService.getActiveVersion(normalizedDefinitionKey).processDefinitionId();
     }
 
     private Map<String, Object> completionVariables(
@@ -381,7 +393,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         }
         List<String> targetCandidateGroups = normalizeList(request.targetCandidateGroups());
         if (!targetCandidateGroups.isEmpty()) {
-            variables.put(targetActivityId + CANDIDATE_GROUP_LIST_SUFFIX, targetCandidateGroups);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Candidate group assignment is not supported");
         }
         return variables;
     }
@@ -400,16 +412,27 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         if (targetCount != 1) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Transfer target must contain exactly one target type");
         }
+        if (!normalizeList(request.targetCandidateGroups()).isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Candidate group transfer is not supported");
+        }
+        List<String> targetUsers = StringUtils.hasText(request.targetAssignee())
+                ? List.of(request.targetAssignee().trim().toLowerCase(java.util.Locale.ROOT))
+                : normalizeList(request.targetCandidateUsers()).stream()
+                        .map(value -> value.toLowerCase(java.util.Locale.ROOT))
+                        .toList();
+        participantDirectory.requireTransferableUsernames(targetUsers);
     }
 
     private void applyTransferTarget(String taskId, TransferTaskRequest request) {
         if (StringUtils.hasText(request.targetAssignee())) {
-            taskService.setAssignee(taskId, request.targetAssignee().trim());
+            taskService.setAssignee(taskId,
+                    request.targetAssignee().trim().toLowerCase(java.util.Locale.ROOT));
             return;
         }
         taskService.setAssignee(taskId, null);
-        normalizeList(request.targetCandidateUsers()).forEach(user -> taskService.addCandidateUser(taskId, user));
-        normalizeList(request.targetCandidateGroups()).forEach(group -> taskService.addCandidateGroup(taskId, group));
+        normalizeList(request.targetCandidateUsers()).stream()
+                .map(user -> user.toLowerCase(java.util.Locale.ROOT))
+                .forEach(user -> taskService.addCandidateUser(taskId, user));
     }
 
     private void addComment(Task task, String type, String comment) {

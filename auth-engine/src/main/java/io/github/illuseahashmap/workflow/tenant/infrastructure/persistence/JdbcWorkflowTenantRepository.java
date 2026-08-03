@@ -64,6 +64,18 @@ public class JdbcWorkflowTenantRepository implements WorkflowTenantRepository {
     }
 
     @Override
+    public void lockAll() {
+        jdbcTemplate.queryForList("SELECT id FROM workflow_tenant ORDER BY id FOR UPDATE", Long.class);
+    }
+
+    @Override
+    public long countEnabled() {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM workflow_tenant WHERE enabled = 1", Long.class);
+        return count == null ? 0L : count;
+    }
+
+    @Override
     public WorkflowTenant save(WorkflowTenant tenant) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {

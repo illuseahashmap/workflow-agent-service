@@ -16,6 +16,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -46,6 +47,8 @@ class AuthenticationHttpIntegrationTest {
                 () -> "integration-test-auth-token-secret-at-least-32-bytes");
         registry.add("workflow.auth.bootstrap-admin.enabled", () -> "false");
         registry.add("workflow.auth.self-registration.enabled", () -> "true");
+        registry.add("workflow.auth.protection.failure-threshold", () -> "3");
+        registry.add("workflow.auth.protection.base-lock-seconds", () -> "1");
     }
 
     @BeforeEach
@@ -83,5 +86,52 @@ class AuthenticationHttpIntegrationTest {
 
         mockMvc.perform(get("/workflow/tenant").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void repeatedLoginFailuresAreSharedAndTemporarilyBlocked() throws Exception {
+        mockMvc.perform(post("/auth/register")
+                        .with(protectedSource())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"protected-user","password":"protected-password"}
+                                """))
+                .andExpect(status().isOk());
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            mockMvc.perform(post("/auth/login")
+                            .with(protectedSource())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"username":"protected-user","password":"wrong-password"}
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Invalid username or password"));
+        }
+
+        mockMvc.perform(post("/auth/login")
+                        .with(protectedSource())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"protected-user","password":"protected-password"}
+                                """))
+                .andExpect(status().isTooManyRequests());
+
+        Thread.sleep(1100);
+
+        mockMvc.perform(post("/auth/login")
+                        .with(protectedSource())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"protected-user","password":"protected-password"}
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    private RequestPostProcessor protectedSource() {
+        return request -> {
+            request.setRemoteAddr("198.51.100.10");
+            return request;
+        };
     }
 }

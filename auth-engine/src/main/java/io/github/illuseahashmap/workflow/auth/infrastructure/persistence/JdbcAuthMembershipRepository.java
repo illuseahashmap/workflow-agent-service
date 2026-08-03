@@ -158,6 +158,32 @@ public class JdbcAuthMembershipRepository implements AuthMembershipRepository {
     }
 
     @Override
+    public List<UserAvailability> findUserAvailability(String tenantCode, Collection<String> usernames) {
+        if (usernames == null || usernames.isEmpty()) {
+            return List.of();
+        }
+        return jdbcClient.sql("""
+                        SELECT users.username,
+                               users.enabled AS user_enabled,
+                               membership.user_id IS NOT NULL AS membership_exists,
+                               COALESCE(membership.enabled, 0) AS membership_enabled
+                        FROM auth_user users
+                        LEFT JOIN auth_user_tenant membership
+                          ON membership.user_id = users.user_id
+                         AND membership.tenant_code = :tenantCode
+                        WHERE users.username IN (:usernames)
+                        """)
+                .param("tenantCode", tenantCode)
+                .param("usernames", usernames)
+                .query((resultSet, rowNumber) -> new UserAvailability(
+                        resultSet.getString("username"),
+                        resultSet.getInt("user_enabled") == 1,
+                        resultSet.getBoolean("membership_exists"),
+                        resultSet.getInt("membership_enabled") == 1))
+                .list();
+    }
+
+    @Override
     public void add(String userId, String tenantCode) {
         jdbcClient.sql("""
                         INSERT INTO auth_user_tenant (user_id, tenant_code)

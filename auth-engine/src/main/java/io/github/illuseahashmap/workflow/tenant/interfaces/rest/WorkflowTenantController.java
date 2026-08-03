@@ -57,4 +57,11 @@ public class WorkflowTenantController {
         tenantManagementService.updateEnabled(id, enabled);
         return ApiResponse.ok();
     }
+
+    @PostMapping("/{id}/restore")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ApiResponse<Void> restore(@PathVariable long id) {
+        tenantManagementService.restore(id);
+        return ApiResponse.ok();
+    }
 }

@@ -41,10 +41,13 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(10);
+            assertThat(resultSet.getInt(1)).isEqualTo(13);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
+        assertThat(tableExists("workflow_assignment_fallback_command")).isTrue();
+        assertThat(tableExists("platform_security_audit")).isTrue();
+        assertThat(tableExists("auth_attempt_guard")).isTrue();
     }
 
     @Test
@@ -71,6 +74,24 @@ class PlatformMigrationIntegrationTest {
                         (tenant_id, rule_id, target_type, target_value, sort_order)
                     VALUES ('tenant-b', %d, 'ASSIGNEE', 'user-a', 10)
                     """.formatted(ruleId)))
+                    .isInstanceOf(PSQLException.class);
+        }
+    }
+
+    @Test
+    void fallbackCommandAllowsOnlyOneTerminalActionPerTask() throws SQLException {
+        try (Connection connection = connection(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO workflow_assignment_fallback_command
+                        (tenant_id, task_id, process_instance_id, action, status)
+                    VALUES ('tenant-a', 'task-unique', 'process-1', 'AUTO_COMPLETE', 'PENDING')
+                    """);
+
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                    INSERT INTO workflow_assignment_fallback_command
+                        (tenant_id, task_id, process_instance_id, action, status)
+                    VALUES ('tenant-a', 'task-unique', 'process-1', 'AUTO_REJECT', 'PENDING')
+                    """))
                     .isInstanceOf(PSQLException.class);
         }
     }

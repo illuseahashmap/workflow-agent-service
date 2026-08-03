@@ -12,6 +12,7 @@ import io.github.illuseahashmap.workflow.auth.domain.PermissionScope;
 import io.github.illuseahashmap.workflow.auth.domain.AuthUser;
 import io.github.illuseahashmap.workflow.auth.domain.AuthUserRepository;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.util.List;
@@ -60,6 +61,7 @@ public class AccessManagementServiceImpl implements AccessManagementService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "User does not exist"));
         membershipRepository.add(user.userId(), tenantCode);
         Set<String> roles = normalizeRoles(request.roleCodes());
+        assertCanChangeRoles(user.userId(), Set.of(), roles);
         authorizationRepository.replaceUserRoles(user.userId(), tenantCode, roles);
         return members(user.username()).stream()
                 .filter(member -> member.userId().equals(user.userId()))
@@ -74,6 +76,10 @@ public class AccessManagementServiceImpl implements AccessManagementService {
         requireMembership(userId, tenantCode);
         Set<String> normalizedRoles = normalizeRoles(roleCodes);
         membershipRepository.lockTenantMemberships(tenantCode);
+        boolean currentlyTenantAdministrator = membershipRepository.isEnabledMemberWithRole(
+                userId, tenantCode, TENANT_ADMIN_ROLE_CODE);
+        Set<String> currentRoles = authorizationRepository.findRoleCodes(userId, tenantCode);
+        assertCanChangeRoles(userId, currentRoles, normalizedRoles);
         assertTenantAdministratorRemains(userId, tenantCode, normalizedRoles.contains(TENANT_ADMIN_ROLE_CODE));
         authorizationRepository.replaceUserRoles(userId, tenantCode, normalizedRoles);
     }
@@ -150,6 +156,42 @@ public class AccessManagementServiceImpl implements AccessManagementService {
         if (membershipRepository.countEnabledMembersWithRole(tenantCode, TENANT_ADMIN_ROLE_CODE) <= 1) {
             throw new BusinessException(
                     ErrorCode.CONFLICT, "At least one enabled tenant administrator must remain");
+        }
+    }
+
+    private void assertCanChangeRoles(String targetUserId,
+                                      Set<String> currentRoles,
+                                      Set<String> requestedRoles) {
+        Set<String> changedRoles = new LinkedHashSet<>(currentRoles);
+        changedRoles.addAll(requestedRoles);
+        Set<String> unchangedRoles = new LinkedHashSet<>(currentRoles);
+        unchangedRoles.retainAll(requestedRoles);
+        changedRoles.removeAll(unchangedRoles);
+        if (changedRoles.isEmpty()) {
+            return;
+        }
+        CurrentPrincipal operator = principalProvider.current();
+        boolean tenantAdministratorChanged = changedRoles.contains(TENANT_ADMIN_ROLE_CODE);
+        if (operator.principalId().equals(targetUserId)
+                && tenantAdministratorChanged
+                && requestedRoles.contains(TENANT_ADMIN_ROLE_CODE)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "Users cannot grant the tenant administrator role to themselves");
+        }
+        if (operator.roles().contains("TENANT_ADMIN") || operator.roles().contains("PLATFORM_ADMIN")) {
+            return;
+        }
+        if (tenantAdministratorChanged) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "Only an administrator can grant or revoke the tenant administrator role");
+        }
+        Set<String> changedPermissions = authorizationRepository.findRoles(currentTenantCode()).stream()
+                .filter(role -> changedRoles.contains(role.roleCode()) && !"USER".equals(role.roleCode()))
+                .flatMap(role -> role.permissions().stream())
+                .collect(Collectors.toSet());
+        if (!operator.permissions().containsAll(changedPermissions)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "Cannot grant or revoke roles outside the operator permission boundary");
         }
     }
 

@@ -10,9 +10,9 @@ import java.util.List;
 
 public interface AuthService {
 
-    AuthTokenResponse register(RegisterRequest request);
+    AuthTokenResponse register(RegisterRequest request, String sourceAddress);
 
-    AuthTokenResponse login(LoginRequest request);
+    AuthTokenResponse login(LoginRequest request, String sourceAddress);
 
     CurrentUserResponse currentUser();
 

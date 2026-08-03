@@ -16,4 +16,6 @@ public interface TenantManagementService {
     void update(long id, TenantCommand command);
 
     void updateEnabled(long id, boolean enabled);
+
+    void restore(long id);
 }

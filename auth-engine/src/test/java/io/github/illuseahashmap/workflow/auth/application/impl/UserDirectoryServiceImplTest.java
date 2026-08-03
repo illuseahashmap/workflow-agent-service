@@ -48,4 +48,36 @@ class UserDirectoryServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("outside-user");
     }
+
+    @Test
+    void distinguishesUnknownTransferUser() {
+        when(membershipRepository.findUserAvailability("tenant-a", Set.of("missing")))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("missing")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Transfer users do not exist: missing");
+    }
+
+    @Test
+    void distinguishesUserOutsideCurrentTenant() {
+        when(membershipRepository.findUserAvailability("tenant-a", Set.of("outsider")))
+                .thenReturn(List.of(new AuthMembershipRepository.UserAvailability(
+                        "outsider", true, false, false)));
+
+        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("outsider")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Transfer users do not belong to the current tenant: outsider");
+    }
+
+    @Test
+    void distinguishesDisabledTenantMember() {
+        when(membershipRepository.findUserAvailability("tenant-a", Set.of("disabled")))
+                .thenReturn(List.of(new AuthMembershipRepository.UserAvailability(
+                        "disabled", true, true, false)));
+
+        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("disabled")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Transfer users are disabled in the current tenant: disabled");
+    }
 }

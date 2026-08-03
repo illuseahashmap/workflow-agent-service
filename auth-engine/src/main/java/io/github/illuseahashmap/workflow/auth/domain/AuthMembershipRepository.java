@@ -20,6 +20,8 @@ public interface AuthMembershipRepository {
 
     Set<String> findEnabledUsernames(String tenantCode, Collection<String> usernames);
 
+    List<UserAvailability> findUserAvailability(String tenantCode, Collection<String> usernames);
+
     void add(String userId, String tenantCode);
 
     void updateEnabled(String userId, String tenantCode, boolean enabled);
@@ -50,6 +52,14 @@ public interface AuthMembershipRepository {
             Set<String> tenantRoleCodes,
             Set<String> globalRoleCodes,
             OffsetDateTime joinedAt
+    ) {
+    }
+
+    record UserAvailability(
+            String username,
+            boolean userEnabled,
+            boolean membershipExists,
+            boolean membershipEnabled
     ) {
     }
 }

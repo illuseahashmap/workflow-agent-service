@@ -19,4 +19,9 @@ public class AuthParticipantDirectoryAdapter implements ParticipantDirectory {
     public Set<String> validateSelectableUsernames(Collection<String> usernames) {
         return userDirectoryService.validateSelectableUsernames(usernames);
     }
+
+    @Override
+    public void requireTransferableUsernames(Collection<String> usernames) {
+        userDirectoryService.requireTransferableUsernames(usernames);
+    }
 }

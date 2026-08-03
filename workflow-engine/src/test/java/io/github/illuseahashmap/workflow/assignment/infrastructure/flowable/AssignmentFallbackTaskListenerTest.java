@@ -5,6 +5,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleService;
+import io.github.illuseahashmap.workflow.assignment.domain.AssignmentFallbackAction;
+import io.github.illuseahashmap.workflow.assignment.domain.AssignmentFallbackCommandRepository;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentTarget;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentTargetType;
 import io.github.illuseahashmap.workflow.assignment.domain.AssignmentType;
@@ -28,7 +30,7 @@ class AssignmentFallbackTaskListenerTest {
     private AssignmentRuleService assignmentRuleService;
 
     @Mock
-    private AssignmentFallbackExecutor fallbackExecutor;
+    private AssignmentFallbackCommandRepository fallbackCommandRepository;
 
     @Mock
     private TaskService taskService;
@@ -40,7 +42,7 @@ class AssignmentFallbackTaskListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new AssignmentFallbackTaskListener(assignmentRuleService, fallbackExecutor, taskService);
+        listener = new AssignmentFallbackTaskListener(assignmentRuleService, fallbackCommandRepository, taskService);
     }
 
     @Test
@@ -69,7 +71,7 @@ class AssignmentFallbackTaskListenerTest {
     }
 
     @Test
-    void shouldExecuteAutoRejectWhenNoTransactionIsActive() {
+    void shouldEnqueueAutoRejectReliably() {
         prepareUnassignedTask();
         when(delegateTask.getProcessInstanceId()).thenReturn("instance-1");
         when(assignmentRuleService.match("tenant-1", "definition-1", "review", Map.of()))
@@ -77,7 +79,8 @@ class AssignmentFallbackTaskListenerTest {
 
         listener.notify(delegateTask);
 
-        verify(fallbackExecutor).autoReject("task-1", "instance-1");
+        verify(fallbackCommandRepository).enqueue(
+                "tenant-1", "task-1", "instance-1", AssignmentFallbackAction.AUTO_REJECT);
     }
 
     private void prepareUnassignedTask() {

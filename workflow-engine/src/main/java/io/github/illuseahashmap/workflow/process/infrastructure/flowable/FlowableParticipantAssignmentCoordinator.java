@@ -23,10 +23,17 @@ import java.util.Set;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.bpmn.model.FlowNode;
+import org.flowable.bpmn.model.ExclusiveGateway;
+import org.flowable.bpmn.model.Gateway;
+import org.flowable.bpmn.model.InclusiveGateway;
 import org.flowable.bpmn.model.MultiInstanceLoopCharacteristics;
+import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.StartEvent;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.RepositoryService;
+import org.flowable.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.flowable.common.engine.impl.el.ExpressionManager;
+import org.flowable.common.engine.impl.variable.MapDelegateVariableContainer;
 import org.flowable.task.api.Task;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -42,26 +49,29 @@ public class FlowableParticipantAssignmentCoordinator {
     private final RepositoryService repositoryService;
     private final AssignmentRuleService assignmentRuleService;
     private final ParticipantDirectory participantDirectory;
+    private final ExpressionManager expressionManager;
 
     public FlowableParticipantAssignmentCoordinator(RepositoryService repositoryService,
                                                     AssignmentRuleService assignmentRuleService,
-                                                    ParticipantDirectory participantDirectory) {
+                                                    ParticipantDirectory participantDirectory,
+                                                    ProcessEngineConfigurationImpl processEngineConfiguration) {
         this.repositoryService = repositoryService;
         this.assignmentRuleService = assignmentRuleService;
         this.participantDirectory = participantDirectory;
+        this.expressionManager = processEngineConfiguration.getExpressionManager();
     }
 
     public List<ParticipantRequirementView> requirementsForStart(
             String tenantId, String processDefinitionId, Map<String, Object> variables) {
         return requirements(tenantId, processDefinitionId,
-                firstUserTasks(processDefinitionId), safeVariables(variables), true);
+                firstUserTasks(processDefinitionId, safeVariables(variables)), safeVariables(variables), true);
     }
 
     public List<ParticipantRequirementView> requirementsForTask(
             String tenantId, Task task, TaskParticipantAction action,
             String targetActivityId, Map<String, Object> variables) {
         return requirements(tenantId, task.getProcessDefinitionId(),
-                targetTasks(task, action, targetActivityId), safeVariables(variables), false);
+                targetTasks(task, action, targetActivityId, safeVariables(variables)), safeVariables(variables), false);
     }
 
     public Map<String, Object> prepareForStart(
@@ -167,18 +177,18 @@ public class FlowableParticipantAssignmentCoordinator {
         return values;
     }
 
-    private List<UserTask> firstUserTasks(String processDefinitionId) {
+    private List<UserTask> firstUserTasks(String processDefinitionId, Map<String, Object> variables) {
         BpmnModel model = requireModel(processDefinitionId);
         List<FlowNode> startEvents = model.getMainProcess().getFlowElements().stream()
                 .filter(StartEvent.class::isInstance)
                 .map(StartEvent.class::cast)
                 .map(FlowNode.class::cast)
                 .toList();
-        return nextUserTasks(startEvents);
+        return nextUserTasks(startEvents, variables);
     }
 
     private List<UserTask> targetTasks(
-            Task task, TaskParticipantAction action, String targetActivityId) {
+            Task task, TaskParticipantAction action, String targetActivityId, Map<String, Object> variables) {
         BpmnModel model = requireModel(task.getProcessDefinitionId());
         if (action == TaskParticipantAction.REJECT) {
             UserTask target = StringUtils.hasText(targetActivityId)
@@ -197,16 +207,13 @@ public class FlowableParticipantAssignmentCoordinator {
         if (!(current instanceof FlowNode flowNode)) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Current workflow activity does not exist");
         }
-        return nextUserTasks(List.of(flowNode));
+        return nextUserTasks(List.of(flowNode), variables);
     }
 
-    private List<UserTask> nextUserTasks(Collection<FlowNode> sources) {
+    private List<UserTask> nextUserTasks(Collection<FlowNode> sources, Map<String, Object> variables) {
         Queue<FlowElement> queue = new ArrayDeque<>();
         for (FlowNode source : sources) {
-            source.getOutgoingFlows().stream()
-                    .map(flow -> flow.getTargetFlowElement())
-                    .filter(java.util.Objects::nonNull)
-                    .forEach(queue::add);
+            enqueueTargets(queue, selectedOutgoingFlows(source, variables));
         }
         Set<String> visited = new HashSet<>();
         Map<String, UserTask> results = new LinkedHashMap<>();
@@ -220,13 +227,91 @@ public class FlowableParticipantAssignmentCoordinator {
                 continue;
             }
             if (element instanceof FlowNode flowNode) {
-                flowNode.getOutgoingFlows().stream()
-                        .map(flow -> flow.getTargetFlowElement())
-                        .filter(java.util.Objects::nonNull)
-                        .forEach(queue::add);
+                enqueueTargets(queue, selectedOutgoingFlows(flowNode, variables));
             }
         }
         return List.copyOf(results.values());
+    }
+
+    private List<SequenceFlow> selectedOutgoingFlows(FlowNode node, Map<String, Object> variables) {
+        if (node instanceof ExclusiveGateway gateway) {
+            return selectExclusiveFlow(gateway, variables);
+        }
+        if (node instanceof InclusiveGateway gateway) {
+            return selectInclusiveFlows(gateway, variables);
+        }
+        return node.getOutgoingFlows();
+    }
+
+    private List<SequenceFlow> selectExclusiveFlow(ExclusiveGateway gateway, Map<String, Object> variables) {
+        SequenceFlow defaultFlow = defaultFlow(gateway);
+        for (SequenceFlow flow : gateway.getOutgoingFlows()) {
+            if (flow == defaultFlow) {
+                continue;
+            }
+            if (conditionMatches(flow, variables)) {
+                return List.of(flow);
+            }
+        }
+        if (defaultFlow != null) {
+            return List.of(defaultFlow);
+        }
+        throw new BusinessException(ErrorCode.BAD_REQUEST,
+                "No outgoing condition matched gateway " + gateway.getId());
+    }
+
+    private List<SequenceFlow> selectInclusiveFlows(InclusiveGateway gateway, Map<String, Object> variables) {
+        SequenceFlow defaultFlow = defaultFlow(gateway);
+        List<SequenceFlow> selected = gateway.getOutgoingFlows().stream()
+                .filter(flow -> flow != defaultFlow)
+                .filter(flow -> conditionMatches(flow, variables))
+                .toList();
+        if (!selected.isEmpty()) {
+            return selected;
+        }
+        if (defaultFlow != null) {
+            return List.of(defaultFlow);
+        }
+        throw new BusinessException(ErrorCode.BAD_REQUEST,
+                "No outgoing condition matched gateway " + gateway.getId());
+    }
+
+    private SequenceFlow defaultFlow(Gateway gateway) {
+        if (!StringUtils.hasText(gateway.getDefaultFlow())) {
+            return null;
+        }
+        return gateway.getOutgoingFlows().stream()
+                .filter(flow -> gateway.getDefaultFlow().equals(flow.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST,
+                        "Gateway " + gateway.getId() + " references an unknown default flow"));
+    }
+
+    private boolean conditionMatches(SequenceFlow flow, Map<String, Object> variables) {
+        if (!StringUtils.hasText(flow.getConditionExpression())) {
+            return true;
+        }
+        try {
+            Object result = expressionManager.createExpression(flow.getConditionExpression())
+                    .getValue(new MapDelegateVariableContainer(new HashMap<>(variables), null));
+            if (result instanceof Boolean booleanResult) {
+                return booleanResult;
+            }
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Gateway condition must evaluate to a boolean: " + flow.getId());
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Gateway condition cannot be evaluated for flow " + flow.getId(), exception);
+        }
+    }
+
+    private void enqueueTargets(Queue<FlowElement> queue, Collection<SequenceFlow> flows) {
+        flows.stream()
+                .map(SequenceFlow::getTargetFlowElement)
+                .filter(java.util.Objects::nonNull)
+                .forEach(queue::add);
     }
 
     private AssignmentType expectedType(UserTask task) {

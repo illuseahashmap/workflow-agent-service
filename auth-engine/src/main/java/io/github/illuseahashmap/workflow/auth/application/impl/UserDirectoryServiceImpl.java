@@ -11,7 +11,10 @@ import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -55,6 +58,39 @@ public class UserDirectoryServiceImpl implements UserDirectoryService {
                     "Users are unavailable in the current tenant: " + String.join(", ", unavailable));
         }
         return Set.copyOf(found);
+    }
+
+    @Override
+    public void requireTransferableUsernames(Collection<String> usernames) {
+        Set<String> normalized = normalizeUsernames(usernames);
+        Map<String, AuthMembershipRepository.UserAvailability> availability = membershipRepository
+                .findUserAvailability(principalProvider.current().tenantCode(), normalized).stream()
+                .collect(Collectors.toMap(
+                        AuthMembershipRepository.UserAvailability::username, Function.identity()));
+        Set<String> missing = normalized.stream()
+                .filter(username -> !availability.containsKey(username))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!missing.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Transfer users do not exist: " + String.join(", ", missing));
+        }
+        Set<String> outsideTenant = normalized.stream()
+                .filter(username -> !availability.get(username).membershipExists())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!outsideTenant.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Transfer users do not belong to the current tenant: " + String.join(", ", outsideTenant));
+        }
+        Set<String> disabled = normalized.stream()
+                .filter(username -> {
+                    AuthMembershipRepository.UserAvailability status = availability.get(username);
+                    return !status.userEnabled() || !status.membershipEnabled();
+                })
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!disabled.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Transfer users are disabled in the current tenant: " + String.join(", ", disabled));
+        }
     }
 
     private Set<String> normalizeUsernames(Collection<String> usernames) {
