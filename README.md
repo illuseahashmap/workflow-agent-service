@@ -64,6 +64,11 @@ Flowable, JDBC, Redis, and servlet APIs remain in infrastructure adapters. Appli
 `auth-engine` owns browser/user authentication, tenant lifecycle, membership, roles, menus, and permissions.
 The existing `workflow-engine.security.infrastructure.token` package remains the service-to-service token adapter until a dedicated gateway or service-auth module is introduced.
 
+## Documentation
+
+- [Agent collaboration architecture](docs/architecture/agent-collaboration-design.md)
+- [Known issues and remediation plan](docs/quality/known-issues.md)
+
 ## Capabilities
 
 - process deployment, version activation, definition queries, diagrams, and deletion
