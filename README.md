@@ -67,6 +67,7 @@ The existing `workflow-engine.security.infrastructure.token` package remains the
 ## Documentation
 
 - [Agent collaboration architecture](docs/architecture/agent-collaboration-design.md)
+- [Backend architecture governance and roadmap](docs/quality/architecture-governance-and-roadmap.md)
 - [Known issues and remediation plan](docs/quality/known-issues.md)
 
 ## Capabilities
