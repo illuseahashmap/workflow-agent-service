@@ -149,6 +149,7 @@
 - 问题：现有单元测试可以通过，但 PostgreSQL、Redis 和 Flowable 的部分 Testcontainers 集成测试依赖本机 Docker 环境，当前评审环境未实际执行这些场景。
 - 修复方向：在 CI 中提供稳定的容器运行环境，将租户隔离、流程锁、事务回滚、重复消息和数据库迁移列为必跑测试。
 - 验收标准：CI 在干净环境中自动完成 Maven 校验和全部基础设施集成测试，并保存测试报告。
+- 本次修复：Spring Boot 集成测试中 Flowable 会先创建运行时表，测试数据源因此不是空 schema；已显式启用 Flyway baseline，从版本 0 执行平台迁移，避免 `Found non-empty schema(s) "public" but no schema history table`。
 
 ## 非当前范围
 
