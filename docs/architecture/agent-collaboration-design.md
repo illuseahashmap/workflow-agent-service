@@ -34,7 +34,7 @@ Agent 不直接控制 Flowable，也不绕过工作流应用服务完成任务�
 - 跨流程实例的无边界长期记忆。
 - Agent 自动获得流程审批、终止、转办等高风险权限。
 - 多 Agent 自主协商和群体编排。
-- 内置向量知识库和文档摄取平台。
+- 完整产品化的知识库、文档摄取、切分策略配置和检索质量评估平台。
 
 这些能力需要在核心执行链路稳定后单独设计。
 
@@ -254,6 +254,59 @@ Agent Worker 不得把完整模型与工具循环视为一次不可恢复的方�
 
 工具执行器负责注入凭据和再次校验参数。模型永远不能读取工具凭据。
 
+### 7.7 KnowledgeRetrieval 与 ContextReference
+
+知识检索是 Agent 的受控工具能力，不是 Agent Runtime 的核心状态机。第一阶段必须预留平台级抽象，但实现保持最小，避免后续被某个工单、设备或文档场景锁死。
+
+Agent Runtime 只认识通用的检索请求和上下文引用，不直接依赖具体向量库、文档类型或业务表：
+
+```text
+KnowledgeSource
+RetrievalQuery
+RetrievalResult
+ContextReference
+Citation
+```
+
+第一阶段可以只提供内置 `knowledge.search` 只读工具，输入至少包含：
+
+```json
+{
+  "query": "逆变器离线如何排查",
+  "scopes": ["product_manual", "fault_case"],
+  "topK": 5
+}
+```
+
+检索结果必须使用稳定结构，至少包含：
+
+```text
+tenantCode
+sourceType
+sourceId
+documentId
+chunkId
+contentPreview
+score
+rankScore
+citation
+metadata
+permissionScope
+indexVersion
+```
+
+第一阶段实现可以采用 PostgreSQL 全文检索、`pgvector` 或两者组合；也可以先接入现有内部知识检索服务。无论底层实现如何，Agent、BPMN 和工具调用审计只依赖上述稳定结果结构。
+
+RAG 相关能力遵循“平台抽象要宽、首版实现要窄”的原则：
+
+- `KnowledgeSource` 第一阶段可以只支持少量内置文档源，后续扩展到文档库、网页、历史工单、对象存储和业务系统投影。
+- `Retriever` 第一阶段可以是 PostgreSQL 全文检索或 `pgvector` 向量召回，后续扩展到 BM25 + embedding 混合召回、cross-encoder rerank 和多路召回融合。
+- `ChunkingStrategy` 第一阶段采用固定按标题和长度切分，后续按文档类型支持 PDF、表格、代码、SOP 和语义切分。
+- `PermissionFilter` 第一阶段至少强制租户隔离和工具授权，后续扩展到部门、角色、流程实例、数据权限和字段级过滤。
+- `Citation` 第一阶段保存 `documentId`、`chunkId` 和版本，后续扩展页码、坐标、原文快照和证据链。
+
+PostgreSQL 可以作为第一阶段向量检索底座，但平台不应把领域模型绑定到 PostgreSQL 专有类型。只有在以下条件出现时才考虑额外接入专用向量库：单租户或全局索引规模超出 PostgreSQL 可接受范围、向量召回延迟无法满足 SLA、多模态或高维索引能力不足、需要独立横向扩缩容，或需要专用向量库提供的过滤、分片、在线重建和召回评估能力。
+
 ## 8. Provider 与凭据
 
 ### 8.1 Provider 类型
@@ -439,12 +492,17 @@ agent_message
 agent_run
 agent_run_checkpoint
 agent_tool_invocation
+agent_knowledge_source
+agent_knowledge_document
+agent_knowledge_chunk
 platform_outbox_event
 platform_inbox_event
 workflow_agent_binding
 ```
 
 `workflow_agent_binding` 是部署时生成的查询投影，用于记录流程定义、Activity 和 AgentVersion 的绑定并阻止误删。Agent 审计表不对 Flowable `ACT_*` 表建立强外键，避免流程历史清理破坏 Agent 审计记录。
+
+`agent_knowledge_*` 表只表示第一阶段最小检索底座和索引投影，不等同于完整知识库产品。若采用外部检索服务或专用向量库，这些表可以退化为知识源、索引版本和引用证据的本地投影。
 
 ## 14. 部署校验
 
@@ -484,6 +542,7 @@ workflow_agent_binding
 - Provider 与加密凭据
 - AgentDefinition 与不可变 AgentVersion
 - OpenAI Compatible 适配器
+- `knowledge.search` 只读工具、检索端口和标准引用结果结构
 - 沙箱测试、发布和权限
 - AgentRun、AgentCheckpoint、Worker 租约、Outbox/Inbox 和基础审计
 
@@ -538,7 +597,7 @@ workflow_agent_binding
 - Vault/KMS 的具体产品适配。
 - 用户 OAuth 委托与 Token Exchange。
 - 远程 Agent 协议。
-- 知识库与 RAG。
+- 完整知识库产品、文档摄取、复杂切分、混合召回、rerank、检索质量评估和专用向量库适配。
 - 独立消息中间件。
 - Agent 内部可视化编排。
 
