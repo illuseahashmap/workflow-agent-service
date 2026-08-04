@@ -61,7 +61,7 @@ public class UserDirectoryServiceImpl implements UserDirectoryService {
     }
 
     @Override
-    public void requireTransferableUsernames(Collection<String> usernames) {
+    public void requireUsableUsernames(Collection<String> usernames) {
         Set<String> normalized = normalizeUsernames(usernames);
         Map<String, AuthMembershipRepository.UserAvailability> availability = membershipRepository
                 .findUserAvailability(principalProvider.current().tenantCode(), normalized).stream()
@@ -72,14 +72,14 @@ public class UserDirectoryServiceImpl implements UserDirectoryService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (!missing.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
-                    "Transfer users do not exist: " + String.join(", ", missing));
+                    "Users do not exist: " + String.join(", ", missing));
         }
         Set<String> outsideTenant = normalized.stream()
                 .filter(username -> !availability.get(username).membershipExists())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (!outsideTenant.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
-                    "Transfer users do not belong to the current tenant: " + String.join(", ", outsideTenant));
+                    "Users do not belong to the current tenant: " + String.join(", ", outsideTenant));
         }
         Set<String> disabled = normalized.stream()
                 .filter(username -> {
@@ -89,7 +89,7 @@ public class UserDirectoryServiceImpl implements UserDirectoryService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (!disabled.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
-                    "Transfer users are disabled in the current tenant: " + String.join(", ", disabled));
+                    "Users are disabled in the current tenant: " + String.join(", ", disabled));
         }
     }
 

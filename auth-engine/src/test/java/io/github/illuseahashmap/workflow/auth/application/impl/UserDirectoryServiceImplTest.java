@@ -54,9 +54,9 @@ class UserDirectoryServiceImplTest {
         when(membershipRepository.findUserAvailability("tenant-a", Set.of("missing")))
                 .thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("missing")))
+        assertThatThrownBy(() -> service.requireUsableUsernames(List.of("missing")))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("Transfer users do not exist: missing");
+                .hasMessage("Users do not exist: missing");
     }
 
     @Test
@@ -65,9 +65,9 @@ class UserDirectoryServiceImplTest {
                 .thenReturn(List.of(new AuthMembershipRepository.UserAvailability(
                         "outsider", true, false, false)));
 
-        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("outsider")))
+        assertThatThrownBy(() -> service.requireUsableUsernames(List.of("outsider")))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("Transfer users do not belong to the current tenant: outsider");
+                .hasMessage("Users do not belong to the current tenant: outsider");
     }
 
     @Test
@@ -76,8 +76,8 @@ class UserDirectoryServiceImplTest {
                 .thenReturn(List.of(new AuthMembershipRepository.UserAvailability(
                         "disabled", true, true, false)));
 
-        assertThatThrownBy(() -> service.requireTransferableUsernames(List.of("disabled")))
+        assertThatThrownBy(() -> service.requireUsableUsernames(List.of("disabled")))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("Transfer users are disabled in the current tenant: disabled");
+                .hasMessage("Users are disabled in the current tenant: disabled");
     }
 }

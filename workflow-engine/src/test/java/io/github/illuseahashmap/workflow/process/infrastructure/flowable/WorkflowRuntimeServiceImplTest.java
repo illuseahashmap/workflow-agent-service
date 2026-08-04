@@ -1,12 +1,18 @@
 package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
 import io.github.illuseahashmap.workflow.process.application.dto.ActiveProcessVersionResult;
+import io.github.illuseahashmap.workflow.process.application.dto.RejectTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRequest;
 import io.github.illuseahashmap.workflow.process.infrastructure.lock.ProcessInstanceTransactionExecutor;
 import io.github.illuseahashmap.workflow.process.application.port.ParticipantDirectory;
@@ -18,6 +24,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
+import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.RepositoryService;
@@ -27,7 +36,9 @@ import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.repository.ProcessDefinitionQuery;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
+import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import org.flowable.task.api.TaskQuery;
+import org.flowable.task.api.Task;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -65,6 +76,8 @@ class WorkflowRuntimeServiceImplTest {
     private ProcessInstance processInstance;
     @Mock
     private TaskQuery taskQuery;
+    @Mock
+    private Task task;
     @Mock
     private ProcessDefinitionQuery processDefinitionQuery;
     @Mock
@@ -131,6 +144,48 @@ class WorkflowRuntimeServiceImplTest {
                 "leave", "expense:2:200", null, Map.of(), List.of())))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Process definition id does not match the requested process definition key");
+    }
+
+    @Test
+    void rejectsUnavailableExplicitTargetAssigneeBeforeChangingFlowableState() {
+        when(tenantProvider.current()).thenReturn(
+                new TenantContext.TenantInfo("tenant-1", "tenant-one", "Tenant One"));
+        when(principalProvider.current()).thenReturn(new CurrentPrincipal(
+                "USER", "user-1", "operator", "Operator", "tenant-one",
+                Set.of("TENANT_ADMIN"), Set.of("workflow:instance:operate")));
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId("task-1")).thenReturn(taskQuery);
+        when(taskQuery.active()).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(task);
+        when(task.getProcessInstanceId()).thenReturn("instance-1");
+        when(task.getProcessDefinitionId()).thenReturn("leave:1:100");
+        when(task.getTenantId()).thenReturn("tenant-1");
+        when(taskViewAssembler.canOperate(task, "operator")).thenReturn(true);
+        when(transactionExecutor.execute(eq("instance-1"), any())).thenAnswer(invocation ->
+                ((Supplier<?>) invocation.getArgument(1)).get());
+        when(repositoryService.getBpmnModel("leave:1:100")).thenReturn(modelWithUserTask("review"));
+        doThrow(new BusinessException(ErrorCode.BAD_REQUEST, "Users do not belong to the current tenant: outsider"))
+                .when(participantDirectory).requireUsableUsernames(List.of("outsider"));
+
+        assertThatThrownBy(() -> service().reject(new RejectTaskRequest(
+                "task-1", "operator", List.of(), "review", null,
+                List.of("outsider"), List.of(), Map.of(), List.of())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Users do not belong to the current tenant: outsider");
+
+        verify(runtimeService, never()).setVariables(eq("instance-1"), anyMap());
+        verify(participantDirectory).requireUsableUsernames(List.of("outsider"));
+    }
+
+    private BpmnModel modelWithUserTask(String activityId) {
+        BpmnModel model = new BpmnModel();
+        org.flowable.bpmn.model.Process process = new org.flowable.bpmn.model.Process();
+        process.setId("leave");
+        UserTask userTask = new UserTask();
+        userTask.setId(activityId);
+        process.addFlowElement(userTask);
+        model.addProcess(process);
+        return model;
     }
 
     private WorkflowRuntimeServiceImpl service() {

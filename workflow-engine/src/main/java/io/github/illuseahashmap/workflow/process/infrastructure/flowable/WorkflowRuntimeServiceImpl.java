@@ -384,6 +384,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         Map<String, Object> variables = new HashMap<>(ProcessVariablePolicy.clientVariables(request.variables()));
         List<String> targetAssignees = normalizeList(request.targetAssignees());
         if (!targetAssignees.isEmpty()) {
+            participantDirectory.requireUsableUsernames(targetAssignees);
             UserTask targetTask = findUserTask(processDefinitionId, targetActivityId);
             boolean collectionAssignment = targetTask != null && (targetTask.getLoopCharacteristics() != null
                     || !CollectionUtils.isEmpty(targetTask.getCandidateUsers())
@@ -420,7 +421,7 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                 : normalizeList(request.targetCandidateUsers()).stream()
                         .map(value -> value.toLowerCase(java.util.Locale.ROOT))
                         .toList();
-        participantDirectory.requireTransferableUsernames(targetUsers);
+        participantDirectory.requireUsableUsernames(targetUsers);
     }
 
     private void applyTransferTarget(String taskId, TransferTaskRequest request) {

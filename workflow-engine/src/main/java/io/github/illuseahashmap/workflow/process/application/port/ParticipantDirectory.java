@@ -7,5 +7,5 @@ public interface ParticipantDirectory {
 
     Set<String> validateSelectableUsernames(Collection<String> usernames);
 
-    void requireTransferableUsernames(Collection<String> usernames);
+    void requireUsableUsernames(Collection<String> usernames);
 }

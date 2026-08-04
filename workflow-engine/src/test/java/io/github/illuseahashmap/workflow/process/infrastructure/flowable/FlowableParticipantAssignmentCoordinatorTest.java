@@ -19,6 +19,7 @@ import org.flowable.bpmn.model.ExclusiveGateway;
 import org.flowable.bpmn.model.ParallelGateway;
 import org.flowable.bpmn.model.Gateway;
 import org.flowable.bpmn.model.SequenceFlow;
+import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.StartEvent;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.RepositoryService;
@@ -176,6 +177,48 @@ class FlowableParticipantAssignmentCoordinatorTest {
                 .containsExactly("financeTask", "archiveTask");
     }
 
+    @Test
+    void followsOnlyMatchingConditionalFlowsAfterUserTask() {
+        BpmnModel model = conditionalActivityModel(false);
+        when(repositoryService.getBpmnModel("leave:1:100")).thenReturn(model);
+        when(assignmentRuleService.match("tenant-1", "leave:1:100", "approvedTask", Map.of("approved", true)))
+                .thenReturn(null);
+
+        List<ParticipantRequirementView> requirements = coordinator.requirementsForStart(
+                "tenant-1", "leave:1:100", Map.of("approved", true));
+
+        assertThat(requirements).extracting(ParticipantRequirementView::activityId)
+                .containsExactly("approvedTask");
+    }
+
+    @Test
+    void followsActivityDefaultFlowWhenNoConditionalFlowMatches() {
+        BpmnModel model = conditionalActivityModel(true);
+        when(repositoryService.getBpmnModel("leave:1:100")).thenReturn(model);
+        when(assignmentRuleService.match("tenant-1", "leave:1:100", "rejectedTask", Map.of("approved", false)))
+                .thenReturn(null);
+
+        List<ParticipantRequirementView> requirements = coordinator.requirementsForStart(
+                "tenant-1", "leave:1:100", Map.of("approved", false));
+
+        assertThat(requirements).extracting(ParticipantRequirementView::activityId)
+                .containsExactly("rejectedTask");
+    }
+
+    @Test
+    void rejectsNonBooleanConditionAfterActivity() {
+        BpmnModel model = conditionalActivityModel(false);
+        SequenceFlow conditional = model.getMainProcess().getFlowElement("to-approved", true)
+                instanceof SequenceFlow flow ? flow : null;
+        conditional.setConditionExpression("${approvedText}");
+        when(repositoryService.getBpmnModel("leave:1:100")).thenReturn(model);
+
+        assertThatThrownBy(() -> coordinator.requirementsForStart(
+                "tenant-1", "leave:1:100", Map.of("approvedText", "yes")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Gateway condition must evaluate to a boolean: to-approved");
+    }
+
     private BpmnModel singleTaskModel() {
         BpmnModel model = new BpmnModel();
         org.flowable.bpmn.model.Process process = new org.flowable.bpmn.model.Process();
@@ -258,6 +301,30 @@ class FlowableParticipantAssignmentCoordinatorTest {
         for (org.flowable.bpmn.model.FlowElement element : List.of(
                 start, decision, approvedSplit, finance, archive, rejected,
                 toDecision, approved, notApproved, toFinance, toArchive)) {
+            process.addFlowElement(element);
+        }
+        model.addProcess(process);
+        return model;
+    }
+
+    private BpmnModel conditionalActivityModel(boolean defaultBranch) {
+        BpmnModel model = new BpmnModel();
+        org.flowable.bpmn.model.Process process = new org.flowable.bpmn.model.Process();
+        process.setId("leave");
+        StartEvent start = node(new StartEvent(), "start");
+        ServiceTask review = node(new ServiceTask(), "review");
+        UserTask approved = userTask("approvedTask");
+        UserTask rejected = userTask("rejectedTask");
+        SequenceFlow toReview = flow("to-review", start, review, null);
+        SequenceFlow toApproved = flow("to-approved", review, approved, "${approved}");
+        SequenceFlow toRejected = flow("to-rejected", review, rejected, null);
+        if (defaultBranch) {
+            review.setDefaultFlow("to-rejected");
+        }
+        start.setOutgoingFlows(List.of(toReview));
+        review.setOutgoingFlows(List.of(toApproved, toRejected));
+        for (org.flowable.bpmn.model.FlowElement element : List.of(
+                start, review, approved, rejected, toReview, toApproved, toRejected)) {
             process.addFlowElement(element);
         }
         model.addProcess(process);

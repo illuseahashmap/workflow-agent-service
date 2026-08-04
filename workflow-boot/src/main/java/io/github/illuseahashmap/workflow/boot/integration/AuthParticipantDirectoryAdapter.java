@@ -21,7 +21,7 @@ public class AuthParticipantDirectoryAdapter implements ParticipantDirectory {
     }
 
     @Override
-    public void requireTransferableUsernames(Collection<String> usernames) {
-        userDirectoryService.requireTransferableUsernames(usernames);
+    public void requireUsableUsernames(Collection<String> usernames) {
+        userDirectoryService.requireUsableUsernames(usernames);
     }
 }

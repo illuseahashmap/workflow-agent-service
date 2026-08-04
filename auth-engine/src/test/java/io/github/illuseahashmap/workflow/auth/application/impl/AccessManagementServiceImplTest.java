@@ -116,6 +116,63 @@ class AccessManagementServiceImplTest {
     }
 
     @Test
+    void readdingExistingMemberUsesCurrentRolesForPermissionBoundary() {
+        CurrentPrincipalProvider memberManager = () -> new CurrentPrincipal(
+                "USER", "manager-id", "manager", "Manager", "tenant-a",
+                Set.of("MEMBER_MANAGER"), Set.of("member:manage"));
+        AccessManagementServiceImpl managerService = new AccessManagementServiceImpl(
+                userRepository, membershipRepository, authorizationRepository, memberManager);
+        when(userRepository.findByUsername("existing-user")).thenReturn(Optional.of(
+                new AuthUser(1L, "existing-id", "existing-user", "Existing User", "hash",
+                        "tenant-a", true, null, null)));
+        when(membershipRepository.find("existing-id", "tenant-a")).thenReturn(Optional.of(
+                new AuthMembershipRepository.TenantMembership(
+                        "existing-id", "tenant-a-id", "tenant-a", "Tenant A", false, true, null)));
+        when(authorizationRepository.findRoleCodes("existing-id", "tenant-a"))
+                .thenReturn(Set.of("TENANT_ADMIN"));
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "USER", "User", null, true, Set.of()),
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "TENANT_ADMIN", "Tenant Administrator", null, true, Set.of())));
+
+        assertThatThrownBy(() -> managerService.addMember(
+                new AddTenantMemberRequest("existing-user", Set.of("USER"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Only an administrator can grant or revoke the tenant administrator role");
+
+        verify(membershipRepository).lockTenantMemberships("tenant-a");
+        verify(membershipRepository, never()).updateEnabled("existing-id", "tenant-a", true);
+        verify(authorizationRepository, never()).replaceUserRoles(
+                "existing-id", "tenant-a", Set.of("USER"));
+    }
+
+    @Test
+    void readdingDisabledExistingMemberRestoresItOnlyAfterRoleBoundaryChecks() {
+        when(userRepository.findByUsername("disabled-user")).thenReturn(Optional.of(
+                new AuthUser(1L, "disabled-id", "disabled-user", "Disabled User", "hash",
+                        "tenant-a", true, null, null)));
+        when(membershipRepository.find("disabled-id", "tenant-a")).thenReturn(Optional.of(
+                new AuthMembershipRepository.TenantMembership(
+                        "disabled-id", "tenant-a-id", "tenant-a", "Tenant A", false, true, null)));
+        when(authorizationRepository.findRoleCodes("disabled-id", "tenant-a"))
+                .thenReturn(Set.of("USER"));
+        when(authorizationRepository.findRoles("tenant-a")).thenReturn(List.of(
+                new AuthAuthorizationRepository.RoleDefinition(
+                        "USER", "User", null, true, Set.of())));
+        when(membershipRepository.findMembers("tenant-a", "disabled-user")).thenReturn(List.of(
+                new AuthMembershipRepository.TenantMember(
+                        "disabled-id", "disabled-user", "Disabled User", true, true,
+                        Set.of("USER"), Set.of(), null)));
+
+        managerService().addMember(new AddTenantMemberRequest("disabled-user", Set.of("USER")));
+
+        verify(membershipRepository).lockTenantMemberships("tenant-a");
+        verify(membershipRepository).updateEnabled("disabled-id", "tenant-a", true);
+        verify(authorizationRepository).replaceUserRoles("disabled-id", "tenant-a", Set.of("USER"));
+    }
+
+    @Test
     void userCannotElevateSelfToTenantAdministrator() {
         CurrentPrincipalProvider selfManager = () -> new CurrentPrincipal(
                 "USER", "user-2", "self", "Self", "tenant-a",
@@ -166,5 +223,9 @@ class AccessManagementServiceImplTest {
                 .thenReturn(true);
         when(membershipRepository.countEnabledMembersWithRole("tenant-a", "TENANT_ADMIN"))
                 .thenReturn(1L);
+    }
+
+    private AccessManagementServiceImpl managerService() {
+        return service;
     }
 }

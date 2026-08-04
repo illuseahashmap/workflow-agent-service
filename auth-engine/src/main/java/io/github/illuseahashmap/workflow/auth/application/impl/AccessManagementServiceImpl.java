@@ -59,9 +59,22 @@ public class AccessManagementServiceImpl implements AccessManagementService {
         String tenantCode = currentTenantCode();
         AuthUser user = userRepository.findByUsername(request.username().trim().toLowerCase())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "User does not exist"));
-        membershipRepository.add(user.userId(), tenantCode);
+        membershipRepository.lockTenantMemberships(tenantCode);
+        AuthMembershipRepository.TenantMembership existingMembership = membershipRepository
+                .find(user.userId(), tenantCode).orElse(null);
         Set<String> roles = normalizeRoles(request.roleCodes());
-        assertCanChangeRoles(user.userId(), Set.of(), roles);
+        Set<String> currentRoles = existingMembership == null
+                ? Set.of() : authorizationRepository.findRoleCodes(user.userId(), tenantCode);
+        assertCanChangeRoles(user.userId(), currentRoles, roles);
+        if (existingMembership != null) {
+            assertTenantAdministratorRemains(
+                    user.userId(), tenantCode, roles.contains(TENANT_ADMIN_ROLE_CODE));
+            if (!existingMembership.membershipEnabled()) {
+                membershipRepository.updateEnabled(user.userId(), tenantCode, true);
+            }
+        } else {
+            membershipRepository.add(user.userId(), tenantCode);
+        }
         authorizationRepository.replaceUserRoles(user.userId(), tenantCode, roles);
         return members(user.username()).stream()
                 .filter(member -> member.userId().equals(user.userId()))

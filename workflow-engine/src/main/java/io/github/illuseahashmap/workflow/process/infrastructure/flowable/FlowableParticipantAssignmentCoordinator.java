@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.bpmn.model.FlowNode;
 import org.flowable.bpmn.model.ExclusiveGateway;
@@ -240,7 +241,54 @@ public class FlowableParticipantAssignmentCoordinator {
         if (node instanceof InclusiveGateway gateway) {
             return selectInclusiveFlows(gateway, variables);
         }
-        return node.getOutgoingFlows();
+        if (node instanceof Gateway) {
+            return node.getOutgoingFlows();
+        }
+        return selectConditionalActivityFlows(node, variables);
+    }
+
+    private List<SequenceFlow> selectConditionalActivityFlows(
+            FlowNode node, Map<String, Object> variables) {
+        List<SequenceFlow> outgoingFlows = node.getOutgoingFlows();
+        if (outgoingFlows.stream().noneMatch(this::hasCondition)) {
+            return outgoingFlows;
+        }
+        SequenceFlow defaultFlow = node instanceof Activity activity
+                ? defaultActivityFlow(activity) : null;
+        List<SequenceFlow> selected = outgoingFlows.stream()
+                .filter(flow -> flow != defaultFlow)
+                .filter(this::hasCondition)
+                .filter(flow -> conditionMatches(flow, variables))
+                .toList();
+        if (!selected.isEmpty()) {
+            return selected;
+        }
+        if (defaultFlow != null) {
+            return List.of(defaultFlow);
+        }
+        List<SequenceFlow> unconditional = outgoingFlows.stream()
+                .filter(flow -> !hasCondition(flow))
+                .toList();
+        if (!unconditional.isEmpty()) {
+            return unconditional;
+        }
+        throw new BusinessException(ErrorCode.BAD_REQUEST,
+                "No outgoing condition matched activity " + node.getId());
+    }
+
+    private SequenceFlow defaultActivityFlow(Activity activity) {
+        if (!StringUtils.hasText(activity.getDefaultFlow())) {
+            return null;
+        }
+        return activity.getOutgoingFlows().stream()
+                .filter(flow -> activity.getDefaultFlow().equals(flow.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST,
+                        "Activity " + activity.getId() + " references an unknown default flow"));
+    }
+
+    private boolean hasCondition(SequenceFlow flow) {
+        return StringUtils.hasText(flow.getConditionExpression());
     }
 
     private List<SequenceFlow> selectExclusiveFlow(ExclusiveGateway gateway, Map<String, Object> variables) {
