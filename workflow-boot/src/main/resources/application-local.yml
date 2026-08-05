@@ -8,6 +8,10 @@ flowable:
   database-schema-update: true
 
 workflow:
+  runtime:
+    environment: development
   auth:
     self-registration:
       enabled: true
+    token:
+      cookie-secure: false
