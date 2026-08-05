@@ -23,6 +23,8 @@ flowable:
   check-process-definitions: false
 
 workflow:
+  runtime:
+    environment: ${WORKFLOW_ENV:production}
   lock:
     key-prefix: ${WORKFLOW_LOCK_KEY_PREFIX:workflow-agent-service}
     wait-seconds: 3

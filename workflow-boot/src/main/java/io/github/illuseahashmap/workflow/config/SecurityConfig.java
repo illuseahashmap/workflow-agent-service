@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.http.HttpHeaders;
+import org.springframework.util.StringUtils;
 
 @Configuration
 @EnableMethodSecurity
@@ -38,7 +38,8 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers(request -> request.getHeader(HttpHeaders.AUTHORIZATION) != null))
+                        .ignoringRequestMatchers(request -> StringUtils.hasText(
+                                request.getHeader(ServiceTokenAuthenticationFilter.TOKEN_HEADER))))
                 .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers("/actuator/health", "/actuator/info", "/auth/csrf", "/auth/register", "/auth/login", "/auth/logout").permitAll()

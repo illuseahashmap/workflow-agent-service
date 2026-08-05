@@ -29,7 +29,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String TOKEN_HEADER = "X-Workflow-Token";
+    public static final String TOKEN_HEADER = "X-Workflow-Token";
 
     private final WorkflowSecurityProperties properties;
     private final ServiceTokenCryptoService cryptoService;
