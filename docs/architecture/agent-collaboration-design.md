@@ -1,6 +1,6 @@
 # Agent 协作节点架构设计
 
-更新时间：2026-08-03
+更新时间：2026-08-05
 状态：已验证设计基线，尚未实施
 
 ## 1. 背景
@@ -37,6 +37,52 @@ Agent 不直接控制 Flowable，也不绕过工作流应用服务完成任务�
 - 完整产品化的知识库、文档摄取、切分策略配置和检索质量评估平台。
 
 这些能力需要在核心执行链路稳定后单独设计。
+
+### 3.1 平台化实现边界
+
+平台不能预先知道每个租户的业务材料、业务术语或企业系统接口，也不应把“读取材料”和“调用企业工具”写死在 `agent-engine` 中。平台提供通用运行时和治理能力，租户通过配置提供业务语义和数据连接。
+
+| 责任方 | 负责内容 |
+| --- | --- |
+| 平台 | Agent 生命周期、模型适配、输入输出 Schema、工具注册、权限策略、凭据保护、异步执行、检查点、审计和成本统计 |
+| 租户管理员 | Provider、凭据、数据源、工具授权、配额和安全策略 |
+| 流程设计者 | Agent 版本、流程变量输入映射、文件上下文、输出映射、允许的工具子集和人工确认策略 |
+| Agent Runtime | 根据已发布配置组装上下文、调用模型和工具、校验结构化结果并上报运行事件 |
+| Flowable | 业务流程、人工任务、流程变量、任务状态和流程历史 |
+
+Agent 节点必须通过显式契约接收业务输入，而不是自行扫描租户数据：
+
+```text
+Flowable 流程变量/文件
+        ↓ inputMapping
+Agent Runtime 上下文组装
+        ↓
+模型推理和受限工具调用
+        ↓ outputSchema 校验
+Agent 结果变量 / 人工复核任务
+        ↓
+Flowable 继续推进流程
+```
+
+第一阶段的 Agent 配置至少应包含：
+
+```text
+AgentDefinition
+├── AgentDefinitionVersion
+├── systemPrompt
+├── modelRef
+├── inputSchema / inputMapping
+├── outputSchema / outputMapping
+├── allowedTools
+├── dataScopes
+├── budgetPolicy
+├── humanApprovalPolicy
+└── retryTimeoutPolicy
+```
+
+企业工具采用平台注册、租户授权、Agent 版本选择的三级关系。第一阶段优先支持受治理的 OpenAPI/HTTP 和 MCP 连接器；禁止租户上传任意可执行代码或配置未经策略校验的任意目标地址。工具执行器负责注入租户凭据、校验参数、执行超时和幂等策略，模型只能看到工具 Schema，不能读取凭据。
+
+平台不负责理解“请假”“采购”或“设备故障”等具体领域。领域知识通过流程变量、文件输入、租户授权的数据源和只读检索工具进入 Agent。领域模板可以后续增加，但不能成为 `agent-engine` 的硬编码依赖。
 
 ## 4. 核心原则
 
@@ -186,7 +232,7 @@ agent-engine ──integration event──> workflow-engine
 
 ### 7.3 AgentRun
 
-表示一次可恢复执行，状态为：
+表示一次可恢复执行。完整目标模型状态为：
 
 ```text
 QUEUED
@@ -199,6 +245,10 @@ TIMED_OUT
 CANCEL_REQUESTED
 CANCELLED
 ```
+
+MVP 只实现 `QUEUED`、`RUNNING`、`SUCCEEDED`、`FAILED`、`TIMED_OUT` 和
+`CANCELLED`。`WAITING_HUMAN`、`WAITING_TOOL_APPROVAL` 和
+`CANCEL_REQUESTED` 属于后续人工交互扩展，不进入 MVP 的状态枚举和恢复逻辑。
 
 每次运行至少关联：
 
@@ -215,6 +265,10 @@ conversationId（可空）
 idempotencyKey
 attempt
 ```
+
+`attempt` 不仅是计数值。每次重试必须创建独立的 `AgentRunAttempt`，原始尝试的
+检查点、错误、租约和结束时间不得被覆盖。`AgentRun` 保存当前尝试引用和累计
+尝试次数，`AgentRunAttempt` 保存每次尝试的完整审计。
 
 `activityActivationId` 在节点每次进入时生成，避免循环流程再次进入同一节点时被错误判定为重复执行。
 
@@ -239,8 +293,11 @@ Agent Worker 不得把完整模型与工具循环视为一次不可恢复的方�
 - 待审批工具调用引用
 - 上下文消息窗口或其可重建引用
 - Token、费用和迭代次数累计值
+- `checkpointSchemaVersion`、`attemptId`、`nextStep` 和 `stateHash`
 
 服务重启或 Worker 租约过期后，从最后一个完整检查点继续。检查点只保存恢复所需的规范化状态，不保存 JVM 对象、函数或模型私有思维链。
+不得在检查点、事件或普通审计字段中保存明文 Token、Provider 密钥、连接凭据或
+模型隐藏思维链；敏感配置只能保存凭据引用，必要的敏感数据必须使用平台密钥加密。
 
 ### 7.6 ToolDefinition 与 ToolInvocation
 
@@ -542,9 +599,13 @@ workflow_agent_binding
 - Provider 与加密凭据
 - AgentDefinition 与不可变 AgentVersion
 - OpenAI Compatible 适配器
+- 输入/输出 Schema、流程变量和文件的显式映射
+- 平台工具注册、租户授权和工具白名单
 - `knowledge.search` 只读工具、检索端口和标准引用结果结构
 - 沙箱测试、发布和权限
 - AgentRun、AgentCheckpoint、Worker 租约、Outbox/Inbox 和基础审计
+
+阶段 1 的验收重点是：两个租户可以使用不同的模型凭据、Agent 配置和工具授权完成同一类通用流程，平台不需要写入任何租户特定业务代码。
 
 ### 阶段 2：自主 Agent 节点
 
@@ -552,6 +613,8 @@ workflow_agent_binding
 - 部署校验和绑定投影
 - 异步可触发 Service Task
 - 输入输出映射、重试、超时、失败路由和人工接管
+- 受治理的 OpenAPI/HTTP、MCP 工具连接器
+- 工具调用前的租户权限、风险等级和幂等校验
 
 ### 阶段 3：人工任务 Copilot
 
@@ -566,6 +629,18 @@ workflow_agent_binding
 - 多租户隔离和权限矩阵测试
 - 重复消息、服务重启、模型超时和流程并发测试
 - 配额、指标、告警、压测和运维文档
+
+### 阶段 5：领域模板与生态扩展
+
+只有通用平台契约稳定后，才按真实需求增加领域模板和连接器：
+
+- 审批、工单、合同等场景的 Agent 模板
+- 历史业务数据和外部知识库连接器
+- 更细粒度的数据权限、字段过滤和证据链
+- 专用模型 Provider、混合检索和 Rerank
+- OAuth 委托、远程 Agent 和插件市场
+
+领域模板只能复用平台公开的 Agent、Tool、Knowledge 和 Policy 契约，不得反向污染 `agent-engine` 的核心领域模型。
 
 ## 17. 第一阶段验收标准
 
@@ -635,7 +710,327 @@ workflow_agent_binding
 
 项目价值不在概念首创，而在提供一个基于 Flowable 8、Spring Boot 4 和 Java 的开源、可治理 Human-Agent Workflow 实现。最接近的完整原厂方案位于 Flowable Enterprise 产品，开源生态中现有方案通常只覆盖模型连接器或通用 AI DAG，尚不能替代本方案的目标组合。
 
-### 19.3 需要避免的重复建设
+### 19.3 Agent MVP 可开发规格
+
+本节将前述架构收敛为第一版可以直接拆分任务的实现规格。MVP 只验证一条完整闭环：
+
+```text
+已发布 Agent 配置
+    ↓
+Flowable Agent Service Task
+    ↓
+可靠事件创建 AgentRun
+    ↓
+Agent Worker 调用 OpenAI Compatible Provider
+    ↓
+JSON Schema 校验输出
+    ↓
+AgentRunCompleted / AgentRunFailed
+    ↓
+workflow-engine 校验并恢复 Flowable 流程
+```
+
+#### 19.3.1 MVP 范围
+
+必须实现：
+
+1. 单租户范围内的 `AgentDefinition`、不可变 `AgentVersion` 和发布状态。
+2. `OPENAI_COMPATIBLE` Provider，以及服务端加密的租户凭据引用。
+3. 一个自主 Agent BPMN 节点，使用异步、可触发 Service Task。
+4. 流程变量和文件引用到 Agent 输入的显式映射。
+5. JSON Schema 输出校验和结果到流程变量的显式映射。
+6. `AgentRun`、`AgentCheckpoint`、Outbox/Inbox、租约和基础审计。
+7. `QUEUED`、`RUNNING`、`SUCCEEDED`、`FAILED`、`CANCELLED`、`TIMED_OUT` 六种运行状态。
+8. 重试、超时、取消、服务重启恢复和重复完成事件幂等。
+9. 一个只读工具 `knowledge.search`，工具执行先经过租户授权和参数校验。
+
+明确不进入 MVP：
+
+- 多 Agent 协作。
+- Agent 内部可视化子流程。
+- Copilot 多轮会话和跨流程记忆。
+- 高风险写工具、自动审批、自动转办和自动终止流程。
+- 任意代码、任意 URL 和租户自定义插件上传。
+- 完整知识库产品、复杂切分、Rerank 和专用向量数据库。
+
+#### 19.3.2 AgentRun 状态机
+
+```text
+QUEUED ──领取租约──> RUNNING
+  │                    │
+  │                    ├──成功──> SUCCEEDED
+  │                    ├──可重试失败──> QUEUED
+  │                    ├──最终失败──> FAILED
+  │                    ├──超时──> TIMED_OUT
+  │                    └──取消请求──> CANCELLED
+  │
+  └──取消请求──> CANCELLED
+```
+
+状态转换只能由 `AgentRunStateMachine` 执行，禁止 Controller、Provider 或 Worker 直接修改任意状态。每次转换必须保存：旧状态、新状态、原因、操作者或系统主体、时间和 `traceId`。
+
+状态约束：
+
+- `QUEUED` 只能由创建运行、可重试失败或租约回收进入。
+- `RUNNING` 只能由持有有效租约的 Worker 进入。
+- `SUCCEEDED`、`FAILED`、`CANCELLED`、`TIMED_OUT` 是终态。
+- 终态收到重复完成或失败事件时返回幂等成功，不再次推进 Flowable。
+- `WAITING_HUMAN` 暂不进入 MVP；后续人工交互使用独立版本扩展状态机。
+
+#### 19.3.3 MVP 数据模型
+
+第一版使用 PostgreSQL，所有业务表必须包含 `tenant_code`、创建时间、更新时间和必要的审计字段。建议最小字段如下：
+
+```text
+agent_definition
+├── id
+├── tenant_code
+├── code
+├── name
+├── description
+├── status
+└── created_by
+
+agent_definition_version
+├── id
+├── tenant_code
+├── definition_id
+├── version
+├── status                 # DRAFT / PUBLISHED / DISABLED
+├── model_ref
+├── system_prompt
+├── input_schema_json
+├── input_mapping_json
+├── output_schema_json
+├── output_mapping_json
+├── tool_policy_json
+├── budget_policy_json
+├── retry_policy_json
+├── published_by
+└── published_at
+
+agent_run
+├── id
+├── tenant_code
+├── agent_version_id
+├── process_definition_id
+├── process_instance_id
+├── execution_id
+├── task_id                # 可空
+├── activity_id
+├── activity_activation_id
+├── status
+├── idempotency_key
+├── attempt_count
+├── current_attempt_id
+├── lease_owner
+├── lease_expires_at
+├── input_snapshot_json
+├── output_snapshot_json
+├── error_code
+├── error_message
+├── started_at
+├── finished_at
+└── trace_id
+
+agent_run_attempt
+├── id
+├── tenant_code
+├── agent_run_id
+├── attempt_no
+├── status
+├── lease_owner
+├── lease_expires_at
+├── input_snapshot_json
+├── output_snapshot_json
+├── error_code
+├── error_message
+├── started_at
+└── finished_at
+
+agent_run_checkpoint
+├── id
+├── tenant_code
+├── agent_run_id
+├── attempt_id
+├── sequence_no
+├── checkpoint_schema_version
+├── checkpoint_type       # MODEL_RESPONSE / TOOL_REQUEST / TOOL_RESULT / HUMAN_PAUSE
+├── next_step
+├── state_json
+├── state_hash
+├── created_at
+└── unique(agent_run_id, attempt_id, sequence_no)
+
+agent_tool_invocation
+├── id
+├── tenant_code
+├── agent_run_id
+├── attempt_id
+├── tool_code
+├── idempotency_key
+├── risk_level
+├── request_json
+├── response_json
+├── status
+├── started_at
+└── finished_at
+```
+
+MVP 不对 Flowable `ACT_*` 表建立数据库外键。Agent 表通过
+`process_definition_id`、`process_instance_id`、`execution_id`、`activity_id` 和
+`activity_activation_id` 建立可查询关联，避免历史清理或流程引擎升级破坏 Agent
+审计数据。必须建立以下租户范围内的唯一约束：
+
+```text
+unique(tenant_code, idempotency_key)
+unique(tenant_code, process_instance_id, execution_id,
+       activity_activation_id, agent_version_id)
+unique(tenant_code, agent_run_id, attempt_no)
+```
+
+第二个约束用于防止同一节点激活重复创建运行；循环再次进入同一 BPMN 节点时，
+必须生成新的 `activity_activation_id`。
+
+#### 19.3.4 可靠事件协议
+
+事件统一使用共享事件信封：
+
+```json
+{
+  "eventId": "uuid",
+  "eventType": "AgentRunRequested.v1",
+  "occurredAt": "2026-08-05T10:00:00Z",
+  "traceId": "trace-id",
+  "tenantCode": "tenant-a",
+  "aggregateId": "agent-run-id",
+  "payload": {}
+}
+```
+
+MVP 只实现以下事件：
+
+| 事件 | 发布者 | 消费者 | 语义 |
+| --- | --- | --- | --- |
+| `AgentRunRequested.v1` | workflow-engine | agent-engine | 请求执行已经创建的 AgentRun |
+| `AgentRunCancellationRequested.v1` | workflow-engine | agent-engine | 请求取消未完成运行 |
+| `AgentRunCompleted.v1` | agent-engine | workflow-engine | Agent 输出已通过 Schema 校验 |
+| `AgentRunFailed.v1` | agent-engine | workflow-engine | Agent 进入失败或超时终态 |
+
+Outbox 记录至少包含 `event_id`、`event_type`、`aggregate_id`、`tenant_code`、`payload`、`status`、`attempt_count`、`next_attempt_at` 和 `last_error`。Inbox 以 `event_id` 建立唯一约束，消费者必须先去重再执行业务动作。
+
+事件职责固定为：workflow-engine 在同一事务中创建 `AgentRun` 并写入
+`AgentRunRequested` Outbox；agent-engine 只负责领取和执行已有运行，不负责通过该
+事件隐式创建运行。完成、失败和取消事件必须携带 `agentRunId`、`attemptId`、
+`activityActivationId` 和结果摘要，消费方据此执行二次幂等校验。
+
+#### 19.3.5 Flowable 交互时序
+
+```text
+Flowable 进入 Agent Service Task
+        ↓
+agentTaskDelegate 只校验 binding 和输入映射
+        ↓
+事务内创建 AgentRun(QUEUED) + Outbox
+        ↓
+事务提交，Triggerable Service Task 以 `async` 方式持久化流程等待态
+        ↓
+Outbox Dispatcher 发布 AgentRunRequested
+        ↓
+Agent Worker 领取租约并进入 RUNNING
+        ↓
+模型调用 / 检查点 / 工具执行
+        ↓
+Agent 发布 Completed 或 Failed
+        ↓
+workflow-engine 获取流程实例锁
+        ↓
+校验 AgentRun、租户、流程实例、Activity 和版本
+        ↓
+在流程实例锁和事务执行器内写入流程变量，并通过 `RuntimeService` 恢复等待执行
+```
+
+关键约束：
+
+- 模型和工具调用不在 Flowable 事务或流程实例锁内执行。
+- `AgentRunCompleted` 不能直接调用 Flowable；必须由 workflow-engine 的事件消费者执行。
+- 事件消费者必须确认 AgentRun 当前属于对应流程实例和 Activity，迟到结果不得修改已经离开该节点的流程。
+- Flowable 恢复动作必须使用现有流程实例锁和事务执行器；实现上由消费者定位
+  对应的等待执行，校验 `activityActivationId` 后调用 `RuntimeService` 恢复，不能
+  直接在消息线程中绕过事务执行器调用 Flowable。
+- Flowable 恢复遇到乐观锁冲突时只能重试消费，不得重复写入结果；超过重试上限进入
+  运营告警和待处理状态。
+- Agent 结果写入流程变量前必须执行输出 Schema、变量名称和大小限制校验。
+- 流程实例已经离开该节点、Agent 版本不匹配、租户不匹配或尝试编号不是当前尝试
+  时，事件只能记录为迟到或过期事件，不得推进流程。
+
+#### 19.3.6 MVP API 契约
+
+管理端 API：
+
+```text
+POST /agent/definitions
+GET  /agent/definitions
+POST /agent/definitions/{id}/versions
+POST /agent/versions/{id}/publish
+POST /agent/versions/{id}/disable
+POST /agent/versions/{id}/test
+```
+
+运行与运维 API：
+
+```text
+GET  /agent/runs/{runId}
+POST /agent/runs/{runId}/cancel
+POST /agent/runs/{runId}/retry
+GET  /agent/runs/{runId}/checkpoints
+```
+
+API 规则：
+
+- 所有查询和命令自动使用当前主体的 `tenantCode`，请求体不得覆盖租户。
+- 发布前校验 Provider、凭据引用、Schema、映射、工具白名单和预算策略。
+- `retry` 只能作用于 `FAILED`、`TIMED_OUT`，且必须生成新的尝试记录，不得覆盖原始审计。
+- `cancel` 对终态返回幂等成功，对运行中的 Agent 写入取消事件。
+- 测试运行必须使用独立的 `test` 标记，不得写入生产流程变量或触发业务工具。
+
+所有 API 必须定义稳定的请求 DTO、响应 DTO、分页字段和错误码。错误响应统一包含
+`code`、`message`、`traceId`，禁止把 Provider 原始异常或凭据相关信息直接返回给前端。
+运行详情至少返回 Agent 版本、流程关联、当前尝试、状态、时间、错误摘要和可见检查点；
+原始 Prompt、凭据引用和敏感输入必须按权限脱敏。
+
+#### 19.3.7 实施任务拆分
+
+建议按以下顺序实现，每个任务完成后保持可编译和可测试：
+
+1. `shared-kernel`：事件信封、租户字段、Trace ID 和错误码。
+2. `agent-engine`：AgentDefinition、AgentVersion、Provider、凭据引用和状态机。
+3. `platform-migrations`：MVP 表、索引、唯一约束和 Flyway 集成测试。
+4. `agent-engine`：AgentRun、Checkpoint、租约、Outbox/Inbox 和 Worker 接口。
+5. `workflow-engine`：Agent Service Task Binding、输入输出映射和部署校验。
+6. `workflow-engine`：AgentRun 完成/失败事件消费者和 Flowable 恢复命令。
+7. `agent-engine`：OpenAI Compatible Provider 和 `knowledge.search` 只读工具。
+8. `workflow-boot`：事件调度、Worker 装配、配置和健康检查。
+9. 前端：Agent 定义、版本发布、流程节点绑定和运行详情页面。
+10. 测试：重复事件、租约过期、Worker 重启、超时、取消、跨租户和迟到事件。
+
+实现顺序补充约束：先冻结状态机、`AgentRunAttempt`、事件信封和 Flowable 恢复协议，
+再开始 Provider、工具连接器和前端。第一条端到端链路必须先完成“创建运行 → 异步执行
+→ 检查点 → 完成事件 → Flowable 恢复”的闭环，再扩展更多工具和人工交互。
+
+#### 19.3.8 MVP 完成判定
+
+只有满足以下条件，才进入人工 Copilot 或更多工具连接器：
+
+1. 两个租户可以配置不同 Agent 版本和 Provider，数据与凭据不会交叉读取。
+2. 一个 BPMN Agent 节点可以在 Web 请求结束后继续执行并恢复流程。
+3. Worker 被终止后可以从最后检查点恢复，幂等读工具不会重复产生业务副作用。
+4. Agent 输出错误、超时、取消和重复完成事件都有确定结果。
+5. 流程已经离开 Agent 节点后，迟到事件不能修改流程变量或重新推进流程。
+6. 可以通过 AgentRun 和 Flowable 历史还原一次运行的版本、输入摘要、模型、工具调用、输出和最终流程结果。
+7. PostgreSQL、Redis、Flowable 和 Worker 关键链路通过 Testcontainers 集成测试。
+
+### 19.4 需要避免的重复建设
 
 - 不自行实现模型厂商协议、工具 Schema 编解码和基础消息对象，复用 LangChain4j。
 - 不另做一套通用 Agent 画布，业务编排继续使用 BPMN。
