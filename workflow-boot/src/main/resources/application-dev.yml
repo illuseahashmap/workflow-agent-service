@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+workflow:
+  runtime:
+    environment: development
+  auth:
+    token:
+      cookie-secure: false

@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: workflow-agent-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: ${WORKFLOW_DB_URL}
+    username: ${WORKFLOW_DB_USERNAME}
+    password: ${WORKFLOW_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    baseline-version: 0
+
+server:
+  port: 8080
+
+flowable:
+  database-schema-update: false
+  async-executor-activate: true
+  check-process-definitions: false
+
+workflow:
+  runtime:
+    environment: ${WORKFLOW_ENV:production}
+  lock:
+    key-prefix: ${WORKFLOW_LOCK_KEY_PREFIX:workflow-agent-service}
+    wait-seconds: 3
+    ttl-seconds: 30
+  security:
+    enabled: true
+    master-key-base64: ${WORKFLOW_MASTER_KEY_BASE64:}
+    replay-window-seconds: 300
+    clock-skew-seconds: 30
+    nonce-cleanup-interval-ms: 600000
+    public-paths:
+      - /actuator/health
+      - /actuator/info
+      - /auth/register
+      - /auth/login
+      - /auth/csrf
+  auth:
+    self-registration:
+      enabled: ${WORKFLOW_SELF_REGISTRATION_ENABLED:false}
+      tenant-code: ${WORKFLOW_SELF_REGISTRATION_TENANT_CODE:default}
+    bootstrap-admin:
+      enabled: ${WORKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${WORKFLOW_BOOTSTRAP_ADMIN_USERNAME:}
+      password: ${WORKFLOW_BOOTSTRAP_ADMIN_PASSWORD:}
+      display-name: ${WORKFLOW_BOOTSTRAP_ADMIN_DISPLAY_NAME:Platform Administrator}
+    token:
+      issuer: workflow-agent-service
+      secret: ${WORKFLOW_AUTH_TOKEN_SECRET:}
+      ttl-seconds: ${WORKFLOW_AUTH_TOKEN_TTL_SECONDS:7200}
+      cookie-secure: ${WORKFLOW_AUTH_COOKIE_SECURE:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
