@@ -11,4 +11,8 @@ public interface AuthUserRepository {
     Optional<AuthUser> findByUserId(String userId);
 
     AuthUser save(String userId, String username, String displayName, String passwordHash, String tenantCode);
+
+    AuthUser updateDisplayName(String userId, String displayName);
+
+    void updatePasswordHash(String userId, String passwordHash);
 }

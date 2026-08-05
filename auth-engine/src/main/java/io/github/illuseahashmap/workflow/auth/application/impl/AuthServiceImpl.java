@@ -2,11 +2,13 @@ package io.github.illuseahashmap.workflow.auth.application.impl;
 
 import io.github.illuseahashmap.workflow.auth.application.AuthService;
 import io.github.illuseahashmap.workflow.auth.application.dto.AuthTokenResponse;
+import io.github.illuseahashmap.workflow.auth.application.dto.ChangePasswordRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.CurrentUserResponse;
 import io.github.illuseahashmap.workflow.auth.application.dto.LoginRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.RegisterRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionResponse;
+import io.github.illuseahashmap.workflow.auth.application.dto.UpdateProfileRequest;
 import io.github.illuseahashmap.workflow.auth.application.port.AuthTokenIssuer;
 import io.github.illuseahashmap.workflow.auth.application.port.AuthenticationAttemptGuard;
 import io.github.illuseahashmap.workflow.auth.application.port.PasswordHasher;
@@ -139,6 +141,32 @@ public class AuthServiceImpl implements AuthService {
                 principal.roles(),
                 principal.permissions()
         );
+    }
+
+    @Override
+    @Transactional
+    public CurrentUserResponse updateProfile(UpdateProfileRequest request) {
+        CurrentPrincipal principal = principalProvider.current();
+        String displayName = request.displayName().trim();
+        AuthUser user = userRepository.updateDisplayName(principal.principalId(), displayName);
+        return new CurrentUserResponse(
+                user.userId(), user.username(), user.displayName(), principal.tenantCode(),
+                principal.roles(), principal.permissions());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        CurrentPrincipal principal = principalProvider.current();
+        AuthUser user = userRepository.findByUserId(principal.principalId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "User does not exist"));
+        if (!passwordHasher.matches(request.currentPassword(), user.passwordHash())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Current password is incorrect");
+        }
+        if (passwordHasher.matches(request.newPassword(), user.passwordHash())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "New password must be different");
+        }
+        userRepository.updatePasswordHash(user.userId(), passwordHasher.hash(request.newPassword()));
     }
 
     @Override

@@ -11,9 +11,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.illuseahashmap.workflow.auth.application.dto.AuthTokenResponse;
+import io.github.illuseahashmap.workflow.auth.application.dto.ChangePasswordRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.LoginRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.RegisterRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantRequest;
+import io.github.illuseahashmap.workflow.auth.application.dto.UpdateProfileRequest;
 import io.github.illuseahashmap.workflow.auth.application.port.AuthenticationAttemptGuard;
 import io.github.illuseahashmap.workflow.auth.application.port.AuthTokenIssuer;
 import io.github.illuseahashmap.workflow.auth.application.port.PasswordHasher;
@@ -209,6 +211,50 @@ class AuthServiceImplTest {
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple("tenant-a", true, true),
                         org.assertj.core.groups.Tuple.tuple("tenant-b", false, false));
+    }
+
+    @Test
+    void updatesCurrentUserDisplayNameWithoutChangingIdentity() {
+        CurrentPrincipal principal = new CurrentPrincipal(
+                "USER", "user-id", "operator", "Old Name", "tenant-a", Set.of("USER"), Set.of("profile:read"));
+        AuthUser updated = user("operator", "New Name", "tenant-a");
+        when(principalProvider.current()).thenReturn(principal);
+        when(userRepository.updateDisplayName("user-id", "New Name")).thenReturn(updated);
+
+        assertThat(service.updateProfile(new UpdateProfileRequest(" New Name ")))
+                .extracting("userId", "username", "displayName", "tenantCode")
+                .containsExactly("user-id", "operator", "New Name", "tenant-a");
+        verify(userRepository).updateDisplayName("user-id", "New Name");
+    }
+
+    @Test
+    void changesPasswordOnlyAfterVerifyingCurrentPassword() {
+        AuthUser user = user("operator", "Operator", "tenant-a");
+        when(principalProvider.current()).thenReturn(new CurrentPrincipal(
+                "USER", "user-id", "operator", "Operator", "tenant-a", Set.of("USER"), Set.of()));
+        when(userRepository.findByUserId("user-id")).thenReturn(Optional.of(user));
+        when(passwordHasher.matches("old-password", "stored-hash")).thenReturn(true);
+        when(passwordHasher.matches("new-password", "stored-hash")).thenReturn(false);
+        when(passwordHasher.hash("new-password")).thenReturn("new-hash");
+
+        service.changePassword(new ChangePasswordRequest("old-password", "new-password"));
+
+        verify(userRepository).updatePasswordHash("user-id", "new-hash");
+    }
+
+    @Test
+    void rejectsPasswordChangeWhenCurrentPasswordIsWrong() {
+        AuthUser user = user("operator", "Operator", "tenant-a");
+        when(principalProvider.current()).thenReturn(new CurrentPrincipal(
+                "USER", "user-id", "operator", "Operator", "tenant-a", Set.of("USER"), Set.of()));
+        when(userRepository.findByUserId("user-id")).thenReturn(Optional.of(user));
+        when(passwordHasher.matches("wrong-password", "stored-hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.changePassword(
+                new ChangePasswordRequest("wrong-password", "new-password")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Current password is incorrect");
+        verify(userRepository, never()).updatePasswordHash(anyString(), anyString());
     }
 
     private AuthUser user(String username, String displayName, String tenantCode) {

@@ -69,6 +69,33 @@ public class JdbcAuthUserRepository implements AuthUserRepository {
                 .single();
     }
 
+    @Override
+    public AuthUser updateDisplayName(String userId, String displayName) {
+        return jdbcClient.sql("""
+                        UPDATE auth_user
+                        SET display_name = :displayName, updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = :userId
+                        RETURNING id, user_id, username, display_name, password_hash, tenant_code,
+                                  enabled, created_at, updated_at
+                        """)
+                .param("userId", userId)
+                .param("displayName", displayName)
+                .query(this::mapRow)
+                .single();
+    }
+
+    @Override
+    public void updatePasswordHash(String userId, String passwordHash) {
+        jdbcClient.sql("""
+                        UPDATE auth_user
+                        SET password_hash = :passwordHash, updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = :userId
+                        """)
+                .param("userId", userId)
+                .param("passwordHash", passwordHash)
+                .update();
+    }
+
     private AuthUser mapRow(ResultSet rs, int rowNum) throws SQLException {
         return new AuthUser(
                 rs.getLong("id"),

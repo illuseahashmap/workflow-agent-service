@@ -1,11 +1,13 @@
 package io.github.illuseahashmap.workflow.auth.application;
 
 import io.github.illuseahashmap.workflow.auth.application.dto.AuthTokenResponse;
+import io.github.illuseahashmap.workflow.auth.application.dto.ChangePasswordRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.CurrentUserResponse;
 import io.github.illuseahashmap.workflow.auth.application.dto.LoginRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.RegisterRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionResponse;
+import io.github.illuseahashmap.workflow.auth.application.dto.UpdateProfileRequest;
 import java.util.List;
 
 public interface AuthService {
@@ -15,6 +17,10 @@ public interface AuthService {
     AuthTokenResponse login(LoginRequest request, String sourceAddress);
 
     CurrentUserResponse currentUser();
+
+    CurrentUserResponse updateProfile(UpdateProfileRequest request);
+
+    void changePassword(ChangePasswordRequest request);
 
     List<TenantOptionResponse> tenants();
 
