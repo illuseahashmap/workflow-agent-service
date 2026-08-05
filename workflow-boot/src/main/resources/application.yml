@@ -38,6 +38,7 @@ workflow:
       - /actuator/info
       - /auth/register
       - /auth/login
+      - /auth/csrf
   auth:
     self-registration:
       enabled: ${WORKFLOW_SELF_REGISTRATION_ENABLED:false}
@@ -51,6 +52,7 @@ workflow:
       issuer: workflow-agent-service
       secret: ${WORKFLOW_AUTH_TOKEN_SECRET:}
       ttl-seconds: ${WORKFLOW_AUTH_TOKEN_TTL_SECONDS:7200}
+      cookie-secure: ${WORKFLOW_AUTH_COOKIE_SECURE:true}
 
 management:
   endpoints:

@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import jakarta.servlet.http.Cookie;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -47,6 +48,7 @@ class AuthenticationHttpIntegrationTest {
         registry.add("workflow.security.enabled", () -> "false");
         registry.add("workflow.auth.token.secret",
                 () -> "integration-test-auth-token-secret-at-least-32-bytes");
+        registry.add("workflow.auth.token.cookie-secure", () -> "false");
         registry.add("workflow.auth.bootstrap-admin.enabled", () -> "false");
         registry.add("workflow.auth.self-registration.enabled", () -> "true");
         registry.add("workflow.auth.protection.failure-threshold", () -> "3");
@@ -62,31 +64,41 @@ class AuthenticationHttpIntegrationTest {
 
     @Test
     void registrationLoginAndProtectedEndpointUseRealSecurityChain() throws Exception {
+        MvcResult csrf = mockMvc.perform(get("/auth/csrf"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Cookie csrfCookie = csrf.getResponse().getCookie("XSRF-TOKEN");
+        String csrfToken = com.jayway.jsonpath.JsonPath.read(
+                csrf.getResponse().getContentAsString(), "$.data");
+
         mockMvc.perform(post("/auth/register")
+                        .cookie(csrfCookie)
+                        .header("X-XSRF-TOKEN", csrfToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"integration-user","displayName":"Integration User","password":"hello-integration"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist())
                 .andExpect(jsonPath("$.data.roles[0]").value("USER"));
 
-        MvcResult login = mockMvc.perform(post("/auth/login")
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .cookie(csrfCookie)
+                        .header("X-XSRF-TOKEN", csrfToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"integration-user","password":"hello-integration"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist())
                 .andReturn();
-        String token = com.jayway.jsonpath.JsonPath.read(
-                login.getResponse().getContentAsString(), "$.data.accessToken");
+        Cookie authCookie = loginResult.getResponse().getCookie("workflow-agent.access-token");
 
-        mockMvc.perform(get("/auth/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/auth/me").cookie(authCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value("integration-user"));
 
-        mockMvc.perform(get("/workflow/tenant").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/workflow/tenant").cookie(authCookie))
                 .andExpect(status().isForbidden());
     }
 

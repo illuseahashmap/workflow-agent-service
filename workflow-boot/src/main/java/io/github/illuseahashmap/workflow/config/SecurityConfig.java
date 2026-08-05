@@ -9,11 +9,12 @@ import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.http.HttpHeaders;
 
 @Configuration
 @EnableMethodSecurity
@@ -35,10 +36,12 @@ public class SecurityConfig {
                                                    ServiceTokenAuthenticationFilter serviceTokenAuthenticationFilter)
             throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(request -> request.getHeader(HttpHeaders.AUTHORIZATION) != null))
                 .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/actuator/health", "/actuator/info", "/auth/register", "/auth/login", "/auth/logout").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info", "/auth/csrf", "/auth/register", "/auth/login", "/auth/logout").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(serviceTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authSecurityFilter, ServiceTokenAuthenticationFilter.class)

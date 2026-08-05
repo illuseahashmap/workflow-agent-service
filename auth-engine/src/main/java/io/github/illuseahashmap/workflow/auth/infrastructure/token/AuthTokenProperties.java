@@ -22,7 +22,7 @@ public class AuthTokenProperties {
 
     private String cookieName = "workflow-agent.access-token";
 
-    private boolean cookieSecure = false;
+    private boolean cookieSecure = true;
 
     private String cookieSameSite = "Lax";
 
