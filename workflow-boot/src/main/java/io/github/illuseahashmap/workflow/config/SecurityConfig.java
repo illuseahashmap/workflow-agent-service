@@ -38,6 +38,9 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(request -> "POST".equalsIgnoreCase(request.getMethod())
+                                && ("/auth/login".equals(request.getRequestURI())
+                                || "/auth/register".equals(request.getRequestURI())))
                         .ignoringRequestMatchers(request -> StringUtils.hasText(
                                 request.getHeader(ServiceTokenAuthenticationFilter.TOKEN_HEADER))))
                 .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
