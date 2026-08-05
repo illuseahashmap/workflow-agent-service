@@ -389,6 +389,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
             boolean collectionAssignment = targetTask != null && (targetTask.getLoopCharacteristics() != null
                     || !CollectionUtils.isEmpty(targetTask.getCandidateUsers())
                     || !CollectionUtils.isEmpty(targetTask.getCandidateGroups()));
+            if (!collectionAssignment && targetAssignees.size() != 1) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST,
+                        "Activity " + targetActivityId + " requires exactly one assignee");
+            }
             variables.put(targetActivityId + (collectionAssignment ? ASSIGNEE_LIST_SUFFIX : ASSIGNEE_SUFFIX),
                     collectionAssignment ? targetAssignees : targetAssignees.getFirst());
         }

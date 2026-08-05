@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/actuator/health", "/actuator/info", "/auth/register", "/auth/login").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info", "/auth/register", "/auth/login", "/auth/logout").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(serviceTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authSecurityFilter, ServiceTokenAuthenticationFilter.class)

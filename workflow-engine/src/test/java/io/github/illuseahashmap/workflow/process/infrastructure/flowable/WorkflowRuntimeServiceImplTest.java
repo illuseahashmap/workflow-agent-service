@@ -177,6 +177,35 @@ class WorkflowRuntimeServiceImplTest {
         verify(participantDirectory).requireUsableUsernames(List.of("outsider"));
     }
 
+    @Test
+    void rejectsMultipleAssigneesForOrdinaryTargetTask() {
+        when(tenantProvider.current()).thenReturn(
+                new TenantContext.TenantInfo("tenant-1", "tenant-one", "Tenant One"));
+        when(principalProvider.current()).thenReturn(new CurrentPrincipal(
+                "USER", "user-1", "operator", "Operator", "tenant-one",
+                Set.of("TENANT_ADMIN"), Set.of("workflow:instance:operate")));
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId("task-1")).thenReturn(taskQuery);
+        when(taskQuery.active()).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(task);
+        when(task.getProcessInstanceId()).thenReturn("instance-1");
+        when(task.getProcessDefinitionId()).thenReturn("leave:1:100");
+        when(task.getTenantId()).thenReturn("tenant-1");
+        when(taskViewAssembler.canOperate(task, "operator")).thenReturn(true);
+        when(transactionExecutor.execute(eq("instance-1"), any())).thenAnswer(invocation ->
+                ((Supplier<?>) invocation.getArgument(1)).get());
+        when(repositoryService.getBpmnModel("leave:1:100")).thenReturn(modelWithUserTask("review"));
+
+        assertThatThrownBy(() -> service().reject(new RejectTaskRequest(
+                "task-1", "operator", List.of(), "review", null,
+                List.of("alice", "bob"), List.of(), Map.of(), List.of())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Activity review requires exactly one assignee");
+
+        verify(participantDirectory).requireUsableUsernames(List.of("alice", "bob"));
+        verify(runtimeService, never()).setVariables(eq("instance-1"), anyMap());
+    }
+
     private BpmnModel modelWithUserTask(String activityId) {
         BpmnModel model = new BpmnModel();
         org.flowable.bpmn.model.Process process = new org.flowable.bpmn.model.Process();

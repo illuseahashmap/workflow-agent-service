@@ -7,10 +7,13 @@ import io.github.illuseahashmap.workflow.auth.application.dto.LoginRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.RegisterRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.SwitchTenantRequest;
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionResponse;
+import io.github.illuseahashmap.workflow.auth.infrastructure.token.AuthTokenProperties;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,21 +25,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthTokenProperties tokenProperties;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+                          AuthTokenProperties tokenProperties) {
         this.authService = authService;
+        this.tokenProperties = tokenProperties;
     }
 
     @PostMapping("/register")
     public ApiResponse<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                   HttpServletRequest servletRequest) {
-        return ApiResponse.ok(authService.register(request, servletRequest.getRemoteAddr()));
+                                                   HttpServletRequest servletRequest,
+                                                   HttpServletResponse httpResponse) {
+        var tokenResponse = authService.register(request, servletRequest.getRemoteAddr());
+        writeTokenCookie(httpResponse, tokenResponse.accessToken(), tokenResponse.expiresIn());
+        return ApiResponse.ok(tokenResponse);
     }
 
     @PostMapping("/login")
     public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
-                                                HttpServletRequest servletRequest) {
-        return ApiResponse.ok(authService.login(request, servletRequest.getRemoteAddr()));
+                                                HttpServletRequest servletRequest,
+                                                HttpServletResponse httpResponse) {
+        var tokenResponse = authService.login(request, servletRequest.getRemoteAddr());
+        writeTokenCookie(httpResponse, tokenResponse.accessToken(), tokenResponse.expiresIn());
+        return ApiResponse.ok(tokenResponse);
     }
 
     @GetMapping("/me")
@@ -50,7 +62,35 @@ public class AuthController {
     }
 
     @PostMapping("/switch-tenant")
-    public ApiResponse<AuthTokenResponse> switchTenant(@Valid @RequestBody SwitchTenantRequest request) {
-        return ApiResponse.ok(authService.switchTenant(request));
+    public ApiResponse<AuthTokenResponse> switchTenant(@Valid @RequestBody SwitchTenantRequest request,
+                                                       HttpServletResponse httpResponse) {
+        var response = authService.switchTenant(request);
+        writeTokenCookie(httpResponse, response.accessToken(), response.expiresIn());
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(HttpServletResponse response) {
+        response.addHeader("Set-Cookie", ResponseCookie.from(tokenProperties.getCookieName(), "")
+                .httpOnly(true)
+                .secure(tokenProperties.isCookieSecure())
+                .sameSite(tokenProperties.getCookieSameSite())
+                .path("/")
+                .maxAge(0)
+                .build()
+                .toString());
+        return ApiResponse.ok(null);
+    }
+
+    private void writeTokenCookie(HttpServletResponse response,
+                                  String token, long expiresIn) {
+        response.addHeader("Set-Cookie", ResponseCookie.from(tokenProperties.getCookieName(), token)
+                .httpOnly(true)
+                .secure(tokenProperties.isCookieSecure())
+                .sameSite(tokenProperties.getCookieSameSite())
+                .path("/")
+                .maxAge(expiresIn)
+                .build()
+                .toString());
     }
 }

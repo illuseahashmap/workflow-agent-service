@@ -15,6 +15,7 @@ import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -38,25 +39,28 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
     private final AuthMembershipRepository membershipRepository;
     private final AuthUserRepository userRepository;
     private final AuthAuthorizationRepository authorizationRepository;
+    private final AuthTokenProperties tokenProperties;
 
     public AuthTokenAuthenticationFilter(AuthTokenService tokenService,
                                          ObjectMapper objectMapper,
                                          AuthTenantRepository tenantRepository,
                                          AuthMembershipRepository membershipRepository,
                                          AuthUserRepository userRepository,
-                                         AuthAuthorizationRepository authorizationRepository) {
+                                         AuthAuthorizationRepository authorizationRepository,
+                                         AuthTokenProperties tokenProperties) {
         this.tokenService = tokenService;
         this.objectMapper = objectMapper;
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
         this.authorizationRepository = authorizationRepository;
+        this.tokenProperties = tokenProperties;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || request.getHeader(HttpHeaders.AUTHORIZATION) == null;
+                || (request.getHeader(HttpHeaders.AUTHORIZATION) == null && readCookieToken(request) == null);
     }
 
     @Override
@@ -65,12 +69,15 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-            if (!authorization.startsWith(BEARER_PREFIX)) {
+            String token = authorization != null && authorization.startsWith(BEARER_PREFIX)
+                    ? authorization.substring(BEARER_PREFIX.length())
+                    : readCookieToken(request);
+            if (token == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            AuthTokenService.AuthTokenPayload payload = tokenService.verify(authorization.substring(BEARER_PREFIX.length()));
+            AuthTokenService.AuthTokenPayload payload = tokenService.verify(token);
             AuthTenantRepository.AuthTenant tenant = tenantRepository.findByTenantCode(payload.tenantCode())
                     .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN, "Tenant does not exist"));
             AuthMembershipRepository.TenantMembership membership = membershipRepository
@@ -114,6 +121,20 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
             TenantContext.clear();
             SecurityContextHolder.clearContext();
         }
+    }
+
+    private String readCookieToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (tokenProperties.getCookieName().equals(cookie.getName())
+                    && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     private void writeError(HttpServletResponse response, BusinessException exception) throws IOException {
