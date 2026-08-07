@@ -3,6 +3,8 @@
 更新时间：2026-08-05
 状态：已验证设计基线，尚未实施
 
+MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。
+
 ## 1. 背景
 
 `workflow-agent-service` 计划在现有多租户 Flowable 工作流平台中引入 Agent 能力，使 Agent 能作为受约束的流程参与者，与人工任务共同完成一个业务流程。
