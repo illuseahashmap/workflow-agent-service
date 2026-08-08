@@ -1,4 +1,4 @@
 /**
- * Agent engine extension point. The first development stage does not include LLM features.
+ * Agent definitions and reliable execution runtime.
  */
 package io.github.illuseahashmap.agent;

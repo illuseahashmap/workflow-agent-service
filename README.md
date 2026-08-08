@@ -21,7 +21,7 @@ workflow-agent-service
 |-- auth-engine      User login, registration, tenant membership, roles, menus, and permissions
 |-- workflow-engine  Workflow domain, use cases, and Flowable adapters
 |-- rules-engine      Reusable condition and priority rule engine
-|-- agent-engine      Reserved for future agent and LLM capabilities
+|-- agent-engine      Agent definitions, reliable runtime, providers, retrieval, and guardrails
 |-- platform-migrations Ordered platform schema and cross-context integrity migrations
 `-- workflow-boot    Executable application and module composition root
 ```
@@ -33,9 +33,10 @@ workflow-boot --> auth-engine --> shared-kernel
 workflow-boot --> workflow-engine --> shared-kernel
 workflow-boot --> platform-migrations
 workflow-engine --> rules-engine
+agent-engine --> shared-kernel
 ```
 
-`auth-engine` and `workflow-engine` follow bounded-context-oriented DDD. The executable application,
+`auth-engine`, `workflow-engine`, and `agent-engine` follow bounded-context-oriented DDD. The executable application,
 HTTP security chain, global exception translation, and Flyway composition live only in `workflow-boot`.
 All ordered schema changes live in `platform-migrations`; business modules do not coordinate global Flyway versions.
 

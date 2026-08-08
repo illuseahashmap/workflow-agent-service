@@ -13,5 +13,24 @@
 
     <artifactId>agent-engine</artifactId>
     <name>agent-engine</name>
-    <description>Agent engine extension module reserved for future LLM capabilities.</description>
+    <description>Agent definitions, reliable runtime, providers, retrieval, guardrails, and audit ledger.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.illuseahashmap</groupId>
+            <artifactId>shared-kernel</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <version>${archunit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

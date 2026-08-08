@@ -14,7 +14,7 @@
 - ArchUnit 已约束领域层、应用层、基础设施层、REST 契约和跨限界上下文依赖方向。
 - Checkstyle、SpotBugs、JaCoCo、Flyway、Testcontainers 和 GitHub Actions 已接入构建流程。
 - 租户、角色、权限、登录保护、服务鉴权、流程版本、派单版本和可靠兜底命令已经具备基础实现。
-- `agent-engine` 仍是预留模块，不得在领域模型、安全边界和可靠执行协议明确前直接加入模型调用代码。
+- `agent-engine` 已按 Agent MVP 规格开始建设运行账本和状态机；在可靠执行闭环完成前不得绕过领域模型直接加入模型调用代码。
 
 ## 不可破坏的架构约束
 
