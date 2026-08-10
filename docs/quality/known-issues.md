@@ -9,7 +9,7 @@
 ### 1. 完整基础设施集成测试尚未在本机闭环
 
 - 状态：进行中
-- 当前情况：CI 已执行 Maven 验证；当前评审环境没有 Maven 和 Docker，未能本机运行 Testcontainers。
+- 当前情况：CI 已执行 Maven 验证；当前评审环境只有 JDK 21 和 Maven 3.8.6，不满足项目强制要求的 JDK 25 和 Maven 3.9，且未确认可用 Docker，因此未能本机运行后端测试和 Testcontainers。
 - 影响：PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全链路仍需依赖 CI 证明。
 - 下一步：稳定 CI 容器环境，并将迁移、租户隔离、锁、事务回滚、重复消息和认证链列为必跑用例。
 - 验收：发布分支完整 `mvn verify` 通过，并归档 Surefire、JaCoCo、SpotBugs 报告。
@@ -58,19 +58,51 @@
 - 下一步：按查询、命令、映射和持久化读写职责继续拆分，不把业务规则复制到 JDBC 层。
 - 验收：大型类职责单一，领域规则有领域测试，仓储只负责持久化和映射。
 
+### 8. AgentRun 过期任务和失效租约缺少回收闭环
+
+- 状态：待处理
+- 当前情况：Worker 已支持 `SKIP LOCKED` 领取、租约写入和迟到 Attempt 防覆盖，但只领取未过期的 `QUEUED` 运行；超过 `deadline_at` 的排队运行和 Worker 崩溃后租约过期的 `RUNNING` 运行没有扫描、续约、接管或终态收敛路径。
+- 影响：排队超时或 Worker 异常退出后，AgentRun 可能永久停留在 `QUEUED` 或 `RUNNING`，无法依靠持久化账本自动恢复。
+- 下一步：增加独立租约续约与 Recovery/Reaper 用例，通过条件更新回收失效租约，并将过期排队任务确定性转为 `TIMED_OUT`；接管时从最后完整 Checkpoint 创建新 Attempt。
+- 验收：Worker 被强制终止、租约过期、运行排队超过 Deadline 时均能自动重试、接管或进入超时终态；旧 Attempt 的迟到结果不能覆盖新 Attempt。
+
+### 9. Agent 输出 Schema 和结果策略尚未真正执行
+
+- 状态：待处理
+- 当前情况：发布时只校验 `outputSchema` 是合法 JSON；Worker 收到非空模型文本后会直接将 required steps 和 result policy 视为通过，并写入 `SUCCEEDED/SUCCESS`。
+- 影响：缺少字段、类型错误、非 JSON、空语义或违反业务 Guardrail 的结果可能被当作成功结果，前端展示与实际执行语义不一致。
+- 下一步：校验 Schema 本身符合受支持的 JSON Schema 方言；运行时解析模型输出并执行 JSON Schema、结果策略和基础 Guardrail，统一产生 `SUCCESS`、`EMPTY`、`PARTIAL`、`REJECTED` 或 `FAILED`。
+- 验收：合法、缺字段、类型错误、非 JSON、空结果和策略拒绝均有自动化测试及确定状态；只有通过必需步骤和结果策略的运行才能进入 `SUCCEEDED`。
+
+### 10. 租户自定义 Provider 地址缺少生产级出站安全控制
+
+- 状态：待处理
+- 当前情况：OpenAI Compatible Provider 只校验 HTTP/HTTPS 和 Host，服务端随后直接访问租户配置的地址。
+- 影响：恶意或错误配置可能访问回环、链路本地、云元数据和平台内部网络，形成 SSRF 和横向探测风险。
+- 下一步：通过统一出站网关或平台级 Provider 策略控制协议、域名、端口和网络区域；解析并校验最终 IP，防止 DNS Rebinding，并限制响应大小和连接/读取超时。私有化模型地址必须由平台管理员显式授权，不能由普通租户配置自动放行。
+- 验收：回环、链路本地、元数据地址、未授权私网、异常端口和 DNS 重绑定测试全部被拒绝；授权的公网及私有化 Provider 可以正常调用且留下审计记录。
+
+### 11. Agent Worker 与平台定时任务尚未隔离
+
+- 状态：待处理
+- 当前情况：Agent 轮询任务在 Spring 默认调度线程中串行执行阻塞式模型 HTTP 调用，同一应用中的派单兜底和 Nonce 清理也使用 `@Scheduled`。
+- 影响：单次慢模型调用可能阻塞其他平台定时任务；当前每轮最多五条的批次配置仍是串行执行，无法形成受控吞吐和租户公平性。
+- 下一步：为 Agent 调度、模型执行和平台维护任务配置独立有界执行器；调度线程只负责领取，执行层增加全局、租户和 Provider 并发配额、队列上限、拒绝策略和指标。
+- 验收：慢 Provider 不影响派单兜底与安全清理任务；并发、队列、拒绝和积压指标可观测；压力测试下不会产生无界线程或连接。
+
 ## P2：平台能力
 
-### 8. 企业工作流能力仍需扩展
+### 12. 企业工作流能力仍需扩展
 
 - 状态：规划中
 - 范围：组织目录、候选组、任务中心、表单、通知、委托、SLA、超时和升级。
 - 约束：先建立领域模型、权限边界和版本兼容关系，再扩展前端配置能力。
 
-### 9. Agent Runtime 仍未达到生产 MVP
+### 13. Agent Runtime 仍未达到生产 MVP
 
 - 状态：基础设施已完成，执行闭环待完成
 - 已有：AgentRun、Attempt、Step、Checkpoint、Provider、Worker、重试和审计基础。
-- 下一步：BPMN Agent Service Task、取消/暂停/恢复、人工确认、工具权限、预算、降级、背压和完整集成测试。
+- 下一步：先关闭上述 Agent Runtime P1 可靠性和安全问题，再完成 BPMN Agent Service Task、取消/暂停/恢复、人工确认、工具权限、预算、降级、背压和完整集成测试。
 - 验收：Agent 可以可靠执行、恢复、幂等、限权、审计，并安全地推进或暂停 Flowable 流程。
 
 ## 已完成历史归档

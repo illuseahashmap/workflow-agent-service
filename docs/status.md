@@ -20,7 +20,7 @@
 - [x] AgentDefinition 与不可变 AgentVersion 管理。
 - [x] Provider 管理、加密凭据保存和 OpenAI Compatible Provider。
 - [x] AgentRun、Attempt、Step、Checkpoint、State History 和 Model Invocation。
-- [x] Outbox/Inbox、Worker 租约、`SKIP LOCKED` 领取和 Mock Provider。
+- [x] Outbox/Inbox、Worker 基础租约写入、`SKIP LOCKED` 领取和 Mock Provider；租约续约、过期回收和 Checkpoint 接管仍在进行中。
 - [x] 手动测试通过正式 AgentRun 链路执行，不存在 Controller 直连模型的旁路。
 - [x] Provider 失败分类、重试、终态幂等和迟到事件保护的基础实现。
 
@@ -42,6 +42,7 @@
 | P1 | RLS 深度覆盖 | 平台业务表已启用 V16 | 完成 Flowable 内部表归属评估和跨租户负面测试 |
 | P1 | API 契约细化 | 路由已全量覆盖，部分响应仍为通用 `ApiResponse` | 补充 DTO 响应模型、错误码和客户端类型生成 |
 | P1 | 覆盖率提升 | 已有基础门禁 | 核心模块逐步提升至 60% 以上，并提高关键安全/并发用例覆盖 |
+| P1 | Agent Runtime 可靠性与安全 | 基础 Worker 和真实 Provider 已可运行，输出校验、过期恢复、出站防护和调度隔离未闭环 | 完成 Schema/结果策略、租约回收、Provider 出站策略和独立有界执行器 |
 
 ## 三、下一阶段目标
 
@@ -60,10 +61,11 @@
 
 ### 阶段 C：Agent MVP 闭环
 
-1. BPMN Agent Service Task 异步调用并可靠恢复流程。
-2. 完成取消、暂停、恢复、超时、人工确认和失败补偿。
-3. 完成工具权限、人工审批、预算、成本、模型版本和全链路审计。
-4. 完成 Provider 降级、限流、背压和生产观测。
+1. 先完成输出 Schema/结果策略、过期运行回收、租约续约接管、Provider 出站安全和 Worker 调度隔离。
+2. BPMN Agent Service Task 异步调用并可靠恢复流程。
+3. 完成取消、暂停、恢复、超时、人工确认和失败补偿。
+4. 完成工具权限、人工审批、预算、成本、模型版本和全链路审计。
+5. 完成 Provider 降级、限流、背压和生产观测。
 
 ## 四、明确暂不做
 
