@@ -8,6 +8,7 @@
 | 当前状态 | [status.md](status.md) | 区分已完成、进行中和下一步目标 |
 | 架构规范 | [architecture-governance-and-roadmap.md](quality/architecture-governance-and-roadmap.md) | 不可破坏的架构约束、质量标准和阶段路线 |
 | Agent 长期设计 | [agent-collaboration-design.md](architecture/agent-collaboration-design.md) | Agent 与 Flowable 的长期边界和扩展地图 |
+| Agent 渐进式自治 | [evidence-governed-agent-autonomy.md](architecture/evidence-governed-agent-autonomy.md) | Agent 基于任务运行证据逐步获得、保持和失去完成权的后续设计方向 |
 | Agent 当前实施 | [agent-mvp-implementation-plan.md](architecture/agent-mvp-implementation-plan.md) | Agent 基础设施的实现范围和剩余验收项 |
 | API 契约 | [api/README.md](api/README.md)、[api/openapi.yaml](api/openapi.yaml) | HTTP 接口契约和兼容性规则 |
 | 学习知识库 | [learning/](learning/) | 按课程理解 Agent 领域模型、持久化和执行链路 |

@@ -117,6 +117,12 @@ BPMN XML、Agent 定义、接口响应、日志和审计记录只保存 `credent
 
 ## 5. 协作模式
 
+本章定义自主节点、Copilot 和人工复核的基础协作模式。针对原本由人工承担的 User Task，
+后续不以增加一种固定 Agent 模式作为差异化，而是按
+[《证据驱动的 Agent 渐进式自治设计方向》](evidence-governed-agent-autonomy.md)建立
+`SHADOW`、`ADVISORY`、`SUPERVISED` 和受约束自动完成的证据治理闭环。该方向尚未实现，
+不改变当前 Agent Runtime 可靠性与安全问题的优先级。
+
 ### 5.1 自主 Agent 节点
 
 自主节点用于分类、摘要、信息提取、风险分析和报告生成等不需要实时人工输入的工作。
@@ -866,9 +872,11 @@ Flowable 恢复动作，并参考 OpenTelemetry GenAI 语义约定命名。Promp
 
 ### 阶段 3：人工任务 Copilot
 
+- User Task 绑定、任务激活标识和自治策略版本固化
+- `SHADOW` 运行与最小决策证据
 - Task Conversation
 - REST 命令与可恢复 SSE
-- Agent 建议、结构化表单结果和人工确认
+- `ADVISORY` 建议、结构化表单结果和人工反馈
 - 任务完成与 Agent 取消的并发处理
 
 ### 阶段 4：生产加固
@@ -878,6 +886,7 @@ Flowable 恢复动作，并参考 OpenTelemetry GenAI 语义约定命名。Promp
 - 重复消息、服务重启、模型超时和流程并发测试
 - 配额、指标、告警、压测和运维文档
 - 版本化评测集、离线回归、线上反馈和发布质量门禁
+- 历史任务回放、AgentVersion 对比和人工审批的自治等级变更
 - Prompt Injection、越权工具、错误引用和无证据输出的对抗测试
 
 ### 阶段 5：人机协作流程生成器

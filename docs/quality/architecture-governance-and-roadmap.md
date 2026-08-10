@@ -101,10 +101,12 @@ Agent 基础领域与管理链路已经实现。只有阶段 A 的安全、审�
 
 ### 阶段 D：人机协作与设计时生成
 
-1. 实现自主 Agent 节点、人工复核、User Task Copilot 和人工接管。
-2. 建立知识与工具端口、最小评测集和运行诊断能力。
-3. 冻结流程语义 IR 和 `CollaborativeProcessDraft`，再实现骨架生成、细节填充、确定性 BPMN 编译与测试。
-4. 生成器只创建草稿，禁止绕过部署校验、权限和人工发布门禁。
+1. 实现自主 Agent 节点，并为 User Task 建立绑定、任务激活标识和版本化自治策略。
+2. 按[《证据驱动的 Agent 渐进式自治设计方向》](../architecture/evidence-governed-agent-autonomy.md)先实现 `SHADOW` 和 `ADVISORY`，形成 Agent 建议、人工决定、最终决定和后续结果的决策证据。
+3. 建立历史任务回放、AgentVersion 对比、最小评测集、人工审批升级和只减权的安全降级机制，再逐步开放 `SUPERVISED` 与受约束自动完成。
+4. 建立知识与工具端口、运行诊断和跨制品证据关联能力。
+5. 冻结流程语义 IR 和 `CollaborativeProcessDraft`，再实现骨架生成、细节填充、确定性 BPMN 编译与测试。
+6. 生成器只创建草稿，禁止绕过部署校验、权限和人工发布门禁。
 
 ## 变更完成标准
 
