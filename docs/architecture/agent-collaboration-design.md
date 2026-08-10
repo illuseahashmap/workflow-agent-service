@@ -1,16 +1,17 @@
-# Agent 协作节点架构设计
+# Agent 协作架构设计
 
-更新时间：2026-08-05
+更新时间：2026-08-10
 状态：长期架构基线；Agent 基础管理、运行账本和 Provider 基础链路已实施，BPMN Agent 节点及生产级执行闭环尚未完成
 
 MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。
 当前实现状态和下一步目标以[《项目状态总览》](../status.md)为准。
+跨仓库产品定位、差异化和阶段目标以聚合仓库的[《Workflow Agent 产品定位与目标》](https://github.com/illuseahashmap/workflow-agent/blob/main/docs/product-positioning-and-goals.zh-CN.md)为准；本文只定义 Agent Runtime、人机协作和设计时生成能力的技术边界。
 
 ## 1. 背景
 
-`workflow-agent-service` 计划在现有多租户 Flowable 工作流平台中引入 Agent 能力，使 Agent 能作为受约束的流程参与者，与人工任务共同完成一个业务流程。
+`workflow-agent-service` 在现有多租户 Flowable 工作流平台中引入 Agent 能力，使 Agent 能作为受约束的流程参与者，与人工任务共同完成一个业务流程。
 
-本方案不以复制 Dify 的完整 Agent 工作流画布为目标。平台中的两类编排职责必须保持分离：
+本方案不以复制 Flowable Enterprise 或 Dify 的完整产品能力为目标。平台中的两类编排职责必须保持分离：
 
 - Flowable 负责 BPMN 业务流程、人工任务、长期状态、事务一致性和补偿路径。
 - `agent-engine` 负责模型调用、对话、工具执行、结构化输出、运行状态和成本审计。
@@ -832,6 +833,8 @@ Flowable 恢复动作，并参考 OpenTelemetry GenAI 语义约定命名。Promp
 
 ## 16. 实施阶段
 
+本节编号表示 Agent 技术实施顺序，不等同于聚合仓库的产品阶段编号。产品优先级变化时可以调整实施批次，但不得突破本文的事务、权限、版本和可靠性边界。
+
 ### 阶段 0：现有问题整改
 
 先完成 `docs/quality/known-issues.md` 中的 P1 问题，尤其是流程锁重入、权限提权和租户恢复问题。
@@ -877,7 +880,18 @@ Flowable 恢复动作，并参考 OpenTelemetry GenAI 语义约定命名。Promp
 - 版本化评测集、离线回归、线上反馈和发布质量门禁
 - Prompt Injection、越权工具、错误引用和无证据输出的对抗测试
 
-### 阶段 5：领域模板与生态扩展
+### 阶段 5：人机协作流程生成器
+
+- 需求抽取、歧义清单和版本化流程语义 IR
+- 流程骨架生成，以及节点、参与人、规则、表单和异常路径填充
+- AgentVersion、Schema、知识、工具、人工确认和失败策略草案
+- 使用 Flowable `BpmnModel` 与 `BpmnXMLConverter` 进行确定性 BPMN 编译
+- 自动布局、静态校验、路径/场景测试、Agent Eval 和人工发布门禁
+- 使用领域命令或 JSON Patch 定位修复，不让模型反复重写整份 XML
+
+生成器属于设计时 Copilot，不属于 Agent Runtime，也不成为新的流程执行引擎。其输出只能是可解释、可修改、可测试的 `CollaborativeProcessDraft`，不得直接发布生产流程。
+
+### 阶段 6：领域模板与生态扩展
 
 只有通用平台契约稳定后，才按真实需求增加领域模板和连接器：
 
@@ -1010,6 +1024,38 @@ Flowable 恢复动作，并参考 OpenTelemetry GenAI 语义约定命名。Promp
 - 不允许为了提高缓存命中率在运行时偷偷调整 Prompt 顺序、裁剪上下文、降低检索新鲜度
   或切换模型；这些变化属于语义配置，必须发布新 AgentVersion。
 - 不允许把缓存作为 AgentRun 恢复、流程推进或审计还原的唯一数据来源。
+
+### 18.6 人机协作流程生成器预留
+
+流程生成器是设计时能力，与运行时 Agent 节点共享版本、Schema、知识、工具、策略和评测契约，但不得共享执行状态机或接管 Flowable 运行状态。
+
+第一版实现前必须冻结以下制品边界：
+
+```text
+CollaborativeProcessDraft
+├── requirementSpec             # 原始需求、结构化需求和待确认歧义
+├── processSemanticIr           # 节点、连线、参与人、规则和异常语义
+├── bpmnDraft                   # 确定性编译后的 BPMN 与布局结果
+├── agentVersionDrafts          # Prompt、模型、输入输出 Schema 和预算
+├── assignmentAndRuleDrafts     # 参与人、会签和确定性规则
+├── knowledgeAndToolBindings    # 知识源、工具、权限和凭据引用
+├── humanAndFailurePolicies     # 人工确认、接管、超时和失败路由
+├── scenarioTests               # 路径、边界、失败和权限场景
+├── agentEvaluations            # 结构、证据、质量和成本评测
+└── releaseReport               # 校验结果、风险和人工审批记录
+```
+
+约束如下：
+
+1. LLM 生成语义提案，不直接生成最终 BPMN XML 或 DI 坐标。
+2. 先生成流程骨架，再按节点类型填充参与人、表单、规则、Agent 和异常细节。
+3. BPMN 使用确定性编译器与布局器生成，并执行 Flowable 部署校验和平台规则校验。
+4. 自动修复只能提交受约束的领域命令或 JSON Patch，禁止整图无差别重写。
+5. 测试同时覆盖 BPMN 路径、业务场景和 Agent Eval，模型自评不能替代确定性断言。
+6. 生成器只能创建草稿；发布必须经过有权限用户确认，并冻结所有关联版本。
+7. 语义 IR 必须独立版本化，避免未来更换模型、布局器或编译器时推翻流程领域模型。
+
+该能力的差异化不是“会生成 BPMN”，而是能够生成并验证包含人工、Agent、规则、知识和工具治理的一整套协作流程发布候选。
 
 ## 19. 现有项目验证与价值判断
 

@@ -1,6 +1,6 @@
 # workflow-agent-service
 
-Open workflow platform backend based on Spring Boot, Flowable, PostgreSQL, and Redis.
+Backend for Workflow Agent, an open-source, Java-first enterprise Human-Agent Workflow platform built on Flowable OSS.
 
 ## Baseline
 
@@ -68,6 +68,7 @@ The existing `workflow-engine.security.infrastructure.token` package remains the
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [Product positioning and goals](https://github.com/illuseahashmap/workflow-agent/blob/main/docs/product-positioning-and-goals.zh-CN.md)
 - [Project status and next goals](docs/status.md)
 - [Agent collaboration architecture](docs/architecture/agent-collaboration-design.md)
 - [Agent MVP implementation plan](docs/architecture/agent-mvp-implementation-plan.md)
