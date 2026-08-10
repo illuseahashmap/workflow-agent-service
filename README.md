@@ -67,9 +67,14 @@ The existing `workflow-engine.security.infrastructure.token` package remains the
 
 ## Documentation
 
+- [Documentation index](docs/README.md)
+- [Project status and next goals](docs/status.md)
 - [Agent collaboration architecture](docs/architecture/agent-collaboration-design.md)
+- [Agent MVP implementation plan](docs/architecture/agent-mvp-implementation-plan.md)
 - [Backend architecture governance and roadmap](docs/quality/architecture-governance-and-roadmap.md)
-- [Known issues and remediation plan](docs/quality/known-issues.md)
+- [Current issues and next remediation](docs/quality/known-issues.md)
+- [OpenAPI contract](docs/api/openapi.yaml)
+- [Agent learning knowledge base](docs/learning/agent-development-01-runtime-ledger-and-state-machine.md)
 
 ## Capabilities
 

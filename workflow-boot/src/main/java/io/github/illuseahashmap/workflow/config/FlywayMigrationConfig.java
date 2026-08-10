@@ -1,5 +1,6 @@
 package io.github.illuseahashmap.workflow.config;
 
+import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,16 +11,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class FlywayMigrationConfig {
 
-    @Bean(initMethod = "migrate")
+    @Bean
     @ConditionalOnProperty(prefix = "spring.flyway", name = "enabled", havingValue = "true", matchIfMissing = true)
     public Flyway workflowFlyway(DataSource dataSource,
                                  @Value("${spring.flyway.baseline-on-migrate:false}") boolean baselineOnMigrate,
                                  @Value("${spring.flyway.baseline-version:0}") String baselineVersion) {
-        return Flyway.configure()
+        Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration/platform")
                 .baselineOnMigrate(baselineOnMigrate)
                 .baselineVersion(baselineVersion)
                 .load();
+        TrustedDataAccessContext.runAsSystemWorker(flyway::migrate);
+        return flyway;
     }
 }

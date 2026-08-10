@@ -29,7 +29,6 @@ import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -164,14 +163,15 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
         ProcessDefinitionCatalog.DefinitionInfo definition = requireDefinition(tenantId, command.processDefinitionId());
         validateAssignmentType(definition.id(), command.taskDefinitionKey(), command.assignmentType());
         List<AssignmentTarget> targets = buildTargets(command);
-        validateTargets(command, targets);
         List<AssignmentCondition> conditions = buildConditions(command.conditions());
-        return new NodeAssignmentRule(
+        NodeAssignmentRule rule = new NodeAssignmentRule(
                 id, tenantId, definition.id(), definition.key(), definition.version(),
                 command.taskDefinitionKey().trim(), command.priority() == null ? 100 : command.priority(),
                 command.assignmentType(), command.emptyUserStrategy(),
                 command.enabled() == null || command.enabled(), normalize(command.description()),
                 conditions, targets, null, null);
+        rule.validate();
+        return rule;
     }
 
     private void validateBindingUnchanged(NodeAssignmentRule existingRule, AssignmentRuleCommand command) {
@@ -213,27 +213,6 @@ public class AssignmentRuleServiceImpl implements AssignmentRuleService {
     private void addTargets(List<AssignmentTarget> targets, AssignmentTargetType type, List<String> values) {
         for (String value : normalizeList(values)) {
             targets.add(new AssignmentTarget(null, type, value, (targets.size() + 1) * 10));
-        }
-    }
-
-    private void validateTargets(AssignmentRuleCommand command, List<AssignmentTarget> targets) {
-        Map<AssignmentTargetType, Long> counts = new HashMap<>();
-        targets.forEach(target -> counts.merge(target.targetType(), 1L, Long::sum));
-        boolean valid = switch (command.assignmentType()) {
-            case ASSIGNEE -> counts.getOrDefault(AssignmentTargetType.ASSIGNEE, 0L) == 1;
-            case CANDIDATE_USERS -> counts.getOrDefault(AssignmentTargetType.CANDIDATE_USER, 0L) > 0;
-            case CANDIDATE_GROUPS -> counts.getOrDefault(AssignmentTargetType.CANDIDATE_GROUP, 0L) > 0;
-            case COUNTERSIGN_USERS -> counts.getOrDefault(AssignmentTargetType.COUNTERSIGN_USER, 0L) > 0;
-            case MIXED -> counts.getOrDefault(AssignmentTargetType.CANDIDATE_USER, 0L) > 0
-                    || counts.getOrDefault(AssignmentTargetType.CANDIDATE_GROUP, 0L) > 0;
-        };
-        if (!valid) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,
-                    "Assignment targets do not match assignment type " + command.assignmentType());
-        }
-        if (command.emptyUserStrategy() == EmptyUserStrategy.TO_ASSIGNEE
-                && counts.getOrDefault(AssignmentTargetType.FALLBACK_ASSIGNEE, 0L) != 1) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "TO_ASSIGNEE requires one fallback assignee");
         }
     }
 

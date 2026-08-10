@@ -41,13 +41,18 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(13);
+            assertThat(resultSet.getInt(1)).isEqualTo(16);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
         assertThat(tableExists("workflow_assignment_fallback_command")).isTrue();
         assertThat(tableExists("platform_security_audit")).isTrue();
         assertThat(tableExists("auth_attempt_guard")).isTrue();
+        assertThat(tableExists("agent_definition")).isTrue();
+        assertThat(tableExists("agent_definition_version")).isTrue();
+        assertThat(tableExists("agent_provider")).isTrue();
+        assertThat(tableExists("agent_run")).isTrue();
+        assertThat(tableExists("agent_model_invocation")).isTrue();
     }
 
     @Test
@@ -92,6 +97,57 @@ class PlatformMigrationIntegrationTest {
                         (tenant_id, task_id, process_instance_id, action, status)
                     VALUES ('tenant-a', 'task-unique', 'process-1', 'AUTO_REJECT', 'PENDING')
                     """))
+                    .isInstanceOf(PSQLException.class);
+        }
+    }
+
+    @Test
+    void enablesForcedRowLevelSecurityForTenantTables() throws SQLException {
+        try (Connection connection = connection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("""
+                     SELECT COUNT(*)
+                     FROM pg_class
+                     WHERE relname IN ('workflow_tenant', 'agent_run', 'workflow_node_assignment_rule')
+                       AND relrowsecurity = TRUE
+                       AND relforcerowsecurity = TRUE
+                     """)) {
+            assertThat(resultSet.next()).isTrue();
+            assertThat(resultSet.getInt(1)).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void rejectsCrossTenantAgentVersionProviderBinding() throws SQLException {
+        try (Connection connection = connection(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO workflow_tenant (tenant_id, tenant_code, tenant_name)
+                    VALUES ('agent-tenant-a', 'agent-tenant-a', 'Agent Tenant A'),
+                           ('agent-tenant-b', 'agent-tenant-b', 'Agent Tenant B')
+                    ON CONFLICT (tenant_code) DO NOTHING
+                    """);
+            ResultSet providerResult = statement.executeQuery("""
+                    INSERT INTO agent_provider
+                        (tenant_code, provider_code, provider_name, provider_type)
+                    VALUES ('agent-tenant-a', 'mock-a', 'Mock A', 'MOCK')
+                    RETURNING id
+                    """);
+            assertThat(providerResult.next()).isTrue();
+            long providerId = providerResult.getLong(1);
+            ResultSet definitionResult = statement.executeQuery("""
+                    INSERT INTO agent_definition
+                        (tenant_code, agent_code, agent_name)
+                    VALUES ('agent-tenant-b', 'agent-b', 'Agent B')
+                    RETURNING id
+                    """);
+            assertThat(definitionResult.next()).isTrue();
+            long definitionId = definitionResult.getLong(1);
+
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                    INSERT INTO agent_definition_version
+                        (tenant_code, definition_id, version, provider_id, system_prompt)
+                    VALUES ('agent-tenant-b', %d, 1, %d, 'Prompt')
+                    """.formatted(definitionId, providerId)))
                     .isInstanceOf(PSQLException.class);
         }
     }

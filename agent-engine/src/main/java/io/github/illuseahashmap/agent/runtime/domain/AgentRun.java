@@ -69,6 +69,32 @@ public final class AgentRun {
         return new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt);
     }
 
+    public static AgentRun restore(
+            long id,
+            String tenantCode,
+            long agentVersionId,
+            String idempotencyKey,
+            AgentRunStatus status,
+            Long currentAttemptId,
+            String leaseOwner,
+            Instant leaseExpiresAt,
+            Instant deadlineAt,
+            Instant startedAt,
+            Instant completedAt,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        AgentRun run = new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt);
+        run.status = status;
+        run.currentAttemptId = currentAttemptId;
+        run.leaseOwner = leaseOwner;
+        run.leaseExpiresAt = leaseExpiresAt;
+        run.startedAt = startedAt;
+        run.completedAt = completedAt;
+        run.updatedAt = updatedAt;
+        return run;
+    }
+
     void startLease(AgentRunLease lease, AgentRunTransitionContext context) {
         currentAttemptId = lease.attemptId();
         leaseOwner = lease.owner();

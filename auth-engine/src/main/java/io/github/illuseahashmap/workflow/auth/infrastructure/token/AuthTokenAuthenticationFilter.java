@@ -10,6 +10,7 @@ import io.github.illuseahashmap.workflow.auth.interfaces.security.AuthSecurityFi
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalContext;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
+import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
@@ -78,21 +79,28 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
             }
 
             AuthTokenService.AuthTokenPayload payload = tokenService.verify(token);
-            AuthTenantRepository.AuthTenant tenant = tenantRepository.findByTenantCode(payload.tenantCode())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN, "Tenant does not exist"));
-            AuthMembershipRepository.TenantMembership membership = membershipRepository
-                    .find(payload.userId(), payload.tenantCode())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN, "Tenant membership does not exist"));
-            if (!tenant.enabled() || !membership.tenantEnabled() || !membership.membershipEnabled()) {
-                throw new BusinessException(ErrorCode.FORBIDDEN, "Tenant access is disabled");
-            }
-            AuthUser user = userRepository.findByUserId(payload.userId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "User does not exist"));
-            if (!user.enabled()) {
-                throw new BusinessException(ErrorCode.FORBIDDEN, "User is disabled");
-            }
-            var roles = authorizationRepository.findRoleCodes(payload.userId(), payload.tenantCode());
-            var permissions = authorizationRepository.findPermissionCodes(payload.userId(), payload.tenantCode());
+            AuthenticatedData authenticatedData = TrustedDataAccessContext.runAsAuthentication(() -> {
+                AuthTenantRepository.AuthTenant tenant = tenantRepository.findByTenantCode(payload.tenantCode())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN, "Tenant does not exist"));
+                AuthMembershipRepository.TenantMembership membership = membershipRepository
+                        .find(payload.userId(), payload.tenantCode())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN, "Tenant membership does not exist"));
+                if (!tenant.enabled() || !membership.tenantEnabled() || !membership.membershipEnabled()) {
+                    throw new BusinessException(ErrorCode.FORBIDDEN, "Tenant access is disabled");
+                }
+                AuthUser user = userRepository.findByUserId(payload.userId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "User does not exist"));
+                if (!user.enabled()) {
+                    throw new BusinessException(ErrorCode.FORBIDDEN, "User is disabled");
+                }
+                var roles = authorizationRepository.findRoleCodes(payload.userId(), payload.tenantCode());
+                var permissions = authorizationRepository.findPermissionCodes(payload.userId(), payload.tenantCode());
+                return new AuthenticatedData(tenant, user, roles, permissions);
+            });
+            AuthTenantRepository.AuthTenant tenant = authenticatedData.tenant();
+            AuthUser user = authenticatedData.user();
+            var roles = authenticatedData.roles();
+            var permissions = authenticatedData.permissions();
             CurrentPrincipal principal = new CurrentPrincipal(
                     "USER",
                     user.userId(),
@@ -121,6 +129,12 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
             TenantContext.clear();
             SecurityContextHolder.clearContext();
         }
+    }
+
+    private record AuthenticatedData(AuthTenantRepository.AuthTenant tenant,
+                                     AuthUser user,
+                                     java.util.Set<String> roles,
+                                     java.util.Set<String> permissions) {
     }
 
     private String readCookieToken(HttpServletRequest request) {

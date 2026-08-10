@@ -3,6 +3,7 @@ package io.github.illuseahashmap.workflow.integration;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -99,6 +100,23 @@ class AuthenticationHttpIntegrationTest {
         mockMvc.perform(get("/auth/me").cookie(authCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value("integration-user"));
+
+        MvcResult authenticatedCsrf = mockMvc.perform(get("/auth/csrf").cookie(authCookie))
+                .andExpect(status().isOk())
+                .andReturn();
+        Cookie authenticatedCsrfCookie = authenticatedCsrf.getResponse().getCookie("XSRF-TOKEN");
+        String authenticatedCsrfToken = com.jayway.jsonpath.JsonPath.read(
+                authenticatedCsrf.getResponse().getContentAsString(), "$.data");
+
+        mockMvc.perform(patch("/auth/me")
+                        .cookie(authCookie, authenticatedCsrfCookie)
+                        .header("X-XSRF-TOKEN", authenticatedCsrfToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"displayName":"Updated Integration User"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.displayName").value("Updated Integration User"));
 
         mockMvc.perform(get("/workflow/tenant").cookie(authCookie))
                 .andExpect(status().isForbidden());

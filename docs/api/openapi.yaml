@@ -1,0 +1,1005 @@
+openapi: 3.0.3
+info:
+  title: Workflow Agent Service API
+  version: 0.1.0
+  description: Versioned public HTTP contract for the workflow and Agent platform.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: /
+security:
+  - cookieAuth: []
+tags:
+  - name: Authentication
+    description: Browser authentication and current session operations.
+  - name: Workflow
+    description: Process and task runtime operations.
+  - name: Agent
+    description: Agent definitions and asynchronous model runs.
+  - name: AccessManagement
+    description: Tenant member, role, and permission management.
+  - name: Tenant
+    description: Platform tenant administration.
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Create a browser session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Session created and written to an HttpOnly cookie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/me:
+    get:
+      tags: [Authentication]
+      operationId: currentUser
+      summary: Read the current user and tenant context
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Current principal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Authentication]
+      operationId: updateProfile
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
+      responses:
+        '200': { description: Profile updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /auth/register:
+    post:
+      tags: [Authentication]
+      operationId: register
+      summary: Register a normal user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '200': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /auth/me/password:
+    post:
+      tags: [Authentication]
+      operationId: changePassword
+      summary: Change current user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '200': { description: Password changed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /auth/tenants:
+    get:
+      tags: [Authentication]
+      operationId: listMyTenants
+      summary: List tenants available to the current user
+      responses:
+        '200': { description: Tenant options, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/switch-tenant:
+    post:
+      tags: [Authentication]
+      operationId: switchTenant
+      summary: Switch the current tenant context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SwitchTenantRequest' }
+      responses:
+        '200': { description: Tenant switched, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /auth/csrf:
+    get:
+      tags: [Authentication]
+      operationId: csrfToken
+      summary: Read the CSRF token for browser requests
+      responses:
+        '200': { description: CSRF token, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      summary: Clear the browser session cookie
+      responses:
+        '200': { description: Session cleared, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/directory/users:
+    get:
+      tags: [Authentication]
+      operationId: searchDirectoryUsers
+      summary: Search users in the current tenant
+      parameters:
+        - { $ref: '#/components/parameters/Keyword' }
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Directory users, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/access/members:
+    get:
+      tags: [AccessManagement]
+      operationId: listMembers
+      summary: List tenant members
+      parameters: [{ $ref: '#/components/parameters/Keyword' }]
+      responses:
+        '200': { description: Members, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [AccessManagement]
+      operationId: addMember
+      summary: Add a member to the current tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddTenantMemberRequest' }
+      responses:
+        '200': { description: Member added, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/access/members/{userId}/roles:
+    post:
+      tags: [AccessManagement]
+      operationId: updateMemberRoles
+      summary: Replace a member's tenant roles
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberRolesRequest' }
+      responses:
+        '200': { description: Roles updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/access/members/{userId}/enabled:
+    post:
+      tags: [AccessManagement]
+      operationId: updateMemberEnabled
+      summary: Enable or disable a tenant member
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+        - { name: enabled, in: query, required: true, schema: { type: boolean } }
+      responses:
+        '200': { description: Member status updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/access/roles:
+    get:
+      tags: [AccessManagement]
+      operationId: listRoles
+      summary: List tenant roles
+      responses:
+        '200': { description: Roles, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [AccessManagement]
+      operationId: saveRole
+      summary: Create or update a tenant role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveTenantRoleRequest' }
+      responses:
+        '200': { description: Role saved, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /auth/access/permissions:
+    get:
+      tags: [AccessManagement]
+      operationId: listPermissions
+      summary: List available permissions
+      responses:
+        '200': { description: Permissions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/tenant:
+    get:
+      tags: [Tenant]
+      operationId: listTenants
+      summary: Page tenants
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { $ref: '#/components/parameters/Keyword' }
+        - { name: enabled, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: Tenants, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [Tenant]
+      operationId: createTenant
+      summary: Create a tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TenantCommand' }
+      responses:
+        '200': { description: Tenant created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/tenant/enabled:
+    get:
+      tags: [Tenant]
+      operationId: listEnabledTenants
+      summary: List enabled tenants
+      responses:
+        '200': { description: Enabled tenants, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/tenant/{id}:
+    post:
+      tags: [Tenant]
+      operationId: updateTenant
+      summary: Update a tenant
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TenantCommand' }
+      responses:
+        '200': { description: Tenant updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/tenant/{id}/enabled:
+    post:
+      tags: [Tenant]
+      operationId: updateTenantEnabled
+      summary: Enable or disable a tenant
+      parameters:
+        - { $ref: '#/components/parameters/NumericId' }
+        - { name: enabled, in: query, required: true, schema: { type: boolean } }
+      responses:
+        '200': { description: Tenant status updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/tenant/{id}/restore:
+    post:
+      tags: [Tenant]
+      operationId: restoreTenant
+      summary: Restore a tenant
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: Tenant restored, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/process/start:
+    post:
+      tags: [Workflow]
+      operationId: startProcess
+      summary: Start a process instance
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartProcessRequest'
+      responses:
+        '200':
+          description: Process started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /workflow/task/approve:
+    post:
+      tags: [Workflow]
+      operationId: approveTask
+      summary: Approve and complete a user task
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskActionRequest'
+      responses:
+        '200':
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /agents:
+    get:
+      tags: [Agent]
+      operationId: listAgents
+      summary: List Agent definitions
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Agent definitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Agent]
+      operationId: createAgent
+      summary: Create an Agent definition
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDefinitionRequest'
+      responses:
+        '201':
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /agent-runs/manual-tests:
+    post:
+      tags: [Agent]
+      operationId: submitAgentManualRun
+      summary: Submit a manual Agent run
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualRunRequest'
+      responses:
+        '202':
+          description: Run accepted for asynchronous execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /workflow/management/process/deploy:
+    post:
+      tags: [Workflow]
+      operationId: deployProcess
+      summary: Deploy a BPMN process definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeployProcessRequest' }
+      responses:
+        '200': { description: Process deployed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /workflow/management/process/definition/activate:
+    post:
+      tags: [Workflow]
+      operationId: activateProcessVersion
+      summary: Activate a process definition version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivateProcessVersionRequest' }
+      responses:
+        '200': { description: Version activated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definition/active:
+    get:
+      tags: [Workflow]
+      operationId: getActiveProcessVersion
+      summary: Read the active process version
+      parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
+      responses:
+        '200': { description: Active version, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definition/exists:
+    get:
+      tags: [Workflow]
+      operationId: processDefinitionExists
+      summary: Check whether a process definition exists
+      parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
+      responses:
+        '200': { description: Existence result, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definitions:
+    get:
+      tags: [Workflow]
+      operationId: listProcessDefinitions
+      summary: List process definition versions
+      parameters:
+        - { name: processDefinitionKey, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Process definitions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definition:
+    get:
+      tags: [Workflow]
+      operationId: getProcessDefinition
+      summary: Read a process definition
+      parameters:
+        - { $ref: '#/components/parameters/ProcessDefinitionKey' }
+        - { name: version, in: query, schema: { type: integer } }
+      responses:
+        '200': { description: Process definition, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    delete:
+      tags: [Workflow]
+      operationId: deleteProcessDefinitions
+      summary: Delete process definition versions
+      parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
+      responses:
+        '200': { description: Definitions deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/diagram:
+    get:
+      tags: [Workflow]
+      operationId: getProcessInstanceDiagram
+      summary: Render a process instance diagram
+      parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
+      responses:
+        '200': { description: PNG diagram, content: { image/png: { schema: { type: string, format: binary } } } }
+  /workflow/management/process/diagram-data:
+    get:
+      tags: [Workflow]
+      operationId: getProcessInstanceDiagramData
+      summary: Read process instance diagram data
+      parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
+      responses:
+        '200': { description: Diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definitions/page:
+    get:
+      tags: [Workflow]
+      operationId: pageProcessDefinitions
+      summary: Page process definitions
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: processDefinitionKey, in: query, schema: { type: string } }
+        - { name: processDefinitionName, in: query, schema: { type: string } }
+        - { name: publishStatus, in: query, schema: { type: string, default: all } }
+      responses:
+        '200': { description: Process definition page, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/instances/page:
+    get:
+      tags: [Workflow]
+      operationId: pageProcessInstances
+      summary: Page process instances
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: processDefinitionKey, in: query, schema: { type: string } }
+        - { name: processDefinitionName, in: query, schema: { type: string } }
+        - { name: processInstanceId, in: query, schema: { type: string } }
+        - { name: businessKey, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, default: all } }
+      responses:
+        '200': { description: Process instance page, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/instance/detail:
+    get:
+      tags: [Workflow]
+      operationId: getProcessInstanceDetail
+      summary: Read process instance detail
+      parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
+      responses:
+        '200': { description: Process instance detail, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/instance/terminate:
+    post:
+      tags: [Workflow]
+      operationId: terminateProcessInstance
+      summary: Terminate a running process instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TerminateProcessRequest' }
+      responses:
+        '200': { description: Process terminated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/management/process/definition/version:
+    delete:
+      tags: [Workflow]
+      operationId: deleteProcessDefinitionVersion
+      summary: Delete one process definition version
+      parameters:
+        - { $ref: '#/components/parameters/ProcessDefinitionKey' }
+        - { name: version, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Definition version deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/process/participant-requirements:
+    post:
+      tags: [Workflow]
+      operationId: getStartParticipantRequirements
+      summary: Resolve participants required to start a process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProcessParticipantRequirementsRequest' }
+      responses:
+        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/process/status:
+    get:
+      tags: [Workflow]
+      operationId: getProcessStatus
+      summary: Read process status
+      parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
+      responses:
+        '200': { description: Process status, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/task/status:
+    get:
+      tags: [Workflow]
+      operationId: getTaskStatus
+      summary: Read task status
+      parameters: [{ $ref: '#/components/parameters/TaskId' }]
+      responses:
+        '200': { description: Task status, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/task/participant-requirements:
+    post:
+      tags: [Workflow]
+      operationId: getTaskParticipantRequirements
+      summary: Resolve participants required for a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskParticipantRequirementsRequest' }
+      responses:
+        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/task/reject:
+    post:
+      tags: [Workflow]
+      operationId: rejectTask
+      summary: Reject a user task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskActionRequest' }
+      responses:
+        '200': { description: Task rejected, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/task/transfer:
+    post:
+      tags: [Workflow]
+      operationId: transferTask
+      summary: Transfer a user task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferTaskRequest' }
+      responses:
+        '200': { description: Task transferred, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/process/definition/diagram:
+    get:
+      tags: [Workflow]
+      operationId: getProcessDefinitionDiagram
+      summary: Read process definition diagram data
+      parameters:
+        - { $ref: '#/components/parameters/ProcessDefinitionKey' }
+        - { name: version, in: query, schema: { type: integer } }
+        - { name: processDefinitionId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Definition diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/node-assignment-rule:
+    get:
+      tags: [Workflow]
+      operationId: pageAssignmentRules
+      summary: Page node assignment rules
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: processDefinitionKey, in: query, schema: { type: string } }
+        - { name: processDefinitionId, in: query, schema: { type: string } }
+        - { name: version, in: query, schema: { type: integer } }
+        - { name: taskDefinitionKey, in: query, schema: { type: string } }
+        - { name: variableName, in: query, schema: { type: string } }
+        - { name: assignmentType, in: query, schema: { type: string } }
+        - { name: emptyUserStrategy, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Assignment rules, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [Workflow]
+      operationId: createAssignmentRule
+      summary: Create a node assignment rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentRuleCommand' }
+      responses:
+        '200': { description: Assignment rule created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/node-assignment-rule/inherit:
+    post:
+      tags: [Workflow]
+      operationId: inheritAssignmentRules
+      summary: Inherit assignment rules from a process definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentRuleInheritCommand' }
+      responses:
+        '200': { description: Rules inherited, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /workflow/node-assignment-rule/{id}:
+    post:
+      tags: [Workflow]
+      operationId: updateAssignmentRule
+      summary: Update a node assignment rule
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentRuleCommand' }
+      responses:
+        '200': { description: Assignment rule updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    delete:
+      tags: [Workflow]
+      operationId: deleteAssignmentRule
+      summary: Delete a node assignment rule
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: Assignment rule deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agents/{id}:
+    post:
+      tags: [Agent]
+      operationId: updateAgent
+      summary: Update an Agent definition
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentDefinitionRequest' }
+      responses:
+        '200': { description: Agent updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    
+  /agents/{definitionId}/versions:
+    get:
+      tags: [Agent]
+      operationId: listAgentVersions
+      summary: List Agent versions
+      parameters: [{ $ref: '#/components/parameters/NumericDefinitionId' }]
+      responses:
+        '200': { description: Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [Agent]
+      operationId: createAgentDraft
+      summary: Create an Agent draft version
+      parameters: [{ $ref: '#/components/parameters/NumericDefinitionId' }]
+      responses:
+        '200': { description: Draft created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agents/{definitionId}/versions/{versionId}:
+    post:
+      tags: [Agent]
+      operationId: updateAgentDraft
+      summary: Update an Agent draft version
+      parameters:
+        - { $ref: '#/components/parameters/NumericDefinitionId' }
+        - { $ref: '#/components/parameters/NumericVersionId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentVersionCommand' }
+      responses:
+        '200': { description: Draft updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agents/{definitionId}/versions/{versionId}/publish:
+    post:
+      tags: [Agent]
+      operationId: publishAgentVersion
+      summary: Publish an Agent version
+      parameters:
+        - { $ref: '#/components/parameters/NumericDefinitionId' }
+        - { $ref: '#/components/parameters/NumericVersionId' }
+      responses:
+        '200': { description: Version published, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agent-providers:
+    get:
+      tags: [Agent]
+      operationId: listAgentProviders
+      summary: Page Agent Providers
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { $ref: '#/components/parameters/Keyword' }
+        - { name: enabled, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: Providers, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+    post:
+      tags: [Agent]
+      operationId: createAgentProvider
+      summary: Create an Agent Provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentProviderCommand' }
+      responses:
+        '200': { description: Provider created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agent-providers/enabled:
+    get:
+      tags: [Agent]
+      operationId: listEnabledAgentProviders
+      summary: List enabled Agent Providers
+      responses:
+        '200': { description: Enabled providers, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agent-providers/{id}:
+    post:
+      tags: [Agent]
+      operationId: updateAgentProvider
+      summary: Update an Agent Provider
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentProviderCommand' }
+      responses:
+        '200': { description: Provider updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agent-runs:
+    get:
+      tags: [Agent]
+      operationId: listAgentRuns
+      summary: Page Agent runs
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { $ref: '#/components/parameters/Keyword' }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agent-runs/{runId}:
+    get:
+      tags: [Agent]
+      operationId: getAgentRun
+      summary: Read an Agent run detail
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      responses:
+        '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+components:
+  parameters:
+    PageNum:
+      name: pageNum
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Keyword:
+      name: keyword
+      in: query
+      schema: { type: string }
+    NumericId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    NumericDefinitionId:
+      name: definitionId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    NumericVersionId:
+      name: versionId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string }
+    ProcessDefinitionKey:
+      name: processDefinitionKey
+      in: query
+      required: true
+      schema: { type: string }
+    ProcessInstanceId:
+      name: processInstanceId
+      in: query
+      required: true
+      schema: { type: string }
+    TaskId:
+      name: taskId
+      in: query
+      required: true
+      schema: { type: string }
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: WORKFLOW_ACCESS_TOKEN
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        data: {}
+        traceId: { type: string }
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1 }
+        password: { type: string, format: password, minLength: 1 }
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1 }
+        displayName: { type: string }
+        password: { type: string, format: password, minLength: 5 }
+    UpdateProfileRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName: { type: string, minLength: 1 }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, format: password, minLength: 1 }
+        newPassword: { type: string, format: password, minLength: 5 }
+    SwitchTenantRequest:
+      type: object
+      required: [tenantCode]
+      properties:
+        tenantCode: { type: string, minLength: 1 }
+    AddTenantMemberRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string }
+        roleCodes: { type: array, items: { type: string } }
+    UpdateMemberRolesRequest:
+      type: object
+      required: [roleCodes]
+      properties:
+        roleCodes: { type: array, items: { type: string } }
+    SaveTenantRoleRequest:
+      type: object
+      required: [roleCode, roleName, permissionCodes]
+      properties:
+        roleCode: { type: string }
+        roleName: { type: string }
+        description: { type: string }
+        permissionCodes: { type: array, items: { type: string } }
+    TenantCommand:
+      type: object
+      required: [tenantCode, tenantName]
+      properties:
+        tenantCode: { type: string }
+        tenantName: { type: string }
+        description: { type: string }
+    StartProcessRequest:
+      type: object
+      required: [processDefinitionKey]
+      properties:
+        processDefinitionKey: { type: string }
+        processDefinitionId: { type: string }
+        businessKey: { type: string }
+        variables: { type: object, additionalProperties: true }
+    DeployProcessRequest:
+      type: object
+      required: [processDefinitionKey, bpmnXml]
+      properties:
+        processDefinitionKey: { type: string }
+        bpmnXml: { type: string }
+        processDefinitionName: { type: string }
+    ActivateProcessVersionRequest:
+      type: object
+      required: [processDefinitionKey, version]
+      properties:
+        processDefinitionKey: { type: string }
+        version: { type: integer }
+        processDefinitionId: { type: string }
+    ProcessParticipantRequirementsRequest:
+      type: object
+      required: [processDefinitionKey]
+      properties:
+        processDefinitionKey: { type: string }
+        processDefinitionId: { type: string }
+        variables: { type: object, additionalProperties: true }
+    TaskParticipantRequirementsRequest:
+      type: object
+      required: [taskId]
+      properties:
+        taskId: { type: string }
+        variables: { type: object, additionalProperties: true }
+    TransferTaskRequest:
+      type: object
+      required: [taskId, targetAssignee]
+      properties:
+        taskId: { type: string }
+        targetAssignee: { type: string }
+        comment: { type: string }
+    TerminateProcessRequest:
+      type: object
+      required: [processInstanceId]
+      properties:
+        processInstanceId: { type: string }
+        reason: { type: string }
+    TaskActionRequest:
+      type: object
+      required: [taskId]
+      properties:
+        taskId: { type: string }
+        comment: { type: string }
+        variables: { type: object, additionalProperties: true }
+    AgentDefinitionRequest:
+      type: object
+      required: [agentCode, agentName]
+      properties:
+        agentCode: { type: string }
+        agentName: { type: string }
+        description: { type: string }
+    AgentVersionCommand:
+      type: object
+      required: [prompt]
+      properties:
+        prompt: { type: string }
+        model: { type: string }
+        description: { type: string }
+    AgentProviderCommand:
+      type: object
+      required: [providerCode, providerName, baseUrl, defaultModel]
+      properties:
+        providerCode: { type: string }
+        providerName: { type: string }
+        baseUrl: { type: string, format: uri }
+        defaultModel: { type: string }
+        enabled: { type: boolean }
+    AssignmentRuleCommand:
+      type: object
+      required: [processDefinitionId, taskDefinitionKey, assignmentType]
+      properties:
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        version: { type: integer }
+        taskDefinitionKey: { type: string }
+        assignmentType: { type: string }
+        targets: { type: array, items: { type: object, additionalProperties: true } }
+        conditions: { type: array, items: { type: object, additionalProperties: true } }
+    AssignmentRuleInheritCommand:
+      type: object
+      required: [processDefinitionId]
+      properties:
+        processDefinitionId: { type: string }
+    ManualRunRequest:
+      type: object
+      required: [agentVersionId, input]
+      properties:
+        agentVersionId: { type: integer, format: int64 }
+        input: { type: string }
+        idempotencyKey: { type: string }
+  responses:
+    Forbidden:
+      description: Authenticated but not authorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }

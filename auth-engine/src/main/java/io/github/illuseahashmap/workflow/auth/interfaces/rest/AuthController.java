@@ -11,6 +11,7 @@ import io.github.illuseahashmap.workflow.auth.application.dto.TenantOptionRespon
 import io.github.illuseahashmap.workflow.auth.application.dto.UpdateProfileRequest;
 import io.github.illuseahashmap.workflow.auth.infrastructure.token.AuthTokenProperties;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
+import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,7 +42,8 @@ public class AuthController {
     public ApiResponse<BrowserAuthResponse> register(@Valid @RequestBody RegisterRequest request,
                                                    HttpServletRequest servletRequest,
                                                    HttpServletResponse httpResponse) {
-        var tokenResponse = authService.register(request, servletRequest.getRemoteAddr());
+        var tokenResponse = TrustedDataAccessContext.runAsAuthentication(
+                () -> authService.register(request, servletRequest.getRemoteAddr()));
         writeTokenCookie(httpResponse, tokenResponse.accessToken(), tokenResponse.expiresIn());
         return ApiResponse.ok(BrowserAuthResponse.from(tokenResponse));
     }
@@ -50,7 +52,8 @@ public class AuthController {
     public ApiResponse<BrowserAuthResponse> login(@Valid @RequestBody LoginRequest request,
                                                 HttpServletRequest servletRequest,
                                                 HttpServletResponse httpResponse) {
-        var tokenResponse = authService.login(request, servletRequest.getRemoteAddr());
+        var tokenResponse = TrustedDataAccessContext.runAsAuthentication(
+                () -> authService.login(request, servletRequest.getRemoteAddr()));
         writeTokenCookie(httpResponse, tokenResponse.accessToken(), tokenResponse.expiresIn());
         return ApiResponse.ok(BrowserAuthResponse.from(tokenResponse));
     }
@@ -79,7 +82,8 @@ public class AuthController {
     @PostMapping("/switch-tenant")
     public ApiResponse<BrowserAuthResponse> switchTenant(@Valid @RequestBody SwitchTenantRequest request,
                                                        HttpServletResponse httpResponse) {
-        var response = authService.switchTenant(request);
+        var response = TrustedDataAccessContext.runAsAuthentication(
+                () -> authService.switchTenant(request));
         writeTokenCookie(httpResponse, response.accessToken(), response.expiresIn());
         return ApiResponse.ok(BrowserAuthResponse.from(response));
     }

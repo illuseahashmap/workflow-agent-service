@@ -23,6 +23,15 @@ flowable:
   check-process-definitions: false
 
 workflow:
+  agent:
+    credentials:
+      master-key-base64: ${WORKFLOW_AGENT_CREDENTIAL_KEY_BASE64:${WORKFLOW_MASTER_KEY_BASE64:}}
+    worker:
+      enabled: ${WORKFLOW_AGENT_WORKER_ENABLED:true}
+      id: ${WORKFLOW_AGENT_WORKER_ID:local-worker}
+      poll-delay-ms: ${WORKFLOW_AGENT_WORKER_POLL_DELAY_MS:1000}
+      lease-seconds: ${WORKFLOW_AGENT_WORKER_LEASE_SECONDS:60}
+      max-attempts: ${WORKFLOW_AGENT_WORKER_MAX_ATTEMPTS:3}
   runtime:
     environment: ${WORKFLOW_ENV:production}
   lock:

@@ -41,4 +41,20 @@ class AgentArchitectureTest {
                 .because("agent-engine communicates with workflow-engine only through stable events and ports")
                 .check(productionClasses);
     }
+
+    @Test
+    void applicationLayerDoesNotDependOnInfrastructure() {
+        noClasses().that().resideInAPackage("..application..")
+                .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .because("Agent application services must reach adapters through ports")
+                .check(productionClasses);
+    }
+
+    @Test
+    void restInterfacesDoNotExposeDomainTypesDirectly() {
+        noClasses().that().resideInAPackage("..interfaces.rest..")
+                .should().dependOnClassesThat().resideInAPackage("..domain..")
+                .because("Agent REST contracts must use application DTOs instead of domain models")
+                .check(productionClasses);
+    }
 }

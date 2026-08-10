@@ -195,7 +195,7 @@ public class JdbcAuthAuthorizationRepository implements AuthAuthorizationReposit
         replaceRolePermissions(tenantCode, "TENANT_ADMIN", Set.of(
                 "workflow:definition:read", "workflow:definition:write",
                 "workflow:instance:read", "workflow:instance:operate", "assignment:manage",
-                "member:manage", "role:manage"));
+                "member:manage", "role:manage", "agent:manage", "agent:run:read", "agent:run:execute"));
         replaceRolePermissions(tenantCode, "USER", Set.of(
                 "workflow:definition:read", "workflow:instance:read"));
     }
