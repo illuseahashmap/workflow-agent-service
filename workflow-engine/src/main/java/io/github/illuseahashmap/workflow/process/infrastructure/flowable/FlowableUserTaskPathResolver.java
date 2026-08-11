@@ -22,6 +22,7 @@ import org.flowable.bpmn.model.InclusiveGateway;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.StartEvent;
 import org.flowable.bpmn.model.UserTask;
+import org.flowable.bpmn.model.ExtensionElement;
 import org.flowable.common.engine.impl.el.ExpressionManager;
 import org.flowable.common.engine.impl.variable.MapDelegateVariableContainer;
 import org.flowable.engine.RepositoryService;
@@ -253,8 +254,18 @@ public final class FlowableUserTaskPathResolver {
     }
 
     private boolean isAgentWaitState(FlowElement element) {
-        return element.getExtensionElements() != null
-                && element.getExtensionElements().containsKey("agentTask");
+        if (element.getExtensionElements() == null) {
+            return false;
+        }
+        return element.getExtensionElements().entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream())
+                .anyMatch(this::isAgentExtension);
+    }
+
+    private boolean isAgentExtension(ExtensionElement extension) {
+        return "agentTask".equals(extension.getName())
+                || "agentTask".equals(extension.getNamespacePrefix() + ":" + extension.getName())
+                || "http://workflow-agent.local/bpmn".equals(extension.getNamespace());
     }
 
     private Map<String, Object> safeVariables(Map<String, Object> variables) {

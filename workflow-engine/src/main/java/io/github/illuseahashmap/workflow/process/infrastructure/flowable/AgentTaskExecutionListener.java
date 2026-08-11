@@ -40,9 +40,9 @@ public class AgentTaskExecutionListener implements ExecutionListener {
             return;
         }
         FlowElement current = execution.getCurrentFlowElement();
-        ExtensionElement binding = current.getExtensionElements()
-                .getOrDefault("agentTask", List.of())
-                .stream()
+        ExtensionElement binding = current.getExtensionElements().values().stream()
+                .flatMap(List::stream)
+                .filter(this::isAgentExtension)
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORKFLOW_ERROR,
                         "Agent task is missing workflow:agentTask binding"));
@@ -61,6 +61,11 @@ public class AgentTaskExecutionListener implements ExecutionListener {
                         + ":" + execution.getId(),
                 null,
                 positiveLongOrDefault(binding.getAttributeValue(null, "timeoutSeconds"), 300)));
+    }
+
+    private boolean isAgentExtension(ExtensionElement extension) {
+        return "agentTask".equals(extension.getName())
+                || "http://workflow-agent.local/bpmn".equals(extension.getNamespace());
     }
 
     private String serializeVariables(Map<String, Object> variables) {
