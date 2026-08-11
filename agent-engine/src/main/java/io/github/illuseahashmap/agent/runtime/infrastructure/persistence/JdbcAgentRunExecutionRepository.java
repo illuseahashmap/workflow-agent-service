@@ -12,8 +12,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -75,6 +77,77 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         mapRun(resultSet), resultSet.getString("input_snapshot_json")))
                 .stream()
                 .findFirst();
+    }
+
+    @Override
+    public int recoverExpired(Instant now) {
+        List<RecoveryCandidate> candidates = jdbcTemplate.query("""
+                        SELECT id, tenant_code, status, current_attempt_id, deadline_at
+                        FROM agent_run
+                        WHERE (status = 'QUEUED' AND deadline_at <= :now)
+                           OR (status = 'RUNNING' AND lease_expires_at <= :now)
+                        ORDER BY id
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 100
+                        """,
+                Map.of("now", timestamp(now)),
+                (rs, rowNum) -> new RecoveryCandidate(
+                        rs.getLong("id"),
+                        rs.getString("tenant_code"),
+                        AgentRunStatus.valueOf(rs.getString("status")),
+                        rs.getObject("current_attempt_id", Long.class),
+                        instant(rs, "deadline_at")));
+        int recovered = 0;
+        for (RecoveryCandidate candidate : candidates) {
+            boolean timedOut = !now.isBefore(candidate.deadlineAt());
+            if (candidate.status() == AgentRunStatus.RUNNING && candidate.currentAttemptId() != null) {
+                jdbcTemplate.update("""
+                                UPDATE agent_run_attempt
+                                SET status = 'FAILED', error_code = 'LEASE_EXPIRED',
+                                    completed_at = :now, updated_at = :now
+                                WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                                  AND id = :attemptId AND status = 'RUNNING'
+                                """,
+                        Map.of("tenantCode", candidate.tenantCode(), "runId", candidate.runId(),
+                                "attemptId", candidate.currentAttemptId(), "now", timestamp(now)));
+                jdbcTemplate.update("""
+                                UPDATE agent_run_step
+                                SET status = 'FAILED', error_code = 'LEASE_EXPIRED',
+                                    completed_at = :now, updated_at = :now
+                                WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                                  AND attempt_id = :attemptId AND status = 'RUNNING'
+                                """,
+                        Map.of("tenantCode", candidate.tenantCode(), "runId", candidate.runId(),
+                                "attemptId", candidate.currentAttemptId(), "now", timestamp(now)));
+            }
+            AgentRunStatus target = timedOut ? AgentRunStatus.TIMED_OUT : AgentRunStatus.QUEUED;
+            int updated = jdbcTemplate.update("""
+                            UPDATE agent_run
+                            SET status = :status, current_attempt_id = NULL,
+                                lease_owner = NULL, lease_expires_at = NULL,
+                                available_at = :availableAt,
+                                completed_at = :completedAt, error_code = :errorCode,
+                                result_status = :resultStatus, updated_at = :now
+                            WHERE tenant_code = :tenantCode AND id = :runId
+                              AND status = :oldStatus
+                            """,
+                    nullableMap(
+                            "status", target.name(), "availableAt", timestamp(now),
+                            "completedAt", timedOut ? timestamp(now) : null,
+                            "errorCode", timedOut ? "AGENT_DEADLINE_EXCEEDED" : "LEASE_EXPIRED",
+                            "resultStatus", timedOut ? "FAILED" : null,
+                            "now", timestamp(now), "tenantCode", candidate.tenantCode(),
+                            "runId", candidate.runId(), "oldStatus", candidate.status().name()));
+            if (updated == 1) {
+                insertTransition(new AgentRunStateTransition(
+                        candidate.tenantCode(), candidate.runId(), candidate.currentAttemptId(),
+                        candidate.status(), target, timedOut ? "AGENT_DEADLINE_EXCEEDED" : "LEASE_EXPIRED",
+                        io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType.SYSTEM,
+                        "agent-recovery", UUID.randomUUID().toString(), now));
+                recovered++;
+            }
+        }
+        return recovered;
     }
 
     @Override
@@ -365,5 +438,14 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
         if (updated != 1) {
             throw new IllegalStateException(message);
         }
+    }
+
+    private record RecoveryCandidate(
+            long runId,
+            String tenantCode,
+            AgentRunStatus status,
+            Long currentAttemptId,
+            Instant deadlineAt
+    ) {
     }
 }

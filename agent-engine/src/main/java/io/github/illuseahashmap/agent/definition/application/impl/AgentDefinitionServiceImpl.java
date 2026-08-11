@@ -1,6 +1,5 @@
 package io.github.illuseahashmap.agent.definition.application.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.definition.application.AgentDefinitionService;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionCommand;
@@ -15,6 +14,8 @@ import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
+import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
@@ -23,6 +24,7 @@ import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -35,6 +37,26 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
     private final TenantProvider tenantProvider;
     private final CurrentPrincipalProvider principalProvider;
     private final ObjectMapper objectMapper;
+    private final AgentOutputSchemaValidator outputSchemaValidator;
+
+    @Autowired
+    public AgentDefinitionServiceImpl(
+            AgentDefinitionRepository definitionRepository,
+            AgentDefinitionVersionRepository versionRepository,
+            AgentProviderRepository providerRepository,
+            TenantProvider tenantProvider,
+            CurrentPrincipalProvider principalProvider,
+            ObjectMapper objectMapper,
+            AgentOutputSchemaValidator outputSchemaValidator
+    ) {
+        this.definitionRepository = definitionRepository;
+        this.versionRepository = versionRepository;
+        this.providerRepository = providerRepository;
+        this.tenantProvider = tenantProvider;
+        this.principalProvider = principalProvider;
+        this.objectMapper = objectMapper;
+        this.outputSchemaValidator = outputSchemaValidator;
+    }
 
     public AgentDefinitionServiceImpl(
             AgentDefinitionRepository definitionRepository,
@@ -44,12 +66,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             CurrentPrincipalProvider principalProvider,
             ObjectMapper objectMapper
     ) {
-        this.definitionRepository = definitionRepository;
-        this.versionRepository = versionRepository;
-        this.providerRepository = providerRepository;
-        this.tenantProvider = tenantProvider;
-        this.principalProvider = principalProvider;
-        this.objectMapper = objectMapper;
+        this(definitionRepository, versionRepository, providerRepository, tenantProvider,
+                principalProvider, objectMapper, new AgentOutputSchemaValidator(objectMapper));
     }
 
     @Override
@@ -217,8 +235,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             return;
         }
         try {
-            objectMapper.readTree(outputSchema);
-        } catch (JsonProcessingException exception) {
+            outputSchemaValidator.validateDefinition(outputSchema);
+        } catch (ModelProviderException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Output Schema must be valid JSON", exception);
         }
     }

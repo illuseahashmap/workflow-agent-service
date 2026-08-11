@@ -18,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -27,12 +28,23 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final ProviderEndpointValidator endpointValidator;
 
-    public OpenAiCompatibleModelProviderAdapter(ObjectMapper objectMapper) {
+    @Autowired
+    public OpenAiCompatibleModelProviderAdapter(
+            ObjectMapper objectMapper,
+            ProviderEndpointValidator endpointValidator
+    ) {
         this.objectMapper = objectMapper;
+        this.endpointValidator = endpointValidator;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
                 .build();
+    }
+
+    public OpenAiCompatibleModelProviderAdapter(ObjectMapper objectMapper) {
+        // The one-argument constructor is retained for isolated adapter tests; Spring uses the strict bean above.
+        this(objectMapper, new ProviderEndpointValidator(true));
     }
 
     @Override
@@ -46,6 +58,7 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
         long startedNanos = System.nanoTime();
         try {
             URI endpoint = endpointUri(request.baseUrl());
+            endpointValidator.validate(endpoint);
             boolean responsesApi = isResponsesEndpoint(endpoint);
             HttpRequest httpRequest = HttpRequest.newBuilder(endpoint)
                     .timeout(request.timeout())

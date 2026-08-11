@@ -6,6 +6,11 @@ spring:
 workflow:
   runtime:
     environment: development
+  agent:
+    provider:
+      egress:
+        allow-private-networks: true
+        allow-http: true
   auth:
     token:
       cookie-secure: false

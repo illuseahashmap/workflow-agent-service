@@ -13,6 +13,8 @@ public interface AgentRunExecutionRepository {
 
     Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now);
 
+    int recoverExpired(Instant now);
+
     int nextAttemptNumber(String tenantCode, long runId);
 
     long insertRunningAttempt(String tenantCode, long runId, int attemptNumber, Instant startedAt);

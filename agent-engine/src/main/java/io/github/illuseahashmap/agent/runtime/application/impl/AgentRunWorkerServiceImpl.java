@@ -14,6 +14,7 @@ import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
+import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureDisposition;
@@ -32,6 +33,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
@@ -46,11 +48,13 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final ModelProviderRegistry providerRegistry;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final AgentOutputSchemaValidator outputSchemaValidator;
     private final AgentRunStateMachine stateMachine = new AgentRunStateMachine();
     private final String workerId;
     private final Duration leaseDuration;
     private final int maxAttempts;
 
+    @Autowired
     public AgentRunWorkerServiceImpl(
             AgentRunExecutionRepository executionRepository,
             AgentDefinitionVersionRepository versionRepository,
@@ -59,6 +63,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             ModelProviderRegistry providerRegistry,
             ObjectMapper objectMapper,
             TransactionTemplate transactionTemplate,
+            AgentOutputSchemaValidator outputSchemaValidator,
             @Value("${workflow.agent.worker.id:local-worker}") String workerId,
             @Value("${workflow.agent.worker.lease-seconds:60}") long leaseSeconds,
             @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts
@@ -70,9 +75,27 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.providerRegistry = providerRegistry;
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
+        this.outputSchemaValidator = outputSchemaValidator;
         this.workerId = workerId + ":" + UUID.randomUUID();
         this.leaseDuration = Duration.ofSeconds(leaseSeconds);
         this.maxAttempts = maxAttempts;
+    }
+
+    public AgentRunWorkerServiceImpl(
+            AgentRunExecutionRepository executionRepository,
+            AgentDefinitionVersionRepository versionRepository,
+            AgentProviderRepository providerRepository,
+            AgentCredentialResolver credentialResolver,
+            ModelProviderRegistry providerRegistry,
+            ObjectMapper objectMapper,
+            TransactionTemplate transactionTemplate,
+            String workerId,
+            long leaseSeconds,
+            int maxAttempts
+    ) {
+        this(executionRepository, versionRepository, providerRepository, credentialResolver,
+                providerRegistry, objectMapper, transactionTemplate,
+                new AgentOutputSchemaValidator(objectMapper), workerId, leaseSeconds, maxAttempts);
     }
 
     @Override
@@ -85,6 +108,12 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             execute(claimed);
             return true;
         });
+    }
+
+    @Override
+    public int recoverExpiredRuns() {
+        return TrustedDataAccessContext.runAsSystemWorker(() ->
+                transactionTemplate.execute(status -> executionRepository.recoverExpired(Instant.now())));
     }
 
     private ClaimedRun claim() {
@@ -136,6 +165,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                             extractInput(claimed.inputSnapshotJson()),
                             remainingTimeout(run, version.timeoutSeconds()),
                             claimed.traceId()));
+            outputSchemaValidator.validateOutput(version.outputSchema(), response.content());
         } catch (ModelProviderException exception) {
             completeFailed(
                     claimed,
