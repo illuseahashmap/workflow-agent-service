@@ -2,6 +2,7 @@ package io.github.illuseahashmap.agent.definition.infrastructure.persistence;
 
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersion;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersionRepository;
+import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy;
 import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import java.sql.ResultSet;
@@ -75,10 +76,10 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
     public AgentDefinitionVersion save(AgentDefinitionVersion version) {
         return jdbcTemplate.queryForObject("""
                         INSERT INTO agent_definition_version (
-                            tenant_code, definition_id, version, status, provider_id, model_name,
+                            tenant_code, definition_id, version, status, execution_mode, provider_id, model_name,
                             system_prompt, timeout_seconds, failure_policy, input_schema, output_schema, created_by
                         ) VALUES (
-                            :tenantCode, :definitionId, :version, :status, :providerId, :modelName,
+                            :tenantCode, :definitionId, :version, :status, :executionMode, :providerId, :modelName,
                             :systemPrompt, :timeoutSeconds, :failurePolicy, :inputSchema, :outputSchema, :createdBy
                         ) RETURNING *
                         """,
@@ -91,6 +92,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         jdbcTemplate.update("""
                         UPDATE agent_definition_version
                         SET provider_id = :providerId,
+                            execution_mode = :executionMode,
                             model_name = :modelName,
                             system_prompt = :systemPrompt,
                             timeout_seconds = :timeoutSeconds,
@@ -126,6 +128,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         parameters.put("definitionId", version.definitionId());
         parameters.put("version", version.version());
         parameters.put("status", version.status().name());
+        parameters.put("executionMode", version.executionMode().name());
         parameters.put("providerId", version.providerId());
         parameters.put("modelName", version.modelName());
         parameters.put("systemPrompt", version.systemPrompt());
@@ -145,6 +148,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
                 resultSet.getLong("definition_id"),
                 resultSet.getInt("version"),
                 AgentVersionStatus.valueOf(resultSet.getString("status")),
+                AgentExecutionMode.valueOf(resultSet.getString("execution_mode")),
                 providerId,
                 resultSet.getString("model_name"),
                 resultSet.getString("system_prompt"),

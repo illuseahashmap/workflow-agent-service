@@ -1,6 +1,8 @@
 package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.workflow.process.application.port.AgentTaskBindingParser;
+import io.github.illuseahashmap.workflow.process.domain.AgentProcessFailurePolicy;
 import io.github.illuseahashmap.workflow.process.domain.AgentTaskBinding;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
@@ -22,6 +24,12 @@ import org.xml.sax.InputSource;
 public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
 
     private static final String WORKFLOW_NAMESPACE = "http://workflow-agent.local/bpmn";
+    private static final String FLOWABLE_NAMESPACE = "http://flowable.org/bpmn";
+    private final ObjectMapper objectMapper;
+
+    public XmlAgentTaskBindingParser(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public List<AgentTaskBinding> parse(String bpmnXml) {
@@ -42,17 +50,21 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
                 Element extension = (Element) nodes.item(index);
                 Node parent = extension.getParentNode();
                 Node waitTask = parent == null ? null : parent.getParentNode();
-                if (!(waitTask instanceof Element task)
-                        || !"receiveTask".equals(task.getLocalName())) {
-                    throw invalid("workflow:agentTask must belong to a bpmn:receiveTask wait state");
+                if (!(waitTask instanceof Element task)) {
+                    throw invalid("workflow:agentTask must belong to a BPMN task");
                 }
+                validateTaskSemantics(task);
+                String inputMapping = validJsonObject(extension.getAttribute("inputMapping"), "inputMapping");
+                String outputMapping = validJsonObject(extension.getAttribute("outputMapping"), "outputMapping");
+                AgentProcessFailurePolicy processFailurePolicy = failurePolicy(extension);
                 bindings.add(new AgentTaskBinding(
                         required(task, "id"),
                         task.getAttribute("name"),
                         positiveLong(extension, "agentVersionId"),
-                        defaultJson(extension.getAttribute("inputMapping")),
-                        defaultJson(extension.getAttribute("outputMapping")),
-                        defaultValue(extension.getAttribute("failurePolicy"), "FAIL_PROCESS")));
+                        inputMapping,
+                        outputMapping,
+                        processFailurePolicy,
+                        timeout(extension)));
             }
             return List.copyOf(bindings);
         } catch (BusinessException exception) {
@@ -60,6 +72,69 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
         } catch (Exception exception) {
             throw invalid("BPMN contains invalid Agent task configuration");
         }
+    }
+
+    private void validateTaskSemantics(Element task) {
+        if ("receiveTask".equals(task.getLocalName())) {
+            return; // Compatibility for already deployed diagrams.
+        }
+        if (!"serviceTask".equals(task.getLocalName())) {
+            throw invalid("workflow:agentTask must belong to a bpmn:serviceTask");
+        }
+        String delegateExpression = task.getAttributeNS(FLOWABLE_NAMESPACE, "delegateExpression");
+        String triggerable = task.getAttributeNS(FLOWABLE_NAMESPACE, "triggerable");
+        String async = task.getAttributeNS(FLOWABLE_NAMESPACE, "async");
+        if (!"${agentTaskDelegate}".equals(delegateExpression)
+                || !"true".equalsIgnoreCase(triggerable)
+                || !"true".equalsIgnoreCase(async)) {
+            throw invalid("Agent serviceTask requires agentTaskDelegate, flowable:async=true, "
+                    + "and flowable:triggerable=true");
+        }
+    }
+
+    private String validJsonObject(String value, String field) {
+        String json = defaultJson(value);
+        try {
+            if (!objectMapper.readTree(json).isObject()) {
+                throw invalid("Agent task " + field + " must be a JSON object");
+            }
+            return json;
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalid("Agent task " + field + " must be valid JSON");
+        }
+    }
+
+    private AgentProcessFailurePolicy failurePolicy(Element extension) {
+        String value = extension.getAttribute("processFailurePolicy");
+        if (value == null || value.isBlank()) {
+            value = extension.getAttribute("failurePolicy");
+        }
+        try {
+            return AgentProcessFailurePolicy.parseCompatible(value);
+        } catch (IllegalArgumentException exception) {
+            throw invalid("Agent task processFailurePolicy is not supported");
+        }
+    }
+
+    private int timeout(Element extension) {
+        String value = extension.getAttribute("processWaitTimeoutSeconds");
+        if (value == null || value.isBlank()) {
+            value = extension.getAttribute("timeoutSeconds");
+        }
+        if (value == null || value.isBlank()) {
+            return 300;
+        }
+        try {
+            int seconds = Integer.parseInt(value);
+            if (seconds >= 1 && seconds <= 3600) {
+                return seconds;
+            }
+        } catch (NumberFormatException ignored) {
+            // normalized below
+        }
+        throw invalid("Agent task processWaitTimeoutSeconds must be between 1 and 3600");
     }
 
     private long positiveLong(Element element, String attribute) {
@@ -85,10 +160,6 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
 
     private String defaultJson(String value) {
         return value == null || value.isBlank() ? "{}" : value;
-    }
-
-    private String defaultValue(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
     }
 
     private BusinessException invalid(String message) {

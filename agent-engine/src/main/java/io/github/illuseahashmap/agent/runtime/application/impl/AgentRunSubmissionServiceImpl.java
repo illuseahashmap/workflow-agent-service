@@ -133,7 +133,12 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
                 command.processInstanceId(),
                 command.executionId(),
                 command.activityId(),
-                command.activityActivationId()));
+                command.activityActivationId(),
+                command.outputMappingJson() == null || command.outputMappingJson().isBlank()
+                        ? "{}" : command.outputMappingJson(),
+                command.processFailurePolicy() == null || command.processFailurePolicy().isBlank()
+                        ? "HOLD_FOR_OPERATIONS" : command.processFailurePolicy(),
+                (int) command.timeoutSeconds()));
         eventPublisher.requested(run);
         return new AgentRunSubmissionView(run.id(), run.status());
     }

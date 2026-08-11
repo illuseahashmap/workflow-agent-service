@@ -6,7 +6,7 @@
 
 更新时间：2026-08-11
 
-状态：执行闭环第一阶段进行中。运行状态机、管理面、手动测试运行、基础 Worker、Mock/OpenAI Compatible Provider、模型调用审计、BPMN Agent 等待节点和 Flowable 恢复适配已经完成；共享事件信封、Outbox/Inbox 表与 PostgreSQL Publisher 已建立，通用 Dispatcher/Inbox 消费者、恢复接管策略细化、取消/人工确认、Guardrail 和生产级观测仍待实现。
+状态：执行闭环第一阶段进行中。运行状态机、管理面、基础 Worker、真实模型调用、模型审计、异步可触发 Agent Service Task、部署期绑定校验，以及基于版本化 Outbox/Inbox 完成事件的流程恢复已经完成；通用事件 Dispatcher、租约续约与接管、取消/人工确认、Guardrail、预算和生产级观测仍待实现。
 
 ## 1. 目标
 

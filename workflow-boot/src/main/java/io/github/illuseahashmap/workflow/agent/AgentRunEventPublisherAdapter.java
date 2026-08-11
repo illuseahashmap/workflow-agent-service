@@ -23,20 +23,25 @@ public class AgentRunEventPublisherAdapter implements AgentRunEventPublisher {
 
     @Override
     public void requested(AgentRun run) {
-        publish("AgentRunRequested", run, Map.of(
+        publish("AgentRunRequested.v1", run, Map.of(
                 "runId", run.id(), "status", run.status().name(),
+                "agentVersionId", run.agentVersionId(),
                 "processInstanceId", nullToEmpty(run.processInstanceId()),
                 "executionId", nullToEmpty(run.executionId()),
-                "activityId", nullToEmpty(run.activityId())));
+                "activityId", nullToEmpty(run.activityId()),
+                "activityActivationId", nullToEmpty(run.activityActivationId())));
     }
 
     @Override
     public void completed(AgentRun run, String outputSnapshotJson) {
-        publish("AgentRunCompleted", run, Map.of(
+        publish("AgentRunCompleted.v1", run, Map.of(
                 "runId", run.id(), "status", run.status().name(),
+                "attemptId", run.currentAttemptId() == null ? 0L : run.currentAttemptId(),
+                "agentVersionId", run.agentVersionId(),
                 "processInstanceId", nullToEmpty(run.processInstanceId()),
                 "executionId", nullToEmpty(run.executionId()),
                 "activityId", nullToEmpty(run.activityId()),
+                "activityActivationId", nullToEmpty(run.activityActivationId()),
                 "outputSnapshotJson", outputSnapshotJson == null ? "" : outputSnapshotJson));
     }
 

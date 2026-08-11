@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.agent.definition.application.dto;
 
 import io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy;
+import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import java.time.OffsetDateTime;
 
@@ -9,6 +10,7 @@ public record AgentVersionView(
         long definitionId,
         int version,
         AgentVersionStatus status,
+        AgentExecutionMode executionMode,
         Long providerId,
         String providerName,
         String modelName,

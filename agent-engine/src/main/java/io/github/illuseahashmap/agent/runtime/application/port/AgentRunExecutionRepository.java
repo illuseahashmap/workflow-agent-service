@@ -57,7 +57,10 @@ public interface AgentRunExecutionRepository {
             String processInstanceId,
             String executionId,
             String activityId,
-            String activityActivationId
+            String activityActivationId,
+            String outputMappingJson,
+            String processFailurePolicy,
+            Integer processWaitTimeoutSeconds
     ) {
         public Submission(
                 String tenantCode,
@@ -70,7 +73,8 @@ public interface AgentRunExecutionRepository {
                 Instant createdAt
         ) {
             this(tenantCode, agentVersionId, idempotencyKey, triggerType, inputSnapshotJson,
-                    requestedBy, deadlineAt, createdAt, null, null, null, null);
+                    requestedBy, deadlineAt, createdAt, null, null, null, null,
+                    "{}", "HOLD_FOR_OPERATIONS", null);
         }
     }
 }

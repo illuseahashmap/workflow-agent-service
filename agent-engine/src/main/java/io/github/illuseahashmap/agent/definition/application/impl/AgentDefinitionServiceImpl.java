@@ -10,6 +10,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentDefinition;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionRepository;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersion;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersionRepository;
+import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
@@ -152,6 +153,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         validateProvider(tenantCode, command.providerId(), false);
         AgentDefinitionVersion updated = new AgentDefinitionVersion(
                 existing.id(), tenantCode, definitionId, existing.version(), AgentVersionStatus.DRAFT,
+                command.executionMode(),
                 command.providerId(), normalizeNullable(command.modelName()),
                 command.systemPrompt() == null ? "" : command.systemPrompt().trim(), command.timeoutSeconds(),
                 command.failurePolicy(), normalizeNullable(command.inputSchema()),
@@ -172,6 +174,10 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         AgentDefinitionVersion version = requireVersion(tenantCode, definitionId, versionId);
         if (version.published()) {
             return toVersionView(version);
+        }
+        if (version.executionMode() != AgentExecutionMode.MODEL_ONLY) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "The selected Agent execution mode is not available yet");
         }
         AgentProvider provider = validateProvider(tenantCode, version.providerId(), true);
         String effectiveModel = StringUtils.hasText(version.modelName())
@@ -200,6 +206,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 definitionId,
                 version,
                 AgentVersionStatus.DRAFT,
+                source == null ? io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode.MODEL_ONLY
+                        : source.executionMode(),
                 source == null ? null : source.providerId(),
                 source == null ? null : source.modelName(),
                 source == null ? "" : source.systemPrompt(),
@@ -292,7 +300,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                         .map(AgentProvider::name)
                         .orElse(null);
         return new AgentVersionView(
-                version.id(), version.definitionId(), version.version(), version.status(), version.providerId(),
+                version.id(), version.definitionId(), version.version(), version.status(), version.executionMode(),
+                version.providerId(),
                 providerName, version.modelName(), version.systemPrompt(), version.timeoutSeconds(),
                 version.failurePolicy(), version.inputSchema(), version.outputSchema(), version.createdBy(),
                 version.publishedBy(),

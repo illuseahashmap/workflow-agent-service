@@ -11,6 +11,8 @@ public record AgentFlowableRunCommand(
         @NotBlank String activityId,
         String activityActivationId,
         String inputSnapshotJson,
+        String outputMappingJson,
+        String processFailurePolicy,
         @NotBlank String idempotencyKey,
         String requestedBy,
         long timeoutSeconds
@@ -19,5 +21,14 @@ public record AgentFlowableRunCommand(
         if (timeoutSeconds <= 0 || timeoutSeconds > 3600) {
             throw new IllegalArgumentException("timeoutSeconds must be between 1 and 3600");
         }
+    }
+
+    public AgentFlowableRunCommand(
+            long agentVersionId, String processInstanceId, String executionId, String activityId,
+            String activityActivationId, String inputSnapshotJson, String idempotencyKey,
+            String requestedBy, long timeoutSeconds) {
+        this(agentVersionId, processInstanceId, executionId, activityId, activityActivationId,
+                inputSnapshotJson, "{}", "HOLD_FOR_OPERATIONS", idempotencyKey,
+                requestedBy, timeoutSeconds);
     }
 }

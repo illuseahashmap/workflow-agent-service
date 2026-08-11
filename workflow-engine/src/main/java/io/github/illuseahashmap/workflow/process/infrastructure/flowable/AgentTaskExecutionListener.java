@@ -11,6 +11,7 @@ import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.flowable.bpmn.model.ExtensionElement;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.engine.delegate.DelegateExecution;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
 public class AgentTaskExecutionListener implements ExecutionListener {
 
     private static final String WORKFLOW_NAMESPACE = "http://workflow-agent.local/bpmn";
+    public static final String ACTIVATION_VARIABLE = "__workflowAgentActivationId";
 
     private final AgentRunGateway agentRunGateway;
     private final TenantProvider tenantProvider;
@@ -42,6 +44,10 @@ public class AgentTaskExecutionListener implements ExecutionListener {
         if (!"start".equals(execution.getEventName())) {
             return;
         }
+        start(execution);
+    }
+
+    public void start(DelegateExecution execution) {
         FlowElement current = execution.getCurrentFlowElement();
         ExtensionElement binding = current.getExtensionElements().values().stream()
                 .flatMap(List::stream)
@@ -52,6 +58,10 @@ public class AgentTaskExecutionListener implements ExecutionListener {
         long agentVersionId = positiveLong(binding.getAttributeValue(null, "agentVersionId"), "agentVersionId");
         String input = serializeVariables(
                 binding.getAttributeValue(null, "inputMapping"), execution.getVariables());
+        String activationId = UUID.randomUUID().toString();
+        execution.setVariableLocal(ACTIVATION_VARIABLE, activationId);
+        String processFailurePolicy = compatibleProcessFailurePolicy(binding);
+        String outputMapping = defaultJson(binding.getAttributeValue(null, "outputMapping"));
         String tenantCode = tenantProvider.current().tenantCode();
         agentRunGateway.submit(new AgentRunGateway.AgentRunRequest(
                 tenantCode,
@@ -59,12 +69,45 @@ public class AgentTaskExecutionListener implements ExecutionListener {
                 execution.getProcessInstanceId(),
                 execution.getId(),
                 execution.getCurrentActivityId(),
-                execution.getId(),
+                activationId,
                 input,
+                outputMapping,
+                processFailurePolicy,
                 "flowable:" + execution.getProcessInstanceId() + ":" + execution.getCurrentActivityId()
-                        + ":" + execution.getId(),
+                        + ":" + activationId,
                 null,
-                positiveLongOrDefault(binding.getAttributeValue(null, "timeoutSeconds"), 300)));
+                processWaitTimeout(binding)));
+    }
+
+    private String defaultJson(String value) {
+        return value == null || value.isBlank() ? "{}" : value;
+    }
+
+    private String compatibleProcessFailurePolicy(ExtensionElement binding) {
+        String value = binding.getAttributeValue(null, "processFailurePolicy");
+        if (value == null || value.isBlank()) {
+            value = binding.getAttributeValue(null, "failurePolicy");
+        }
+        if (value == null || value.isBlank() || "FAIL_PROCESS".equals(value)) {
+            return "HOLD_FOR_OPERATIONS";
+        }
+        if (!List.of("CONTINUE_EMPTY", "MANUAL_REVIEW", "HOLD_FOR_OPERATIONS").contains(value)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Unsupported Agent process failure policy");
+        }
+        return value;
+    }
+
+    private long processWaitTimeout(ExtensionElement binding) {
+        String value = binding.getAttributeValue(null, "processWaitTimeoutSeconds");
+        if (value == null || value.isBlank()) {
+            value = binding.getAttributeValue(null, "timeoutSeconds");
+        }
+        long timeout = positiveLongOrDefault(value, 300);
+        if (timeout < 1 || timeout > 3600) {
+            throw new BusinessException(
+                    ErrorCode.BAD_REQUEST, "processWaitTimeoutSeconds must be between 1 and 3600");
+        }
+        return timeout;
     }
 
     private boolean isAgentExtension(ExtensionElement extension) {

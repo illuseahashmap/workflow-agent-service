@@ -9,7 +9,8 @@ public record AgentTaskBinding(
         long agentVersionId,
         String inputMappingJson,
         String outputMappingJson,
-        String failurePolicy
+        AgentProcessFailurePolicy processFailurePolicy,
+        int processWaitTimeoutSeconds
 ) {
 
     public AgentTaskBinding {
@@ -19,7 +20,17 @@ public record AgentTaskBinding(
         }
         requireText(inputMappingJson, "inputMappingJson");
         requireText(outputMappingJson, "outputMappingJson");
-        requireText(failurePolicy, "failurePolicy");
+        Objects.requireNonNull(processFailurePolicy, "processFailurePolicy must not be null");
+        if (processWaitTimeoutSeconds < 1 || processWaitTimeoutSeconds > 3600) {
+            throw new IllegalArgumentException("processWaitTimeoutSeconds must be between 1 and 3600");
+        }
+    }
+
+    public AgentTaskBinding(
+            String taskDefinitionKey, String taskName, long agentVersionId,
+            String inputMappingJson, String outputMappingJson, String failurePolicy) {
+        this(taskDefinitionKey, taskName, agentVersionId, inputMappingJson, outputMappingJson,
+                AgentProcessFailurePolicy.parseCompatible(failurePolicy), 300);
     }
 
     private static void requireText(String value, String name) {

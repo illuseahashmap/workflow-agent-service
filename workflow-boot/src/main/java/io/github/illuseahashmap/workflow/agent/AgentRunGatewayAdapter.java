@@ -26,6 +26,8 @@ public class AgentRunGatewayAdapter implements AgentRunGateway {
                 request.activityId(),
                 request.activityActivationId(),
                 request.inputSnapshotJson(),
+                request.outputMappingJson(),
+                request.processFailurePolicy(),
                 request.idempotencyKey(),
                 request.requestedBy(),
                 request.timeoutSeconds()));

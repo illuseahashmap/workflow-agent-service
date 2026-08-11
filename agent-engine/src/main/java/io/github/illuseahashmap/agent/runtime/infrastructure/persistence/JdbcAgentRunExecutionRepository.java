@@ -35,11 +35,13 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                             tenant_code, idempotency_key, agent_version_id, status,
                             trigger_type, input_snapshot_json, requested_by,
                             process_instance_id, execution_id, activity_id, activity_activation_id,
+                            output_mapping_json, process_failure_policy, process_wait_timeout_seconds,
                             deadline_at, available_at, created_at, updated_at
                         ) VALUES (
                             :tenantCode, :idempotencyKey, :agentVersionId, 'QUEUED',
                             :triggerType, CAST(:inputSnapshotJson AS jsonb), :requestedBy,
                             :processInstanceId, :executionId, :activityId, :activityActivationId,
+                            CAST(:outputMappingJson AS jsonb), :processFailurePolicy, :processWaitTimeoutSeconds,
                             :deadlineAt, :createdAt, :createdAt, :createdAt
                         ) RETURNING id
                         """,
@@ -54,6 +56,9 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         "executionId", submission.executionId(),
                         "activityId", submission.activityId(),
                         "activityActivationId", submission.activityActivationId(),
+                        "outputMappingJson", submission.outputMappingJson(),
+                        "processFailurePolicy", submission.processFailurePolicy(),
+                        "processWaitTimeoutSeconds", submission.processWaitTimeoutSeconds(),
                         "deadlineAt", timestamp(submission.deadlineAt()),
                         "createdAt", timestamp(submission.createdAt())),
                 Long.class);
@@ -66,7 +71,8 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 submission.createdAt(),
                 submission.processInstanceId(),
                 submission.executionId(),
-                submission.activityId());
+                submission.activityId(),
+                submission.activityActivationId());
     }
 
     @Override
@@ -309,6 +315,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
         boolean terminal = run.status().isTerminal();
         var parameters = with(identity,
                 "status", run.status().name(),
+                "terminal", terminal,
                 "errorCode", errorCode,
                 "availableAt", timestamp(availableAt),
                 "completedAt", run.completedAt() == null ? null : timestamp(run.completedAt()),
@@ -317,7 +324,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
         int updated = jdbcTemplate.update("""
                         UPDATE agent_run
                         SET status = :status,
-                            current_attempt_id = NULL,
+                            current_attempt_id = CASE WHEN :terminal THEN :attemptId ELSE NULL END,
                             lease_owner = NULL,
                             lease_expires_at = NULL,
                             available_at = :availableAt,
@@ -410,7 +417,8 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 instant(resultSet, "updated_at"),
                 resultSet.getString("process_instance_id"),
                 resultSet.getString("execution_id"),
-                resultSet.getString("activity_id"));
+                resultSet.getString("activity_id"),
+                resultSet.getString("activity_activation_id"));
     }
 
     private Map<String, Object> identity(String tenantCode, long runId, long attemptId, long stepId) {

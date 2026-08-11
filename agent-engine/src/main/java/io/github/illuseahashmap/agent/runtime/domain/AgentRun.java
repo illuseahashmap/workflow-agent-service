@@ -18,6 +18,7 @@ public final class AgentRun {
     private final String processInstanceId;
     private final String executionId;
     private final String activityId;
+    private final String activityActivationId;
     private final List<AgentRunStateTransition> stateHistory;
     private AgentRunStatus status;
     private Long currentAttemptId;
@@ -36,7 +37,8 @@ public final class AgentRun {
             Instant createdAt,
             String processInstanceId,
             String executionId,
-            String activityId
+            String activityId,
+            String activityActivationId
     ) {
         if (id <= 0) {
             throw new IllegalArgumentException("id must be positive");
@@ -62,6 +64,7 @@ public final class AgentRun {
         this.processInstanceId = processInstanceId;
         this.executionId = executionId;
         this.activityId = activityId;
+        this.activityActivationId = activityActivationId;
         this.updatedAt = createdAt;
         this.status = AgentRunStatus.QUEUED;
         this.stateHistory = new ArrayList<>();
@@ -76,7 +79,7 @@ public final class AgentRun {
             Instant createdAt
     ) {
         return new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt,
-                null, null, null);
+                null, null, null, null);
     }
 
     public static AgentRun queued(
@@ -85,7 +88,16 @@ public final class AgentRun {
             String executionId, String activityId
     ) {
         return new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt,
-                processInstanceId, executionId, activityId);
+                processInstanceId, executionId, activityId, null);
+    }
+
+    public static AgentRun queued(
+            long id, String tenantCode, long agentVersionId, String idempotencyKey,
+            Instant deadlineAt, Instant createdAt, String processInstanceId,
+            String executionId, String activityId, String activityActivationId
+    ) {
+        return new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt,
+                processInstanceId, executionId, activityId, activityActivationId);
     }
 
     public static AgentRun restore(
@@ -107,7 +119,26 @@ public final class AgentRun {
             String activityId
     ) {
         AgentRun run = new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt,
-                processInstanceId, executionId, activityId);
+                processInstanceId, executionId, activityId, null);
+        run.status = status;
+        run.currentAttemptId = currentAttemptId;
+        run.leaseOwner = leaseOwner;
+        run.leaseExpiresAt = leaseExpiresAt;
+        run.startedAt = startedAt;
+        run.completedAt = completedAt;
+        run.updatedAt = updatedAt;
+        return run;
+    }
+
+    public static AgentRun restore(
+            long id, String tenantCode, long agentVersionId, String idempotencyKey,
+            AgentRunStatus status, Long currentAttemptId, String leaseOwner,
+            Instant leaseExpiresAt, Instant deadlineAt, Instant startedAt, Instant completedAt,
+            Instant createdAt, Instant updatedAt, String processInstanceId,
+            String executionId, String activityId, String activityActivationId
+    ) {
+        AgentRun run = new AgentRun(id, tenantCode, agentVersionId, idempotencyKey, deadlineAt, createdAt,
+                processInstanceId, executionId, activityId, activityActivationId);
         run.status = status;
         run.currentAttemptId = currentAttemptId;
         run.leaseOwner = leaseOwner;
@@ -217,6 +248,7 @@ public final class AgentRun {
     public String processInstanceId() { return processInstanceId; }
     public String executionId() { return executionId; }
     public String activityId() { return activityId; }
+    public String activityActivationId() { return activityActivationId; }
 
     public List<AgentRunStateTransition> stateHistory() {
         return List.copyOf(stateHistory);

@@ -8,13 +8,13 @@ import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
-import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
-import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutorRegistry;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
+import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
@@ -31,6 +31,7 @@ import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,11 +46,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final AgentRunExecutionRepository executionRepository;
     private final AgentDefinitionVersionRepository versionRepository;
     private final AgentProviderRepository providerRepository;
-    private final AgentCredentialResolver credentialResolver;
-    private final ModelProviderRegistry providerRegistry;
+    private final AgentExecutorRegistry executorRegistry;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
-    private final AgentOutputSchemaValidator outputSchemaValidator;
     private final AgentRunStateMachine stateMachine = new AgentRunStateMachine();
     private final String workerId;
     private final Duration leaseDuration;
@@ -61,11 +60,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentRunExecutionRepository executionRepository,
             AgentDefinitionVersionRepository versionRepository,
             AgentProviderRepository providerRepository,
-            AgentCredentialResolver credentialResolver,
-            ModelProviderRegistry providerRegistry,
+            AgentExecutorRegistry executorRegistry,
             ObjectMapper objectMapper,
             TransactionTemplate transactionTemplate,
-            AgentOutputSchemaValidator outputSchemaValidator,
             @Value("${workflow.agent.worker.id:local-worker}") String workerId,
             @Value("${workflow.agent.worker.lease-seconds:60}") long leaseSeconds,
             @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts,
@@ -74,11 +71,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.executionRepository = executionRepository;
         this.versionRepository = versionRepository;
         this.providerRepository = providerRepository;
-        this.credentialResolver = credentialResolver;
-        this.providerRegistry = providerRegistry;
+        this.executorRegistry = executorRegistry;
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
-        this.outputSchemaValidator = outputSchemaValidator;
         this.workerId = workerId + ":" + UUID.randomUUID();
         this.leaseDuration = Duration.ofSeconds(leaseSeconds);
         this.maxAttempts = maxAttempts;
@@ -97,9 +92,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             long leaseSeconds,
             int maxAttempts
     ) {
-        this(executionRepository, versionRepository, providerRepository, credentialResolver,
-                providerRegistry, objectMapper, transactionTemplate,
-                new AgentOutputSchemaValidator(objectMapper), workerId, leaseSeconds, maxAttempts,
+        this(executionRepository, versionRepository, providerRepository,
+                new AgentExecutorRegistry(List.of(new ModelOnlyAgentExecutor(
+                        credentialResolver, providerRegistry, new AgentOutputSchemaValidator(objectMapper)))),
+                objectMapper, transactionTemplate, workerId, leaseSeconds, maxAttempts,
                 AgentRunEventPublisher.NOOP);
     }
 
@@ -148,31 +144,16 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
 
     private void execute(ClaimedRun claimed) {
         AgentRun run = claimed.run();
-        long providerId;
-        String model;
-        ModelProviderResponse response;
+        AgentExecutor.Result executionResult;
         try {
             AgentDefinitionVersion version = versionRepository.findByVersionId(run.tenantCode(), run.agentVersionId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent version does not exist"));
             AgentProvider provider = providerRepository.findById(run.tenantCode(), version.providerId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent Provider does not exist"));
-            providerId = provider.id();
-            model = StringUtils.hasText(version.modelName()) ? version.modelName() : provider.defaultModel();
-            String credential = provider.type() == AgentProviderType.OPENAI_COMPATIBLE
-                    ? credentialResolver.resolve(run.tenantCode(), provider.id())
-                    : "";
             String userInput = extractInput(claimed.inputSnapshotJson());
-            outputSchemaValidator.validateInput(version.inputSchema(), userInput);
-            response = providerRegistry.require(provider.type()).invoke(
-                    new ModelProviderRequest(
-                            provider.baseUrl(),
-                            credential,
-                            model,
-                            version.systemPrompt(),
-                            userInput,
-                            remainingTimeout(run, version.timeoutSeconds()),
-                            claimed.traceId()));
-            outputSchemaValidator.validateOutput(version.outputSchema(), response.content());
+            executionResult = executorRegistry.require(version.executionMode()).execute(
+                    new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
+                            remainingTimeout(run, version.timeoutSeconds()), claimed.traceId()));
         } catch (ModelProviderException exception) {
             completeFailed(
                     claimed,
@@ -188,7 +169,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             completeFailed(claimed, providerId(run), requestedModel(run), "AGENT_EXECUTION_ERROR", false);
             return;
         }
-        completeSucceeded(claimed, providerId, model, response);
+        completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
+                executionResult.modelResponse());
     }
 
     private void completeSucceeded(

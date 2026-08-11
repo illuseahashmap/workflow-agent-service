@@ -687,7 +687,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AgentVersionCommand' }
+            schema: { $ref: '#/components/schemas/AgentVersionUpdateCommand' }
       responses:
         '200': { description: Draft updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
   /agents/{definitionId}/versions/{versionId}/publish:
@@ -950,11 +950,30 @@ components:
         description: { type: string }
     AgentVersionCommand:
       type: object
+      deprecated: true
+      description: Legacy placeholder retained only for published-contract compatibility.
       required: [prompt]
       properties:
-        prompt: { type: string }
-        model: { type: string }
-        description: { type: string }
+        prompt: { type: string, deprecated: true }
+        model: { type: string, deprecated: true }
+        description: { type: string, deprecated: true }
+    AgentVersionUpdateCommand:
+      type: object
+      required: [timeoutSeconds, failurePolicy]
+      properties:
+        executionMode:
+          type: string
+          enum: [MODEL_ONLY, PLATFORM_AGENT, REMOTE_AGENT]
+          default: MODEL_ONLY
+        providerId: { type: integer, format: int64 }
+        modelName: { type: string, maxLength: 128 }
+        systemPrompt: { type: string, maxLength: 20000 }
+        timeoutSeconds: { type: integer, minimum: 1, maximum: 3600 }
+        failurePolicy:
+          type: string
+          enum: [FAIL_PROCESS, CONTINUE_EMPTY, MANUAL_REVIEW]
+        inputSchema: { type: string, maxLength: 20000 }
+        outputSchema: { type: string, maxLength: 20000 }
     AgentProviderCommand:
       type: object
       required: [providerCode, providerName, baseUrl, defaultModel]

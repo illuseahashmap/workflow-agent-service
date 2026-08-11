@@ -1,6 +1,6 @@
 # 项目状态总览
 
-更新时间：2026-08-10
+更新时间：2026-08-11
 
 本文档是“现在做到什么程度、下一步做什么”的唯一入口。详细设计文档可以更长，但不得与本文档的状态结论冲突。
 
@@ -20,7 +20,10 @@
 - [x] AgentDefinition 与不可变 AgentVersion 管理。
 - [x] Provider 管理、加密凭据保存和 OpenAI Compatible Provider。
 - [x] AgentRun、Attempt、Step、Checkpoint、State History 和 Model Invocation。
-- [ ] Outbox/Inbox 可靠事件正在建设（共享事件信封、V17 表和 PostgreSQL Publisher 已完成，Dispatcher/Inbox 消费者与流程恢复待完成）；Worker 基础租约写入、`SKIP LOCKED` 领取和 Mock Provider 已完成。
+- [x] Agent 流程完成事件采用版本化 Outbox/Inbox 消费、Attempt/节点激活校验和显式输出映射，不再扫描终态或默认删除流程实例。
+- [x] BPMN Agent 节点统一为异步可触发 Service Task；历史 Receive Task 仅保留导入兼容，新增定义不再产生旧语义。
+- [x] Agent 绑定在部署期校验租户、发布版本、执行模式、输入输出映射、流程等待时限和失败策略。
+- [x] `AgentExecutor` 按执行模式扩展，当前只开放 `MODEL_ONLY`；未来平台 Agent 与远程 Agent 不复用 Provider 概念，也不另建运行账本。
 - [x] 手动测试通过正式 AgentRun 链路执行，不存在 Controller 直连模型的旁路。
 - [x] Provider 失败分类、重试、终态幂等和迟到事件保护的基础实现。
 
@@ -42,7 +45,7 @@
 | P1 | RLS 深度覆盖 | 平台业务表已启用 V16 | 完成 Flowable 内部表归属评估和跨租户负面测试 |
 | P1 | API 契约细化 | 路由已全量覆盖，部分响应仍为通用 `ApiResponse` | 补充 DTO 响应模型、错误码和客户端类型生成 |
 | P1 | 覆盖率提升 | 已有基础门禁 | 核心模块逐步提升至 60% 以上，并提高关键安全/并发用例覆盖 |
-| P1 | Agent Runtime 可靠性与安全 | 基础 Worker 和真实 Provider 已可运行，输出校验、过期恢复、出站防护和调度隔离未闭环 | 完成 Schema/结果策略、租约回收、Provider 出站策略和独立有界执行器 |
+| P1 | Agent Runtime 可靠性与安全 | Service Task、完成事件恢复、映射和部署校验已闭环；结果策略、过期恢复、出站防护和调度隔离未闭环 | 完成结果判定、租约回收、Provider 出站策略和独立有界执行器 |
 
 ## 三、下一阶段目标
 
@@ -62,7 +65,7 @@
 ### 阶段 C：Agent MVP 闭环
 
 1. 先完成输出 Schema/结果策略、过期运行回收、租约续约接管、Provider 出站安全和 Worker 调度隔离。
-2. BPMN Agent Service Task 异步调用并可靠恢复流程。
+2. 为 BPMN Agent Service Task 补齐失败边界事件、人工复核任务和容器化端到端测试。
 3. 完成取消、暂停、恢复、超时、人工确认和失败补偿。
 4. 完成工具权限、人工审批、预算、成本、模型版本和全链路审计。
 5. 完成 Provider 降级、限流、背压和生产观测。

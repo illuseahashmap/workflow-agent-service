@@ -15,6 +15,8 @@ public interface AgentRunGateway {
             String activityId,
             String activityActivationId,
             String inputSnapshotJson,
+            String outputMappingJson,
+            String processFailurePolicy,
             String idempotencyKey,
             String requestedBy,
             long timeoutSeconds

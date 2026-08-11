@@ -8,6 +8,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
+import io.github.illuseahashmap.workflow.process.application.AgentBindingDeploymentValidator;
 import io.github.illuseahashmap.workflow.process.application.port.AgentTaskBindingParser;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
@@ -37,24 +38,28 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     private final TenantProvider tenantProvider;
     private final CurrentPrincipalProvider principalProvider;
     private final AgentTaskBindingParser agentTaskBindingParser;
+    private final AgentBindingDeploymentValidator agentBindingDeploymentValidator;
 
     public WorkflowDefinitionServiceImpl(RepositoryService repositoryService,
                                          JdbcTemplate jdbcTemplate,
                                          TenantProvider tenantProvider,
                                          CurrentPrincipalProvider principalProvider,
-                                         AgentTaskBindingParser agentTaskBindingParser) {
+                                         AgentTaskBindingParser agentTaskBindingParser,
+                                         AgentBindingDeploymentValidator agentBindingDeploymentValidator) {
         this.repositoryService = repositoryService;
         this.jdbcTemplate = jdbcTemplate;
         this.tenantProvider = tenantProvider;
         this.principalProvider = principalProvider;
         this.agentTaskBindingParser = agentTaskBindingParser;
+        this.agentBindingDeploymentValidator = agentBindingDeploymentValidator;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DeployProcessResult deploy(DeployProcessRequest request) {
-        agentTaskBindingParser.parse(request.bpmnXml());
         TenantContext.TenantInfo tenant = tenantProvider.current();
+        agentBindingDeploymentValidator.validate(
+                tenant.tenantCode(), agentTaskBindingParser.parse(request.bpmnXml()));
         String resourceName = request.processDefinitionKey() + ".bpmn20.xml";
         Deployment deployment = repositoryService.createDeployment()
                 .name(request.processDefinitionName())
