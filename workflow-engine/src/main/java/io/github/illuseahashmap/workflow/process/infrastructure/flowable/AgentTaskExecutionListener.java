@@ -80,7 +80,9 @@ public class AgentTaskExecutionListener implements ExecutionListener {
     }
 
     private long positiveLongOrDefault(String value, long fallback) {
-        if (value == null || value.isBlank()) return fallback;
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException exception) {
