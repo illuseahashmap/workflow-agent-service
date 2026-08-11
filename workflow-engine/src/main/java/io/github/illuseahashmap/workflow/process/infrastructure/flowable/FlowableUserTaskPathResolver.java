@@ -115,6 +115,11 @@ public final class FlowableUserTaskPathResolver {
                 results.putIfAbsent(userTask.getId(), userTask);
                 continue;
             }
+            if (isAgentWaitState(element)) {
+                // An Agent task is an asynchronous wait state. Do not expose user tasks
+                // behind it as start-time participant requirements.
+                continue;
+            }
             if (element instanceof FlowNode flowNode) {
                 enqueueTargets(queue, selectedOutgoingFlows(flowNode, variables));
             }
@@ -245,6 +250,11 @@ public final class FlowableUserTaskPathResolver {
                 .map(SequenceFlow::getTargetFlowElement)
                 .filter(java.util.Objects::nonNull)
                 .forEach(queue::add);
+    }
+
+    private boolean isAgentWaitState(FlowElement element) {
+        return element.getExtensionElements() != null
+                && element.getExtensionElements().containsKey("agentTask");
     }
 
     private Map<String, Object> safeVariables(Map<String, Object> variables) {
