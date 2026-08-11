@@ -4,7 +4,7 @@
 
 本文件保留领域模型、接口和实现细节，当前完成度与下一步目标以[《项目状态总览》](../status.md)为准；文中的“必做”表示 MVP 目标，不代表代码已经完成。
 
-更新时间：2026-08-07
+更新时间：2026-08-11
 
 状态：执行闭环第一阶段进行中。运行状态机、管理面、手动测试运行、基础 Worker、Mock/OpenAI Compatible Provider、模型调用审计、BPMN Agent 等待节点和 Flowable 恢复适配已经完成；共享事件信封、Outbox/Inbox 表与 PostgreSQL Publisher 已建立，通用 Dispatcher/Inbox 消费者、恢复接管策略细化、取消/人工确认、Guardrail 和生产级观测仍待实现。
 
@@ -246,22 +246,21 @@ public interface AgentRunGateway {
 
 `workflow-engine` 创建运行时只传显式上下文，不让 `agent-engine` 自行读取 Flowable。
 
-### 5.4 Provider 端口
+### 5.4 模型 Provider 端口
 
 ```java
-public interface AgentProvider {
-    AgentProviderResult execute(AgentProviderRequest request);
-
-    AgentProviderCapabilities capabilities(ProviderRef providerRef);
-
-    void cancel(AgentProviderCancellation cancellation);
+public interface ModelProviderPort {
+    ModelProviderResponse invoke(ModelProviderRequest request);
 }
 ```
 
 MVP 至少提供：
 
-1. `MockAgentProvider`，用于端到端测试。
-2. `OpenAiCompatibleAgentProvider`，用于真实模型调用。
+1. `MockModelProviderAdapter`，用于端到端测试。
+2. `OpenAiCompatibleModelProviderAdapter`，用于真实模型调用。
+
+模型 Provider 不负责 AgentRun 状态机、工具循环、恢复或 Flowable 交互。取消能力由通用
+`AgentExecutor` 和运行状态机协调；当底层模型协议支持取消时，再通过可选 Provider 能力端口下推。
 
 ### 5.5 检索端口
 
@@ -527,6 +526,36 @@ GET  /agent/runs/{runId}/checkpoints
 2. 响应不返回明文凭据、完整敏感 Prompt、隐藏思维链和 Provider 原始密钥错误。
 3. 错误响应统一包含 `code`、`message`、`traceId`。
 4. 分页使用项目现有 `PageResult`。
+
+### 10.4 当前交互与后续 Agent 扩展边界
+
+MVP 的现有配置等价于 `executionMode=MODEL_ONLY`。为避免第二阶段推翻第一阶段，当前实现
+和下一轮接口调整必须遵守以下边界：
+
+1. `AgentVersion` 对外 DTO 增加执行模式时，历史数据和缺省请求统一解释为
+   `MODEL_ONLY`，但发布后的版本不得被原地改成其他模式。
+2. Worker 的单次模型调用逐步迁入 `ModelOnlyAgentExecutor`；调度、租约、Attempt、Step、
+   Checkpoint、结果校验和事件发布留在通用运行骨架中。
+3. 后续 `PLATFORM_AGENT` 和 `REMOTE_AGENT` 只能增加新的 `AgentExecutor`，必须复用同一
+   AgentRun 账本、状态机、统一结果信封和完成事件。
+4. Provider 只表示模型服务；远程完整 Agent 使用独立 Connector 和协议，不伪装为
+   OpenAI Compatible Provider。
+5. AgentVersion 的运行超时、最大步骤和预算与 BPMN 节点的流程等待、失败路由分开命名；
+   节点配置只能收紧 AgentVersion 和租户策略。
+
+MVP 前端在扩展工具和 RAG 前先闭环以下交互：
+
+- Agent 草稿按输入 Schema 生成结构化测试输入，测试运行展示 Attempt、Step、模型调用、
+  输出校验、Token、费用、延迟和错误分类。
+- 发布前显示配置变更摘要，并由后端校验 Provider、凭据、Schema 和最低测试结果。
+- BPMN Agent 节点提供已发布版本预览、输入映射、输出映射、流程等待时限和流程失败策略；
+  不允许在节点属性中编辑 Prompt、Provider 或扩大工具权限。
+- 运行详情以 Step 时间线展示，取消、重试和后续人工确认全部通过应用命令执行并写审计。
+
+这一阶段不必立即创建 Tool、RAG、Remote Agent 的全部数据表，但必须保留
+`AgentExecutor` 扩展点、执行模式兼容字段和版本化资源引用方向。详细交互与长期模型以
+[Agent 协作架构设计 9.3 节](agent-collaboration-design.md#93-agent-创作测试发布与流程绑定交互)
+为准。
 
 ## 11. Worker 设计
 

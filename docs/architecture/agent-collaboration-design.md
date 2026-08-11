@@ -1,7 +1,7 @@
 # Agent 协作架构设计
 
-更新时间：2026-08-10
-状态：长期架构基线；Agent 基础管理、运行账本和 Provider 基础链路已实施，BPMN Agent 节点及生产级执行闭环尚未完成
+更新时间：2026-08-11
+状态：长期架构基线；Agent 基础管理、运行账本、Provider 基础链路和 BPMN Agent 等待节点雏形已实施，可靠恢复及生产级执行闭环尚未完成
 
 MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。
 当前实现状态和下一步目标以[《项目状态总览》](../status.md)为准。
@@ -233,6 +233,7 @@ agent-engine ──integration event──> workflow-engine
 
 表示不可变的已发布版本，至少包含：
 
+- 执行模式与执行器协议版本
 - Provider 和模型引用
 - 系统行为指令
 - 模型参数
@@ -249,6 +250,10 @@ agent-engine ──integration event──> workflow-engine
 - 配置内容指纹
 
 状态为 `DRAFT`、`PUBLISHED` 或 `RETIRED`。只有 `PUBLISHED` 版本可以部署到 BPMN。
+
+`AgentVersion` 不应随着能力增加演变成包含几十个可空字段的宽表。模型、工具、检索、
+Guardrail、人工确认和运行策略分别形成可版本化配置，`AgentVersion` 只保存不可变引用，
+发布时生成完整 `SemanticExecutionSpec` 和内容指纹。历史运行始终按该快照解释。
 
 ### 7.3 AgentRun
 
@@ -569,19 +574,30 @@ AgentRun.EffectiveRuntimeSnapshot（运行事实）
 
 ## 8. Provider 与凭据
 
-### 8.1 Provider 类型
+### 8.1 执行器、模型 Provider 与远程 Agent 的边界
 
 第一阶段只实现 `OPENAI_COMPATIBLE` Provider，以统一支持云端模型、Ollama、vLLM 和其他兼容服务。
 
-后续可增加：
+必须区分以下三个概念：
 
-- 特定云厂商 Provider，用于支持其专有鉴权和能力。
-- `REMOTE_AGENT`，用于调用独立部署的完整 Agent 服务。
+- `AgentExecutor`：执行一个已发布 AgentVersion，负责步骤推进、检查点、暂停和恢复。
+- `ModelProvider`：只提供模型推理能力，例如 OpenAI Compatible 或特定云厂商模型。
+- `RemoteAgentConnector`：调用租户或第三方独立部署的完整 Agent，不作为模型 Provider。
 
-所有 Provider 实现统一端口：
+执行模式由 `AgentVersion.executionMode` 冻结：
+
+| 执行模式 | 用途 | 首次实现 |
+| --- | --- | --- |
+| `MODEL_ONLY` | 单次模型调用和结构化输出，用于跑通当前最小闭环 | 是 |
+| `PLATFORM_AGENT` | 平台控制模型、RAG、工具、Guardrail 和人工确认的多步循环 | 完成可靠闭环后 |
+| `REMOTE_AGENT` | 通过版本化协议调用外部完整 Agent，并映射其步骤与状态 | 工具治理稳定后 |
+
+统一调度端口为：
 
 ```java
-public interface AgentProvider {
+public interface AgentExecutor {
+    boolean supports(AgentExecutionMode mode);
+
     AgentExecutionResult execute(AgentExecutionContext context);
 
     AgentExecutionResult resume(AgentResumeContext context);
@@ -590,9 +606,14 @@ public interface AgentProvider {
 }
 ```
 
-第一阶段使用 LangChain4j 最新稳定 BOM 的低层 `ChatModel`、`ToolSpecification`、结构化输出和消息类型作为 Provider 适配器实现基础，不使用仍标记为实验性的 `langchain4j-agentic` 模块，也不让 LangChain4j 类型进入领域模型。
+`MODEL_ONLY` 由 `ModelOnlyAgentExecutor` 实现，`PLATFORM_AGENT` 由
+`PlatformAgentExecutor` 实现，`REMOTE_AGENT` 由 `RemoteAgentExecutor` 与
+`RemoteAgentConnector` 协作实现。三者复用同一套 AgentRun、Attempt、Step、Checkpoint、
+结果信封和事件协议，禁止各建一套运行账本。
 
-工具循环由平台状态机控制，而不是直接使用自动执行工具的黑盒高层 API。这样才能在工具执行前完成租户权限、风险审批、幂等和检查点持久化。`AgentProvider` 端口隔离 LangChain4j，后续可以替换为 Spring AI 或直接厂商 SDK。
+第一阶段使用 LangChain4j 最新稳定 BOM 的低层 `ChatModel`、`ToolSpecification`、结构化输出和消息类型作为模型适配器实现基础，不使用仍标记为实验性的 `langchain4j-agentic` 模块，也不让 LangChain4j 类型进入领域模型。
+
+工具循环由平台状态机控制，而不是直接使用自动执行工具的黑盒高层 API。这样才能在工具执行前完成租户权限、风险审批、幂等和检查点持久化。`ModelProviderPort` 隔离 LangChain4j，后续可以替换为 Spring AI 或直接厂商 SDK。
 
 ### 8.2 凭据来源
 
@@ -652,6 +673,173 @@ public interface AgentProvider {
 | `agent:audit:read` | 查看完整审计、Token 和费用 |
 
 默认由 `TENANT_ADMIN` 管理 Provider 和租户授权。Agent 编辑、发布和工作流部署应支持权限分离，避免单个普通用户同时控制凭据、Agent 行为和流程发布。
+
+### 9.3 Agent 创作、测试、发布与流程绑定交互
+
+本节定义管理端和流程设计器的稳定交互契约。前端页面可以迭代，但不得把模型凭据、
+Agent 语义配置和 BPMN 节点策略混成同一层配置。
+
+#### 9.3.1 配置分层与数据归属
+
+```text
+平台或租户资源层
+├── ModelProvider / Credential
+├── ToolDefinition / Connector / MCP Server
+├── KnowledgeSource / RetrievalProfile
+├── TenantAgentGovernancePolicy
+└── TenantRuntimeOptimizationPolicy
+
+Agent 语义层（发布后不可变）
+AgentDefinition
+└── AgentVersion
+    ├── executionMode
+    ├── ModelProfileVersionRef
+    ├── ToolSetVersionRef
+    ├── RetrievalProfileVersionRef
+    ├── GuardrailPolicyVersionRef
+    ├── HumanConfirmationPolicyVersionRef
+    ├── AgentRuntimeLimitVersionRef
+    ├── inputSchema / outputSchema
+    └── SemanticExecutionSpec + fingerprint
+
+流程节点层（只能收紧）
+WorkflowAgentBinding
+├── agentVersionId
+├── inputMapping / outputMapping
+├── enabledToolSubset
+├── processWaitTimeout
+├── processFailurePolicy
+└── humanConfirmationOverride
+```
+
+`AgentVersion` 负责“这个 Agent 能做什么以及如何执行”，BPMN 绑定负责“本流程在本节点
+如何使用它”。节点不得修改 Prompt、Provider、模型、RAG 范围或增加工具权限。
+
+策略优先级固定为：
+
+1. 平台安全策略是不可突破的硬上限。
+2. 租户 `TenantAgentGovernancePolicy` 在平台上限内授权 Provider、连接器、数据范围、并发和预算。
+3. AgentVersion 在租户授权内冻结语义能力和运行限制。
+4. BPMN 节点只能进一步缩短超时、减少预算、缩小工具集合或提高人工确认等级。
+5. 运行时快照记录四层策略的版本与最终有效值，不能只记录计算结果。
+
+数值限制采用最小值，权限集合采用交集，人工确认风险等级采用最严格值。任一层缺少
+授权都不得通过下层配置补齐。
+
+`failurePolicy` 和 `timeout` 必须拆分命名，避免当前双重归属：
+
+- `agentRunTimeout`、`maxSteps`、`maxTokenBudget` 和 `runFailurePolicy` 属于 AgentVersion，
+  控制 Agent 内部重试、降级和终态收敛。
+- `processWaitTimeout` 和 `processFailurePolicy` 属于 WorkflowAgentBinding，控制流程等待、
+  BPMN 错误路由、人工接管或运维保持，不直接决定模型重试。
+- `processWaitTimeout` 不得大于 AgentVersion 和租户治理策略允许的最大运行时间。
+- Agent 失败不得隐式删除流程实例；只有显式流程终止策略和具备权限的流程操作才能终止。
+
+#### 9.3.2 Agent 中心信息架构
+
+随着能力增加，Agent 中心不能继续把所有内容放在一个巨型页面中。稳定信息架构为：
+
+| 一级入口 | 主要职责 | 典型用户 |
+| --- | --- | --- |
+| Agent | 定义、草稿版本、测试、发布、版本对比 | Agent 编辑者、发布者 |
+| 能力资源 | Provider、工具/MCP、知识源、凭据和租户授权 | 租户管理员 |
+| 测试与评测 | 测试集、用例、回归结果、发布门禁和版本对比 | Agent 编辑者、审核者 |
+| 运行中心 | Run、Attempt、Step、Checkpoint、成本、错误与恢复操作 | 运维、流程管理员 |
+
+Agent 草稿编辑器采用分步导航而不是单个长表单：
+
+```text
+1. 基础信息
+   名称、说明、所有者、标签
+2. 执行方式
+   MODEL_ONLY / PLATFORM_AGENT / REMOTE_AGENT
+3. 模型与行为
+   Provider、模型、Prompt、模型参数；REMOTE_AGENT 改为连接器和协议能力
+4. 能力
+   工具集合、MCP、RetrievalProfile、记忆范围及每项授权状态
+5. 运行策略
+   最大步骤、超时、Token/费用预算、重试、降级、人工确认、Guardrail
+6. 输入输出契约
+   Schema 可视化编辑、原始 JSON Schema、示例和兼容性检查
+7. 测试与发布
+   测试用例、执行 Trace、评测结果、变更摘要和发布门禁
+```
+
+切换执行方式时只显示该模式适用的配置，但不得删除其他模式曾发布版本的历史数据。
+当前已有版本按 `MODEL_ONLY` 迁移；新增字段必须提供数据库默认值和 API 兼容读取逻辑。
+
+#### 9.3.3 测试与发布交互
+
+配置了 `inputSchema` 后，测试页必须由 Schema 生成结构化表单，同时保留受权限控制的
+原始 JSON 模式。测试不能只显示最终模型文本，至少展示：
+
+- 有效 AgentVersion 草稿指纹和执行模式。
+- 输入快照及 Schema 校验结果。
+- Attempt 和 Step 时间线。
+- 模型、检索、工具、Guardrail、人工确认和输出映射的可见结果。
+- 实际模型、Token、费用、延迟、缓存状态、Citation 和错误分类。
+- 最终统一结果状态以及为何得到该状态。
+
+测试运行默认处于 `SANDBOX`：禁止写生产流程变量，高风险或有副作用工具默认使用 Mock、
+Dry-run 或要求人工确认。测试用例可保存为版本化 Dataset Case，支持对当前草稿和已发布
+版本做回归比较。
+
+发布动作必须显示变更摘要并执行门禁：Provider/连接器可用性、租户授权、Schema、预算、
+工具风险、检索权限、必需测试集和最低评测阈值。发布成功后冻结所有引用版本和
+`SemanticExecutionSpec`；任何语义变化必须创建新草稿，不允许在发布后静默修改。
+
+#### 9.3.4 BPMN Agent 节点属性面板
+
+流程设计者选择 Agent 节点后，属性面板按以下顺序展示：
+
+1. **Agent 版本**：只选择已发布版本，显示执行模式、版本、所有者、输入输出摘要和能力摘要。
+2. **输入映射**：左侧为 Agent 输入字段，右侧为流程变量或受支持表达式；必填字段缺失即时提示。
+3. **输出映射**：左侧为 Agent 输出字段，右侧为新流程变量；禁止覆盖平台内部变量和类型不兼容变量。
+4. **执行约束**：业务等待时限、节点预算和 AgentVersion 工具子集，只允许收紧。
+5. **失败与人工处理**：BPMN 错误路由、人工接管、运维保持或允许空结果；不提供隐式删除流程选项。
+6. **部署校验结果**：展示版本发布态、租户授权、映射、预算、连接器和节点语义校验结果。
+
+属性面板不得允许修改系统 Prompt、Provider 凭据、完整工具定义和知识源。切换 AgentVersion
+时必须重新检查映射；不兼容字段不得静默删除，用户确认后才能更新绑定。导入、编辑、保存、
+重新打开和重新部署必须保持绑定字段双向无损。
+
+#### 9.3.5 运行详情与人工交互
+
+运行详情以业务可理解的 Step 时间线为主，而不是直接暴露内部表：
+
+```text
+输入校验 → 上下文组装 → 知识检索 → 模型决策 → 工具调用
+         → 人工确认（可选）→ 输出校验 → 发布结果 → 恢复流程
+```
+
+每个 Step 显示状态、耗时、重试、错误分类和可见摘要；敏感 Prompt、凭据、隐藏推理和未脱敏
+工具参数不进入普通页面。具有权限的用户可以执行取消、重试、人工确认、转人工和恢复，
+所有命令生成新的状态转换及审计记录，不能直接修改数据库终态。
+
+`REMOTE_AGENT` 在相同时间线中映射外部状态。外部协议至少支持提交、查询、取消、回调或
+轮询、幂等键、能力协商和版本号；无法提供细粒度 Step 时记录为一个远程执行 Step，不得
+伪造平台内部工具或模型明细。
+
+#### 9.3.6 API 与扩展兼容性
+
+管理 API 应逐步增加以下稳定资源，不把完整能力配置塞入一个无结构 JSON 字段：
+
+```text
+GET  /agent/versions/{id}/effective-spec
+GET  /agent/versions/{id}/compatibility
+POST /agent/versions/{id}/test-runs
+GET  /agent/test-runs/{runId}
+POST /agent/versions/{id}/publish-check
+
+GET  /agent/resources/providers
+GET  /agent/resources/tool-sets
+GET  /agent/resources/retrieval-profiles
+GET  /agent/resources/policies
+```
+
+接口响应携带资源版本、状态和兼容性信息。前端提交引用 ID，后端在发布和 BPMN 部署时
+重新解析并验证，不能信任前端计算的有效策略。新增执行模式通过 `AgentExecutor` 注册表
+扩展；未知模式或协议版本必须确定性拒绝，不能回退成 `MODEL_ONLY`。
 
 ## 10. 运行时交互
 
