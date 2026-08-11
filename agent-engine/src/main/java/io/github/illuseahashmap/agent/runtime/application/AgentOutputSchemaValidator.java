@@ -53,6 +53,25 @@ public class AgentOutputSchemaValidator {
         }
     }
 
+    public void validateInput(String schema, String content) {
+        if (!StringUtils.hasText(schema)) {
+            return;
+        }
+        try {
+            JsonNode schemaNode = objectMapper.readTree(schema);
+            JsonNode input = objectMapper.readTree(content);
+            if (!matches(schemaNode, input)) {
+                throw new ModelProviderException(
+                        "AGENT_INPUT_SCHEMA_INVALID", ModelProviderFailureKind.PERMANENT,
+                        "Agent input did not satisfy the configured input contract");
+            }
+        } catch (IOException exception) {
+            throw new ModelProviderException(
+                    "AGENT_INPUT_NOT_JSON", ModelProviderFailureKind.PERMANENT,
+                    "Agent input must be valid JSON when an input schema is configured", exception);
+        }
+    }
+
     private void validateSchemaNode(JsonNode schema) {
         JsonNode type = schema.get("type");
         if (type != null && !type.isTextual()) {
@@ -68,6 +87,13 @@ public class AgentOutputSchemaValidator {
         }
         if (properties != null) {
             properties.fields().forEachRemaining(entry -> validateSchemaNode(entry.getValue()));
+        }
+        JsonNode items = schema.get("items");
+        if (items != null) {
+            if (!items.isObject()) {
+                throw invalid("Schema items must be an object");
+            }
+            validateSchemaNode(items);
         }
     }
 
@@ -90,6 +116,14 @@ public class AgentOutputSchemaValidator {
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> field = fields.next();
                 if (value.has(field.getKey()) && !matches(field.getValue(), value.get(field.getKey()))) {
+                    return false;
+                }
+            }
+        }
+        JsonNode items = schema.get("items");
+        if (items != null && value.isArray()) {
+            for (JsonNode item : value) {
+                if (!matches(items, item)) {
                     return false;
                 }
             }

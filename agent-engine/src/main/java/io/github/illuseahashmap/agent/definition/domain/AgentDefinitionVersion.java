@@ -13,6 +13,7 @@ public record AgentDefinitionVersion(
         String systemPrompt,
         int timeoutSeconds,
         AgentFailurePolicy failurePolicy,
+        String inputSchema,
         String outputSchema,
         String createdBy,
         String publishedBy,
@@ -20,6 +21,17 @@ public record AgentDefinitionVersion(
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
+
+    /** Compatibility constructor for callers that predate the input contract. */
+    public AgentDefinitionVersion(
+            Long id, String tenantCode, long definitionId, int version, AgentVersionStatus status,
+            Long providerId, String modelName, String systemPrompt, int timeoutSeconds,
+            AgentFailurePolicy failurePolicy, String outputSchema, String createdBy, String publishedBy,
+            OffsetDateTime publishedAt, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        this(id, tenantCode, definitionId, version, status, providerId, modelName, systemPrompt,
+                timeoutSeconds, failurePolicy, null, outputSchema, createdBy, publishedBy,
+                publishedAt, createdAt, updatedAt);
+    }
 
     public boolean published() {
         return status == AgentVersionStatus.PUBLISHED;

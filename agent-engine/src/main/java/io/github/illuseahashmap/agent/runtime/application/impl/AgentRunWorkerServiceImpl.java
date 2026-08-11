@@ -161,13 +161,15 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             String credential = provider.type() == AgentProviderType.OPENAI_COMPATIBLE
                     ? credentialResolver.resolve(run.tenantCode(), provider.id())
                     : "";
+            String userInput = extractInput(claimed.inputSnapshotJson());
+            outputSchemaValidator.validateInput(version.inputSchema(), userInput);
             response = providerRegistry.require(provider.type()).invoke(
                     new ModelProviderRequest(
                             provider.baseUrl(),
                             credential,
                             model,
                             version.systemPrompt(),
-                            extractInput(claimed.inputSnapshotJson()),
+                            userInput,
                             remainingTimeout(run, version.timeoutSeconds()),
                             claimed.traceId()));
             outputSchemaValidator.validateOutput(version.outputSchema(), response.content());
@@ -296,7 +298,11 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
 
     private String extractInput(String inputSnapshotJson) {
         try {
-            return objectMapper.readTree(inputSnapshotJson).path("input").asText();
+            var input = objectMapper.readTree(inputSnapshotJson).path("input");
+            if (input.isMissingNode() || input.isNull()) {
+                return "";
+            }
+            return input.isTextual() ? input.textValue() : objectMapper.writeValueAsString(input);
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to read Agent input", exception);
         }

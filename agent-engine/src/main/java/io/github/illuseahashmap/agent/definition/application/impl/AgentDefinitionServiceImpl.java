@@ -147,13 +147,15 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         if (existing.published()) {
             throw new BusinessException(ErrorCode.CONFLICT, "Published Agent versions are immutable");
         }
+        validateInputSchema(command.inputSchema());
         validateOutputSchema(command.outputSchema());
         validateProvider(tenantCode, command.providerId(), false);
         AgentDefinitionVersion updated = new AgentDefinitionVersion(
                 existing.id(), tenantCode, definitionId, existing.version(), AgentVersionStatus.DRAFT,
                 command.providerId(), normalizeNullable(command.modelName()),
                 command.systemPrompt() == null ? "" : command.systemPrompt().trim(), command.timeoutSeconds(),
-                command.failurePolicy(), normalizeNullable(command.outputSchema()), existing.createdBy(),
+                command.failurePolicy(), normalizeNullable(command.inputSchema()),
+                normalizeNullable(command.outputSchema()), existing.createdBy(),
                 null, null, existing.createdAt(), existing.updatedAt());
         versionRepository.updateDraft(updated);
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
@@ -182,6 +184,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "System prompt is required before publishing");
         }
         validateOutputSchema(version.outputSchema());
+        validateInputSchema(version.inputSchema());
         versionRepository.publish(tenantCode, definitionId, versionId, principalProvider.current().principalId());
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
     }
@@ -203,6 +206,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 source == null ? 120 : source.timeoutSeconds(),
                 source == null ? io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy.FAIL_PROCESS
                         : source.failurePolicy(),
+                source == null ? null : source.inputSchema(),
                 source == null ? null : source.outputSchema(),
                 principalProvider.current().principalId(),
                 null,
@@ -238,6 +242,17 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             outputSchemaValidator.validateDefinition(outputSchema);
         } catch (ModelProviderException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Output Schema must be valid JSON", exception);
+        }
+    }
+
+    private void validateInputSchema(String inputSchema) {
+        if (!StringUtils.hasText(inputSchema)) {
+            return;
+        }
+        try {
+            outputSchemaValidator.validateDefinition(inputSchema);
+        } catch (ModelProviderException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Input Schema must be valid JSON", exception);
         }
     }
 
@@ -279,7 +294,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         return new AgentVersionView(
                 version.id(), version.definitionId(), version.version(), version.status(), version.providerId(),
                 providerName, version.modelName(), version.systemPrompt(), version.timeoutSeconds(),
-                version.failurePolicy(), version.outputSchema(), version.createdBy(), version.publishedBy(),
+                version.failurePolicy(), version.inputSchema(), version.outputSchema(), version.createdBy(),
+                version.publishedBy(),
                 version.publishedAt(), version.createdAt(), version.updatedAt());
     }
 

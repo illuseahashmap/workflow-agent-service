@@ -76,10 +76,10 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         return jdbcTemplate.queryForObject("""
                         INSERT INTO agent_definition_version (
                             tenant_code, definition_id, version, status, provider_id, model_name,
-                            system_prompt, timeout_seconds, failure_policy, output_schema, created_by
+                            system_prompt, timeout_seconds, failure_policy, input_schema, output_schema, created_by
                         ) VALUES (
                             :tenantCode, :definitionId, :version, :status, :providerId, :modelName,
-                            :systemPrompt, :timeoutSeconds, :failurePolicy, :outputSchema, :createdBy
+                            :systemPrompt, :timeoutSeconds, :failurePolicy, :inputSchema, :outputSchema, :createdBy
                         ) RETURNING *
                         """,
                 versionParameters(version),
@@ -95,6 +95,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
                             system_prompt = :systemPrompt,
                             timeout_seconds = :timeoutSeconds,
                             failure_policy = :failurePolicy,
+                            input_schema = :inputSchema,
                             output_schema = :outputSchema,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE tenant_code = :tenantCode AND definition_id = :definitionId
@@ -130,6 +131,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         parameters.put("systemPrompt", version.systemPrompt());
         parameters.put("timeoutSeconds", version.timeoutSeconds());
         parameters.put("failurePolicy", version.failurePolicy().name());
+        parameters.put("inputSchema", version.inputSchema());
         parameters.put("outputSchema", version.outputSchema());
         parameters.put("createdBy", version.createdBy());
         return parameters;
@@ -148,6 +150,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
                 resultSet.getString("system_prompt"),
                 resultSet.getInt("timeout_seconds"),
                 AgentFailurePolicy.valueOf(resultSet.getString("failure_policy")),
+                resultSet.getString("input_schema"),
                 resultSet.getString("output_schema"),
                 resultSet.getString("created_by"),
                 resultSet.getString("published_by"),

@@ -12,6 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.io.InputStream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ExclusiveGateway;
@@ -56,7 +62,7 @@ public final class FlowableUserTaskPathResolver {
                 .map(StartEvent.class::cast)
                 .map(FlowNode.class::cast)
                 .toList();
-        return nextUserTasks(startEvents, safeVariables(variables));
+        return nextUserTasks(processDefinitionId, startEvents, safeVariables(variables));
     }
 
     public List<UserTask> targetTasks(
@@ -80,7 +86,7 @@ public final class FlowableUserTaskPathResolver {
         if (!(current instanceof FlowNode flowNode)) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Current workflow activity does not exist");
         }
-        return nextUserTasks(List.of(flowNode), safeVariables(variables));
+        return nextUserTasks(task.getProcessDefinitionId(), List.of(flowNode), safeVariables(variables));
     }
 
     public UserTask findUserTask(BpmnModel model, String activityId) {
@@ -100,7 +106,9 @@ public final class FlowableUserTaskPathResolver {
         return StringUtils.hasText(task.getName()) ? task.getName().trim() : task.getId();
     }
 
-    private List<UserTask> nextUserTasks(Collection<FlowNode> sources, Map<String, Object> variables) {
+    private List<UserTask> nextUserTasks(
+            String processDefinitionId, Collection<FlowNode> sources, Map<String, Object> variables) {
+        Set<String> agentWaitStateIds = agentWaitStateIds(processDefinitionId);
         Queue<FlowElement> queue = new ArrayDeque<>();
         for (FlowNode source : sources) {
             enqueueTargets(queue, selectedOutgoingFlows(source, variables));
@@ -116,7 +124,7 @@ public final class FlowableUserTaskPathResolver {
                 results.putIfAbsent(userTask.getId(), userTask);
                 continue;
             }
-            if (isAgentWaitState(element)) {
+            if (agentWaitStateIds.contains(element.getId()) || isAgentWaitState(element)) {
                 // An Agent task is an asynchronous wait state. Do not expose user tasks
                 // behind it as start-time participant requirements.
                 continue;
@@ -259,7 +267,58 @@ public final class FlowableUserTaskPathResolver {
         }
         return element.getExtensionElements().entrySet().stream()
                 .flatMap(entry -> entry.getValue().stream())
-                .anyMatch(this::isAgentExtension);
+                .anyMatch(this::containsAgentExtension);
+    }
+
+    private boolean containsAgentExtension(ExtensionElement extension) {
+        if (isAgentExtension(extension)) {
+            return true;
+        }
+        if (extension.getChildElements() == null) {
+            return false;
+        }
+        return extension.getChildElements().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(this::containsAgentExtension);
+    }
+
+    private Set<String> agentWaitStateIds(String processDefinitionId) {
+        var definition = repositoryService.getProcessDefinition(processDefinitionId);
+        if (definition == null || definition.getDeploymentId() == null
+                || !StringUtils.hasText(definition.getResourceName())) {
+            return Set.of();
+        }
+        try (InputStream input = repositoryService.getResourceAsStream(
+                definition.getDeploymentId(), definition.getResourceName())) {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document document = factory.newDocumentBuilder().parse(input);
+            NodeList allElements = document.getElementsByTagName("*");
+            Set<String> ids = new HashSet<>();
+            for (int index = 0; index < allElements.getLength(); index++) {
+                Element candidate = (Element) allElements.item(index);
+                String localName = candidate.getLocalName();
+                String nodeName = candidate.getNodeName();
+                if (!"agentTask".equals(localName)
+                        && !"agentTask".equals(nodeName)
+                        && !nodeName.endsWith(":agentTask")) {
+                    continue;
+                }
+                Node current = candidate.getParentNode();
+                while (current != null) {
+                    if (current instanceof Element element && element.hasAttribute("id")
+                            && !"extensionElements".equals(element.getLocalName())) {
+                        ids.add(element.getAttribute("id"));
+                        break;
+                    }
+                    current = current.getParentNode();
+                }
+            }
+            return Set.copyOf(ids);
+        } catch (Exception exception) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR,
+                    "Unable to inspect deployed BPMN Agent tasks", exception);
+        }
     }
 
     private boolean isAgentExtension(ExtensionElement extension) {

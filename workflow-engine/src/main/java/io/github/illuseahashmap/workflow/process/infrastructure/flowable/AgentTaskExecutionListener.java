@@ -1,11 +1,14 @@
 package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.workflow.process.application.port.AgentRunGateway;
+import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.flowable.bpmn.model.ExtensionElement;
@@ -47,7 +50,8 @@ public class AgentTaskExecutionListener implements ExecutionListener {
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORKFLOW_ERROR,
                         "Agent task is missing workflow:agentTask binding"));
         long agentVersionId = positiveLong(binding.getAttributeValue(null, "agentVersionId"), "agentVersionId");
-        String input = serializeVariables(execution.getVariables());
+        String input = serializeVariables(
+                binding.getAttributeValue(null, "inputMapping"), execution.getVariables());
         String tenantCode = tenantProvider.current().tenantCode();
         agentRunGateway.submit(new AgentRunGateway.AgentRunRequest(
                 tenantCode,
@@ -68,12 +72,97 @@ public class AgentTaskExecutionListener implements ExecutionListener {
                 || "http://workflow-agent.local/bpmn".equals(extension.getNamespace());
     }
 
-    private String serializeVariables(Map<String, Object> variables) {
+    /**
+     * Builds the business input contract for the Agent. Flowable contains trusted
+     * platform variables as well as user variables; platform variables must never
+     * become implicit model context. A non-empty binding is destination -> source.
+     */
+    private String serializeVariables(String mappingJson, Map<String, Object> variables) {
         try {
-            return objectMapper.writeValueAsString(Map.of("input", variables == null ? Map.of() : variables));
+            Map<String, Object> businessVariables = new LinkedHashMap<>();
+            if (variables != null) {
+                variables.forEach((name, value) -> {
+                    if (!ProcessVariablePolicy.isInternalVariable(name)) {
+                        businessVariables.put(name, value);
+                    }
+                });
+            }
+            Map<String, Object> mapped = resolveMapping(mappingJson, businessVariables);
+            return objectMapper.writeValueAsString(Map.of("input", mapped));
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCode.WORKFLOW_ERROR, "Unable to serialize Agent input", exception);
         }
+    }
+
+    private Map<String, Object> resolveMapping(String mappingJson, Map<String, Object> variables)
+            throws JsonProcessingException {
+        if (mappingJson == null || mappingJson.isBlank() || "{}".equals(mappingJson.trim())) {
+            return variables;
+        }
+        JsonNode mapping = objectMapper.readTree(mappingJson);
+        if (!mapping.isObject()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent inputMapping must be a JSON object");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        mapping.fields().forEachRemaining(entry ->
+                result.put(entry.getKey(), resolveMappingValue(entry.getValue(), variables)));
+        return result;
+    }
+
+    private Object resolveMappingValue(JsonNode node, Map<String, Object> variables) {
+        if (!node.isTextual()) {
+            return objectMapper.convertValue(node, Object.class);
+        }
+        String source = node.textValue().trim();
+        if (source.startsWith("${") && source.endsWith("}")) {
+            source = source.substring(2, source.length() - 1).trim();
+        }
+        Object value = resolvePath(variables, source);
+        if (value == null && !containsPath(variables, source)) {
+            throw new BusinessException(
+                    ErrorCode.BAD_REQUEST, "Agent inputMapping references missing process variable: " + source);
+        }
+        return value;
+    }
+
+    private Object resolvePath(Object current, String path) {
+        Object value = current;
+        for (String segment : path.split("\\.")) {
+            if (value instanceof Map<?, ?> map && map.containsKey(segment)) {
+                value = map.get(segment);
+            } else if (value instanceof List<?> list && segment.matches("\\d+")) {
+                int index = Integer.parseInt(segment);
+                if (index >= list.size()) {
+                    return null;
+                }
+                value = list.get(index);
+            } else {
+                return null;
+            }
+        }
+        return value;
+    }
+
+    private boolean containsPath(Map<String, Object> variables, String path) {
+        if (variables.containsKey(path)) {
+            return true;
+        }
+        String[] segments = path.split("\\.");
+        Object current = variables;
+        for (String segment : segments) {
+            if (current instanceof Map<?, ?> map && map.containsKey(segment)) {
+                current = map.get(segment);
+            } else if (current instanceof List<?> list && segment.matches("\\d+")) {
+                int index = Integer.parseInt(segment);
+                if (index >= list.size()) {
+                    return false;
+                }
+                current = list.get(index);
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 
     private long positiveLong(String value, String field) {

@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.flowable.engine.RuntimeService;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class AgentFlowableCompletionCoordinator {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final RuntimeService runtimeService;
     private final ObjectMapper objectMapper;
 
     public AgentFlowableCompletionCoordinator(
-            JdbcTemplate jdbcTemplate,
+            NamedParameterJdbcTemplate jdbcTemplate,
             RuntimeService runtimeService,
             ObjectMapper objectMapper
     ) {

@@ -15,6 +15,7 @@ public record AgentVersionView(
         String systemPrompt,
         int timeoutSeconds,
         AgentFailurePolicy failurePolicy,
+        String inputSchema,
         String outputSchema,
         String createdBy,
         String publishedBy,

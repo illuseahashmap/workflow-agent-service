@@ -12,6 +12,13 @@ public record AgentVersionCommand(
         @Size(max = 20000) String systemPrompt,
         @Min(1) @Max(3600) int timeoutSeconds,
         @NotNull AgentFailurePolicy failurePolicy,
+        @Size(max = 20000) String inputSchema,
         @Size(max = 20000) String outputSchema
 ) {
+
+    public AgentVersionCommand(
+            Long providerId, String modelName, String systemPrompt, int timeoutSeconds,
+            AgentFailurePolicy failurePolicy, String outputSchema) {
+        this(providerId, modelName, systemPrompt, timeoutSeconds, failurePolicy, null, outputSchema);
+    }
 }
