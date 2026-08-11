@@ -20,7 +20,7 @@
 - [x] AgentDefinition 与不可变 AgentVersion 管理。
 - [x] Provider 管理、加密凭据保存和 OpenAI Compatible Provider。
 - [x] AgentRun、Attempt、Step、Checkpoint、State History 和 Model Invocation。
-- [x] Outbox/Inbox、Worker 基础租约写入、`SKIP LOCKED` 领取和 Mock Provider；租约续约、过期回收和 Checkpoint 接管仍在进行中。
+- [ ] Outbox/Inbox 可靠事件正在建设（共享事件信封、V17 表和 PostgreSQL Publisher 已完成，Dispatcher/Inbox 消费者与流程恢复待完成）；Worker 基础租约写入、`SKIP LOCKED` 领取和 Mock Provider 已完成。
 - [x] 手动测试通过正式 AgentRun 链路执行，不存在 Controller 直连模型的旁路。
 - [x] Provider 失败分类、重试、终态幂等和迟到事件保护的基础实现。
 
