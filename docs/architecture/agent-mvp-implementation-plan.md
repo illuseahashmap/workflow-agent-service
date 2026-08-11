@@ -1,12 +1,12 @@
 # Agent MVP 实施设计
 
-状态：基础设施阶段进行中；BPMN Agent 节点、可靠恢复闭环和生产验收尚未完成。
+状态：执行闭环第一阶段进行中；通用事件分发、取消/人工确认、Guardrail 和生产验收尚未完成。
 
 本文件保留领域模型、接口和实现细节，当前完成度与下一步目标以[《项目状态总览》](../status.md)为准；文中的“必做”表示 MVP 目标，不代表代码已经完成。
 
 更新时间：2026-08-07
 
-状态：基础设施阶段进行中，执行闭环阶段尚未开始。运行状态机、管理面、手动测试运行、基础 Worker、Mock/OpenAI Compatible Provider 和模型调用审计已经完成；共享事件信封、Outbox/Inbox 表与 PostgreSQL Publisher 已建立，Dispatcher、BPMN Agent 节点、恢复接管、取消/人工确认、Guardrail 和生产级观测仍待实现。
+状态：执行闭环第一阶段进行中。运行状态机、管理面、手动测试运行、基础 Worker、Mock/OpenAI Compatible Provider、模型调用审计、BPMN Agent 等待节点和 Flowable 恢复适配已经完成；共享事件信封、Outbox/Inbox 表与 PostgreSQL Publisher 已建立，通用 Dispatcher/Inbox 消费者、恢复接管策略细化、取消/人工确认、Guardrail 和生产级观测仍待实现。
 
 ## 1. 目标
 

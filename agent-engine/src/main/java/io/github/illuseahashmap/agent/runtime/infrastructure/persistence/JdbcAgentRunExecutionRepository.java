@@ -34,20 +34,26 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         INSERT INTO agent_run (
                             tenant_code, idempotency_key, agent_version_id, status,
                             trigger_type, input_snapshot_json, requested_by,
+                            process_instance_id, execution_id, activity_id, activity_activation_id,
                             deadline_at, available_at, created_at, updated_at
                         ) VALUES (
                             :tenantCode, :idempotencyKey, :agentVersionId, 'QUEUED',
                             :triggerType, CAST(:inputSnapshotJson AS jsonb), :requestedBy,
+                            :processInstanceId, :executionId, :activityId, :activityActivationId,
                             :deadlineAt, :createdAt, :createdAt, :createdAt
                         ) RETURNING id
                         """,
-                Map.of(
+                nullableMap(
                         "tenantCode", submission.tenantCode(),
                         "idempotencyKey", submission.idempotencyKey(),
                         "agentVersionId", submission.agentVersionId(),
                         "triggerType", submission.triggerType().name(),
                         "inputSnapshotJson", submission.inputSnapshotJson(),
                         "requestedBy", submission.requestedBy(),
+                        "processInstanceId", submission.processInstanceId(),
+                        "executionId", submission.executionId(),
+                        "activityId", submission.activityId(),
+                        "activityActivationId", submission.activityActivationId(),
                         "deadlineAt", timestamp(submission.deadlineAt()),
                         "createdAt", timestamp(submission.createdAt())),
                 Long.class);
@@ -57,7 +63,10 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 submission.agentVersionId(),
                 submission.idempotencyKey(),
                 submission.deadlineAt(),
-                submission.createdAt());
+                submission.createdAt(),
+                submission.processInstanceId(),
+                submission.executionId(),
+                submission.activityId());
     }
 
     @Override
@@ -398,7 +407,10 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 instant(resultSet, "started_at"),
                 instant(resultSet, "completed_at"),
                 instant(resultSet, "created_at"),
-                instant(resultSet, "updated_at"));
+                instant(resultSet, "updated_at"),
+                resultSet.getString("process_instance_id"),
+                resultSet.getString("execution_id"),
+                resultSet.getString("activity_id"));
     }
 
     private Map<String, Object> identity(String tenantCode, long runId, long attemptId, long stepId) {

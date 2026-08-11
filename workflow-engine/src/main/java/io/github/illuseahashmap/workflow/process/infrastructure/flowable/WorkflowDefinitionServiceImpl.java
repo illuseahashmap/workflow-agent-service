@@ -8,6 +8,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
+import io.github.illuseahashmap.workflow.process.application.port.AgentTaskBindingParser;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
@@ -35,20 +36,24 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     private final JdbcTemplate jdbcTemplate;
     private final TenantProvider tenantProvider;
     private final CurrentPrincipalProvider principalProvider;
+    private final AgentTaskBindingParser agentTaskBindingParser;
 
     public WorkflowDefinitionServiceImpl(RepositoryService repositoryService,
                                          JdbcTemplate jdbcTemplate,
                                          TenantProvider tenantProvider,
-                                         CurrentPrincipalProvider principalProvider) {
+                                         CurrentPrincipalProvider principalProvider,
+                                         AgentTaskBindingParser agentTaskBindingParser) {
         this.repositoryService = repositoryService;
         this.jdbcTemplate = jdbcTemplate;
         this.tenantProvider = tenantProvider;
         this.principalProvider = principalProvider;
+        this.agentTaskBindingParser = agentTaskBindingParser;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DeployProcessResult deploy(DeployProcessRequest request) {
+        agentTaskBindingParser.parse(request.bpmnXml());
         TenantContext.TenantInfo tenant = tenantProvider.current();
         String resourceName = request.processDefinitionKey() + ".bpmn20.xml";
         Deployment deployment = repositoryService.createDeployment()

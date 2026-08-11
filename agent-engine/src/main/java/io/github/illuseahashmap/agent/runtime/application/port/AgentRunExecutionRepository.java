@@ -53,7 +53,24 @@ public interface AgentRunExecutionRepository {
             String inputSnapshotJson,
             String requestedBy,
             Instant deadlineAt,
-            Instant createdAt
+            Instant createdAt,
+            String processInstanceId,
+            String executionId,
+            String activityId,
+            String activityActivationId
     ) {
+        public Submission(
+                String tenantCode,
+                long agentVersionId,
+                String idempotencyKey,
+                AgentRunTriggerType triggerType,
+                String inputSnapshotJson,
+                String requestedBy,
+                Instant deadlineAt,
+                Instant createdAt
+        ) {
+            this(tenantCode, agentVersionId, idempotencyKey, triggerType, inputSnapshotJson,
+                    requestedBy, deadlineAt, createdAt, null, null, null, null);
+        }
     }
 }

@@ -17,6 +17,7 @@ import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureDisposition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunLease;
@@ -53,6 +54,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final String workerId;
     private final Duration leaseDuration;
     private final int maxAttempts;
+    private final AgentRunEventPublisher eventPublisher;
 
     @Autowired
     public AgentRunWorkerServiceImpl(
@@ -66,7 +68,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentOutputSchemaValidator outputSchemaValidator,
             @Value("${workflow.agent.worker.id:local-worker}") String workerId,
             @Value("${workflow.agent.worker.lease-seconds:60}") long leaseSeconds,
-            @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts
+            @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts,
+            AgentRunEventPublisher eventPublisher
     ) {
         this.executionRepository = executionRepository;
         this.versionRepository = versionRepository;
@@ -79,6 +82,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.workerId = workerId + ":" + UUID.randomUUID();
         this.leaseDuration = Duration.ofSeconds(leaseSeconds);
         this.maxAttempts = maxAttempts;
+        this.eventPublisher = eventPublisher;
     }
 
     public AgentRunWorkerServiceImpl(
@@ -95,7 +99,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     ) {
         this(executionRepository, versionRepository, providerRepository, credentialResolver,
                 providerRegistry, objectMapper, transactionTemplate,
-                new AgentOutputSchemaValidator(objectMapper), workerId, leaseSeconds, maxAttempts);
+                new AgentOutputSchemaValidator(objectMapper), workerId, leaseSeconds, maxAttempts,
+                AgentRunEventPublisher.NOOP);
     }
 
     @Override
@@ -204,6 +209,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     response,
                     outputSnapshot(response),
                     lastTransition(claimed.run()));
+            eventPublisher.completed(claimed.run(), outputSnapshot(response));
         });
     }
 
@@ -254,6 +260,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     errorCode,
                     availableAt,
                     lastTransition(claimed.run()));
+            if (!retriesRemaining || !now.isBefore(claimed.run().deadlineAt())) {
+                eventPublisher.completed(claimed.run(), null);
+            }
         });
     }
 

@@ -10,8 +10,10 @@ import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunSubmissionService;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentManualRunCommand;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentFlowableRunCommand;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunSubmissionView;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunTriggerType;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
@@ -23,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService {
@@ -34,6 +37,28 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
     private final TenantProvider tenantProvider;
     private final CurrentPrincipalProvider principalProvider;
     private final ObjectMapper objectMapper;
+    private final AgentRunEventPublisher eventPublisher;
+
+    @Autowired
+    public AgentRunSubmissionServiceImpl(
+            AgentDefinitionRepository definitionRepository,
+            AgentDefinitionVersionRepository versionRepository,
+            AgentProviderRepository providerRepository,
+            AgentRunExecutionRepository executionRepository,
+            TenantProvider tenantProvider,
+            CurrentPrincipalProvider principalProvider,
+            ObjectMapper objectMapper,
+            AgentRunEventPublisher eventPublisher
+    ) {
+        this.definitionRepository = definitionRepository;
+        this.versionRepository = versionRepository;
+        this.providerRepository = providerRepository;
+        this.executionRepository = executionRepository;
+        this.tenantProvider = tenantProvider;
+        this.principalProvider = principalProvider;
+        this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
+    }
 
     public AgentRunSubmissionServiceImpl(
             AgentDefinitionRepository definitionRepository,
@@ -44,13 +69,8 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
             CurrentPrincipalProvider principalProvider,
             ObjectMapper objectMapper
     ) {
-        this.definitionRepository = definitionRepository;
-        this.versionRepository = versionRepository;
-        this.providerRepository = providerRepository;
-        this.executionRepository = executionRepository;
-        this.tenantProvider = tenantProvider;
-        this.principalProvider = principalProvider;
-        this.objectMapper = objectMapper;
+        this(definitionRepository, versionRepository, providerRepository, executionRepository,
+                tenantProvider, principalProvider, objectMapper, AgentRunEventPublisher.NOOP);
     }
 
     @Override
@@ -81,6 +101,40 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
                 principalProvider.current().principalId(),
                 now.plusSeconds(version.timeoutSeconds()),
                 now));
+        eventPublisher.requested(run);
+        return new AgentRunSubmissionView(run.id(), run.status());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AgentRunSubmissionView submitFlowable(AgentFlowableRunCommand command) {
+        String tenantCode = tenantProvider.current().tenantCode();
+        AgentDefinitionVersion version = versionRepository.findByVersionId(tenantCode, command.agentVersionId())
+                .filter(AgentDefinitionVersion::published)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT,
+                        "The referenced Agent version is not published for the current tenant"));
+        AgentProvider provider = providerRepository.findById(tenantCode, version.providerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent Provider does not exist"));
+        if (!provider.enabled()) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Agent Provider is disabled");
+        }
+        Instant now = Instant.now();
+        String input = command.inputSnapshotJson() == null || command.inputSnapshotJson().isBlank()
+                ? "{}" : command.inputSnapshotJson();
+        AgentRun run = executionRepository.insertQueued(new AgentRunExecutionRepository.Submission(
+                tenantCode,
+                version.id(),
+                command.idempotencyKey(),
+                AgentRunTriggerType.FLOWABLE,
+                input,
+                command.requestedBy() == null ? principalProvider.current().principalId() : command.requestedBy(),
+                now.plusSeconds(Math.min(command.timeoutSeconds(), version.timeoutSeconds())),
+                now,
+                command.processInstanceId(),
+                command.executionId(),
+                command.activityId(),
+                command.activityActivationId()));
+        eventPublisher.requested(run);
         return new AgentRunSubmissionView(run.id(), run.status());
     }
 
