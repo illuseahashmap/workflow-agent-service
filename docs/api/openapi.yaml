@@ -800,6 +800,11 @@ paths:
       summary: Acknowledge a dead-letter Agent completion event without replaying it
       parameters:
         - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IgnoreAgentCompletionEventCommand' }
       responses:
         '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
 components:
@@ -862,6 +867,11 @@ components:
       in: cookie
       name: WORKFLOW_ACCESS_TOKEN
   schemas:
+    IgnoreAgentCompletionEventCommand:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
     ApiResponse:
       type: object
       required: [code, message]

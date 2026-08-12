@@ -55,4 +55,12 @@ class DomainArchitectureTest {
                 .because("REST contracts must use application DTOs instead of exposing domain models")
                 .check(productionClasses);
     }
+
+    @Test
+    void compositionRootDoesNotDependOnWorkflowInfrastructureImplementations() {
+        noClasses().that().resideInAPackage("..workflow.agent..")
+                .should().dependOnClassesThat().resideInAPackage("..process.infrastructure..")
+                .because("composition adapters must invoke workflow application ports and use cases")
+                .check(productionClasses);
+    }
 }

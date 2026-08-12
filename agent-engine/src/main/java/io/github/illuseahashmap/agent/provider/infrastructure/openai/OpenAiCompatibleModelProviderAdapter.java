@@ -11,6 +11,7 @@ import io.github.illuseahashmap.agent.provider.application.port.ModelProviderReq
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -29,14 +31,17 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final ProviderEndpointValidator endpointValidator;
+    private final int maximumResponseBytes;
 
     @Autowired
     public OpenAiCompatibleModelProviderAdapter(
             ObjectMapper objectMapper,
-            ProviderEndpointValidator endpointValidator
+            ProviderEndpointValidator endpointValidator,
+            @Value("${workflow.agent.provider.egress.maximum-response-bytes:1048576}") int maximumResponseBytes
     ) {
         this.objectMapper = objectMapper;
         this.endpointValidator = endpointValidator;
+        this.maximumResponseBytes = Math.max(1024, Math.min(maximumResponseBytes, 10 * 1024 * 1024));
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
                 .build();
@@ -44,7 +49,7 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
 
     public OpenAiCompatibleModelProviderAdapter(ObjectMapper objectMapper) {
         // The one-argument constructor is retained for isolated adapter tests; Spring uses the strict bean above.
-        this(objectMapper, new ProviderEndpointValidator(true));
+        this(objectMapper, new ProviderEndpointValidator(true), 1024 * 1024);
     }
 
     @Override
@@ -67,12 +72,23 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody(request, responsesApi)))
                     .build();
-            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<InputStream> response = httpClient.send(
+                    httpRequest, HttpResponse.BodyHandlers.ofInputStream());
+            String responseBody;
+            try (InputStream body = response.body()) {
+                byte[] bytes = body.readNBytes(maximumResponseBytes + 1);
+                if (bytes.length > maximumResponseBytes) {
+                    throw new ModelProviderException(
+                            "PROVIDER_RESPONSE_TOO_LARGE", ModelProviderFailureKind.PERMANENT,
+                            "Model Provider response exceeded the configured size limit");
+                }
+                responseBody = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            }
             long latencyMillis = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw httpFailure(response.statusCode(), response.body());
+                throw httpFailure(response.statusCode(), responseBody);
             }
-            return parseResponse(response.body(), latencyMillis, responsesApi);
+            return parseResponse(responseBody, latencyMillis, responsesApi);
         } catch (java.net.http.HttpTimeoutException exception) {
             throw new ModelProviderException(
                     "PROVIDER_TIMEOUT", ModelProviderFailureKind.TIMEOUT,

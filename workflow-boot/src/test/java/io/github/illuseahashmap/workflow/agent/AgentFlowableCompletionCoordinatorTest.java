@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.github.illuseahashmap.workflow.process.application.AgentCompletionContractException;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;

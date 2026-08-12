@@ -33,26 +33,40 @@ public class AgentCompletionOperationsService {
 
     @Transactional(rollbackFor = Exception.class)
     public void replay(UUID eventId) {
-        requireChanged(eventStore.replay(eventId));
-        audit("AGENT_COMPLETION_REPLAYED", eventId);
+        var event = requireFound(eventStore.replay(eventId));
+        audit("AGENT_COMPLETION_REPLAYED", event, "REPLAY", "Retry requested by operator");
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void ignore(UUID eventId) {
-        requireChanged(eventStore.ignore(eventId));
-        audit("AGENT_COMPLETION_IGNORED", eventId);
+    public void ignore(UUID eventId, String reason) {
+        var principal = principalProvider.current();
+        var event = requireFound(eventStore.ignore(eventId, reason.strip(), principal.principalId()));
+        audit("AGENT_COMPLETION_IGNORED", event, "IGNORE", reason.strip());
     }
 
-    private void requireChanged(boolean changed) {
-        if (!changed) {
+    private AgentCompletionEventStore.DeadLetterEvent requireFound(
+            AgentCompletionEventStore.DeadLetterEvent event) {
+        if (event == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Dead-letter completion event was not found");
         }
+        return event;
     }
 
-    private void audit(String eventType, UUID eventId) {
+    private void audit(
+            String eventType,
+            AgentCompletionEventStore.DeadLetterEvent event,
+            String method,
+            String reason
+    ) {
         var principal = principalProvider.current();
         auditRepository.record(
-                eventType, principal.principalId(), principal.tenantCode(), null,
-                eventId.toString(), "SUCCESS", "Agent completion dead-letter operation");
+                eventType, principal.principalId(), event.tenantCode(), null,
+                event.eventId().toString(), "SUCCESS",
+                "method=" + method + "; reason=" + reason
+                        + "; targetTenant=" + event.tenantCode()
+                        + "; agentRun=" + event.aggregateId()
+                        + "; processInstance=" + event.processInstanceId()
+                        + "; execution=" + event.executionId()
+                        + "; originalError=" + event.lastError());
     }
 }

@@ -33,6 +33,7 @@ workflow:
       egress:
         allow-private-networks: ${WORKFLOW_AGENT_PROVIDER_ALLOW_PRIVATE_NETWORKS:false}
         allow-http: ${WORKFLOW_AGENT_PROVIDER_ALLOW_HTTP:false}
+        maximum-response-bytes: ${WORKFLOW_AGENT_PROVIDER_MAXIMUM_RESPONSE_BYTES:1048576}
     credentials:
       master-key-base64: ${WORKFLOW_AGENT_CREDENTIAL_KEY_BASE64:${WORKFLOW_MASTER_KEY_BASE64:}}
     worker:
@@ -43,6 +44,7 @@ workflow:
       max-attempts: ${WORKFLOW_AGENT_WORKER_MAX_ATTEMPTS:3}
       recovery-delay-ms: ${WORKFLOW_AGENT_WORKER_RECOVERY_DELAY_MS:10000}
       execution-pool-size: ${WORKFLOW_AGENT_WORKER_EXECUTION_POOL_SIZE:2}
+      queue-capacity: ${WORKFLOW_AGENT_WORKER_QUEUE_CAPACITY:20}
   runtime:
     environment: ${WORKFLOW_ENV:production}
   lock:

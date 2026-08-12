@@ -30,6 +30,12 @@
 - [x] `AgentExecutor` 按执行模式扩展，当前只开放 `MODEL_ONLY`；未来平台 Agent 与远程 Agent 不复用 Provider 概念，也不另建运行账本。
 - [x] 手动测试通过正式 AgentRun 链路执行，不存在 Controller 直连模型的旁路。
 - [x] Provider 失败分类、重试、终态幂等和迟到事件保护的基础实现。
+- [x] Agent 完成恢复规则已归属 `workflow-engine` 应用层；`workflow-boot` 只承担事件传输、跨模块快照适配与事务装配，并有 ArchUnit 门禁。
+- [x] Agent 完成事件具备真实 PostgreSQL + Flowable 事务集成测试，验证 Flowable、Inbox、Outbox 与 AgentRun 标记共同提交或回滚。
+- [x] 死信人工处置使用独立 `IGNORED` 终态、必填原因和目标租户/AgentRun/流程实例审计，不再伪装为正常投递。
+- [x] Agent Schema 映射支持整个数组、固定索引与通配投影，前端选择器和后端部署/运行时契约一致。
+- [x] 模型轮询与执行线程已分离，使用固定大小有界执行池和明确拒绝边界；AgentRun 过期/失效租约由独立 Recovery 扫描收敛。
+- [x] Provider 默认拒绝不安全协议、内网/元数据目标和异常端口，并限制响应体、连接及请求时限；生产级 DNS 固定与私网授权仍规划使用统一出站代理。
 
 ### 架构与工程治理
 

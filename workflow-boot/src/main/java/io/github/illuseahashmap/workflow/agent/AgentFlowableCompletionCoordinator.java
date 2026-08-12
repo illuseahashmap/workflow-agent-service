@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.workflow.agent;
 
 import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
+import io.github.illuseahashmap.workflow.process.application.AgentCompletionContractException;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;

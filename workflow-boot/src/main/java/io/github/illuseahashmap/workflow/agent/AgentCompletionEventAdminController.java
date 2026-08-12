@@ -3,6 +3,9 @@ package io.github.illuseahashmap.workflow.agent;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Restricted recovery commands for poisoned Agent completion events. */
@@ -41,8 +45,16 @@ public class AgentCompletionEventAdminController {
     }
 
     @PostMapping("/{eventId}/ignore")
-    public ApiResponse<Void> ignore(@PathVariable UUID eventId) {
-        operationsService.ignore(eventId);
+    public ApiResponse<Void> ignore(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody IgnoreCompletionEventCommand command
+    ) {
+        operationsService.ignore(eventId, command.reason());
         return ApiResponse.ok(null);
+    }
+
+    public record IgnoreCompletionEventCommand(
+            @NotBlank @Size(max = 1000) String reason
+    ) {
     }
 }

@@ -41,7 +41,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(23);
+            assertThat(resultSet.getInt(1)).isEqualTo(24);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
@@ -55,6 +55,9 @@ class PlatformMigrationIntegrationTest {
         assertThat(tableExists("agent_model_invocation")).isTrue();
         assertThat(columnExists("platform_outbox_event", "claim_expires_at")).isTrue();
         assertThat(columnExists("platform_outbox_event", "dead_lettered_at")).isTrue();
+        assertThat(columnExists("platform_outbox_event", "resolution_reason")).isTrue();
+        assertThat(columnExists("platform_outbox_event", "resolution_method")).isTrue();
+        assertThat(columnExists("platform_outbox_event", "resolved_by")).isTrue();
     }
 
     @Test

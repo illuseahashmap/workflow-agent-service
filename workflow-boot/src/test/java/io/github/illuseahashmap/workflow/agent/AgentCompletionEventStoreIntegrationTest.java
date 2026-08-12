@@ -61,8 +61,29 @@ class AgentCompletionEventStoreIntegrationTest {
 
         assertThat(eventStore.deadLetters(10)).extracting(AgentCompletionEventStore.DeadLetterEvent::eventId)
                 .containsExactly(eventId);
-        assertThat(eventStore.replay(eventId)).isTrue();
+        assertThat(eventStore.replay(eventId)).isNotNull();
         assertThat(eventStore.claim("worker-b", 10, Duration.ofSeconds(30))).containsExactly(eventId);
+    }
+
+    @Test
+    void ignoredDeadLetterKeepsDistinctTerminalStateAndResolutionEvidence() {
+        UUID eventId = insertCompletionEvent();
+        eventStore.claim("worker-a", 10, Duration.ofSeconds(30));
+        eventStore.retryOrDeadLetter(
+                eventId, "worker-a", new IllegalStateException("bad mapping"), 8, true);
+
+        assertThat(eventStore.ignore(eventId, "Business process was repaired manually", "admin-a"))
+                .isNotNull();
+
+        Map<String, Object> resolution = jdbcTemplate.queryForMap("""
+                SELECT status, resolution_reason, resolution_method, resolved_by
+                FROM platform_outbox_event WHERE event_id = :eventId
+                """, Map.of("eventId", eventId));
+        assertThat(resolution).containsEntry("status", "IGNORED")
+                .containsEntry("resolution_reason", "Business process was repaired manually")
+                .containsEntry("resolution_method", "IGNORE")
+                .containsEntry("resolved_by", "admin-a");
+        assertThat(eventStore.replay(eventId)).isNull();
     }
 
     private UUID insertCompletionEvent() {

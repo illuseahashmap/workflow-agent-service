@@ -2,37 +2,31 @@ package io.github.illuseahashmap.workflow.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
-import io.github.illuseahashmap.workflow.process.infrastructure.flowable.AgentTaskExecutionListener;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.HashMap;
+import io.github.illuseahashmap.workflow.process.application.AgentCompletionContractException;
+import io.github.illuseahashmap.workflow.process.application.AgentCompletionRecoveryService;
+import io.github.illuseahashmap.workflow.process.application.dto.AgentCompletionCommand;
 import java.util.Map;
 import java.util.UUID;
-import org.flowable.engine.RuntimeService;
-import org.flowable.engine.runtime.Execution;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/** Performs one Inbox-idempotent Flowable recovery inside the caller transaction. */
+/** Local transport adapter: validates the event envelope and owns Inbox/Outbox delivery state. */
 @Component
 public class AgentFlowableCompletionProcessor {
 
     private static final String CONSUMER_NAME = "workflow-agent-completion-v1";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final RuntimeService runtimeService;
+    private final AgentCompletionRecoveryService recoveryService;
     private final ObjectMapper objectMapper;
 
     public AgentFlowableCompletionProcessor(
             NamedParameterJdbcTemplate jdbcTemplate,
-            RuntimeService runtimeService,
+            AgentCompletionRecoveryService recoveryService,
             ObjectMapper objectMapper
     ) {
         this.jdbcTemplate = jdbcTemplate;
-        this.runtimeService = runtimeService;
+        this.recoveryService = recoveryService;
         this.objectMapper = objectMapper;
     }
 
@@ -46,11 +40,9 @@ public class AgentFlowableCompletionProcessor {
             return;
         }
         insertInbox(event);
-        CompletedRun run = lockRun(event);
-        if (run != null && run.processInstanceId() != null) {
-            recoverFlowable(run, event);
-            markRunHandled(run);
-        }
+        recoveryService.recover(new AgentCompletionCommand(
+                event.tenantCode(), event.runId(), event.attemptId(),
+                event.activityActivationId(), event.traceId()));
         completeInbox(eventId);
         markDelivered(eventId, workerId);
     }
@@ -62,10 +54,8 @@ public class AgentFlowableCompletionProcessor {
                         WHERE event_id = :eventId AND event_type = :eventType
                           AND status = 'PROCESSING' AND claimed_by = :workerId
                         FOR UPDATE
-                        """, Map.of(
-                        "eventId", eventId,
-                        "eventType", AgentCompletionEventStore.EVENT_TYPE,
-                        "workerId", workerId),
+                        """, Map.of("eventId", eventId,
+                        "eventType", AgentCompletionEventStore.EVENT_TYPE, "workerId", workerId),
                 (rs, rowNum) -> new RawCompletionEvent(
                         rs.getObject("event_id", UUID.class), rs.getString("tenant_code"),
                         rs.getString("trace_id"), rs.getString("payload")))
@@ -76,112 +66,16 @@ public class AgentFlowableCompletionProcessor {
         try {
             JsonNode payload = objectMapper.readTree(raw.payload());
             if (!payload.path("runId").canConvertToLong()
-                    || !payload.path("attemptId").canConvertToLong()) {
+                    || !payload.path("attemptId").canConvertToLong()
+                    || payload.path("activityActivationId").asText().isBlank()) {
                 throw new IllegalArgumentException("Required completion fields are missing");
             }
-            return new CompletionEvent(
-                    raw.eventId(), raw.tenantCode(), payload.path("runId").asLong(),
-                    payload.path("attemptId").asLong(),
+            return new CompletionEvent(raw.eventId(), raw.tenantCode(),
+                    payload.path("runId").asLong(), payload.path("attemptId").asLong(),
                     payload.path("activityActivationId").asText(), raw.traceId());
         } catch (Exception exception) {
             throw new AgentCompletionContractException("Invalid Agent completion event payload", exception);
         }
-    }
-
-    private CompletedRun lockRun(CompletionEvent event) {
-        return jdbcTemplate.query("""
-                        SELECT id, tenant_code, agent_version_id, process_instance_id, execution_id,
-                               activity_id, activity_activation_id, current_attempt_id, status,
-                               error_code, output_snapshot_json, output_mapping_json,
-                               process_failure_policy
-                        FROM agent_run
-                        WHERE id = :runId AND tenant_code = :tenantCode
-                          AND trigger_type = 'FLOWABLE'
-                          AND status IN ('SUCCEEDED', 'FAILED', 'TIMED_OUT', 'CANCELLED')
-                        FOR UPDATE
-                        """, Map.of("runId", event.runId(), "tenantCode", event.tenantCode()),
-                (rs, rowNum) -> mapRun(rs)).stream().findFirst().orElse(null);
-    }
-
-    private void recoverFlowable(CompletedRun run, CompletionEvent event) {
-        if (run.currentAttemptId() == null || run.currentAttemptId() != event.attemptId()
-                || !safeEquals(run.activityActivationId(), event.activityActivationId())) {
-            return;
-        }
-        jdbcTemplate.queryForList("""
-                SELECT ID_ FROM ACT_RU_EXECUTION
-                WHERE ID_ = :executionId AND PROC_INST_ID_ = :processInstanceId
-                FOR UPDATE
-                """, Map.of("executionId", run.executionId(),
-                "processInstanceId", run.processInstanceId()), String.class);
-        Execution execution = runtimeService.createExecutionQuery()
-                .executionId(run.executionId()).singleResult();
-        if (execution == null || !safeEquals(execution.getActivityId(), run.activityId())) {
-            return;
-        }
-        Object activeActivation = runtimeService.getVariableLocal(
-                run.executionId(), AgentTaskExecutionListener.ACTIVATION_VARIABLE);
-        if (!safeEquals(String.valueOf(activeActivation), run.activityActivationId())) {
-            return;
-        }
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("agentRunId", run.id());
-        variables.put("agentRunStatus", run.status());
-        if ("SUCCEEDED".equals(run.status())) {
-            variables.putAll(mapOutput(run.outputSnapshotJson(), run.outputMappingJson()));
-            runtimeService.trigger(run.executionId(), variables);
-            return;
-        }
-        variables.put("agentRunErrorCode", run.errorCode() == null ? "AGENT_FAILED" : run.errorCode());
-        if ("CONTINUE_EMPTY".equals(run.processFailurePolicy())) {
-            runtimeService.trigger(run.executionId(), variables);
-        } else {
-            runtimeService.setVariablesLocal(run.executionId(), variables);
-        }
-    }
-
-    private Map<String, Object> mapOutput(String snapshotJson, String mappingJson) {
-        try {
-            JsonNode snapshot = objectMapper.readTree(snapshotJson == null ? "{}" : snapshotJson);
-            JsonNode content = snapshot.path("content");
-            if (content.isTextual()) {
-                content = objectMapper.readTree(content.textValue());
-            }
-            JsonNode mapping = objectMapper.readTree(mappingJson == null ? "{}" : mappingJson);
-            Map<String, Object> variables = new HashMap<>();
-            JsonNode mappedContent = content;
-            mapping.fields().forEachRemaining(entry -> {
-                String variableName = entry.getValue().asText();
-                if (!variableName.matches("[A-Za-z][A-Za-z0-9_]{0,127}")
-                        || ProcessVariablePolicy.isInternalVariable(variableName)) {
-                    throw new AgentCompletionContractException(
-                            "Unsafe Agent output variable: " + variableName);
-                }
-                JsonNode value = resolvePath(mappedContent, entry.getKey());
-                if (value == null || value.isMissingNode()) {
-                    throw new AgentCompletionContractException(
-                            "Agent output mapping path is missing: " + entry.getKey());
-                }
-                variables.put(variableName, objectMapper.convertValue(value, Object.class));
-            });
-            return variables;
-        } catch (AgentCompletionContractException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new AgentCompletionContractException("Unable to apply Agent output mapping", exception);
-        }
-    }
-
-    private JsonNode resolvePath(JsonNode root, String path) {
-        JsonNode current = root;
-        for (String segment : path.split("\\.")) {
-            current = current.isArray() && segment.matches("\\d+")
-                    ? current.path(Integer.parseInt(segment)) : current.path(segment);
-            if (current.isMissingNode()) {
-                return current;
-            }
-        }
-        return current;
     }
 
     private boolean inboxCompleted(UUID eventId) {
@@ -195,9 +89,8 @@ public class AgentFlowableCompletionProcessor {
 
     private void insertInbox(CompletionEvent event) {
         jdbcTemplate.update("""
-                INSERT INTO platform_inbox_event (
-                    event_id, consumer_name, tenant_code, received_at
-                ) VALUES (:eventId, :consumerName, :tenantCode, CURRENT_TIMESTAMP)
+                INSERT INTO platform_inbox_event (event_id, consumer_name, tenant_code, received_at)
+                VALUES (:eventId, :consumerName, :tenantCode, CURRENT_TIMESTAMP)
                 ON CONFLICT (consumer_name, event_id) DO NOTHING
                 """, Map.of("eventId", event.eventId(), "consumerName", CONSUMER_NAME,
                 "tenantCode", event.tenantCode()));
@@ -220,42 +113,11 @@ public class AgentFlowableCompletionProcessor {
                 """, Map.of("eventId", eventId, "workerId", workerId));
     }
 
-    private void markRunHandled(CompletedRun run) {
-        jdbcTemplate.update("""
-                UPDATE agent_run SET workflow_resumed_at = :handledAt, updated_at = :handledAt
-                WHERE id = :id AND tenant_code = :tenantCode AND workflow_resumed_at IS NULL
-                """, Map.of("id", run.id(), "tenantCode", run.tenantCode(),
-                "handledAt", OffsetDateTime.now(ZoneOffset.UTC)));
-    }
-
-    private CompletedRun mapRun(ResultSet rs) throws SQLException {
-        return new CompletedRun(
-                rs.getLong("id"), rs.getString("tenant_code"), rs.getLong("agent_version_id"),
-                rs.getString("process_instance_id"), rs.getString("execution_id"),
-                rs.getString("activity_id"), rs.getString("activity_activation_id"),
-                rs.getObject("current_attempt_id", Long.class), rs.getString("status"),
-                rs.getString("error_code"), rs.getString("output_snapshot_json"),
-                rs.getString("output_mapping_json"), rs.getString("process_failure_policy"));
-    }
-
-    private boolean safeEquals(String left, String right) {
-        return left != null && left.equals(right);
-    }
-
     private record RawCompletionEvent(UUID eventId, String tenantCode, String traceId, String payload) {
     }
 
     private record CompletionEvent(
             UUID eventId, String tenantCode, long runId, long attemptId,
-            String activityActivationId, String traceId
-    ) {
-    }
-
-    private record CompletedRun(
-            long id, String tenantCode, long agentVersionId, String processInstanceId,
-            String executionId, String activityId, String activityActivationId,
-            Long currentAttemptId, String status, String errorCode,
-            String outputSnapshotJson, String outputMappingJson, String processFailurePolicy
-    ) {
+            String activityActivationId, String traceId) {
     }
 }

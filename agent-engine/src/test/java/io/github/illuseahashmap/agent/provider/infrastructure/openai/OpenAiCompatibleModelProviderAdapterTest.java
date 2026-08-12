@@ -119,6 +119,17 @@ class OpenAiCompatibleModelProviderAdapterTest {
                 });
     }
 
+    @Test
+    void rejectsResponseThatExceedsConfiguredLimit() throws Exception {
+        startServer(200, "x".repeat(2048));
+        var adapter = new OpenAiCompatibleModelProviderAdapter(
+                new ObjectMapper(), new ProviderEndpointValidator(true), 1024);
+
+        assertThatThrownBy(() -> adapter.invoke(request()))
+                .isInstanceOfSatisfying(ModelProviderException.class, exception ->
+                        assertThat(exception.errorCode()).isEqualTo("PROVIDER_RESPONSE_TOO_LARGE"));
+    }
+
     private ModelProviderRequest request() {
         return request("/v1");
     }

@@ -1,6 +1,6 @@
-package io.github.illuseahashmap.workflow.agent;
+package io.github.illuseahashmap.workflow.process.application;
 
-/** Marks a completion event that cannot succeed without changing its frozen contract. */
+/** Permanent contract violation that must not be retried by the transport. */
 public class AgentCompletionContractException extends RuntimeException {
 
     public AgentCompletionContractException(String message) {

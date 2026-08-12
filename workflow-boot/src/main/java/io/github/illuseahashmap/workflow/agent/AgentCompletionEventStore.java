@@ -89,39 +89,73 @@ public class AgentCompletionEventStore {
 
     public List<DeadLetterEvent> deadLetters(int limit) {
         return jdbcTemplate.query("""
-                SELECT event_id, tenant_code, aggregate_id, attempt_count, last_error,
-                       created_at, dead_lettered_at
-                FROM platform_outbox_event
-                WHERE event_type = :eventType AND status = 'DEAD_LETTER'
-                ORDER BY dead_lettered_at DESC, id DESC
+                SELECT event.event_id, event.tenant_code, event.aggregate_id, event.attempt_count,
+                       event.last_error, event.created_at, event.dead_lettered_at,
+                       run.process_instance_id, run.execution_id
+                FROM platform_outbox_event event
+                LEFT JOIN agent_run run ON run.tenant_code = event.tenant_code
+                    AND run.id::text = event.aggregate_id
+                WHERE event.event_type = :eventType AND event.status = 'DEAD_LETTER'
+                ORDER BY event.dead_lettered_at DESC, event.id DESC
                 LIMIT :limit
                 """, Map.of("eventType", EVENT_TYPE, "limit", limit), (rs, rowNum) -> new DeadLetterEvent(
                 rs.getObject("event_id", UUID.class), rs.getString("tenant_code"),
                 rs.getString("aggregate_id"), rs.getInt("attempt_count"),
                 rs.getString("last_error"), rs.getObject("created_at", java.time.OffsetDateTime.class),
-                rs.getObject("dead_lettered_at", java.time.OffsetDateTime.class)));
+                rs.getObject("dead_lettered_at", java.time.OffsetDateTime.class),
+                rs.getString("process_instance_id"), rs.getString("execution_id")));
     }
 
-    public boolean replay(UUID eventId) {
-        return jdbcTemplate.update("""
+    public DeadLetterEvent replay(UUID eventId) {
+        DeadLetterEvent event = deadLetter(eventId);
+        int updated = jdbcTemplate.update("""
                 UPDATE platform_outbox_event
                 SET status = 'RETRY', attempt_count = 0, next_attempt_at = CURRENT_TIMESTAMP,
                     last_error = NULL, dead_lettered_at = NULL,
+                    resolution_reason = NULL, resolution_method = NULL,
+                    resolved_by = NULL, resolved_at = NULL,
                     claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE event_id = :eventId AND event_type = :eventType AND status = 'DEAD_LETTER'
-                """, Map.of("eventId", eventId, "eventType", EVENT_TYPE)) == 1;
+                """, Map.of("eventId", eventId, "eventType", EVENT_TYPE));
+        return updated == 1 ? event : null;
     }
 
-    public boolean ignore(UUID eventId) {
-        return jdbcTemplate.update("""
+    public DeadLetterEvent ignore(UUID eventId, String reason, String operatorId) {
+        DeadLetterEvent event = deadLetter(eventId);
+        int updated = jdbcTemplate.update("""
                 UPDATE platform_outbox_event
-                SET status = 'DELIVERED', delivered_at = CURRENT_TIMESTAMP,
-                    last_error = CONCAT('IGNORED_BY_OPERATOR: ', COALESCE(last_error, '')),
+                SET status = 'IGNORED', resolution_reason = :reason,
+                    resolution_method = 'IGNORE', resolved_by = :operatorId,
+                    resolved_at = CURRENT_TIMESTAMP,
                     claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE event_id = :eventId AND event_type = :eventType AND status = 'DEAD_LETTER'
-                """, Map.of("eventId", eventId, "eventType", EVENT_TYPE)) == 1;
+                """, Map.of("eventId", eventId, "eventType", EVENT_TYPE,
+                        "reason", reason, "operatorId", operatorId));
+        return updated == 1 ? event : null;
+    }
+
+    private DeadLetterEvent deadLetter(UUID eventId) {
+        return jdbcTemplate.query("""
+                SELECT event.event_id, event.tenant_code, event.aggregate_id, event.attempt_count,
+                       event.last_error, event.created_at, event.dead_lettered_at,
+                       run.process_instance_id, run.execution_id
+                FROM platform_outbox_event event
+                LEFT JOIN agent_run run ON run.tenant_code = event.tenant_code
+                    AND run.id::text = event.aggregate_id
+                WHERE event.event_id = :eventId AND event.event_type = :eventType
+                  AND event.status = 'DEAD_LETTER'
+                FOR UPDATE OF event
+                """, Map.of("eventId", eventId, "eventType", EVENT_TYPE),
+                (rs, rowNum) -> new DeadLetterEvent(
+                        rs.getObject("event_id", UUID.class), rs.getString("tenant_code"),
+                        rs.getString("aggregate_id"), rs.getInt("attempt_count"),
+                        rs.getString("last_error"),
+                        rs.getObject("created_at", java.time.OffsetDateTime.class),
+                        rs.getObject("dead_lettered_at", java.time.OffsetDateTime.class),
+                        rs.getString("process_instance_id"), rs.getString("execution_id")))
+                .stream().findFirst().orElse(null);
     }
 
     private String summarize(Throwable failure) {
@@ -137,7 +171,9 @@ public class AgentCompletionEventStore {
             int attemptCount,
             String lastError,
             java.time.OffsetDateTime createdAt,
-            java.time.OffsetDateTime deadLetteredAt
+            java.time.OffsetDateTime deadLetteredAt,
+            String processInstanceId,
+            String executionId
     ) {
     }
 }
