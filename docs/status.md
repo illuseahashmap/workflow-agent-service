@@ -1,6 +1,6 @@
 # 项目状态总览
 
-更新时间：2026-08-11
+更新时间：2026-08-12
 
 本文档是“现在做到什么程度、下一步做什么”的唯一入口。详细设计文档可以更长，但不得与本文档的状态结论冲突。
 
@@ -21,6 +21,10 @@
 - [x] Provider 管理、加密凭据保存和 OpenAI Compatible Provider。
 - [x] AgentRun、Attempt、Step、Checkpoint、State History 和 Model Invocation。
 - [x] Agent 流程完成事件采用版本化 Outbox/Inbox 消费、Attempt/节点激活校验和显式输出映射，不再扫描终态或默认删除流程实例。
+- [x] 完成事件支持 `SKIP LOCKED` 原子领取、领取租约、独立有界执行器、指数退避、死信和平台管理员审计化重放/忽略。
+- [x] Agent 输入遵循显式最小化映射；空映射产生空对象，未映射流程变量不会进入模型上下文。
+- [x] 设计器通过分页搜索 API 获取已发布版本和契约指纹，输入输出字段根据 Schema 选择，未知路径在部署前拒绝。
+- [x] 人工复核任务实现前，前端不开放 `MANUAL_REVIEW`，后端部署校验同步拒绝该伪能力。
 - [x] BPMN Agent 节点统一为异步可触发 Service Task；历史 Receive Task 仅保留导入兼容，新增定义不再产生旧语义。
 - [x] Agent 绑定在部署期校验租户、发布版本、执行模式、输入输出映射、流程等待时限和失败策略。
 - [x] `AgentExecutor` 按执行模式扩展，当前只开放 `MODEL_ONLY`；未来平台 Agent 与远程 Agent 不复用 Provider 概念，也不另建运行账本。

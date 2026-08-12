@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersionRe
 import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy;
 import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -70,6 +71,55 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
     @Override
     public Optional<AgentDefinitionVersion> findLatest(String tenantCode, long definitionId) {
         return findByDefinition(tenantCode, definitionId).stream().findFirst();
+    }
+
+    @Override
+    public PageSlice<PublishedVersion> pagePublished(PublishedVersionCriteria criteria) {
+        StringBuilder where = new StringBuilder("""
+                WHERE version.tenant_code = :tenantCode
+                  AND version.status = 'PUBLISHED'
+                  AND definition.enabled = 1
+                """);
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("tenantCode", criteria.tenantCode());
+        if (criteria.keyword() != null) {
+            where.append("""
+                    AND (LOWER(definition.agent_code) LIKE :keyword
+                      OR LOWER(definition.agent_name) LIKE :keyword)
+                    """);
+            parameters.put("keyword", "%" + criteria.keyword().toLowerCase(java.util.Locale.ROOT) + "%");
+        }
+        if (criteria.versionId() != null) {
+            where.append(" AND version.id = :versionId");
+            parameters.put("versionId", criteria.versionId());
+        }
+        long total = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM agent_definition_version version
+                JOIN agent_definition definition
+                  ON definition.id = version.definition_id
+                 AND definition.tenant_code = version.tenant_code
+                """ + where, parameters, Long.class);
+        parameters.put("limit", criteria.pageSize());
+        parameters.put("offset", (criteria.pageNum() - 1) * criteria.pageSize());
+        List<PublishedVersion> items = jdbcTemplate.query("""
+                SELECT version.id, version.definition_id, definition.agent_code, definition.agent_name,
+                       version.version, version.execution_mode, version.timeout_seconds,
+                       version.input_schema, version.output_schema
+                FROM agent_definition_version version
+                JOIN agent_definition definition
+                  ON definition.id = version.definition_id
+                 AND definition.tenant_code = version.tenant_code
+                """ + where + """
+                ORDER BY definition.agent_name, version.version DESC, version.id DESC
+                LIMIT :limit OFFSET :offset
+                """, parameters, (rs, rowNum) -> new PublishedVersion(
+                rs.getLong("id"), rs.getLong("definition_id"), rs.getString("agent_code"),
+                rs.getString("agent_name"), rs.getInt("version"),
+                AgentExecutionMode.valueOf(rs.getString("execution_mode")),
+                rs.getInt("timeout_seconds"), rs.getString("input_schema"),
+                rs.getString("output_schema")));
+        return new PageSlice<>(total, criteria.pageNum(), criteria.pageSize(), items);
     }
 
     @Override

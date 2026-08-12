@@ -4,12 +4,16 @@ import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinition
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionView;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionView;
+import io.github.illuseahashmap.agent.definition.application.dto.PublishedAgentVersionView;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.List;
 
 public interface AgentDefinitionService {
 
     PageResult<AgentDefinitionView> page(Integer pageNum, Integer pageSize, String keyword, Boolean enabled);
+
+    PageResult<PublishedAgentVersionView> publishedVersions(
+            Integer pageNum, Integer pageSize, String keyword, Long versionId);
 
     AgentDefinitionView create(AgentDefinitionCommand command);
 

@@ -675,6 +675,18 @@ paths:
       parameters: [{ $ref: '#/components/parameters/NumericDefinitionId' }]
       responses:
         '200': { description: Draft created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /agents/published-versions:
+    get:
+      tags: [Agent]
+      operationId: pagePublishedAgentVersions
+      summary: Search published Agent versions for workflow binding
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { $ref: '#/components/parameters/Keyword' }
+        - { name: versionId, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Published Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
   /agents/{definitionId}/versions/{versionId}:
     post:
       tags: [Agent]
@@ -763,6 +775,33 @@ paths:
       parameters: [{ $ref: '#/components/parameters/RunId' }]
       responses:
         '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /operations/agent-completion-events/dead-letters:
+    get:
+      tags: [Operations]
+      operationId: listAgentCompletionDeadLetters
+      summary: List dead-letter Agent completion events
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200': { description: Dead-letter events, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /operations/agent-completion-events/{eventId}/replay:
+    post:
+      tags: [Operations]
+      operationId: replayAgentCompletionEvent
+      summary: Replay a dead-letter Agent completion event
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Event scheduled for replay, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /operations/agent-completion-events/{eventId}/ignore:
+    post:
+      tags: [Operations]
+      operationId: ignoreAgentCompletionEvent
+      summary: Acknowledge a dead-letter Agent completion event without replaying it
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
 components:
   parameters:
     PageNum:

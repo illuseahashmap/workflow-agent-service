@@ -6,6 +6,7 @@ import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinition
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionView;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionView;
+import io.github.illuseahashmap.agent.definition.application.dto.PublishedAgentVersionView;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinition;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionRepository;
 import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersion;
@@ -24,6 +25,10 @@ import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +90,45 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 normalizedPageNum, normalizedPageSize, tenantCode, normalizeNullable(keyword), enabled));
         return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
                 page.items().stream().map(this::toView).toList());
+    }
+
+    @Override
+    public PageResult<PublishedAgentVersionView> publishedVersions(
+            Integer pageNum, Integer pageSize, String keyword, Long versionId
+    ) {
+        int normalizedPageNum = normalizePageNum(pageNum);
+        int normalizedPageSize = normalizePageSize(pageSize);
+        PageSlice<AgentDefinitionVersionRepository.PublishedVersion> page =
+                versionRepository.pagePublished(
+                        new AgentDefinitionVersionRepository.PublishedVersionCriteria(
+                                normalizedPageNum, normalizedPageSize, tenantCode(),
+                                normalizeNullable(keyword), versionId));
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
+                page.items().stream().map(this::toPublishedVersionView).toList());
+    }
+
+    private PublishedAgentVersionView toPublishedVersionView(
+            AgentDefinitionVersionRepository.PublishedVersion version
+    ) {
+        return new PublishedAgentVersionView(
+                version.id(), version.definitionId(), version.agentCode(), version.agentName(),
+                version.version(), version.executionMode(), version.timeoutSeconds(),
+                version.inputSchema(), version.outputSchema(), contractFingerprint(version));
+    }
+
+    private String contractFingerprint(AgentDefinitionVersionRepository.PublishedVersion version) {
+        try {
+            String contract = version.executionMode() + "\n" + version.timeoutSeconds() + "\n"
+                    + nullToEmpty(version.inputSchema()) + "\n" + nullToEmpty(version.outputSchema());
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(contract.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     @Override

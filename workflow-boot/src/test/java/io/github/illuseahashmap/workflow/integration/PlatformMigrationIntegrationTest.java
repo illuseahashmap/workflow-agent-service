@@ -41,7 +41,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(16);
+            assertThat(resultSet.getInt(1)).isEqualTo(23);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
@@ -53,6 +53,8 @@ class PlatformMigrationIntegrationTest {
         assertThat(tableExists("agent_provider")).isTrue();
         assertThat(tableExists("agent_run")).isTrue();
         assertThat(tableExists("agent_model_invocation")).isTrue();
+        assertThat(columnExists("platform_outbox_event", "claim_expires_at")).isTrue();
+        assertThat(columnExists("platform_outbox_event", "dead_lettered_at")).isTrue();
     }
 
     @Test
@@ -161,6 +163,13 @@ class PlatformMigrationIntegrationTest {
         try (Connection connection = connection(); ResultSet tables = connection.getMetaData()
                 .getTables(null, "public", tableName, new String[]{"TABLE"})) {
             return tables.next();
+        }
+    }
+
+    private boolean columnExists(String tableName, String columnName) throws SQLException {
+        try (Connection connection = connection(); ResultSet columns = connection.getMetaData()
+                .getColumns(null, "public", tableName, columnName)) {
+            return columns.next();
         }
     }
 }

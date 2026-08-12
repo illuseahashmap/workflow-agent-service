@@ -47,4 +47,37 @@ class AgentBindingDeploymentValidatorTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("unsafe");
     }
+
+    @Test
+    void rejectsUnknownInputAndOutputSchemaPaths() {
+        when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
+                new AgentVersionCatalog.PublishedAgentVersion(
+                        42L, "MODEL_ONLY", 300,
+                        "{\"type\":\"object\",\"properties\":{\"customer\":{\"type\":\"string\"}}}",
+                        "{\"type\":\"object\",\"properties\":{\"decision\":{\"type\":\"string\"}}}")));
+        var unknownInput = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{\"unknown\":\"source\"}", "{}",
+                AgentProcessFailurePolicy.HOLD_FOR_OPERATIONS, 120);
+        var unknownOutput = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{}", "{\"unknown\":\"agentDecision\"}",
+                AgentProcessFailurePolicy.HOLD_FOR_OPERATIONS, 120);
+
+        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(unknownInput)))
+                .hasMessageContaining("unknown field");
+        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(unknownOutput)))
+                .hasMessageContaining("unknown path");
+    }
+
+    @Test
+    void rejectsManualReviewUntilHumanTaskCapabilityExists() {
+        when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
+                new AgentVersionCatalog.PublishedAgentVersion(
+                        42L, "MODEL_ONLY", 300, null, null)));
+        var binding = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{}", "{}",
+                AgentProcessFailurePolicy.MANUAL_REVIEW, 120);
+
+        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(binding)))
+                .hasMessageContaining("unavailable");
+    }
 }

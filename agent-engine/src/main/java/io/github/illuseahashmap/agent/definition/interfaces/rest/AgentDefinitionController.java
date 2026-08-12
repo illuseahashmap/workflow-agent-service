@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinition
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionView;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionView;
+import io.github.illuseahashmap.agent.definition.application.dto.PublishedAgentVersionView;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
@@ -37,6 +38,16 @@ public class AgentDefinitionController {
             @RequestParam(required = false) Boolean enabled
     ) {
         return ApiResponse.ok(service.page(pageNum, pageSize, keyword, enabled));
+    }
+
+    @GetMapping("/published-versions")
+    public ApiResponse<PageResult<PublishedAgentVersionView>> publishedVersions(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long versionId
+    ) {
+        return ApiResponse.ok(service.publishedVersions(pageNum, pageSize, keyword, versionId));
     }
 
     @PostMapping
