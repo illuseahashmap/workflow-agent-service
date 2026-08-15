@@ -37,9 +37,6 @@ public class AgentOutputSchemaValidator {
 
     public void validateOutput(String schema, String content) {
         if (!StringUtils.hasText(schema)) {
-            if (!StringUtils.hasText(content)) {
-                throw invalidOutput("AGENT_OUTPUT_EMPTY");
-            }
             return;
         }
         try {

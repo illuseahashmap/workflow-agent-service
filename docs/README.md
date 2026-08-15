@@ -10,6 +10,8 @@
 | Agent 长期设计 | [agent-collaboration-design.md](architecture/agent-collaboration-design.md) | Agent 与 Flowable 的长期边界和扩展地图 |
 | Agent 渐进式自治 | [evidence-governed-agent-autonomy.md](architecture/evidence-governed-agent-autonomy.md) | Agent 基于任务运行证据逐步获得、保持和失去完成权的后续设计方向 |
 | Agent 当前实施 | [agent-mvp-implementation-plan.md](architecture/agent-mvp-implementation-plan.md) | Agent 基础设施的实现范围和剩余验收项 |
+| Agent 资源治理 | [agent-resource-governance.md](architecture/agent-resource-governance.md) | 虚拟线程、租户公平配额、分布式许可证和批量租约续约的长期约束 |
+| 工作流 Agent 交互 | [workflow-agent-interaction-contract.md](architecture/workflow-agent-interaction-contract.md) | 首节点/审批后 Agent 的数据契约、命令校验与表单扩展边界 |
 | API 契约 | [api/README.md](api/README.md)、[api/openapi.yaml](api/openapi.yaml) | HTTP 接口契约和兼容性规则 |
 | 学习知识库 | [learning/](learning/) | 按课程理解 Agent 领域模型、持久化和执行链路 |
 | 当前问题 | [known-issues.md](quality/known-issues.md) | 只记录尚未关闭的问题和明确延期项 |

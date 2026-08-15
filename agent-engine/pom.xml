@@ -15,6 +15,11 @@
     <name>agent-engine</name>
     <description>Agent definitions, reliable runtime, providers, retrieval, guardrails, and audit ledger.</description>
 
+    <properties>
+        <jacoco.minimum.line>0.42</jacoco.minimum.line>
+        <jacoco.minimum.branch>0.38</jacoco.minimum.branch>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.illuseahashmap</groupId>

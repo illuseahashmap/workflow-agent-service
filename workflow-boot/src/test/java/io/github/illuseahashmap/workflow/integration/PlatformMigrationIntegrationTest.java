@@ -41,12 +41,13 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(24);
+            assertThat(resultSet.getInt(1)).isEqualTo(25);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
         assertThat(tableExists("workflow_assignment_fallback_command")).isTrue();
         assertThat(tableExists("platform_security_audit")).isTrue();
+        assertThat(tableExists("workflow_operation_audit")).isTrue();
         assertThat(tableExists("auth_attempt_guard")).isTrue();
         assertThat(tableExists("agent_definition")).isTrue();
         assertThat(tableExists("agent_definition_version")).isTrue();

@@ -4,6 +4,7 @@ import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRes
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStateTransition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunTriggerType;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -14,6 +15,15 @@ public interface AgentRunExecutionRepository {
     Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now);
 
     int recoverExpired(Instant now);
+
+    boolean renewLease(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            Instant renewedAt,
+            Instant leaseExpiresAt
+    );
 
     int nextAttemptNumber(String tenantCode, long runId);
 
@@ -41,6 +51,7 @@ public interface AgentRunExecutionRepository {
             long providerId,
             String requestedModel,
             String errorCode,
+            ResultStatus resultStatus,
             Instant availableAt,
             AgentRunStateTransition transition
     );

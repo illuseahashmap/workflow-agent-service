@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers("/actuator/health", "/actuator/info", "/auth/csrf", "/auth/register", "/auth/login", "/auth/logout").permitAll()
+                        .requestMatchers("/actuator/prometheus").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(serviceTokenAuthenticationFilter, CsrfFilter.class)
                 .addFilterBefore(authSecurityFilter, ServiceTokenAuthenticationFilter.class)

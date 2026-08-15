@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowInteractionGuard;
+import io.github.illuseahashmap.workflow.process.application.WorkflowOperationAuditService;
 import io.github.illuseahashmap.workflow.process.application.dto.ActiveProcessVersionResult;
 import io.github.illuseahashmap.workflow.process.application.dto.RejectTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.StartProcessRequest;
@@ -72,6 +74,10 @@ class WorkflowRuntimeServiceImplTest {
     private TenantProvider tenantProvider;
     @Mock
     private ParticipantDirectory participantDirectory;
+    @Mock
+    private WorkflowOperationAuditService auditService;
+    @Mock
+    private WorkflowInteractionGuard interactionGuard;
     @Mock
     private ProcessInstance processInstance;
     @Mock
@@ -222,6 +228,6 @@ class WorkflowRuntimeServiceImplTest {
                 runtimeService, taskService, historyService, identityService,
                 repositoryService, definitionService, taskViewAssembler,
                 participantCoordinator, transactionExecutor, principalProvider,
-                tenantProvider, participantDirectory);
+                tenantProvider, participantDirectory, auditService, interactionGuard);
     }
 }

@@ -40,7 +40,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/BrowserAuthApiResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /auth/me:
@@ -55,7 +55,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/CurrentUserApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -70,7 +70,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
       responses:
-        '200': { description: Profile updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Profile updated, content: { application/json: { schema: { $ref: '#/components/schemas/CurrentUserApiResponse' } } } }
         '400': { $ref: '#/components/responses/BadRequest' }
   /auth/register:
     post:
@@ -84,7 +84,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
-        '200': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/BrowserAuthApiResponse' } } } }
         '400': { $ref: '#/components/responses/BadRequest' }
   /auth/me/password:
     post:
@@ -97,7 +97,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
       responses:
-        '200': { description: Password changed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Password changed, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
         '400': { $ref: '#/components/responses/BadRequest' }
   /auth/tenants:
     get:
@@ -105,7 +105,7 @@ paths:
       operationId: listMyTenants
       summary: List tenants available to the current user
       responses:
-        '200': { description: Tenant options, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant options, content: { application/json: { schema: { $ref: '#/components/schemas/TenantOptionListApiResponse' } } } }
   /auth/switch-tenant:
     post:
       tags: [Authentication]
@@ -117,7 +117,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SwitchTenantRequest' }
       responses:
-        '200': { description: Tenant switched, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant switched, content: { application/json: { schema: { $ref: '#/components/schemas/BrowserAuthApiResponse' } } } }
         '403': { $ref: '#/components/responses/Forbidden' }
   /auth/csrf:
     get:
@@ -125,14 +125,14 @@ paths:
       operationId: csrfToken
       summary: Read the CSRF token for browser requests
       responses:
-        '200': { description: CSRF token, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: CSRF token, content: { application/json: { schema: { $ref: '#/components/schemas/StringApiResponse' } } } }
   /auth/logout:
     post:
       tags: [Authentication]
       operationId: logout
       summary: Clear the browser session cookie
       responses:
-        '200': { description: Session cleared, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Session cleared, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /auth/directory/users:
     get:
       tags: [Authentication]
@@ -143,7 +143,7 @@ paths:
         - { $ref: '#/components/parameters/PageNum' }
         - { $ref: '#/components/parameters/PageSize' }
       responses:
-        '200': { description: Directory users, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Directory users, content: { application/json: { schema: { $ref: '#/components/schemas/DirectoryUserPageApiResponse' } } } }
   /auth/access/members:
     get:
       tags: [AccessManagement]
@@ -151,7 +151,7 @@ paths:
       summary: List tenant members
       parameters: [{ $ref: '#/components/parameters/Keyword' }]
       responses:
-        '200': { description: Members, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Members, content: { application/json: { schema: { $ref: '#/components/schemas/TenantMemberListApiResponse' } } } }
     post:
       tags: [AccessManagement]
       operationId: addMember
@@ -162,7 +162,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AddTenantMemberRequest' }
       responses:
-        '200': { description: Member added, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Member added, content: { application/json: { schema: { $ref: '#/components/schemas/TenantMemberApiResponse' } } } }
   /auth/access/members/{userId}/roles:
     post:
       tags: [AccessManagement]
@@ -175,7 +175,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/UpdateMemberRolesRequest' }
       responses:
-        '200': { description: Roles updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Roles updated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /auth/access/members/{userId}/enabled:
     post:
       tags: [AccessManagement]
@@ -185,14 +185,14 @@ paths:
         - { $ref: '#/components/parameters/UserId' }
         - { name: enabled, in: query, required: true, schema: { type: boolean } }
       responses:
-        '200': { description: Member status updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Member status updated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /auth/access/roles:
     get:
       tags: [AccessManagement]
       operationId: listRoles
       summary: List tenant roles
       responses:
-        '200': { description: Roles, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Roles, content: { application/json: { schema: { $ref: '#/components/schemas/TenantRoleListApiResponse' } } } }
     post:
       tags: [AccessManagement]
       operationId: saveRole
@@ -203,14 +203,14 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SaveTenantRoleRequest' }
       responses:
-        '200': { description: Role saved, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Role saved, content: { application/json: { schema: { $ref: '#/components/schemas/TenantRoleApiResponse' } } } }
   /auth/access/permissions:
     get:
       tags: [AccessManagement]
       operationId: listPermissions
       summary: List available permissions
       responses:
-        '200': { description: Permissions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Permissions, content: { application/json: { schema: { $ref: '#/components/schemas/PermissionListApiResponse' } } } }
   /workflow/tenant:
     get:
       tags: [Tenant]
@@ -222,7 +222,7 @@ paths:
         - { $ref: '#/components/parameters/Keyword' }
         - { name: enabled, in: query, schema: { type: boolean } }
       responses:
-        '200': { description: Tenants, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenants, content: { application/json: { schema: { $ref: '#/components/schemas/TenantPageApiResponse' } } } }
     post:
       tags: [Tenant]
       operationId: createTenant
@@ -233,14 +233,14 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TenantCommand' }
       responses:
-        '200': { description: Tenant created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant created, content: { application/json: { schema: { $ref: '#/components/schemas/TenantApiResponse' } } } }
   /workflow/tenant/enabled:
     get:
       tags: [Tenant]
       operationId: listEnabledTenants
       summary: List enabled tenants
       responses:
-        '200': { description: Enabled tenants, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Enabled tenants, content: { application/json: { schema: { $ref: '#/components/schemas/TenantListApiResponse' } } } }
   /workflow/tenant/{id}:
     post:
       tags: [Tenant]
@@ -253,7 +253,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TenantCommand' }
       responses:
-        '200': { description: Tenant updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant updated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/tenant/{id}/enabled:
     post:
       tags: [Tenant]
@@ -263,7 +263,7 @@ paths:
         - { $ref: '#/components/parameters/NumericId' }
         - { name: enabled, in: query, required: true, schema: { type: boolean } }
       responses:
-        '200': { description: Tenant status updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant status updated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/tenant/{id}/restore:
     post:
       tags: [Tenant]
@@ -271,7 +271,7 @@ paths:
       summary: Restore a tenant
       parameters: [{ $ref: '#/components/parameters/NumericId' }]
       responses:
-        '200': { description: Tenant restored, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Tenant restored, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/process/start:
     post:
       tags: [Workflow]
@@ -290,9 +290,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/StartProcessApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /workflow/process/interaction:
+    post:
+      tags: [Workflow]
+      operationId: getStartProcessInteraction
+      summary: Generate the tenant-facing data contract for the next Agent frontier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProcessInteractionRequest' }
+      responses:
+        '200': { description: Generated interaction contract, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessInteractionApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /workflow/task/approve:
     post:
       tags: [Workflow]
@@ -311,7 +324,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/TaskActionApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
   /agents:
@@ -326,7 +339,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/AgentDefinitionPageApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
     post:
@@ -346,7 +359,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/AgentDefinitionApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
   /agent-runs/manual-tests:
@@ -367,7 +380,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: '#/components/schemas/AgentRunSubmissionApiResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
   /workflow/management/process/deploy:
@@ -381,7 +394,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/DeployProcessRequest' }
       responses:
-        '200': { description: Process deployed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process deployed, content: { application/json: { schema: { $ref: '#/components/schemas/DeployProcessApiResponse' } } } }
         '400': { $ref: '#/components/responses/BadRequest' }
   /workflow/management/process/definition/activate:
     post:
@@ -394,7 +407,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ActivateProcessVersionRequest' }
       responses:
-        '200': { description: Version activated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Version activated, content: { application/json: { schema: { $ref: '#/components/schemas/ActiveProcessVersionApiResponse' } } } }
   /workflow/management/process/definition/active:
     get:
       tags: [Workflow]
@@ -402,7 +415,7 @@ paths:
       summary: Read the active process version
       parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
       responses:
-        '200': { description: Active version, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Active version, content: { application/json: { schema: { $ref: '#/components/schemas/ActiveProcessVersionApiResponse' } } } }
   /workflow/management/process/definition/exists:
     get:
       tags: [Workflow]
@@ -410,7 +423,7 @@ paths:
       summary: Check whether a process definition exists
       parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
       responses:
-        '200': { description: Existence result, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Existence result, content: { application/json: { schema: { $ref: '#/components/schemas/BooleanApiResponse' } } } }
   /workflow/management/process/definitions:
     get:
       tags: [Workflow]
@@ -419,7 +432,7 @@ paths:
       parameters:
         - { name: processDefinitionKey, in: query, schema: { type: string } }
       responses:
-        '200': { description: Process definitions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process definitions, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessDefinitionListApiResponse' } } } }
   /workflow/management/process/definition:
     get:
       tags: [Workflow]
@@ -429,14 +442,14 @@ paths:
         - { $ref: '#/components/parameters/ProcessDefinitionKey' }
         - { name: version, in: query, schema: { type: integer } }
       responses:
-        '200': { description: Process definition, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process definition, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessDefinitionApiResponse' } } } }
     delete:
       tags: [Workflow]
       operationId: deleteProcessDefinitions
       summary: Delete process definition versions
       parameters: [{ $ref: '#/components/parameters/ProcessDefinitionKey' }]
       responses:
-        '200': { description: Definitions deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Definitions deleted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/management/process/diagram:
     get:
       tags: [Workflow]
@@ -452,7 +465,7 @@ paths:
       summary: Read process instance diagram data
       parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
       responses:
-        '200': { description: Diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessDiagramApiResponse' } } } }
   /workflow/management/process/definitions/page:
     get:
       tags: [Workflow]
@@ -465,7 +478,7 @@ paths:
         - { name: processDefinitionName, in: query, schema: { type: string } }
         - { name: publishStatus, in: query, schema: { type: string, default: all } }
       responses:
-        '200': { description: Process definition page, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process definition page, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessDefinitionPageApiResponse' } } } }
   /workflow/management/process/instances/page:
     get:
       tags: [Workflow]
@@ -480,7 +493,7 @@ paths:
         - { name: businessKey, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string, default: all } }
       responses:
-        '200': { description: Process instance page, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process instance page, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessInstancePageApiResponse' } } } }
   /workflow/management/process/instance/detail:
     get:
       tags: [Workflow]
@@ -488,7 +501,7 @@ paths:
       summary: Read process instance detail
       parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
       responses:
-        '200': { description: Process instance detail, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process instance detail, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessInstanceDetailApiResponse' } } } }
   /workflow/management/process/instance/terminate:
     post:
       tags: [Workflow]
@@ -500,7 +513,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TerminateProcessRequest' }
       responses:
-        '200': { description: Process terminated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process terminated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/management/process/definition/version:
     delete:
       tags: [Workflow]
@@ -510,7 +523,7 @@ paths:
         - { $ref: '#/components/parameters/ProcessDefinitionKey' }
         - { name: version, in: query, required: true, schema: { type: integer } }
       responses:
-        '200': { description: Definition version deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Definition version deleted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /workflow/process/participant-requirements:
     post:
       tags: [Workflow]
@@ -522,7 +535,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ProcessParticipantRequirementsRequest' }
       responses:
-        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ParticipantRequirementListApiResponse' } } } }
   /workflow/process/status:
     get:
       tags: [Workflow]
@@ -530,7 +543,7 @@ paths:
       summary: Read process status
       parameters: [{ $ref: '#/components/parameters/ProcessInstanceId' }]
       responses:
-        '200': { description: Process status, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Process status, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessStatusApiResponse' } } } }
   /workflow/task/status:
     get:
       tags: [Workflow]
@@ -538,7 +551,7 @@ paths:
       summary: Read task status
       parameters: [{ $ref: '#/components/parameters/TaskId' }]
       responses:
-        '200': { description: Task status, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Task status, content: { application/json: { schema: { $ref: '#/components/schemas/TaskApiResponse' } } } }
   /workflow/task/participant-requirements:
     post:
       tags: [Workflow]
@@ -550,7 +563,20 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TaskParticipantRequirementsRequest' }
       responses:
-        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ParticipantRequirementListApiResponse' } } } }
+  /workflow/task/interaction:
+    post:
+      tags: [Workflow]
+      operationId: getTaskInteraction
+      summary: Generate the tenant-facing data contract for an Agent reached after task approval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInteractionRequest' }
+      responses:
+        '200': { description: Generated interaction contract, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessInteractionApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /workflow/task/reject:
     post:
       tags: [Workflow]
@@ -562,7 +588,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TaskActionRequest' }
       responses:
-        '200': { description: Task rejected, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Task rejected, content: { application/json: { schema: { $ref: '#/components/schemas/TaskActionApiResponse' } } } }
   /workflow/task/transfer:
     post:
       tags: [Workflow]
@@ -574,7 +600,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TransferTaskRequest' }
       responses:
-        '200': { description: Task transferred, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Task transferred, content: { application/json: { schema: { $ref: '#/components/schemas/TaskApiResponse' } } } }
   /workflow/process/definition/diagram:
     get:
       tags: [Workflow]
@@ -585,7 +611,7 @@ paths:
         - { name: version, in: query, schema: { type: integer } }
         - { name: processDefinitionId, in: query, schema: { type: string } }
       responses:
-        '200': { description: Definition diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Definition diagram data, content: { application/json: { schema: { $ref: '#/components/schemas/ProcessDefinitionDiagramApiResponse' } } } }
   /workflow/node-assignment-rule:
     get:
       tags: [Workflow]
@@ -602,7 +628,7 @@ paths:
         - { name: assignmentType, in: query, schema: { type: string } }
         - { name: emptyUserStrategy, in: query, schema: { type: string } }
       responses:
-        '200': { description: Assignment rules, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Assignment rules, content: { application/json: { schema: { $ref: '#/components/schemas/AssignmentRulePageApiResponse' } } } }
     post:
       tags: [Workflow]
       operationId: createAssignmentRule
@@ -613,7 +639,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AssignmentRuleCommand' }
       responses:
-        '200': { description: Assignment rule created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Assignment rule created, content: { application/json: { schema: { $ref: '#/components/schemas/AssignmentRuleApiResponse' } } } }
   /workflow/node-assignment-rule/inherit:
     post:
       tags: [Workflow]
@@ -625,7 +651,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AssignmentRuleInheritCommand' }
       responses:
-        '200': { description: Rules inherited, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Rules inherited, content: { application/json: { schema: { $ref: '#/components/schemas/AssignmentRuleInheritApiResponse' } } } }
   /workflow/node-assignment-rule/{id}:
     post:
       tags: [Workflow]
@@ -638,14 +664,14 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AssignmentRuleCommand' }
       responses:
-        '200': { description: Assignment rule updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Assignment rule updated, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
     delete:
       tags: [Workflow]
       operationId: deleteAssignmentRule
       summary: Delete a node assignment rule
       parameters: [{ $ref: '#/components/parameters/NumericId' }]
       responses:
-        '200': { description: Assignment rule deleted, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Assignment rule deleted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /agents/{id}:
     post:
       tags: [Agent]
@@ -658,7 +684,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AgentDefinitionRequest' }
       responses:
-        '200': { description: Agent updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Agent updated, content: { application/json: { schema: { $ref: '#/components/schemas/AgentDefinitionApiResponse' } } } }
     
   /agents/{definitionId}/versions:
     get:
@@ -667,14 +693,14 @@ paths:
       summary: List Agent versions
       parameters: [{ $ref: '#/components/parameters/NumericDefinitionId' }]
       responses:
-        '200': { description: Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/AgentVersionListApiResponse' } } } }
     post:
       tags: [Agent]
       operationId: createAgentDraft
       summary: Create an Agent draft version
       parameters: [{ $ref: '#/components/parameters/NumericDefinitionId' }]
       responses:
-        '200': { description: Draft created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Draft created, content: { application/json: { schema: { $ref: '#/components/schemas/AgentVersionApiResponse' } } } }
   /agents/published-versions:
     get:
       tags: [Agent]
@@ -686,7 +712,7 @@ paths:
         - { $ref: '#/components/parameters/Keyword' }
         - { name: versionId, in: query, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: Published Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Published Agent versions, content: { application/json: { schema: { $ref: '#/components/schemas/PublishedAgentVersionPageApiResponse' } } } }
   /agents/{definitionId}/versions/{versionId}:
     post:
       tags: [Agent]
@@ -701,7 +727,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AgentVersionUpdateCommand' }
       responses:
-        '200': { description: Draft updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Draft updated, content: { application/json: { schema: { $ref: '#/components/schemas/AgentVersionApiResponse' } } } }
   /agents/{definitionId}/versions/{versionId}/publish:
     post:
       tags: [Agent]
@@ -711,7 +737,7 @@ paths:
         - { $ref: '#/components/parameters/NumericDefinitionId' }
         - { $ref: '#/components/parameters/NumericVersionId' }
       responses:
-        '200': { description: Version published, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Version published, content: { application/json: { schema: { $ref: '#/components/schemas/AgentVersionApiResponse' } } } }
   /agent-providers:
     get:
       tags: [Agent]
@@ -723,7 +749,7 @@ paths:
         - { $ref: '#/components/parameters/Keyword' }
         - { name: enabled, in: query, schema: { type: boolean } }
       responses:
-        '200': { description: Providers, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Providers, content: { application/json: { schema: { $ref: '#/components/schemas/AgentProviderPageApiResponse' } } } }
     post:
       tags: [Agent]
       operationId: createAgentProvider
@@ -734,14 +760,14 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AgentProviderCommand' }
       responses:
-        '200': { description: Provider created, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Provider created, content: { application/json: { schema: { $ref: '#/components/schemas/AgentProviderApiResponse' } } } }
   /agent-providers/enabled:
     get:
       tags: [Agent]
       operationId: listEnabledAgentProviders
       summary: List enabled Agent Providers
       responses:
-        '200': { description: Enabled providers, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Enabled providers, content: { application/json: { schema: { $ref: '#/components/schemas/AgentProviderListApiResponse' } } } }
   /agent-providers/{id}:
     post:
       tags: [Agent]
@@ -754,7 +780,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AgentProviderCommand' }
       responses:
-        '200': { description: Provider updated, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Provider updated, content: { application/json: { schema: { $ref: '#/components/schemas/AgentProviderApiResponse' } } } }
   /agent-runs:
     get:
       tags: [Agent]
@@ -766,7 +792,7 @@ paths:
         - { $ref: '#/components/parameters/Keyword' }
         - { name: status, in: query, schema: { type: string } }
       responses:
-        '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunPageApiResponse' } } } }
   /agent-runs/{runId}:
     get:
       tags: [Agent]
@@ -774,7 +800,7 @@ paths:
       summary: Read an Agent run detail
       parameters: [{ $ref: '#/components/parameters/RunId' }]
       responses:
-        '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunDetailApiResponse' } } } }
   /operations/agent-completion-events/dead-letters:
     get:
       tags: [Operations]
@@ -783,7 +809,7 @@ paths:
       parameters:
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
       responses:
-        '200': { description: Dead-letter events, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Dead-letter events, content: { application/json: { schema: { $ref: '#/components/schemas/DeadLetterListApiResponse' } } } }
   /operations/agent-completion-events/{eventId}/replay:
     post:
       tags: [Operations]
@@ -792,7 +818,7 @@ paths:
       parameters:
         - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        '200': { description: Event scheduled for replay, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Event scheduled for replay, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /operations/agent-completion-events/{eventId}/ignore:
     post:
       tags: [Operations]
@@ -806,7 +832,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/IgnoreAgentCompletionEventCommand' }
       responses:
-        '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+        '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
 components:
   parameters:
     PageNum:
@@ -874,12 +900,680 @@ components:
         reason: { type: string, minLength: 1, maxLength: 1000 }
     ApiResponse:
       type: object
-      required: [code, message]
+      required: [code, message, traceId]
       properties:
         code: { type: string }
         message: { type: string }
         data: {}
         traceId: { type: string }
+    VoidApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: object, nullable: true } }
+    StringApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: string } }
+    BooleanApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: boolean } }
+    BrowserAuthApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/BrowserAuthResponse' } }
+    CurrentUserApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/CurrentUserResponse' } }
+    TenantOptionListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/TenantOption' } } }
+    DirectoryUserPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/DirectoryUserPage' } }
+    TenantMemberApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/TenantMember' } }
+    TenantMemberListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/TenantMember' } } }
+    TenantRoleApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/TenantRole' } }
+    TenantRoleListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/TenantRole' } } }
+    PermissionListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Permission' } } }
+    TenantApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/Tenant' } }
+    TenantListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Tenant' } } }
+    TenantPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/TenantPage' } }
+    StartProcessApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/StartProcessResult' } }
+    TaskActionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/TaskActionResult' } }
+    TaskApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/TaskView' } }
+    ParticipantRequirementListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/ParticipantRequirement' } } }
+    ProcessInteractionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessInteraction' } }
+    ProcessStatusApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessStatus' } }
+    DeployProcessApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/DeployProcessResult' } }
+    ActiveProcessVersionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ActiveProcessVersion' } }
+    ProcessDefinitionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessDefinition' } }
+    ProcessDefinitionListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/ProcessDefinition' } } }
+    ProcessDefinitionPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessDefinitionPage' } }
+    ProcessInstancePageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessInstancePage' } }
+    ProcessInstanceDetailApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessInstanceDetail' } }
+    ProcessDiagramApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessDiagram' } }
+    ProcessDefinitionDiagramApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ProcessDefinitionDiagram' } }
+    AssignmentRuleApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AssignmentRule' } }
+    AssignmentRulePageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AssignmentRulePage' } }
+    AssignmentRuleInheritApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AssignmentRuleInheritResult' } }
+    AgentDefinitionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentDefinition' } }
+    AgentDefinitionPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentDefinitionPage' } }
+    AgentVersionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentVersion' } }
+    AgentVersionListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/AgentVersion' } } }
+    PublishedAgentVersionPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PublishedAgentVersionPage' } }
+    AgentProviderApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentProvider' } }
+    AgentProviderListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/AgentProvider' } } }
+    AgentProviderPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentProviderPage' } }
+    AgentRunSubmissionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentRunSubmission' } }
+    AgentRunPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentRunPage' } }
+    AgentRunDetailApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentRunDetail' } }
+    DeadLetterListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/DeadLetterEvent' } } }
+
+    BrowserAuthResponse:
+      type: object
+      required: [tokenType, expiresIn, expiresAt, userId, username, tenantCode, roles, permissions]
+      properties:
+        tokenType: { type: string }
+        expiresIn: { type: integer, format: int64 }
+        expiresAt: { type: string, format: date-time }
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string, nullable: true }
+        tenantCode: { type: string }
+        roles: { type: array, uniqueItems: true, items: { type: string } }
+        permissions: { type: array, uniqueItems: true, items: { type: string } }
+    CurrentUserResponse:
+      type: object
+      required: [userId, username, tenantCode, roles, permissions]
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string, nullable: true }
+        tenantCode: { type: string }
+        roles: { type: array, uniqueItems: true, items: { type: string } }
+        permissions: { type: array, uniqueItems: true, items: { type: string } }
+    TenantOption:
+      type: object
+      required: [tenantId, tenantCode, tenantName, enabled, current, roles]
+      properties:
+        tenantId: { type: string }
+        tenantCode: { type: string }
+        tenantName: { type: string }
+        enabled: { type: boolean }
+        current: { type: boolean }
+        roles: { type: array, uniqueItems: true, items: { type: string } }
+    DirectoryUser:
+      type: object
+      required: [userId, username]
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string, nullable: true }
+    DirectoryUserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/DirectoryUser' } } }
+    TenantMember:
+      type: object
+      required: [userId, username, enabled, roles, globalRoles]
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        displayName: { type: string, nullable: true }
+        enabled: { type: boolean }
+        roles: { type: array, uniqueItems: true, items: { type: string } }
+        globalRoles: { type: array, uniqueItems: true, items: { type: string } }
+        joinedAt: { type: string, format: date-time, nullable: true }
+    TenantRole:
+      type: object
+      required: [roleCode, roleName, enabled, builtIn, permissions]
+      properties:
+        roleCode: { type: string }
+        roleName: { type: string }
+        description: { type: string, nullable: true }
+        enabled: { type: boolean }
+        builtIn: { type: boolean }
+        permissions: { type: array, uniqueItems: true, items: { type: string } }
+    Permission:
+      type: object
+      required: [permissionCode, permissionName]
+      properties:
+        permissionCode: { type: string }
+        permissionName: { type: string }
+        description: { type: string, nullable: true }
+    Tenant:
+      type: object
+      required: [id, tenantId, tenantCode, tenantName, enabled, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        tenantId: { type: string }
+        tenantCode: { type: string }
+        tenantName: { type: string }
+        description: { type: string, nullable: true }
+        enabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TenantPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/Tenant' } } }
+    PageMetadata:
+      type: object
+      required: [total, pageNum, pageSize, records]
+      properties:
+        total: { type: integer, format: int64 }
+        pageNum: { type: integer }
+        pageSize: { type: integer }
+        records: { type: array, items: {} }
+    TaskView:
+      type: object
+      required: [taskId, processInstanceId, taskDefinitionKey, status, candidateUsers, candidateGroups]
+      properties:
+        taskId: { type: string }
+        processInstanceId: { type: string }
+        processDefinitionId: { type: string }
+        taskDefinitionKey: { type: string }
+        taskName: { type: string, nullable: true }
+        assignee: { type: string, nullable: true }
+        candidateUsers: { type: array, items: { type: string } }
+        candidateGroups: { type: array, items: { type: string } }
+        status: { type: string }
+        startTime: { type: string, format: date-time, nullable: true }
+        endTime: { type: string, format: date-time, nullable: true }
+        deleteReason: { type: string, nullable: true }
+    StartProcessResult:
+      type: object
+      required: [processInstanceId, processDefinitionId, processDefinitionKey, activeTasks]
+      properties:
+        processInstanceId: { type: string }
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        businessKey: { type: string, nullable: true }
+        activeTasks: { type: array, items: { $ref: '#/components/schemas/TaskView' } }
+    TaskActionResult:
+      type: object
+      required: [completedTaskId, processInstanceId, processEnded, nextTasks]
+      properties:
+        completedTaskId: { type: string }
+        processInstanceId: { type: string }
+        processEnded: { type: boolean }
+        nextTasks: { type: array, items: { $ref: '#/components/schemas/TaskView' } }
+    ParticipantRequirement:
+      type: object
+      required: [activityId, activityName, assignmentType, multiple, required]
+      properties:
+        activityId: { type: string }
+        activityName: { type: string }
+        assignmentType: { type: string }
+        multiple: { type: boolean }
+        required: { type: boolean }
+    ProcessInteraction:
+      type: object
+      required: [fields, agentActivityIds]
+      properties:
+        fields: { type: array, items: { $ref: '#/components/schemas/InteractionDataField' } }
+        agentActivityIds: { type: array, items: { type: string } }
+    InteractionDataField:
+      type: object
+      required: [variablePath, label, dataType, required, agentActivityId, agentActivityName, agentInputPath]
+      properties:
+        variablePath: { type: string }
+        label: { type: string }
+        description: { type: string, nullable: true }
+        dataType: { type: string, enum: [string, number, integer, boolean, object, array] }
+        format: { type: string, nullable: true }
+        required: { type: boolean }
+        currentValue: {}
+        agentActivityId: { type: string }
+        agentActivityName: { type: string }
+        agentInputPath: { type: string }
+    ProcessStatus:
+      type: object
+      required: [processInstanceId, processDefinitionId, status, activeTasks]
+      properties:
+        processInstanceId: { type: string }
+        processDefinitionId: { type: string }
+        businessKey: { type: string, nullable: true }
+        status: { type: string }
+        activeTasks: { type: array, items: { $ref: '#/components/schemas/TaskView' } }
+    DeployProcessResult:
+      type: object
+      required: [deploymentId, processDefinitionId, processDefinitionKey, version]
+      properties:
+        deploymentId: { type: string }
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionName: { type: string, nullable: true }
+        version: { type: integer }
+    ActiveProcessVersion:
+      type: object
+      required: [tenantId, processDefinitionKey, processDefinitionId, version, activatedBy, activatedAt]
+      properties:
+        tenantId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionId: { type: string }
+        version: { type: integer }
+        activatedBy: { type: string }
+        activatedAt: { type: string, format: date-time }
+    ProcessDefinition:
+      type: object
+      required: [processDefinitionId, processDefinitionKey, version, deploymentId, tenantId, active]
+      properties:
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionName: { type: string, nullable: true }
+        version: { type: integer }
+        deploymentId: { type: string }
+        deployedAt: { type: string, format: date-time, nullable: true }
+        tenantId: { type: string }
+        active: { type: boolean }
+        bpmnXml: { type: string, nullable: true }
+    ProcessDefinitionSummary:
+      type: object
+      required: [processDefinitionId, processDefinitionKey, latestVersion, publishStatus, tenantId]
+      properties:
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionName: { type: string, nullable: true }
+        latestVersion: { type: integer }
+        latestDeploymentId: { type: string }
+        latestDeployTime: { type: string, format: date-time, nullable: true }
+        activeVersion: { type: integer, nullable: true }
+        activeProcessDefinitionId: { type: string, nullable: true }
+        activeDeploymentId: { type: string, nullable: true }
+        activeUpdateTime: { type: string, format: date-time, nullable: true }
+        publishStatus: { type: string }
+        tenantId: { type: string }
+    ProcessDefinitionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/ProcessDefinitionSummary' } } }
+    ProcessInstanceSummary:
+      type: object
+      required: [processInstanceId, processDefinitionId, processDefinitionKey, status, tenantId]
+      properties:
+        processInstanceId: { type: string }
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionName: { type: string, nullable: true }
+        processDefinitionVersion: { type: integer, nullable: true }
+        latestTaskId: { type: string, nullable: true }
+        businessKey: { type: string, nullable: true }
+        startUserId: { type: string, nullable: true }
+        startTime: { type: string, format: date-time, nullable: true }
+        endTime: { type: string, format: date-time, nullable: true }
+        lastUpdateTime: { type: string, format: date-time, nullable: true }
+        durationInMillis: { type: integer, format: int64, nullable: true }
+        deleteReason: { type: string, nullable: true }
+        status: { type: string }
+        tenantId: { type: string }
+    ProcessInstancePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/ProcessInstanceSummary' } } }
+    ProcessInstanceDetail:
+      type: object
+      required: [instance, tasks, variables]
+      properties:
+        instance: { $ref: '#/components/schemas/ProcessInstanceSummary' }
+        tasks: { type: array, items: { type: object } }
+        variables: { type: array, items: { type: object } }
+    ProcessDiagram:
+      type: object
+      required: [bpmnXml, completedActivityIds, activeActivityIds, highlightedFlows, activityDetails]
+      properties:
+        bpmnXml: { type: string }
+        completedActivityIds: { type: array, items: { type: string } }
+        activeActivityIds: { type: array, items: { type: string } }
+        highlightedFlows: { type: array, items: { type: string } }
+        activityDetails: { type: object, additionalProperties: { type: object } }
+    ProcessDefinitionDiagram:
+      type: object
+      required: [processDefinitionId, processDefinitionKey, version, deploymentId, active, bpmnXml, tenantId]
+      properties:
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        processDefinitionName: { type: string, nullable: true }
+        version: { type: integer }
+        deploymentId: { type: string }
+        deployTime: { type: string, format: date-time, nullable: true }
+        active: { type: boolean }
+        bpmnXml: { type: string }
+        tenantId: { type: string }
+    AssignmentRule:
+      type: object
+      required: [id, processDefinitionId, processDefinitionKey, version, taskDefinitionKey, priority, assignmentType, enabled]
+      properties:
+        id: { type: integer, format: int64 }
+        tenantId: { type: string }
+        processDefinitionId: { type: string }
+        processDefinitionKey: { type: string }
+        version: { type: integer }
+        taskDefinitionKey: { type: string }
+        priority: { type: integer }
+        assignmentType: { type: string }
+        emptyUserStrategy: { type: string }
+        enabled: { type: boolean }
+        description: { type: string, nullable: true }
+        conditions: { type: array, items: { type: object } }
+        targets: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AssignmentRulePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/AssignmentRule' } } }
+    AssignmentRuleInheritResult:
+      type: object
+      required: [targetProcessDefinitionId, targetVersion, copiedCount, skippedCount, skippedReasons]
+      properties:
+        sourceProcessDefinitionId: { type: string, nullable: true }
+        sourceVersion: { type: integer, nullable: true }
+        targetProcessDefinitionId: { type: string }
+        targetVersion: { type: integer }
+        copiedCount: { type: integer }
+        skippedCount: { type: integer }
+        skippedReasons: { type: array, items: { type: string } }
+    AgentDefinition:
+      type: object
+      required: [id, code, name, enabled, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        enabled: { type: boolean }
+        latestVersion: { type: integer, nullable: true }
+        publishedVersion: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AgentDefinitionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/AgentDefinition' } } }
+    AgentVersion:
+      type: object
+      required: [id, definitionId, version, status, executionMode, timeoutSeconds, failurePolicy]
+      properties:
+        id: { type: integer, format: int64 }
+        definitionId: { type: integer, format: int64 }
+        version: { type: integer }
+        status: { type: string }
+        executionMode: { type: string }
+        providerId: { type: integer, format: int64, nullable: true }
+        providerName: { type: string, nullable: true }
+        modelName: { type: string, nullable: true }
+        systemPrompt: { type: string, nullable: true }
+        timeoutSeconds: { type: integer }
+        failurePolicy: { type: string }
+        inputSchema: { type: string, nullable: true }
+        outputSchema: { type: string, nullable: true }
+        createdBy: { type: string, nullable: true }
+        publishedBy: { type: string, nullable: true }
+        publishedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PublishedAgentVersion:
+      type: object
+      required: [id, definitionId, agentCode, agentName, version, executionMode, timeoutSeconds, contractFingerprint]
+      properties:
+        id: { type: integer, format: int64 }
+        definitionId: { type: integer, format: int64 }
+        agentCode: { type: string }
+        agentName: { type: string }
+        version: { type: integer }
+        executionMode: { type: string }
+        timeoutSeconds: { type: integer }
+        inputSchema: { type: string, nullable: true }
+        outputSchema: { type: string, nullable: true }
+        contractFingerprint: { type: string }
+    PublishedAgentVersionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/PublishedAgentVersion' } } }
+    AgentProvider:
+      type: object
+      required: [id, code, name, type, enabled, credentialConfigured, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        type: { type: string }
+        baseUrl: { type: string, nullable: true }
+        defaultModel: { type: string, nullable: true }
+        enabled: { type: boolean }
+        credentialConfigured: { type: boolean }
+        credentialHint: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AgentProviderPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/AgentProvider' } } }
+    AgentRunSubmission:
+      type: object
+      required: [runId, status]
+      properties:
+        runId: { type: integer, format: int64 }
+        status: { type: string }
+    AgentRun:
+      type: object
+      required: [id, agentCode, agentName, agentVersion, status, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        agentCode: { type: string }
+        agentName: { type: string }
+        agentVersion: { type: integer }
+        status: { type: string }
+        resultStatus: { type: string, nullable: true }
+        processInstanceId: { type: string, nullable: true }
+        activityId: { type: string, nullable: true }
+        errorCode: { type: string, nullable: true }
+        deadlineAt: { type: string, format: date-time, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AgentRunPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/AgentRun' } } }
+    AgentRunDetail:
+      type: object
+      required: [run, payload, attempts, steps, modelInvocations, checkpoints, stateHistory]
+      properties:
+        run: { $ref: '#/components/schemas/AgentRun' }
+        payload: { type: object }
+        attempts: { type: array, items: { type: object } }
+        steps: { type: array, items: { type: object } }
+        modelInvocations: { type: array, items: { type: object } }
+        checkpoints: { type: array, items: { type: object } }
+        stateHistory: { type: array, items: { type: object } }
+    DeadLetterEvent:
+      type: object
+      required: [eventId, tenantCode, aggregateId, attemptCount, createdAt]
+      properties:
+        eventId: { type: string, format: uuid }
+        tenantCode: { type: string }
+        aggregateId: { type: string }
+        attemptCount: { type: integer }
+        lastError: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        deadLetteredAt: { type: string, format: date-time, nullable: true }
+        processInstanceId: { type: string, nullable: true }
+        executionId: { type: string, nullable: true }
     LoginRequest:
       type: object
       required: [username, password]
@@ -963,6 +1657,19 @@ components:
       properties:
         processDefinitionKey: { type: string }
         processDefinitionId: { type: string }
+        variables: { type: object, additionalProperties: true }
+    ProcessInteractionRequest:
+      type: object
+      required: [processDefinitionKey]
+      properties:
+        processDefinitionKey: { type: string }
+        processDefinitionId: { type: string }
+        variables: { type: object, additionalProperties: true }
+    TaskInteractionRequest:
+      type: object
+      required: [taskId]
+      properties:
+        taskId: { type: string }
         variables: { type: object, additionalProperties: true }
     TaskParticipantRequirementsRequest:
       type: object

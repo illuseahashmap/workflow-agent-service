@@ -67,7 +67,8 @@ class AuthenticationHttpIntegrationTest {
 
     @Test
     void registrationLoginAndProtectedEndpointUseRealSecurityChain() throws Exception {
-        MvcResult csrf = mockMvc.perform(get("/auth/csrf"))
+        Cookie staleAuthCookie = new Cookie("workflow-agent.access-token", "signed-with-an-obsolete-secret");
+        MvcResult csrf = mockMvc.perform(get("/auth/csrf").cookie(staleAuthCookie))
                 .andExpect(status().isOk())
                 .andReturn();
         Cookie csrfCookie = csrf.getResponse().getCookie("XSRF-TOKEN");
@@ -86,7 +87,7 @@ class AuthenticationHttpIntegrationTest {
                 .andExpect(jsonPath("$.data.roles[0]").value("USER"));
 
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
-                        .cookie(csrfCookie)
+                        .cookie(csrfCookie, staleAuthCookie)
                         .header("X-XSRF-TOKEN", csrfToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

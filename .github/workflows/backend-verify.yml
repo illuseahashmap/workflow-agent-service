@@ -34,6 +34,7 @@ jobs:
           npx --yes @redocly/cli@latest bundle docs/api/openapi.yaml \
             --output "$RUNNER_TEMP/openapi-current.json" --ext json
           node scripts/check-openapi-coverage.mjs "$RUNNER_TEMP/openapi-current.json" .
+          node scripts/check-openapi-response-models.mjs "$RUNNER_TEMP/openapi-current.json"
 
       - name: Check OpenAPI compatibility
         if: github.event_name == 'pull_request'
@@ -68,8 +69,19 @@ jobs:
           java-version: "25"
           cache: maven
 
+      - name: Set up Node.js for quality checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify Docker infrastructure
+        run: docker info
+
       - name: Verify all modules
         run: mvn --batch-mode --no-transfer-progress verify
+
+      - name: Verify required integration tests executed
+        run: node scripts/check-integration-test-results.mjs
 
       - name: Upload test reports
         if: always()

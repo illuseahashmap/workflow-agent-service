@@ -12,6 +12,10 @@
     </parent>
 
     <artifactId>auth-engine</artifactId>
+    <properties>
+        <jacoco.minimum.line>0.27</jacoco.minimum.line>
+        <jacoco.minimum.branch>0.25</jacoco.minimum.branch>
+    </properties>
     <name>auth-engine</name>
     <description>User authentication, authorization, roles, menus, and permissions.</description>
 
@@ -48,7 +52,4 @@
         </dependency>
     </dependencies>
 
-    <properties>
-        <jacoco.minimum.branch>0.20</jacoco.minimum.branch>
-    </properties>
 </project>

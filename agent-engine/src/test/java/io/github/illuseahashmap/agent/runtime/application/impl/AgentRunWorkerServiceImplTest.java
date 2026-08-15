@@ -16,6 +16,7 @@ import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialR
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderPort;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
@@ -24,6 +25,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecution
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -100,10 +102,38 @@ class AgentRunWorkerServiceImplTest {
                 org.mockito.ArgumentMatchers.eq(30L),
                 org.mockito.ArgumentMatchers.eq("mock-model"),
                 org.mockito.ArgumentMatchers.eq("PROVIDER_UNAVAILABLE"),
+                org.mockito.ArgumentMatchers.eq(
+                        io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED),
                 any(),
                 any());
         assertThat(runCaptor.getValue().status()).isEqualTo(AgentRunStatus.QUEUED);
         assertThat(runCaptor.getValue().currentAttemptId()).isNull();
+    }
+
+    @Test
+    void rejectsStructurallyValidButEmptyBusinessResult() {
+        AgentRun run = queuedRun();
+        configureClaim(run);
+        when(versionRepository.findByVersionId("tenant-a", 20L)).thenReturn(Optional.of(version(30L)));
+        when(providerRepository.findById("tenant-a", 30L)).thenReturn(Optional.of(provider(AgentProviderType.MOCK)));
+        ModelProviderPort providerPort = mock(ModelProviderPort.class);
+        when(providerPort.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(providerPort.invoke(any())).thenReturn(new ModelProviderResponse(
+                " ", "mock-model", "request-1", "stop", 1, 0, 0, 5));
+
+        service(providerPort).executeNext();
+
+        verify(executionRepository).saveFailed(
+                any(),
+                org.mockito.ArgumentMatchers.eq(101L),
+                org.mockito.ArgumentMatchers.eq(201L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.eq("mock-model"),
+                org.mockito.ArgumentMatchers.eq("AGENT_RESULT_EMPTY"),
+                org.mockito.ArgumentMatchers.eq(ResultStatus.EMPTY),
+                any(),
+                any());
+        assertThat(run.status()).isEqualTo(AgentRunStatus.FAILED);
     }
 
     private AgentRunWorkerServiceImpl service(ModelProviderPort providerPort) {

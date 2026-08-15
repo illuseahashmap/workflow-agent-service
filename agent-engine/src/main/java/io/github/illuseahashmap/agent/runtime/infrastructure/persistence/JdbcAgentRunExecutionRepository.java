@@ -6,6 +6,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecution
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStateTransition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -166,6 +167,33 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public boolean renewLease(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            Instant renewedAt,
+            Instant leaseExpiresAt
+    ) {
+        int updated = jdbcTemplate.update("""
+                        UPDATE agent_run
+                        SET lease_expires_at = :leaseExpiresAt, updated_at = :renewedAt
+                        WHERE tenant_code = :tenantCode AND id = :runId
+                          AND status = 'RUNNING' AND current_attempt_id = :attemptId
+                          AND lease_owner = :leaseOwner AND lease_expires_at > :renewedAt
+                          AND deadline_at >= :leaseExpiresAt
+                        """,
+                Map.of(
+                        "tenantCode", tenantCode,
+                        "runId", runId,
+                        "attemptId", attemptId,
+                        "leaseOwner", leaseOwner,
+                        "renewedAt", timestamp(renewedAt),
+                        "leaseExpiresAt", timestamp(leaseExpiresAt)));
+        return updated == 1;
+    }
+
+    @Override
     public int nextAttemptNumber(String tenantCode, long runId) {
         return jdbcTemplate.queryForObject("""
                         SELECT COALESCE(MAX(attempt_no), 0) + 1
@@ -287,6 +315,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
             long providerId,
             String requestedModel,
             String errorCode,
+            ResultStatus resultStatus,
             Instant availableAt,
             AgentRunStateTransition transition
     ) {
@@ -319,7 +348,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 "errorCode", errorCode,
                 "availableAt", timestamp(availableAt),
                 "completedAt", run.completedAt() == null ? null : timestamp(run.completedAt()),
-                "resultStatus", terminal ? "FAILED" : null,
+                "resultStatus", terminal ? resultStatus.name() : null,
                 "updatedAt", timestamp(run.updatedAt()));
         int updated = jdbcTemplate.update("""
                         UPDATE agent_run

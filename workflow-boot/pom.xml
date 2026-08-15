@@ -12,6 +12,10 @@
     </parent>
 
     <artifactId>workflow-boot</artifactId>
+    <properties>
+        <jacoco.minimum.line>0.22</jacoco.minimum.line>
+        <jacoco.minimum.branch>0.18</jacoco.minimum.branch>
+    </properties>
     <name>workflow-boot</name>
     <description>Application composition root for workflow platform modules.</description>
 
@@ -39,6 +43,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -18,6 +18,9 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentResultPolicy;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunLeaseHeartbeat;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRuntimeMetrics;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureDisposition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunLease;
@@ -26,6 +29,7 @@ import io.github.illuseahashmap.agent.runtime.domain.AgentRunStateMachine;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStateTransition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunTransitionContext;
 import io.github.illuseahashmap.agent.runtime.domain.AgentTimeoutType;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
@@ -54,6 +58,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final Duration leaseDuration;
     private final int maxAttempts;
     private final AgentRunEventPublisher eventPublisher;
+    private final AgentRunLeaseHeartbeat leaseHeartbeat;
+    private final AgentResultPolicy resultPolicy;
+    private final AgentRuntimeMetrics metrics;
 
     @Autowired
     public AgentRunWorkerServiceImpl(
@@ -66,7 +73,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             @Value("${workflow.agent.worker.id:local-worker}") String workerId,
             @Value("${workflow.agent.worker.lease-seconds:60}") long leaseSeconds,
             @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts,
-            AgentRunEventPublisher eventPublisher
+            AgentRunEventPublisher eventPublisher,
+            AgentRunLeaseHeartbeat leaseHeartbeat,
+            AgentResultPolicy resultPolicy,
+            AgentRuntimeMetrics metrics
     ) {
         this.executionRepository = executionRepository;
         this.versionRepository = versionRepository;
@@ -75,9 +85,12 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
         this.workerId = workerId + ":" + UUID.randomUUID();
-        this.leaseDuration = Duration.ofSeconds(leaseSeconds);
+        this.leaseDuration = Duration.ofSeconds(Math.max(5L, Math.min(leaseSeconds, 3_600L)));
         this.maxAttempts = maxAttempts;
         this.eventPublisher = eventPublisher;
+        this.leaseHeartbeat = leaseHeartbeat;
+        this.resultPolicy = resultPolicy;
+        this.metrics = metrics;
     }
 
     public AgentRunWorkerServiceImpl(
@@ -96,7 +109,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 new AgentExecutorRegistry(List.of(new ModelOnlyAgentExecutor(
                         credentialResolver, providerRegistry, new AgentOutputSchemaValidator(objectMapper)))),
                 objectMapper, transactionTemplate, workerId, leaseSeconds, maxAttempts,
-                AgentRunEventPublisher.NOOP);
+                AgentRunEventPublisher.NOOP,
+                AgentRunLeaseHeartbeat.NOOP,
+                new DefaultAgentResultPolicy(),
+                AgentRuntimeMetrics.NOOP);
     }
 
     @Override
@@ -113,8 +129,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
 
     @Override
     public int recoverExpiredRuns() {
-        return TrustedDataAccessContext.runAsSystemWorker(() ->
+        int recovered = TrustedDataAccessContext.runAsSystemWorker(() ->
                 transactionTemplate.execute(status -> executionRepository.recoverExpired(Instant.now())));
+        metrics.recovered(recovered);
+        return recovered;
     }
 
     private ClaimedRun claim() {
@@ -138,39 +156,65 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 new AgentRunLease(attemptId, workerId, leaseExpiresAt),
                 transition(attemptId, "WORKER_CLAIMED", traceId, now));
         executionRepository.saveClaimed(run, lastTransition(run));
+        metrics.claimed();
         return new ClaimedRun(
                 run, attemptId, attemptNumber, stepId, traceId, snapshot.inputSnapshotJson());
     }
 
     private void execute(ClaimedRun claimed) {
         AgentRun run = claimed.run();
-        AgentExecutor.Result executionResult;
-        try {
-            AgentDefinitionVersion version = versionRepository.findByVersionId(run.tenantCode(), run.agentVersionId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent version does not exist"));
-            AgentProvider provider = providerRepository.findById(run.tenantCode(), version.providerId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent Provider does not exist"));
-            String userInput = extractInput(claimed.inputSnapshotJson());
-            executionResult = executorRegistry.require(version.executionMode()).execute(
-                    new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
-                            remainingTimeout(run, version.timeoutSeconds()), claimed.traceId()));
-        } catch (ModelProviderException exception) {
-            completeFailed(
-                    claimed,
-                    providerId(run),
-                    requestedModel(run),
-                    exception.errorCode(),
-                    exception.failureKind() != ModelProviderFailureKind.PERMANENT);
-            return;
-        } catch (BusinessException exception) {
-            completeFailed(claimed, providerId(run), requestedModel(run), "AGENT_CONFIGURATION_ERROR", false);
-            return;
-        } catch (RuntimeException exception) {
-            completeFailed(claimed, providerId(run), requestedModel(run), "AGENT_EXECUTION_ERROR", false);
-            return;
+        AgentRunLeaseHeartbeat.LeaseCommand leaseCommand = new AgentRunLeaseHeartbeat.LeaseCommand(
+                run.tenantCode(), run.id(), claimed.attemptId(), workerId, leaseDuration, run.deadlineAt());
+        try (AgentRunLeaseHeartbeat.LeaseHandle lease = leaseHeartbeat.start(leaseCommand)) {
+            AgentExecutor.Result executionResult;
+            AgentDefinitionVersion version;
+            try {
+                version = versionRepository.findByVersionId(run.tenantCode(), run.agentVersionId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent version does not exist"));
+                AgentProvider provider = providerRepository.findById(run.tenantCode(), version.providerId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent Provider does not exist"));
+                String userInput = extractInput(claimed.inputSnapshotJson());
+                executionResult = executorRegistry.require(version.executionMode()).execute(
+                        new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
+                                remainingTimeout(run, version.timeoutSeconds()), claimed.traceId()));
+            } catch (ModelProviderException exception) {
+                completeIfLeaseValid(lease, () -> completeFailed(
+                        claimed,
+                        providerId(run),
+                        requestedModel(run),
+                        exception.errorCode(),
+                        ResultStatus.FAILED,
+                        exception.failureKind() != ModelProviderFailureKind.PERMANENT));
+                return;
+            } catch (BusinessException exception) {
+                completeIfLeaseValid(lease, () -> completeFailed(
+                        claimed, providerId(run), requestedModel(run),
+                        "AGENT_CONFIGURATION_ERROR", ResultStatus.FAILED, false));
+                return;
+            } catch (RuntimeException exception) {
+                completeIfLeaseValid(lease, () -> completeFailed(
+                        claimed, providerId(run), requestedModel(run),
+                        "AGENT_EXECUTION_ERROR", ResultStatus.FAILED, false));
+                return;
+            }
+            if (!lease.isValid()) {
+                return;
+            }
+            AgentResultPolicy.Decision decision = resultPolicy.evaluate(version, executionResult.modelResponse());
+            if (decision.accepted()) {
+                completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
+                        executionResult.modelResponse());
+            } else {
+                completeFailed(claimed, executionResult.providerId(), executionResult.requestedModel(),
+                        decision.reasonCode(), decision.status(), false);
+            }
         }
-        completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
-                executionResult.modelResponse());
+    }
+
+    private void completeIfLeaseValid(AgentRunLeaseHeartbeat.LeaseHandle lease, Runnable completion) {
+        if (lease.isValid()) {
+            completion.run();
+        }
     }
 
     private void completeSucceeded(
@@ -194,6 +238,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     outputSnapshot(response),
                     lastTransition(claimed.run()));
             eventPublisher.completed(claimed.run(), outputSnapshot(response));
+            metrics.completed(ResultStatus.SUCCESS);
         });
     }
 
@@ -202,6 +247,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             long providerId,
             String requestedModel,
             String errorCode,
+            ResultStatus resultStatus,
             boolean retryable
     ) {
         transactionTemplate.executeWithoutResult(status -> {
@@ -242,10 +288,14 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     providerId,
                     requestedModel,
                     errorCode,
+                    resultStatus,
                     availableAt,
                     lastTransition(claimed.run()));
             if (!retriesRemaining || !now.isBefore(claimed.run().deadlineAt())) {
                 eventPublisher.completed(claimed.run(), null);
+                metrics.completed(resultStatus);
+            } else {
+                metrics.retryScheduled(errorCode);
             }
         });
     }

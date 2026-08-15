@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -33,6 +34,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implements AuthSecurityFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final Set<String> PUBLIC_AUTH_ENDPOINTS = Set.of(
+            "/auth/csrf",
+            "/auth/register",
+            "/auth/login",
+            "/auth/logout"
+    );
 
     private final AuthTokenService tokenService;
     private final ObjectMapper objectMapper;
@@ -60,8 +67,10 @@ public class AuthTokenAuthenticationFilter extends OncePerRequestFilter implemen
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || (request.getHeader(HttpHeaders.AUTHORIZATION) == null && readCookieToken(request) == null);
+                || (authorization == null && PUBLIC_AUTH_ENDPOINTS.contains(request.getRequestURI()))
+                || (authorization == null && readCookieToken(request) == null);
     }
 
     @Override

@@ -12,6 +12,10 @@
     </parent>
 
     <artifactId>workflow-engine</artifactId>
+    <properties>
+        <jacoco.minimum.line>0.32</jacoco.minimum.line>
+        <jacoco.minimum.branch>0.27</jacoco.minimum.branch>
+    </properties>
     <name>workflow-engine</name>
     <description>Open workflow platform service based on Flowable.</description>
 

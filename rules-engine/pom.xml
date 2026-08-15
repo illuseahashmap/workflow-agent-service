@@ -12,6 +12,10 @@
     </parent>
 
     <artifactId>rules-engine</artifactId>
+    <properties>
+        <jacoco.minimum.line>0.85</jacoco.minimum.line>
+        <jacoco.minimum.branch>0.45</jacoco.minimum.branch>
+    </properties>
     <name>rules-engine</name>
     <description>Reusable rule engine for workflow and agent capabilities.</description>
 

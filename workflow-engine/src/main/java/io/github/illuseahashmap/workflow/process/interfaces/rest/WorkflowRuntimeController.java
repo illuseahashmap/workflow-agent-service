@@ -13,7 +13,11 @@ import io.github.illuseahashmap.workflow.process.application.dto.TaskView;
 import io.github.illuseahashmap.workflow.process.application.dto.TaskParticipantRequirementsRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.TransferTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowInteractionService;
 import io.github.illuseahashmap.workflow.process.application.WorkflowAdministrationService;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessInteractionRequest;
+import io.github.illuseahashmap.workflow.process.application.dto.ProcessInteractionView;
+import io.github.illuseahashmap.workflow.process.application.dto.TaskInteractionRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionDiagramView;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -30,12 +34,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkflowRuntimeController {
 
     private final WorkflowRuntimeService workflowRuntimeService;
+    private final WorkflowInteractionService interactionService;
     private final WorkflowAdministrationService administrationService;
 
     public WorkflowRuntimeController(WorkflowRuntimeService workflowRuntimeService,
+                                     WorkflowInteractionService interactionService,
                                      WorkflowAdministrationService administrationService) {
         this.workflowRuntimeService = workflowRuntimeService;
+        this.interactionService = interactionService;
         this.administrationService = administrationService;
+    }
+
+    @PostMapping("/process/interaction")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
+    public ApiResponse<ProcessInteractionView> startInteraction(
+            @Valid @RequestBody ProcessInteractionRequest request) {
+        return ApiResponse.ok(interactionService.startInteraction(request));
     }
 
     @PostMapping("/process/start")
@@ -61,6 +75,13 @@ public class WorkflowRuntimeController {
     @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:read')")
     public ApiResponse<TaskView> taskStatus(@RequestParam String taskId) {
         return ApiResponse.ok(workflowRuntimeService.getTaskStatus(taskId));
+    }
+
+    @PostMapping("/task/interaction")
+    @PreAuthorize("hasRole('SERVICE') or hasAuthority('workflow:instance:operate')")
+    public ApiResponse<ProcessInteractionView> taskInteraction(
+            @Valid @RequestBody TaskInteractionRequest request) {
+        return ApiResponse.ok(interactionService.taskInteraction(request));
     }
 
     @PostMapping("/task/participant-requirements")

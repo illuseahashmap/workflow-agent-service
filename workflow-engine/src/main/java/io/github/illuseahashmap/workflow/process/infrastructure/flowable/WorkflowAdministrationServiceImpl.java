@@ -2,6 +2,7 @@ package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.assignment.application.AssignmentRuleService;
 import io.github.illuseahashmap.workflow.process.application.WorkflowAdministrationService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowOperationAuditService;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionDiagramView;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionSummaryView;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDiagramDataView;
@@ -35,6 +36,7 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
     private final WorkflowInstanceReadService instanceReadService;
     private final TenantProvider tenantProvider;
     private final AssignmentRuleService assignmentRuleService;
+    private final WorkflowOperationAuditService auditService;
 
     public WorkflowAdministrationServiceImpl(RepositoryService repositoryService,
                                              RuntimeService runtimeService,
@@ -44,7 +46,8 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
                                              WorkflowDefinitionReadService definitionReadService,
                                              WorkflowInstanceReadService instanceReadService,
                                              TenantProvider tenantProvider,
-                                             AssignmentRuleService assignmentRuleService) {
+                                             AssignmentRuleService assignmentRuleService,
+                                             WorkflowOperationAuditService auditService) {
         this.repositoryService = repositoryService;
         this.runtimeService = runtimeService;
         this.historyService = historyService;
@@ -54,6 +57,7 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
         this.instanceReadService = instanceReadService;
         this.tenantProvider = tenantProvider;
         this.assignmentRuleService = assignmentRuleService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -104,6 +108,9 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
                 throw new BusinessException(ErrorCode.NOT_FOUND, "Process instance does not exist");
             }
             runtimeService.deleteProcessInstance(processInstanceId, request.reason().trim());
+            auditService.record(
+                    "PROCESS_TERMINATED", processInstanceId, instance.getProcessDefinitionKey(),
+                    null, instance.getBusinessKey(), "RUNNING", "TERMINATED", request.reason());
             return null;
         });
     }
@@ -131,6 +138,9 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
         jdbcTemplate.update("""
                 DELETE FROM workflow_active_version WHERE tenant_id = ? AND process_definition_key = ?
                 """, tenantId, processDefinitionKey);
+        auditService.record(
+                "PROCESS_DEFINITIONS_DELETED", null, processDefinitionKey,
+                null, processDefinitionKey, "DEPLOYED", "DELETED", null);
     }
 
     @Override
@@ -154,5 +164,8 @@ public class WorkflowAdministrationServiceImpl implements WorkflowAdministration
                 DELETE FROM workflow_active_version
                 WHERE tenant_id = ? AND process_definition_key = ? AND process_definition_id = ?
                 """, tenantId, processDefinitionKey, definition.getId());
+        auditService.record(
+                "PROCESS_DEFINITION_VERSION_DELETED", null, processDefinitionKey,
+                null, "version=" + version, "DEPLOYED", "DELETED", null);
     }
 }

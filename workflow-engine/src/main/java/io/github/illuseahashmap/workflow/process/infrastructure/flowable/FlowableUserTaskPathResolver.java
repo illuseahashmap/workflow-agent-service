@@ -57,12 +57,22 @@ public final class FlowableUserTaskPathResolver {
 
     public List<UserTask> firstUserTasks(String processDefinitionId, Map<String, Object> variables) {
         BpmnModel model = requireModel(processDefinitionId);
-        List<FlowNode> startEvents = model.getMainProcess().getFlowElements().stream()
-                .filter(StartEvent.class::isInstance)
-                .map(StartEvent.class::cast)
-                .map(FlowNode.class::cast)
-                .toList();
+        List<FlowNode> startEvents = startEvents(model);
         return nextUserTasks(processDefinitionId, startEvents, safeVariables(variables));
+    }
+
+    public List<FlowElement> firstAgentTasks(String processDefinitionId, Map<String, Object> variables) {
+        BpmnModel model = requireModel(processDefinitionId);
+        return nextAgentTasks(processDefinitionId, startEvents(model), safeVariables(variables));
+    }
+
+    public List<FlowElement> nextAgentTasks(Task task, Map<String, Object> variables) {
+        BpmnModel model = requireModel(task.getProcessDefinitionId());
+        FlowElement current = model.getMainProcess().getFlowElement(task.getTaskDefinitionKey(), true);
+        if (!(current instanceof FlowNode flowNode)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Current workflow activity does not exist");
+        }
+        return nextAgentTasks(task.getProcessDefinitionId(), List.of(flowNode), safeVariables(variables));
     }
 
     public List<UserTask> targetTasks(
@@ -134,6 +144,42 @@ public final class FlowableUserTaskPathResolver {
             }
         }
         return List.copyOf(results.values());
+    }
+
+    private List<FlowElement> nextAgentTasks(
+            String processDefinitionId, Collection<FlowNode> sources, Map<String, Object> variables) {
+        Set<String> agentWaitStateIds = agentWaitStateIds(processDefinitionId);
+        Queue<FlowElement> queue = new ArrayDeque<>();
+        for (FlowNode source : sources) {
+            enqueueTargets(queue, selectedOutgoingFlows(source, variables));
+        }
+        Set<String> visited = new HashSet<>();
+        Map<String, FlowElement> results = new LinkedHashMap<>();
+        while (!queue.isEmpty()) {
+            FlowElement element = queue.remove();
+            if (!visited.add(element.getId())) {
+                continue;
+            }
+            if (element instanceof UserTask) {
+                continue;
+            }
+            if (agentWaitStateIds.contains(element.getId()) || isAgentWaitState(element)) {
+                results.putIfAbsent(element.getId(), element);
+                continue;
+            }
+            if (element instanceof FlowNode flowNode) {
+                enqueueTargets(queue, selectedOutgoingFlows(flowNode, variables));
+            }
+        }
+        return List.copyOf(results.values());
+    }
+
+    private List<FlowNode> startEvents(BpmnModel model) {
+        return model.getMainProcess().getFlowElements().stream()
+                .filter(StartEvent.class::isInstance)
+                .map(StartEvent.class::cast)
+                .map(FlowNode.class::cast)
+                .toList();
     }
 
     private List<SequenceFlow> selectedOutgoingFlows(FlowNode node, Map<String, Object> variables) {

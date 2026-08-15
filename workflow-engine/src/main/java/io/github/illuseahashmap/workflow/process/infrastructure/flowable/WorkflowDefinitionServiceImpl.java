@@ -8,6 +8,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessRe
 import io.github.illuseahashmap.workflow.process.application.dto.DeployProcessResult;
 import io.github.illuseahashmap.workflow.process.application.dto.ProcessDefinitionView;
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowOperationAuditService;
 import io.github.illuseahashmap.workflow.process.application.AgentBindingDeploymentValidator;
 import io.github.illuseahashmap.workflow.process.application.port.AgentTaskBindingParser;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
@@ -39,19 +40,22 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     private final CurrentPrincipalProvider principalProvider;
     private final AgentTaskBindingParser agentTaskBindingParser;
     private final AgentBindingDeploymentValidator agentBindingDeploymentValidator;
+    private final WorkflowOperationAuditService auditService;
 
     public WorkflowDefinitionServiceImpl(RepositoryService repositoryService,
                                          JdbcTemplate jdbcTemplate,
                                          TenantProvider tenantProvider,
                                          CurrentPrincipalProvider principalProvider,
                                          AgentTaskBindingParser agentTaskBindingParser,
-                                         AgentBindingDeploymentValidator agentBindingDeploymentValidator) {
+                                         AgentBindingDeploymentValidator agentBindingDeploymentValidator,
+                                         WorkflowOperationAuditService auditService) {
         this.repositoryService = repositoryService;
         this.jdbcTemplate = jdbcTemplate;
         this.tenantProvider = tenantProvider;
         this.principalProvider = principalProvider;
         this.agentTaskBindingParser = agentTaskBindingParser;
         this.agentBindingDeploymentValidator = agentBindingDeploymentValidator;
+        this.auditService = auditService;
     }
 
     @Override
@@ -77,6 +81,9 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
         if (!request.processDefinitionKey().equals(definition.getKey())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "BPMN process id must equal processDefinitionKey");
         }
+        auditService.record(
+                "PROCESS_DEFINITION_DEPLOYED", null, definition.getKey(), null,
+                "version=" + definition.getVersion(), null, "DEPLOYED", null);
         return new DeployProcessResult(
                 deployment.getId(),
                 definition.getId(),
@@ -113,6 +120,9 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
                     activated_by = EXCLUDED.activated_by,
                     activated_at = CURRENT_TIMESTAMP
                 """, tenant.tenantId(), definition.getKey(), definition.getId(), definition.getVersion(), activatedBy);
+        auditService.record(
+                "PROCESS_DEFINITION_ACTIVATED", null, definition.getKey(), null,
+                "version=" + definition.getVersion(), "DEPLOYED", "ACTIVE", null);
         return getActiveVersion(request.processDefinitionKey());
     }
 

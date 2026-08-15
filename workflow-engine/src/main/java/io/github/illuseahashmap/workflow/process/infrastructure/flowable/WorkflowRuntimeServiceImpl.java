@@ -2,6 +2,8 @@ package io.github.illuseahashmap.workflow.process.infrastructure.flowable;
 
 import io.github.illuseahashmap.workflow.process.application.WorkflowDefinitionService;
 import io.github.illuseahashmap.workflow.process.application.WorkflowRuntimeService;
+import io.github.illuseahashmap.workflow.process.application.WorkflowInteractionGuard;
+import io.github.illuseahashmap.workflow.process.application.WorkflowOperationAuditService;
 import io.github.illuseahashmap.workflow.process.application.ProcessVariablePolicy;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskRequest;
 import io.github.illuseahashmap.workflow.process.application.dto.ApproveTaskResult;
@@ -54,6 +56,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
     private final CurrentPrincipalProvider principalProvider;
     private final TenantProvider tenantProvider;
     private final WorkflowTaskOperationSupport taskSupport;
+    private final WorkflowOperationAuditService auditService;
+    private final WorkflowInteractionGuard interactionGuard;
 
     public WorkflowRuntimeServiceImpl(RuntimeService runtimeService,
                                       TaskService taskService,
@@ -66,7 +70,9 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                                       ProcessInstanceTransactionExecutor transactionExecutor,
                                       CurrentPrincipalProvider principalProvider,
                                       TenantProvider tenantProvider,
-                                      ParticipantDirectory participantDirectory) {
+                                      ParticipantDirectory participantDirectory,
+                                      WorkflowOperationAuditService auditService,
+                                      WorkflowInteractionGuard interactionGuard) {
         this.runtimeService = runtimeService;
         this.taskService = taskService;
         this.historyService = historyService;
@@ -76,6 +82,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         this.transactionExecutor = transactionExecutor;
         this.principalProvider = principalProvider;
         this.tenantProvider = tenantProvider;
+        this.auditService = auditService;
+        this.interactionGuard = interactionGuard;
         this.taskSupport = new WorkflowTaskOperationSupport(
                 runtimeService, taskService, repositoryService, definitionService,
                 taskViewAssembler, participantDirectory, tenantProvider);
@@ -88,6 +96,8 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         String processDefinitionId = resolveProcessDefinitionId(
                 request.processDefinitionKey(), request.processDefinitionId(), tenant.tenantId());
         Map<String, Object> variables = ProcessVariablePolicy.clientVariables(request.variables());
+        interactionGuard.validateStart(
+                request.processDefinitionKey(), processDefinitionId, variables);
         variables.putAll(participantCoordinator.prepareForStart(
                 tenant.tenantId(), processDefinitionId, variables, request.participantAssignments()));
         CurrentPrincipal actor = principalProvider.current();
@@ -101,6 +111,9 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         } finally {
             identityService.setAuthenticatedUserId(null);
         }
+        auditService.record(
+                "PROCESS_STARTED", instance.getProcessInstanceId(), instance.getProcessDefinitionKey(),
+                null, instance.getBusinessKey(), null, "RUNNING", null);
         return new StartProcessResult(
                 instance.getProcessInstanceId(),
                 instance.getProcessDefinitionId(),
@@ -184,12 +197,22 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
         return transactionExecutor.execute(processInstanceId, () -> {
             CurrentPrincipal actor = principalProvider.current();
             Task task = getActiveTaskForOperation(request.taskId(), actor);
+            boolean claimed = !StringUtils.hasText(task.getAssignee());
             taskViewAssembler.claimIfNeeded(task, actor.username());
+            if (claimed) {
+                auditService.record(
+                        "TASK_CLAIMED", processInstanceId, null, task.getId(), actor.username(),
+                        "UNASSIGNED", "ASSIGNED", null);
+            }
             addComment(task, "agree", request.comment());
+            interactionGuard.validateTask(task.getId(), request.variables());
             Map<String, Object> variables = completionVariables(
                     task, TaskParticipantAction.APPROVE, null,
                     request.variables(), request.participantAssignments());
             taskService.complete(task.getId(), variables);
+            auditService.record(
+                    "TASK_APPROVED", processInstanceId, null, task.getId(), task.getTaskDefinitionKey(),
+                    "ACTIVE", "COMPLETED", request.comment());
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
@@ -204,10 +227,14 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                 taskService.setAssignee(task.getId(), request.currentAssignee());
             }
             addComment(task, "autoComplete", request.comment());
+            interactionGuard.validateTask(task.getId(), request.variables());
             Map<String, Object> variables = completionVariables(
                     task, TaskParticipantAction.APPROVE, null,
                     request.variables(), request.participantAssignments());
             taskService.complete(task.getId(), variables);
+            auditService.record(
+                    "TASK_AUTO_COMPLETED", processInstanceId, null, task.getId(), task.getTaskDefinitionKey(),
+                    "ACTIVE", "COMPLETED", request.comment());
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
@@ -248,6 +275,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
                         .moveExecutionToActivityId(task.getExecutionId(), targetActivityId)
                         .changeState();
             }
+            auditService.record(
+                    "TASK_REJECTED", processInstanceId, null, task.getId(),
+                    task.getTaskDefinitionKey() + " -> " + targetActivityId,
+                    "ACTIVE", "MOVED_TO_TARGET", request.comment());
             return buildApproveResult(task.getId(), processInstanceId);
         });
     }
@@ -263,6 +294,10 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
             clearCandidates(task.getId());
             applyTransferTarget(task.getId(), request);
             addTransferComment(task, request, previousAssignee, actor.username());
+            auditService.record(
+                    "TASK_TRANSFERRED", processInstanceId, null, task.getId(),
+                    previousAssignee + " -> " + transferTarget(request),
+                    "ASSIGNED", "TRANSFERRED", request.comment());
             return taskViewAssembler.fromActiveTask(getActiveTask(task.getId()));
         });
     }
@@ -341,6 +376,15 @@ public class WorkflowRuntimeServiceImpl implements WorkflowRuntimeService {
 
     private void clearCandidates(String taskId) {
         taskSupport.clearCandidates(taskId);
+    }
+
+    private String transferTarget(TransferTaskRequest request) {
+        if (StringUtils.hasText(request.targetAssignee())) {
+            return request.targetAssignee();
+        }
+        int candidateUsers = request.targetCandidateUsers() == null ? 0 : request.targetCandidateUsers().size();
+        int candidateGroups = request.targetCandidateGroups() == null ? 0 : request.targetCandidateGroups().size();
+        return "candidates(users=" + candidateUsers + ", groups=" + candidateGroups + ")";
     }
 
     private void assertTaskTenant(Task task) {
