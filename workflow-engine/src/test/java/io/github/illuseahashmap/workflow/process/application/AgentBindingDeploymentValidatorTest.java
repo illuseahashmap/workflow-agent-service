@@ -69,6 +69,27 @@ class AgentBindingDeploymentValidatorTest {
     }
 
     @Test
+    void rejectsInputArrayIndexesAndWildcardsUntilConstructionContractExists() {
+        when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
+                new AgentVersionCatalog.PublishedAgentVersion(
+                        42L, "MODEL_ONLY", 300,
+                        "{\"type\":\"object\",\"properties\":{\"risks\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"level\":{\"type\":\"string\"}}}}}}",
+                        "{}")));
+
+        var indexed = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{\"risks.0.level\":\"riskLevel\"}", "{}",
+                AgentProcessFailurePolicy.HOLD_FOR_OPERATIONS, 120);
+        var wildcard = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{\"risks.*.level\":\"riskLevel\"}", "{}",
+                AgentProcessFailurePolicy.HOLD_FOR_OPERATIONS, 120);
+
+        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(indexed)))
+                .hasMessageContaining("array indexes or wildcard");
+        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(wildcard)))
+                .hasMessageContaining("array indexes or wildcard");
+    }
+
+    @Test
     void rejectsManualReviewUntilHumanTaskCapabilityExists() {
         when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
                 new AgentVersionCatalog.PublishedAgentVersion(

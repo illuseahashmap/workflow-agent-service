@@ -96,13 +96,12 @@ Adapter 将错误分类为：
 
 ## 7. 当前边界
 
-本课已经具备真实模型调用能力，但完整 Agent MVP 仍未完成：
+本课已经具备真实模型调用能力，并已接入首个纵向闭环：Agent Service Task、Outbox/Inbox 完成事件、输入/输出 Schema 校验、基础结果策略、租约续期和过期运行接管均已有实现。完整 Agent MVP 仍未完成：
 
-1. 尚未接入 Flowable Agent Service Task；
-2. 尚未实现 Outbox/Inbox 可靠事件；
-3. 尚未实现租约续期和过期运行接管；
-4. 尚未执行 Output Schema 与 Guardrail 校验；
-5. 尚未实现 Checkpoint 恢复和 Provider 并发配额。
+1. 尚未实现基于 Checkpoint 的多步骤恢复；
+2. 尚未实现完整 Guardrail、人工确认和高风险工具治理；
+3. 尚未实现跨实例的租户/Provider 并发配额；
+4. 尚未完成容器化端到端故障恢复和生产观测验收。
 
 这些功能应继续扩展现有运行链路，不能另建一套执行记录。
 

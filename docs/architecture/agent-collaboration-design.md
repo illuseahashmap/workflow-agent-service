@@ -1,10 +1,10 @@
 # Agent 协作架构设计
 
-更新时间：2026-08-11
-状态：长期架构基线；Agent 基础管理、运行账本、Provider 基础链路和 BPMN Agent 等待节点雏形已实施，可靠恢复及生产级执行闭环尚未完成
+更新时间：2026-08-18
+状态：长期架构基线；首个 Agent Service Task 纵向闭环已实施，取消/人工确认、Guardrail、资源治理和生产级自治仍属于后续能力。
 
 MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。
-当前实现状态和下一步目标以[《项目状态总览》](../status.md)为准。
+当前实现状态和下一步目标以[《下一步计划与当前状态》](../status.md)为准。
 跨仓库产品定位、差异化和阶段目标以聚合仓库的[《Workflow Agent 产品定位与目标》](https://github.com/illuseahashmap/workflow-agent/blob/main/docs/product-positioning-and-goals.zh-CN.md)为准；本文只定义 Agent Runtime、人机协作和设计时生成能力的技术边界。
 
 ## 1. 背景

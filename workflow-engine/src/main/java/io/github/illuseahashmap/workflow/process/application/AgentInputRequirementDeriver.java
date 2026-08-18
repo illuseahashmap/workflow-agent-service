@@ -39,6 +39,7 @@ public class AgentInputRequirementDeriver {
                 if (!entry.getValue().isTextual()) {
                     return;
                 }
+                rejectUnsupportedInputPath(entry.getKey());
                 String variablePath = normalizeVariablePath(entry.getValue().asText());
                 JsonNode fieldSchema = resolveSchemaPath(schema, entry.getKey());
                 fields.add(new InteractionDataFieldView(
@@ -71,6 +72,14 @@ public class AgentInputRequirementDeriver {
             throw invalid("Agent input mapping contains an unsafe process variable path: " + path);
         }
         return path;
+    }
+
+    private void rejectUnsupportedInputPath(String path) {
+        for (String segment : path.split("\\.")) {
+            if (segment.matches("\\d+") || "*".equals(segment)) {
+                throw invalid("Agent input mapping does not support array indexes or wildcard paths: " + path);
+            }
+        }
     }
 
     private JsonNode resolveSchemaPath(JsonNode schema, String path) {

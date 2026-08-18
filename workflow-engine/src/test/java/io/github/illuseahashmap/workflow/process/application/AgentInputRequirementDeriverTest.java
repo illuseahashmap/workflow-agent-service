@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.workflow.process.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
@@ -50,5 +51,17 @@ class AgentInputRequirementDeriverTest {
         );
 
         assertThat(fields).isEmpty();
+    }
+
+    @Test
+    void rejectsInputArrayIndexesAndWildcardsConsistentlyWithDeploymentValidation() {
+        String schema = "{\"type\":\"object\",\"properties\":{\"risks\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}";
+
+        assertThatThrownBy(() -> deriver.derive(
+                schema, "{\"risks.0\":\"risk\"}", Map.of(), "agent", "Agent"))
+                .hasMessageContaining("array indexes or wildcard");
+        assertThatThrownBy(() -> deriver.derive(
+                schema, "{\"risks.*\":\"risk\"}", Map.of(), "agent", "Agent"))
+                .hasMessageContaining("array indexes or wildcard");
     }
 }

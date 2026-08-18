@@ -59,6 +59,7 @@ public class AgentBindingDeploymentValidator {
             JsonNode mapping = objectMapper.readTree(mappingJson);
             Set<String> mappedFields = new HashSet<>();
             mapping.fieldNames().forEachRemaining(field -> {
+                rejectUnsupportedInputPath(field);
                 mappedFields.add(field);
                 if (resolveSchemaPath(schema, field).isMissingNode()) {
                     throw invalid("Agent input mapping contains an unknown field: " + field);
@@ -75,6 +76,14 @@ public class AgentBindingDeploymentValidator {
             throw exception;
         } catch (Exception exception) {
             throw invalid("Unable to validate Agent input mapping");
+        }
+    }
+
+    private void rejectUnsupportedInputPath(String path) {
+        for (String segment : path.split("\\.")) {
+            if (segment.matches("\\d+") || "*".equals(segment)) {
+                throw invalid("Agent input mapping does not support array indexes or wildcard paths: " + path);
+            }
         }
     }
 

@@ -1,25 +1,26 @@
 # 项目文档导航
 
-文档分为四类，状态以 [项目状态总览](status.md) 为准：
+项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
 
-| 类别 | 入口 | 用途 |
+| 类别 | 唯一入口 | 说明 |
 | --- | --- | --- |
-| 产品目标 | [聚合仓库产品定位与目标](https://github.com/illuseahashmap/workflow-agent/blob/main/docs/product-positioning-and-goals.zh-CN.md) | 跨仓库产品定位、差异化、能力支柱和阶段目标的唯一权威来源 |
-| 当前状态 | [status.md](status.md) | 区分已完成、进行中和下一步目标 |
-| 架构规范 | [architecture-governance-and-roadmap.md](quality/architecture-governance-and-roadmap.md) | 不可破坏的架构约束、质量标准和阶段路线 |
-| Agent 长期设计 | [agent-collaboration-design.md](architecture/agent-collaboration-design.md) | Agent 与 Flowable 的长期边界和扩展地图 |
-| Agent 渐进式自治 | [evidence-governed-agent-autonomy.md](architecture/evidence-governed-agent-autonomy.md) | Agent 基于任务运行证据逐步获得、保持和失去完成权的后续设计方向 |
-| Agent 当前实施 | [agent-mvp-implementation-plan.md](architecture/agent-mvp-implementation-plan.md) | Agent 基础设施的实现范围和剩余验收项 |
-| Agent 资源治理 | [agent-resource-governance.md](architecture/agent-resource-governance.md) | 虚拟线程、租户公平配额、分布式许可证和批量租约续约的长期约束 |
-| 工作流 Agent 交互 | [workflow-agent-interaction-contract.md](architecture/workflow-agent-interaction-contract.md) | 首节点/审批后 Agent 的数据契约、命令校验与表单扩展边界 |
-| API 契约 | [api/README.md](api/README.md)、[api/openapi.yaml](api/openapi.yaml) | HTTP 接口契约和兼容性规则 |
-| 学习知识库 | [learning/](learning/) | 按课程理解 Agent 领域模型、持久化和执行链路 |
-| 当前问题 | [known-issues.md](quality/known-issues.md) | 只记录尚未关闭的问题和明确延期项 |
+| 长期设计 | [long-term-design.md](architecture/long-term-design.md) | 架构边界、领域模型、扩展方向和不可破坏的工程约束 |
+| 下一步计划 | [status.md](status.md) | 当前基线、当前阶段、下一步验收和明确暂不做的内容 |
+| 待修复问题 | [known-issues.md](quality/known-issues.md) | 仍未关闭的问题、影响、修复方向和验收标准 |
 
-## 文档状态规则
+## 支撑资料
 
-- 已完成的工作进入“已完成基线”或历史归档，不再放入当前待办。
-- 进行中的工作必须有验收标准和下一步动作。
-- 设计文档描述目标，不代表功能已经实现；是否实现以 `status.md` 和代码/测试为准。
-- 产品定位与跨仓库阶段目标只在聚合仓库维护；后端文档不得另写一套相互竞争的产品路线。
-- 每次跨模块开发完成后，必须同步更新 `status.md`、`known-issues.md` 和相关架构文档。
+- [API 契约](api/README.md)：机器可读接口契约和兼容性规则，不承担产品路线。
+- [学习知识库](learning/)：用于理解已实现设计的课程材料，不承担当前状态判断。
+- [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
+- [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
+- [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。
+- [工作流与 Agent 交互契约](architecture/workflow-agent-interaction-contract.md)：当前交互契约和表单扩展边界。
+
+## 文档规则
+
+- 已完成内容只出现在“下一步计划”的当前基线或支撑资料的实现边界中，不重复进入问题清单。
+- 计划项必须有优先级、边界和验收标准；没有验收标准的内容只能放入长期设计。
+- 待修复问题必须说明当前实现、影响和下一步；修复后从问题清单移除，并在当前基线留下简短记录。
+- 详细设计可以保留，但不得自行维护与三个权威入口冲突的状态结论。
+- 产品定位和跨仓库路线只在聚合仓库维护，后端不复制一套产品路线。
