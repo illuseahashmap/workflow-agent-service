@@ -20,6 +20,13 @@ public class DefaultAgentResultPolicy implements AgentResultPolicy {
         if ("content_filter".equalsIgnoreCase(finishReason)) {
             return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_CONTENT_FILTERED");
         }
+        if ("evidence_insufficient".equalsIgnoreCase(finishReason)) {
+            return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_EVIDENCE_INSUFFICIENT");
+        }
+        if ("business_rejected".equalsIgnoreCase(finishReason)
+                || "rejected".equalsIgnoreCase(finishReason)) {
+            return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_BUSINESS_REJECTED");
+        }
         if ("length".equalsIgnoreCase(finishReason)) {
             return Decision.rejected(ResultStatus.PARTIAL, "AGENT_RESULT_INCOMPLETE");
         }

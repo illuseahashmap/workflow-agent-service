@@ -19,6 +19,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecution
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentResultPolicy;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRetryBackoffPolicy;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunLeaseHeartbeat;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRuntimeMetrics;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureDisposition;
@@ -61,6 +62,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final AgentRunLeaseHeartbeat leaseHeartbeat;
     private final AgentResultPolicy resultPolicy;
     private final AgentRuntimeMetrics metrics;
+    private final AgentRetryBackoffPolicy retryBackoffPolicy;
 
     @Autowired
     public AgentRunWorkerServiceImpl(
@@ -76,7 +78,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentRunEventPublisher eventPublisher,
             AgentRunLeaseHeartbeat leaseHeartbeat,
             AgentResultPolicy resultPolicy,
-            AgentRuntimeMetrics metrics
+            AgentRuntimeMetrics metrics,
+            AgentRetryBackoffPolicy retryBackoffPolicy
     ) {
         this.executionRepository = executionRepository;
         this.versionRepository = versionRepository;
@@ -91,6 +94,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.leaseHeartbeat = leaseHeartbeat;
         this.resultPolicy = resultPolicy;
         this.metrics = metrics;
+        this.retryBackoffPolicy = retryBackoffPolicy;
     }
 
     public AgentRunWorkerServiceImpl(
@@ -112,7 +116,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 AgentRunEventPublisher.NOOP,
                 AgentRunLeaseHeartbeat.NOOP,
                 new DefaultAgentResultPolicy(),
-                AgentRuntimeMetrics.NOOP);
+                AgentRuntimeMetrics.NOOP,
+                ExponentialJitterRetryBackoffPolicy.defaults(java.util.random.RandomGenerator.getDefault()));
     }
 
     @Override
@@ -203,7 +208,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentResultPolicy.Decision decision = resultPolicy.evaluate(version, executionResult.modelResponse());
             if (decision.accepted()) {
                 completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
-                        executionResult.modelResponse());
+                        executionResult.modelResponse(), decision);
             } else {
                 completeFailed(claimed, executionResult.providerId(), executionResult.requestedModel(),
                         decision.reasonCode(), decision.status(), false);
@@ -221,12 +226,13 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             ClaimedRun claimed,
             long providerId,
             String requestedModel,
-            ModelProviderResponse response
+            ModelProviderResponse response,
+            AgentResultPolicy.Decision decision
     ) {
         transactionTemplate.executeWithoutResult(status -> {
             Instant now = Instant.now();
             stateMachine.markSucceeded(
-                    claimed.run(), true, true,
+                    claimed.run(), true, decision.accepted(),
                     transition(claimed.attemptId(), "MODEL_COMPLETED", claimed.traceId(), now));
             executionRepository.saveSucceeded(
                     claimed.run(),
@@ -235,9 +241,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     providerId,
                     requestedModel,
                     response,
-                    outputSnapshot(response),
+                    outputSnapshot(response, decision),
                     lastTransition(claimed.run()));
-            eventPublisher.completed(claimed.run(), outputSnapshot(response));
+            eventPublisher.completed(claimed.run(), outputSnapshot(response, decision));
             metrics.completed(ResultStatus.SUCCESS);
         });
     }
@@ -257,7 +263,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     && now.isBefore(claimed.run().deadlineAt());
             Instant availableAt;
             if (retriesRemaining) {
-                availableAt = now.plusSeconds(backoffSeconds(claimed.attemptNumber()));
+                availableAt = now.plus(retryBackoffPolicy.delayFor(claimed.attemptNumber()));
                 if (!availableAt.isBefore(claimed.run().deadlineAt())) {
                     retriesRemaining = false;
                 }
@@ -340,12 +346,14 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         }
     }
 
-    private String outputSnapshot(ModelProviderResponse response) {
+    private String outputSnapshot(ModelProviderResponse response, AgentResultPolicy.Decision decision) {
         try {
             return objectMapper.writeValueAsString(Map.of(
                     "content", response.content(),
                     "model", response.actualModel() == null ? "" : response.actualModel(),
-                    "finishReason", response.finishReason() == null ? "" : response.finishReason()));
+                    "finishReason", response.finishReason() == null ? "" : response.finishReason(),
+                    "resultStatus", decision.status().name(),
+                    "resultReason", decision.reasonCode()));
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to serialize Agent output", exception);
         }
@@ -368,10 +376,6 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
 
     private AgentRunStateTransition lastTransition(AgentRun run) {
         return run.stateHistory().getLast();
-    }
-
-    private long backoffSeconds(int attemptNumber) {
-        return Math.min(30L, 1L << Math.min(attemptNumber - 1, 5));
     }
 
     private record ClaimedRun(

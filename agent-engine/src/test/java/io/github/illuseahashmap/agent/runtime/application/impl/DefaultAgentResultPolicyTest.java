@@ -27,6 +27,14 @@ class DefaultAgentResultPolicyTest {
                 .isEqualTo(ResultStatus.PARTIAL);
     }
 
+    @Test
+    void rejectsEvidenceAndBusinessFailuresBeforeFlowableCanAdvance() {
+        assertThat(policy.evaluate(null, response("answer", "evidence_insufficient")).status())
+                .isEqualTo(ResultStatus.REJECTED);
+        assertThat(policy.evaluate(null, response("answer", "business_rejected")).reasonCode())
+                .isEqualTo("AGENT_RESULT_BUSINESS_REJECTED");
+    }
+
     private ModelProviderResponse response(String content, String finishReason) {
         return new ModelProviderResponse(content, "model", "request", finishReason, 1, 1, 0, 10);
     }

@@ -61,14 +61,14 @@
 ### 8. AgentRun 过期任务和失效租约缺少回收闭环
 
 - 状态：进行中
-- 当前情况：已有独立 Recovery 调度和专用租约心跳调度器，使用 `SKIP LOCKED` 扫描过期 `QUEUED` 和租约失效的 `RUNNING`；排队超时会收敛为 `TIMED_OUT`，失效运行会关闭旧 Attempt 后重新排队，下一次领取创建新 Attempt，迟到结果受 Attempt 条件更新保护。基于 Checkpoint 的多步骤恢复和强杀压力验证仍未完成。
+- 当前情况：已有独立 Recovery 调度和专用租约心跳调度器，使用 `SKIP LOCKED` 扫描过期 `QUEUED` 和租约失效的 `RUNNING`；重试采用有界指数退避和随机抖动，最终 `available_at` 在失败事务中持久化。排队超时会收敛为 `TIMED_OUT`，失效运行会关闭旧 Attempt 后重新排队，下一次领取创建新 Attempt，迟到结果受 Attempt 条件更新保护。基于 Checkpoint 的多步骤恢复和强杀压力验证仍未完成。
 - 下一步：在平台 Agent 具备多步骤执行后，从最后完整 Checkpoint 恢复，并补充 Worker 强杀、心跳失败和恢复压力测试。
 - 验收：Worker 被强制终止、租约过期、运行排队超过 Deadline 时均能自动重试、接管或进入超时终态；旧 Attempt 的迟到结果不能覆盖新 Attempt。
 
 ### 9. Agent 输出 Schema 和结果策略尚未完整执行
 
 - 状态：待处理
-- 当前情况：发布时已校验平台支持的 JSON Schema 子集，Worker 已执行输入和输出结构校验，并通过基础结果策略区分空结果、内容过滤和长度截断；流程恢复事务也只按冻结的 BPMN `outputMapping` 写入显式业务变量。租户可配置的业务结果策略、证据约束和 Guardrail 尚未执行。
+- 当前情况：发布时已校验平台支持的 JSON Schema 子集，Worker 已执行输入和输出结构校验，并通过基础结果策略区分空结果、内容过滤、证据不足、业务拒绝和长度截断；成功结果快照会记录策略状态和原因，流程恢复事务也只按冻结的 BPMN `outputMapping` 写入显式业务变量。租户可配置的业务结果策略、证据约束和 Guardrail 尚未执行。
 - 影响：结构合法但业务不可用、证据不足或违反业务约束的结果仍可能进入 `SUCCEEDED`。
 - 下一步：建立独立的结果判定层，统一产生 `SUCCESS`、`EMPTY`、`PARTIAL`、`REJECTED` 或 `FAILED`，禁止未经结果策略认可的输出推进流程。
 - 验收：合法、缺字段、类型错误、非 JSON、空结果、部分结果和策略拒绝均有自动化测试及确定状态；只有通过必需步骤和结果策略的运行才能进入 `SUCCEEDED`，映射后的流程变量可被后续网关和任务稳定消费。
