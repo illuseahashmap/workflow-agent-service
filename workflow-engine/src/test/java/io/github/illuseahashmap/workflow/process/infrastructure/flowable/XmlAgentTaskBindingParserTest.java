@@ -13,18 +13,19 @@ class XmlAgentTaskBindingParserTest {
     private final XmlAgentTaskBindingParser parser = new XmlAgentTaskBindingParser(new ObjectMapper());
 
     @Test
-    void parsesTriggerableServiceTaskContract() {
+    void parsesReceiveTaskAgentContract() {
         var binding = parser.parse(bpmn("""
-                <bpmn:serviceTask id="agentReview" flowable:async="true" flowable:triggerable="true"
-                    flowable:delegateExpression="${agentTaskDelegate}">
+                <bpmn:receiveTask id="agentReview">
                   <bpmn:extensionElements>
                     <workflow:agentTask agentVersionId="42"
                         inputMapping='{"customer":"customer"}'
                         outputMapping='{"decision":"agentDecision"}'
                         processFailurePolicy="MANUAL_REVIEW"
                         processWaitTimeoutSeconds="120" />
+                    <flowable:ExecutionListener event="start"
+                        flowable:delegateExpression="${agentTaskExecutionListener}" />
                   </bpmn:extensionElements>
-                </bpmn:serviceTask>
+                </bpmn:receiveTask>
                 """)).getFirst();
 
         assertThat(binding.agentVersionId()).isEqualTo(42L);
@@ -33,7 +34,7 @@ class XmlAgentTaskBindingParserTest {
     }
 
     @Test
-    void rejectsServiceTaskWithoutTriggerableContract() {
+    void rejectsServiceTaskAgentContract() {
         assertThatThrownBy(() -> parser.parse(bpmn("""
                 <bpmn:serviceTask id="agentReview">
                   <bpmn:extensionElements>
@@ -41,7 +42,7 @@ class XmlAgentTaskBindingParserTest {
                   </bpmn:extensionElements>
                 </bpmn:serviceTask>
                 """))).isInstanceOf(BusinessException.class)
-                .hasMessageContaining("triggerable");
+                .hasMessageContaining("receiveTask");
     }
 
     private String bpmn(String task) {

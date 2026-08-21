@@ -20,6 +20,19 @@ class AgentBindingDeploymentValidatorTest {
             new AgentBindingDeploymentValidator(catalog, new ObjectMapper());
 
     @Test
+    void allowsPlatformAgentWorkflowDeployment() {
+        when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
+                new AgentVersionCatalog.PublishedAgentVersion(
+                        42L, "PLATFORM_AGENT", 300,
+                        "{\"type\":\"object\"}", "{\"type\":\"object\"}")));
+        var binding = new AgentTaskBinding(
+                "agentReview", "Review", 42L, "{}", "{}",
+                AgentProcessFailurePolicy.HOLD_FOR_OPERATIONS, 120);
+
+        validator.validate("tenant-a", List.of(binding));
+    }
+
+    @Test
     void rejectsMissingRequiredInputMapping() {
         when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
                 new AgentVersionCatalog.PublishedAgentVersion(

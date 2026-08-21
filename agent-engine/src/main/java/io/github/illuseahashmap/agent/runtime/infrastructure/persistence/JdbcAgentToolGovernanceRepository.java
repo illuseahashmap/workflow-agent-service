@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutio
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -66,7 +67,9 @@ public class JdbcAgentToolGovernanceRepository
         parameters.put("outputSnapshot", audit.output());
         parameters.put("errorCode", audit.errorCode());
         parameters.put("traceId", audit.traceId());
-        parameters.put("createdAt", audit.createdAt());
+        // PostgreSQL cannot infer a JDBC type for java.time.Instant through
+        // NamedParameterJdbcTemplate. Bind an explicit SQL timestamp value.
+        parameters.put("createdAt", Timestamp.from(audit.createdAt()));
         jdbcTemplate.update("""
                         INSERT INTO agent_tool_execution_audit (
                             tenant_code, tool_code, idempotency_key, arguments_hash,

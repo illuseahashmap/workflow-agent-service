@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -47,6 +49,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AgentRunWorkerServiceImpl.class);
 
     private final AgentRunExecutionRepository executionRepository;
     private final AgentDefinitionVersionRepository versionRepository;
@@ -181,8 +185,11 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 String userInput = extractInput(claimed.inputSnapshotJson());
                 executionResult = executorRegistry.require(version.executionMode()).execute(
                         new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
-                                remainingTimeout(run, version.timeoutSeconds()), claimed.traceId()));
+                                remainingTimeout(run, version.timeoutSeconds()), claimed.traceId(),
+                                run.processInstanceId()));
             } catch (ModelProviderException exception) {
+                LOG.warn("Agent provider execution failed: runId={}, traceId={}, errorCode={}",
+                        run.id(), claimed.traceId(), exception.errorCode(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
                         claimed,
                         providerId(run),
@@ -192,11 +199,15 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                         exception.failureKind() != ModelProviderFailureKind.PERMANENT));
                 return;
             } catch (BusinessException exception) {
+                LOG.warn("Agent configuration failed: runId={}, traceId={}, message={}",
+                        run.id(), claimed.traceId(), exception.getMessage(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
                         claimed, providerId(run), requestedModel(run),
                         "AGENT_CONFIGURATION_ERROR", ResultStatus.FAILED, false));
                 return;
             } catch (RuntimeException exception) {
+                LOG.error("Agent execution failed unexpectedly: runId={}, traceId={}",
+                        run.id(), claimed.traceId(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
                         claimed, providerId(run), requestedModel(run),
                         "AGENT_EXECUTION_ERROR", ResultStatus.FAILED, false));

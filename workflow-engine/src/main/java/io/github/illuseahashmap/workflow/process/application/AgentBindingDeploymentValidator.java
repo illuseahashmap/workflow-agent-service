@@ -34,7 +34,7 @@ public class AgentBindingDeploymentValidator {
                     .orElseThrow(() -> invalid(
                             "Agent version is missing, unpublished, or belongs to another tenant: "
                                     + binding.agentVersionId()));
-            if (!"MODEL_ONLY".equals(version.executionMode())) {
+            if (!Set.of("MODEL_ONLY", "PLATFORM_AGENT").contains(version.executionMode())) {
                 throw invalid("Agent execution mode is not available for workflow deployment: "
                         + version.executionMode());
             }

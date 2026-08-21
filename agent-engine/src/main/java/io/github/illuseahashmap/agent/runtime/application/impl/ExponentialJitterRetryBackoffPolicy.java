@@ -4,6 +4,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentRetryBackoff
 import java.time.Duration;
 import java.util.Objects;
 import java.util.random.RandomGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ public final class ExponentialJitterRetryBackoffPolicy implements AgentRetryBack
     private final double jitterRatio;
     private final RandomGenerator random;
 
+    @Autowired
     public ExponentialJitterRetryBackoffPolicy(
             @Value("${workflow.agent.worker.retry.max-delay-seconds:30}") long maxDelaySeconds,
             @Value("${workflow.agent.worker.retry.jitter-ratio:0.25}") double jitterRatio

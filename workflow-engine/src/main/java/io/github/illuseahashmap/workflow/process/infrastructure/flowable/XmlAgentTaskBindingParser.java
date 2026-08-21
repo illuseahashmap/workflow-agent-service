@@ -75,20 +75,8 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
     }
 
     private void validateTaskSemantics(Element task) {
-        if ("receiveTask".equals(task.getLocalName())) {
-            return; // Compatibility for already deployed diagrams.
-        }
-        if (!"serviceTask".equals(task.getLocalName())) {
-            throw invalid("workflow:agentTask must belong to a bpmn:serviceTask");
-        }
-        String delegateExpression = task.getAttributeNS(FLOWABLE_NAMESPACE, "delegateExpression");
-        String triggerable = task.getAttributeNS(FLOWABLE_NAMESPACE, "triggerable");
-        String async = task.getAttributeNS(FLOWABLE_NAMESPACE, "async");
-        if (!"${agentTaskDelegate}".equals(delegateExpression)
-                || !"true".equalsIgnoreCase(triggerable)
-                || !"true".equalsIgnoreCase(async)) {
-            throw invalid("Agent serviceTask requires agentTaskDelegate, flowable:async=true, "
-                    + "and flowable:triggerable=true");
+        if (!"receiveTask".equals(task.getLocalName())) {
+            throw invalid("workflow:agentTask must belong to a bpmn:receiveTask");
         }
     }
 

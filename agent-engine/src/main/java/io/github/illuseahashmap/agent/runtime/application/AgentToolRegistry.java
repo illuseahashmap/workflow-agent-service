@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -59,6 +60,10 @@ public class AgentToolRegistry {
             throw new BusinessException(ErrorCode.CONFLICT, "Agent tool is not registered: " + name);
         }
         return tool;
+    }
+
+    public Set<String> registeredToolNames() {
+        return tools.keySet();
     }
 
     public AgentTool.Result execute(String tenantCode, String toolCode, AgentTool.Request request) {

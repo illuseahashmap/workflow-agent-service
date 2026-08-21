@@ -19,11 +19,16 @@ public interface AgentTool {
     Result execute(Request request);
 
     record Request(String tenantCode, Map<String, Object> arguments, Duration timeout,
-                   String traceId, String idempotencyKey) {
+                   String traceId, String idempotencyKey, String processInstanceId) {
         public Request(String tenantCode, Map<String, Object> arguments,
                        Duration timeout, String traceId) {
             this(tenantCode, arguments, timeout, traceId,
-                    traceId + ":" + Integer.toHexString(arguments == null ? 0 : arguments.hashCode()));
+                    traceId + ":" + Integer.toHexString(arguments == null ? 0 : arguments.hashCode()), null);
+        }
+
+        public Request(String tenantCode, Map<String, Object> arguments,
+                       Duration timeout, String traceId, String idempotencyKey) {
+            this(tenantCode, arguments, timeout, traceId, idempotencyKey, null);
         }
     }
 

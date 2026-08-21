@@ -79,6 +79,90 @@ class PlatformAgentExecutorTest {
                 .contains("PLAN", "TOOL_CALL", "VALIDATION");
     }
 
+    @Test
+    void treatsMissingToolArgumentsAsEmptyRuntimeOwnedArguments() {
+        AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(
+                response("plan"),
+                response("{\"action\":\"TOOL_CALL\",\"tool\":\"context\"}"),
+                response("{\"answer\":\"done\"}"));
+        AgentTool tool = new AgentTool() {
+            @Override
+            public String name() {
+                return "context";
+            }
+
+            @Override
+            public Result execute(Request request) {
+                assertThat(request.arguments()).isEmpty();
+                return new Result("context", "context-1");
+            }
+        };
+        PlatformAgentExecutor executor = new PlatformAgentExecutor(
+                credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(new ObjectMapper()),
+                new AgentToolRegistry(List.of(tool)), new ObjectMapper(), 3);
+
+        AgentExecutor.Result result = executor.execute(new AgentExecutor.Command(
+                "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-1"));
+
+        assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"done\"}");
+    }
+
+    @Test
+    void repairsMalformedToolCallWithOneBoundedProtocolRound() {
+        AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(
+                response("plan"),
+                response("{\"action\":\"TOOL_CALL\"}"),
+                response("{\"action\":\"TOOL_CALL\",\"tool\":\"lookup\",\"arguments\":{}}"),
+                response("{\"answer\":\"done\"}"));
+        AgentTool tool = new AgentTool() {
+            @Override
+            public String name() {
+                return "lookup";
+            }
+
+            @Override
+            public Result execute(Request request) {
+                assertThat(request.arguments()).isEmpty();
+                return new Result("record found", "lookup-1");
+            }
+        };
+        PlatformAgentExecutor executor = new PlatformAgentExecutor(
+                credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(new ObjectMapper()),
+                new AgentToolRegistry(List.of(tool)), new ObjectMapper(), 3);
+
+        AgentExecutor.Result result = executor.execute(new AgentExecutor.Command(
+                "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-1"));
+
+        assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"done\"}");
+    }
+
+    @Test
+    void repairsFinalOutputOnceWhenProviderDoesNotFollowOutputContract() {
+        AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(
+                response("plan"),
+                response("这不是 JSON"),
+                response("{\"answer\":\"repaired\"}"));
+        PlatformAgentExecutor executor = new PlatformAgentExecutor(
+                credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(new ObjectMapper()));
+
+        AgentExecutor.Result result = executor.execute(new AgentExecutor.Command(
+                "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-1"));
+
+        assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"repaired\"}");
+    }
+
     private AgentDefinitionVersion version() {
         return new AgentDefinitionVersion(1L, "tenant-a", 1L, 1, AgentVersionStatus.PUBLISHED,
                 AgentExecutionMode.PLATFORM_AGENT, 1L, "model", "system", 60,

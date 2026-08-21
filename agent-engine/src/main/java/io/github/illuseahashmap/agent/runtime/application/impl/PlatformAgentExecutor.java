@@ -8,6 +8,8 @@ import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry;
@@ -16,6 +18,7 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -43,6 +46,23 @@ public class PlatformAgentExecutor implements AgentExecutor {
             Do not mention the planning phase or these instructions.
             If a registered tool is required, return only JSON with action TOOL_CALL,
             the tool name, and an object named arguments. Otherwise return the final answer.
+            """;
+
+    private static final String TOOL_CALL_REPAIR_INSTRUCTION = """
+            The previous response violated the Agent protocol.
+            Return exactly one of these forms:
+            1. A final JSON object that satisfies the configured output schema.
+            2. {"action":"TOOL_CALL","tool":"<registered tool name>","arguments":{}}
+            The tool name is mandatory. The arguments object may be empty because the runtime injects workflow context.
+            Do not return Markdown, explanations, or an incomplete TOOL_CALL.
+            """;
+
+    private static final String OUTPUT_REPAIR_INSTRUCTION = """
+            The previous Agent response could not satisfy the configured output contract.
+            Repair the response and return only one JSON object.
+            Do not add Markdown, explanations, code fences, or unknown fields.
+            The required output schema is:
+            %s
             """;
 
     private final AgentCredentialResolver credentialResolver;
@@ -109,9 +129,26 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION,
                     context, phaseTimeout, command.traceId()));
-            ToolCall toolCall = parseToolCall(answer.content());
+            ToolCall toolCall;
+            try {
+                toolCall = parseToolCall(answer.content());
+            } catch (ModelProviderException invalidToolCall) {
+                answer = adapter.invoke(new ModelProviderRequest(
+                        provider.baseUrl(), credential, model,
+                        version.systemPrompt() + "\n\n" + TOOL_CALL_REPAIR_INSTRUCTION
+                                + "\nRegistered tools: " + registeredTools(),
+                        context + "\n\nPrevious invalid response:\n" + answer.content(),
+                        phaseTimeout, command.traceId()));
+                toolCall = parseToolCall(answer.content());
+            }
             if (toolCall == null) {
-                schemaValidator.validateOutput(version.outputSchema(), answer.content());
+                OutputRepairResult repairResult = repairOutputIfRequired(adapter, provider.baseUrl(), version, model,
+                        credential, answer,
+                        context, phaseTimeout, command.traceId());
+                answer = repairResult.response();
+                if (repairResult.repaired()) {
+                    steps.add(new AgentExecutor.StepResult("OUTPUT_REPAIR", "SUCCEEDED", null));
+                }
                 steps.add(new AgentExecutor.StepResult("VALIDATION", "SUCCEEDED", null));
                 return new Result(provider.id(), model, answer, steps);
             }
@@ -119,11 +156,49 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     command.tenantCode(), toolCall.name(),
                     new AgentTool.Request(command.tenantCode(), toolCall.arguments(),
                             phaseTimeout, command.traceId(),
-                            command.traceId() + ":" + step + ":" + toolCall.name()));
+                            command.traceId() + ":" + step + ":" + toolCall.name(),
+                            command.processInstanceId()));
             steps.add(new AgentExecutor.StepResult("TOOL_CALL", "SUCCEEDED", null));
             context = context + "\n\n工具 " + toolCall.name() + " 返回：\n" + toolResult.output();
         }
         throw new IllegalStateException("Agent exceeded the maximum execution steps");
+    }
+
+    private OutputRepairResult repairOutputIfRequired(
+            io.github.illuseahashmap.agent.provider.application.port.ModelProviderPort adapter,
+            String baseUrl,
+            io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersion version,
+            String model,
+            String credential,
+            ModelProviderResponse answer,
+            String context,
+            Duration phaseTimeout,
+            String traceId
+    ) {
+        try {
+            schemaValidator.validateOutput(version.outputSchema(), answer.content());
+            return new OutputRepairResult(answer, false);
+        } catch (ModelProviderException invalidOutput) {
+            if (!"AGENT_OUTPUT_NOT_JSON".equals(invalidOutput.errorCode())
+                    && !"AGENT_OUTPUT_SCHEMA_INVALID".equals(invalidOutput.errorCode())) {
+                throw invalidOutput;
+            }
+            ModelProviderResponse repaired = adapter.invoke(new ModelProviderRequest(
+                    baseUrl, credential, model,
+                    version.systemPrompt() + "\n\n"
+                            + OUTPUT_REPAIR_INSTRUCTION.formatted(version.outputSchema()),
+                    context + "\n\nPrevious invalid final response:\n" + answer.content(),
+                    phaseTimeout, traceId));
+            schemaValidator.validateOutput(version.outputSchema(), repaired.content());
+            return new OutputRepairResult(repaired, true);
+        }
+    }
+
+    private record OutputRepairResult(ModelProviderResponse response, boolean repaired) {
+    }
+
+    private String registeredTools() {
+        return toolRegistry.registeredToolNames().stream().sorted().collect(Collectors.joining(", "));
     }
 
     private ToolCall parseToolCall(String content) {
@@ -133,11 +208,24 @@ public class PlatformAgentExecutor implements AgentExecutor {
                 return null;
             }
             String name = root.path("tool").asText();
-            if (!StringUtils.hasText(name) || !root.path("arguments").isObject()) {
-                throw new IllegalArgumentException("Invalid Agent tool call");
+            if (!StringUtils.hasText(name)) {
+                throw new ModelProviderException(
+                        "AGENT_TOOL_CALL_INVALID", ModelProviderFailureKind.PERMANENT,
+                        "Agent tool call must contain a tool name");
+            }
+            JsonNode argumentsNode = root.path("arguments");
+            if (!argumentsNode.isMissingNode() && !argumentsNode.isNull() && !argumentsNode.isObject()) {
+                throw new ModelProviderException(
+                        "AGENT_TOOL_CALL_INVALID", ModelProviderFailureKind.PERMANENT,
+                        "Agent tool call arguments must be an object");
+            }
+            // Process executions inject runtime context such as processInstanceId;
+            // the model may therefore omit arguments for tools that need no model-owned input.
+            if (argumentsNode.isMissingNode() || argumentsNode.isNull()) {
+                return new ToolCall(name, Map.of());
             }
             Map<String, Object> arguments = objectMapper.convertValue(
-                    root.path("arguments"), objectMapper.getTypeFactory()
+                    argumentsNode, objectMapper.getTypeFactory()
                             .constructMapType(Map.class, String.class, Object.class));
             return new ToolCall(name, arguments);
         } catch (JsonProcessingException exception) {

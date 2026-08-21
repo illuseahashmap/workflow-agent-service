@@ -20,8 +20,13 @@ public interface AgentExecutor {
             AgentProvider provider,
             String input,
             Duration timeout,
-            String traceId
+            String traceId,
+            String processInstanceId
     ) {
+        public Command(String tenantCode, AgentDefinitionVersion version, AgentProvider provider,
+                       String input, Duration timeout, String traceId) {
+            this(tenantCode, version, provider, input, timeout, traceId, null);
+        }
     }
 
     record Result(long providerId, String requestedModel, ModelProviderResponse modelResponse,

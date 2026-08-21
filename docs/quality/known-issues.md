@@ -124,7 +124,7 @@
 ### 16. Agent Runtime 仍未达到生产 MVP
 
 - 状态：基础设施已完成，执行闭环待完成
-- 已有：AgentRun、Attempt、Step、Checkpoint、Provider、Worker、重试和审计基础；`PLATFORM_AGENT` 已能执行计划→执行两阶段模型调用；首个 `agent_run_status` 只读工具已接入租户授权、Schema、幂等审计和步骤记录，但检索、写工具审批、预算和人工确认仍未完成。
+- 已有：AgentRun、Attempt、Step、Checkpoint、Provider、Worker、重试和审计基础；`PLATFORM_AGENT` 已能执行计划→执行两阶段模型调用；`agent_run_status` 与 `workflow_process_context` 只读工具已接入租户授权、Schema、幂等审计和步骤记录，流程运行上下文可自动注入，但检索、写工具审批、预算和人工确认仍未完成。
 - 下一步：先将计划、模型、校验、工具和检索统一落入可恢复 Step 账本，再完成工具权限、人工确认、预算、降级、背压和完整集成测试；不能把模型文本直接解释为可执行命令。
 - 验收：Agent 可以可靠执行、恢复、幂等、限权、审计，并安全地推进或暂停 Flowable 流程。
 
