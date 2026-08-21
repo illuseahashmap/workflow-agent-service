@@ -208,7 +208,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentResultPolicy.Decision decision = resultPolicy.evaluate(version, executionResult.modelResponse());
             if (decision.accepted()) {
                 completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
-                        executionResult.modelResponse(), decision);
+                        executionResult.modelResponse(), executionResult.steps(), decision);
             } else {
                 completeFailed(claimed, executionResult.providerId(), executionResult.requestedModel(),
                         decision.reasonCode(), decision.status(), false);
@@ -227,6 +227,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             long providerId,
             String requestedModel,
             ModelProviderResponse response,
+            List<AgentExecutor.StepResult> steps,
             AgentResultPolicy.Decision decision
     ) {
         transactionTemplate.executeWithoutResult(status -> {
@@ -234,6 +235,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             stateMachine.markSucceeded(
                     claimed.run(), true, decision.accepted(),
                     transition(claimed.attemptId(), "MODEL_COMPLETED", claimed.traceId(), now));
+            persistChildSteps(claimed, steps, now);
             executionRepository.saveSucceeded(
                     claimed.run(),
                     claimed.attemptId(),
@@ -246,6 +248,19 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             eventPublisher.completed(claimed.run(), outputSnapshot(response, decision));
             metrics.completed(ResultStatus.SUCCESS);
         });
+    }
+
+    private void persistChildSteps(
+            ClaimedRun claimed,
+            List<AgentExecutor.StepResult> steps,
+            Instant completedAt
+    ) {
+        int sequence = 2;
+        for (AgentExecutor.StepResult step : steps) {
+            executionRepository.insertCompletedStep(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), sequence++,
+                    step.stepType(), step.status(), step.errorCode(), completedAt);
+        }
     }
 
     private void completeFailed(

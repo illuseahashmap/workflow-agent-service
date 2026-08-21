@@ -10,6 +10,7 @@ import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -46,6 +47,15 @@ public class AgentRunQueryServiceImpl implements AgentRunQueryService {
         }
         return repository.findDetail(tenantProvider.current().tenantCode(), runId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent run does not exist"));
+    }
+
+    @Override
+    public List<AgentRunView> findByProcessInstance(String processInstanceId) {
+        if (!StringUtils.hasText(processInstanceId)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Process instance id must not be blank");
+        }
+        return repository.findByProcessInstance(
+                tenantProvider.current().tenantCode(), processInstanceId.trim());
     }
 
     private AgentRunStatus parseStatus(String value) {

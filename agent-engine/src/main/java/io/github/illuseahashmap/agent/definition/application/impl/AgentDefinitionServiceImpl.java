@@ -219,7 +219,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         if (version.published()) {
             return toVersionView(version);
         }
-        if (version.executionMode() != AgentExecutionMode.MODEL_ONLY) {
+        if (version.executionMode() != AgentExecutionMode.MODEL_ONLY
+                && version.executionMode() != AgentExecutionMode.PLATFORM_AGENT) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                     "The selected Agent execution mode is not available yet");
         }

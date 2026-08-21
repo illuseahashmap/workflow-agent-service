@@ -589,7 +589,7 @@ AgentRun.EffectiveRuntimeSnapshot（运行事实）
 | 执行模式 | 用途 | 首次实现 |
 | --- | --- | --- |
 | `MODEL_ONLY` | 单次模型调用和结构化输出，用于跑通当前最小闭环 | 是 |
-| `PLATFORM_AGENT` | 平台控制模型、RAG、工具、Guardrail 和人工确认的多步循环 | 完成可靠闭环后 |
+| `PLATFORM_AGENT` | 平台控制模型、RAG、工具、Guardrail 和人工确认的多步循环 | 已落地计划→执行两阶段；工具、RAG 和人工确认仍按后续切片接入 |
 | `REMOTE_AGENT` | 通过版本化协议调用外部完整 Agent，并映射其步骤与状态 | 工具治理稳定后 |
 
 统一调度端口为：
@@ -610,6 +610,11 @@ public interface AgentExecutor {
 `PlatformAgentExecutor` 实现，`REMOTE_AGENT` 由 `RemoteAgentExecutor` 与
 `RemoteAgentConnector` 协作实现。三者复用同一套 AgentRun、Attempt、Step、Checkpoint、
 结果信封和事件协议，禁止各建一套运行账本。
+
+当前 `PlatformAgentExecutor` 已经把一次运行拆成“计划阶段”和“执行阶段”两阶段受控循环，
+工具意图只能通过 `AgentToolRegistry` 查找已注册的只读工具，并经过租户授权、输入 Schema、
+幂等键和审计拦截，携带租户、超时和 Trace 上下文执行；未注册或非只读工具会被拒绝。
+当前内置工具只提供 AgentRun 状态查询，任意 HTTP、脚本或代码执行仍禁止。
 
 第一阶段使用 LangChain4j 最新稳定 BOM 的低层 `ChatModel`、`ToolSpecification`、结构化输出和消息类型作为模型适配器实现基础，不使用仍标记为实验性的 `langchain4j-agentic` 模块，也不让 LangChain4j 类型进入领域模型。
 

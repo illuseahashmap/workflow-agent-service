@@ -87,6 +87,17 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
                 findStateHistory(parameters)));
     }
 
+    @Override
+    public List<AgentRunView> findByProcessInstance(String tenantCode, String processInstanceId) {
+        return jdbcTemplate.query("""
+                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version
+                        """ + FROM_CLAUSE + " WHERE r.tenant_code = :tenantCode"
+                        + " AND r.process_instance_id = :processInstanceId"
+                        + " ORDER BY r.created_at ASC, r.id ASC",
+                Map.of("tenantCode", tenantCode, "processInstanceId", processInstanceId),
+                (resultSet, rowNum) -> mapView(resultSet));
+    }
+
     private AgentRunPayloadView findPayload(Map<String, Object> parameters) {
         return jdbcTemplate.queryForObject("""
                         SELECT input_snapshot_json::text AS input_snapshot_json,

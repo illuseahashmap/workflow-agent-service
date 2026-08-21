@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunDetailView
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,5 +37,11 @@ public class AgentRunController {
     @GetMapping("/{runId}")
     public ApiResponse<AgentRunDetailView> detail(@PathVariable long runId) {
         return ApiResponse.ok(service.detail(runId));
+    }
+
+    /** Stable tenant-facing correlation endpoint; callers do not need AgentRun internals to track a workflow. */
+    @GetMapping("/process-instances/{processInstanceId}")
+    public ApiResponse<List<AgentRunView>> byProcessInstance(@PathVariable String processInstanceId) {
+        return ApiResponse.ok(service.findByProcessInstance(processInstanceId));
     }
 }

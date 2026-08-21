@@ -240,6 +240,37 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public void insertCompletedStep(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            int sequenceNo,
+            String stepType,
+            String status,
+            String errorCode,
+            Instant completedAt
+    ) {
+        jdbcTemplate.update("""
+                        INSERT INTO agent_run_step (
+                            tenant_code, agent_run_id, attempt_id, sequence_no,
+                            step_type, status, error_code, started_at, completed_at, updated_at
+                        ) VALUES (
+                            :tenantCode, :runId, :attemptId, :sequenceNo,
+                            :stepType, :status, :errorCode, :completedAt, :completedAt, :completedAt
+                        )
+                        """,
+                Map.of(
+                        "tenantCode", tenantCode,
+                        "runId", runId,
+                        "attemptId", attemptId,
+                        "sequenceNo", sequenceNo,
+                        "stepType", stepType,
+                        "status", status,
+                        "errorCode", errorCode == null ? "" : errorCode,
+                        "completedAt", timestamp(completedAt)));
+    }
+
+    @Override
     public void saveClaimed(AgentRun run, AgentRunStateTransition transition) {
         int updated = jdbcTemplate.update("""
                         UPDATE agent_run

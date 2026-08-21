@@ -61,6 +61,21 @@ class AgentRunQueryServiceImplTest {
                 .hasMessage("Agent run id must be positive");
     }
 
+    @Test
+    void loadsRunsCorrelatedToCurrentTenantProcess() {
+        when(repository.findByProcessInstance("tenant-a", "process-1")).thenReturn(List.of(runView()));
+
+        assertThat(service.findByProcessInstance(" process-1 ")).containsExactly(runView());
+        verify(repository).findByProcessInstance("tenant-a", "process-1");
+    }
+
+    @Test
+    void rejectsBlankProcessInstanceId() {
+        assertThatThrownBy(() -> service.findByProcessInstance(" "))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Process instance id must not be blank");
+    }
+
     private AgentRunView runView() {
         OffsetDateTime now = OffsetDateTime.parse("2026-08-08T10:00:00+08:00");
         return new AgentRunView(

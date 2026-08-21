@@ -124,14 +124,14 @@
 ### 16. Agent Runtime 仍未达到生产 MVP
 
 - 状态：基础设施已完成，执行闭环待完成
-- 已有：AgentRun、Attempt、Step、Checkpoint、Provider、Worker、重试和审计基础。
-- 下一步：先关闭上述 Agent Runtime P1 可靠性和安全问题，再完成取消/暂停/恢复、真实人工确认、工具权限、预算、降级、背压和完整集成测试。
+- 已有：AgentRun、Attempt、Step、Checkpoint、Provider、Worker、重试和审计基础；`PLATFORM_AGENT` 已能执行计划→执行两阶段模型调用；首个 `agent_run_status` 只读工具已接入租户授权、Schema、幂等审计和步骤记录，但检索、写工具审批、预算和人工确认仍未完成。
+- 下一步：先将计划、模型、校验、工具和检索统一落入可恢复 Step 账本，再完成工具权限、人工确认、预算、降级、背压和完整集成测试；不能把模型文本直接解释为可执行命令。
 - 验收：Agent 可以可靠执行、恢复、幂等、限权、审计，并安全地推进或暂停 Flowable 流程。
 
 ### 17. Agent 交互契约尚未形成完整表单与外部渠道
 
 - 状态：首个纵向切片已完成。
-- 已有：后端可按真实首节点或审批后路径生成 Agent 输入字段，发起/审批界面复用同一渲染组件，命令边界强制校验必填输入；`agent_process` 第 3 版已验证客户名称、申请金额、申请说明三字段映射。
+- 已有：后端可按真实首节点或审批后路径生成 Agent 输入字段，发起/审批界面复用同一渲染组件，命令边界强制校验必填输入；租户系统可通过 `GET /agent-runs/process-instances/{processInstanceId}` 查询实例关联的 AgentRun 摘要；`agent_process` 第 3 版已验证客户名称、申请金额、申请说明三字段映射。
 - 剩余风险：复杂对象和数组仍使用通用 JSON 兼容输入；尚无版本化表单、字段权限、字典数据源、外部系统幂等提交和数据待补录任务。
 - 下一步：按照[工作流与 Agent 交互数据契约](../architecture/workflow-agent-interaction-contract.md)逐步引入表单上下文和多渠道适配，不修改 AgentRun 或 Flowable 核心领域边界。
 - 验收：租户可通过 UI 或受控系统接口提供任意版本化业务输入，运行实例可还原所用契约版本，复杂数据无需编写 JSON。

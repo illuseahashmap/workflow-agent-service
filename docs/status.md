@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-08-18
+更新时间：2026-08-21
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -17,8 +17,12 @@
 
 - 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计。
 - 已完成正式 AgentRun 执行链路：Provider 调用、Schema 校验、基础结果策略、重试、租约心跳、Recovery、Outbox/Inbox 和 Flowable 恢复。
+- 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
+- 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
+- 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、幂等键和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已完成首节点及审批后 Agent 输入契约：后端按真实路径生成字段，前端动态渲染，命令边界再次校验必填输入。
+- 已提供租户安全的流程实例 AgentRun 关联查询：`GET /agent-runs/process-instances/{processInstanceId}`，外部系统可以跟踪执行状态而不接触内部状态机。
 - 输入映射首版只允许标量、对象字段和整个数组；输出映射支持数组索引和通配投影。
 
 ### 工程质量基线
@@ -35,8 +39,8 @@
 | P0 | 流程操作审计 | 基础审计已有 | 发起、领取、审批、驳回、转办、终止、规则命中可追溯 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
 | P1 | API 契约治理 | 路由已覆盖，部分响应模型仍需细化 | DTO、错误码、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | 首个闭环已有，生产级能力未完成 | Checkpoint 恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
-| P1 | Agent 交互扩展 | 首个输入契约切片已完成 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
+| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片已有，生产级能力未完成 | 工具/RAG/人工确认步骤、Checkpoint 恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
+| P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 
 ## 三、下一阶段顺序
 

@@ -31,6 +31,20 @@ public interface AgentRunExecutionRepository {
 
     long insertRunningStep(String tenantCode, long runId, long attemptId, Instant startedAt);
 
+    /** Persists a completed child step after an executor has returned its bounded result. */
+    default void insertCompletedStep(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            int sequenceNo,
+            String stepType,
+            String status,
+            String errorCode,
+            Instant completedAt
+    ) {
+        // Compatibility default for in-memory and legacy adapters.
+    }
+
     void saveClaimed(AgentRun run, AgentRunStateTransition transition);
 
     void saveSucceeded(

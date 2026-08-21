@@ -29,6 +29,8 @@ flowable:
 
 workflow:
   agent:
+    platform:
+      max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
     provider:
       egress:
         allow-private-networks: ${WORKFLOW_AGENT_PROVIDER_ALLOW_PRIVATE_NETWORKS:false}
