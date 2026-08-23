@@ -8,16 +8,16 @@ import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,6 +116,11 @@ public class PlatformAgentExecutor implements AgentExecutor {
 
         schemaValidator.validateInput(version.inputSchema(), command.input());
         var adapter = providerRegistry.require(provider.type());
+        List<ModelProviderRequest.ToolDefinition> availableTools =
+                toolRegistry.availableToolDefinitions(command.tenantCode());
+        var capabilities = adapter.capabilities(provider.baseUrl());
+        List<ModelProviderRequest.ToolDefinition> nativeTools =
+                capabilities != null && capabilities.nativeToolCalling() ? availableTools : List.of();
         ModelProviderResponse plan = adapter.invoke(new ModelProviderRequest(
                 provider.baseUrl(), credential, model,
                 version.systemPrompt() + "\n\n" + PLANNER_INSTRUCTION,
@@ -124,21 +129,24 @@ public class PlatformAgentExecutor implements AgentExecutor {
         var steps = new ArrayList<AgentExecutor.StepResult>();
         steps.add(new AgentExecutor.StepResult("PLAN", "SUCCEEDED", null));
         String context = "计划：\n" + plan.content() + "\n\n用户请求：\n" + command.input();
+        ModelProviderRequest.ToolResult previousToolResult = null;
         for (int step = 1; step <= maxSteps; step++) {
             ModelProviderResponse answer = adapter.invoke(new ModelProviderRequest(
                     provider.baseUrl(), credential, model,
-                    version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION,
-                    context, phaseTimeout, command.traceId()));
+                    version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION
+                            + "\n\n可用工具契约：\n" + toolInstructions(availableTools),
+                    context, phaseTimeout, command.traceId(), nativeTools, previousToolResult));
             ToolCall toolCall;
             try {
-                toolCall = parseToolCall(answer.content());
-            } catch (ModelProviderException invalidToolCall) {
+                toolCall = answer.toolCall() == null
+                        ? parseToolCall(answer.content()) : parseToolCall(answer.toolCall());
+            } catch (AgentExecutionException invalidToolCall) {
                 answer = adapter.invoke(new ModelProviderRequest(
                         provider.baseUrl(), credential, model,
                         version.systemPrompt() + "\n\n" + TOOL_CALL_REPAIR_INSTRUCTION
                                 + "\nRegistered tools: " + registeredTools(),
-                        context + "\n\nPrevious invalid response:\n" + answer.content(),
-                        phaseTimeout, command.traceId()));
+                    context + "\n\nPrevious invalid response:\n" + safeContent(answer),
+                        phaseTimeout, command.traceId(), nativeTools, previousToolResult));
                 toolCall = parseToolCall(answer.content());
             }
             if (toolCall == null) {
@@ -160,6 +168,10 @@ public class PlatformAgentExecutor implements AgentExecutor {
                             command.processInstanceId()));
             steps.add(new AgentExecutor.StepResult("TOOL_CALL", "SUCCEEDED", null));
             context = context + "\n\n工具 " + toolCall.name() + " 返回：\n" + toolResult.output();
+            previousToolResult = toolCall.callId() == null ? null
+                    : new ModelProviderRequest.ToolResult(
+                            toolCall.callId(), toolCall.name(),
+                            toolArgumentsJson(toolCall.arguments()), toolResult.output());
         }
         throw new IllegalStateException("Agent exceeded the maximum execution steps");
     }
@@ -178,9 +190,9 @@ public class PlatformAgentExecutor implements AgentExecutor {
         try {
             schemaValidator.validateOutput(version.outputSchema(), answer.content());
             return new OutputRepairResult(answer, false);
-        } catch (ModelProviderException invalidOutput) {
-            if (!"AGENT_OUTPUT_NOT_JSON".equals(invalidOutput.errorCode())
-                    && !"AGENT_OUTPUT_SCHEMA_INVALID".equals(invalidOutput.errorCode())) {
+        } catch (AgentExecutionException invalidOutput) {
+            if (!"AGENT_OUTPUT_NOT_JSON".equals(invalidOutput.failure().errorCode())
+                    && !"AGENT_OUTPUT_SCHEMA_INVALID".equals(invalidOutput.failure().errorCode())) {
                 throw invalidOutput;
             }
             ModelProviderResponse repaired = adapter.invoke(new ModelProviderRequest(
@@ -201,6 +213,16 @@ public class PlatformAgentExecutor implements AgentExecutor {
         return toolRegistry.registeredToolNames().stream().sorted().collect(Collectors.joining(", "));
     }
 
+    private String toolInstructions(List<ModelProviderRequest.ToolDefinition> tools) {
+        if (tools.isEmpty()) {
+            return "当前没有可用工具。";
+        }
+        return tools.stream()
+                .map(tool -> "- " + tool.name() + ": " + tool.description()
+                        + "，参数 Schema=" + tool.inputSchema())
+                .collect(Collectors.joining("\n"));
+    }
+
     private ToolCall parseToolCall(String content) {
         try {
             JsonNode root = objectMapper.readTree(content);
@@ -209,30 +231,70 @@ public class PlatformAgentExecutor implements AgentExecutor {
             }
             String name = root.path("tool").asText();
             if (!StringUtils.hasText(name)) {
-                throw new ModelProviderException(
-                        "AGENT_TOOL_CALL_INVALID", ModelProviderFailureKind.PERMANENT,
-                        "Agent tool call must contain a tool name");
+                throw new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                        "AGENT_TOOL_CALL_INVALID",
+                        io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.TOOL_PROTOCOL,
+                        false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                        "Agent tool call must contain a tool name"));
             }
             JsonNode argumentsNode = root.path("arguments");
             if (!argumentsNode.isMissingNode() && !argumentsNode.isNull() && !argumentsNode.isObject()) {
-                throw new ModelProviderException(
-                        "AGENT_TOOL_CALL_INVALID", ModelProviderFailureKind.PERMANENT,
-                        "Agent tool call arguments must be an object");
+                throw new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                        "AGENT_TOOL_CALL_INVALID",
+                        io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.TOOL_PROTOCOL,
+                        false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                        "Agent tool call arguments must be an object"));
             }
             // Process executions inject runtime context such as processInstanceId;
             // the model may therefore omit arguments for tools that need no model-owned input.
             if (argumentsNode.isMissingNode() || argumentsNode.isNull()) {
-                return new ToolCall(name, Map.of());
+                return new ToolCall(name, Map.of(), null);
             }
             Map<String, Object> arguments = objectMapper.convertValue(
                     argumentsNode, objectMapper.getTypeFactory()
                             .constructMapType(Map.class, String.class, Object.class));
-            return new ToolCall(name, arguments);
+            return new ToolCall(name, arguments, null);
         } catch (JsonProcessingException exception) {
             return null;
         }
     }
 
-    private record ToolCall(String name, Map<String, Object> arguments) {
+    private ToolCall parseToolCall(ModelProviderResponse.ToolCall call) {
+        try {
+            JsonNode arguments = objectMapper.readTree(call.argumentsJson());
+            if (arguments == null || !arguments.isObject()) {
+                throw new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                        "AGENT_TOOL_CALL_INVALID",
+                        io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.TOOL_PROTOCOL,
+                        false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                        "Agent tool call arguments must be an object"));
+            }
+            return new ToolCall(call.name(), objectMapper.convertValue(arguments, Map.class), call.callId());
+        } catch (JsonProcessingException exception) {
+            throw new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                    "AGENT_TOOL_CALL_INVALID",
+                    io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.TOOL_PROTOCOL,
+                    false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                    "Agent tool call arguments must be valid JSON"), exception);
+        }
+    }
+
+    private String safeContent(ModelProviderResponse response) {
+        return response.content() == null ? "" : response.content();
+    }
+
+    private String toolArgumentsJson(Map<String, Object> arguments) {
+        try {
+            return objectMapper.writeValueAsString(arguments);
+        } catch (JsonProcessingException exception) {
+            throw new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                    "AGENT_TOOL_CALL_INVALID",
+                    io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.TOOL_PROTOCOL,
+                    false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                    "Agent tool call arguments could not be serialized"), exception);
+        }
+    }
+
+    private record ToolCall(String name, Map<String, Object> arguments, String callId) {
     }
 }

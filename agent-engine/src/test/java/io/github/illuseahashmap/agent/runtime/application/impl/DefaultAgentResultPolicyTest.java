@@ -35,6 +35,16 @@ class DefaultAgentResultPolicyTest {
                 .isEqualTo("AGENT_RESULT_BUSINESS_REJECTED");
     }
 
+    @Test
+    void honoursExplicitBusinessResultEnvelope() {
+        assertThat(policy.evaluate(null, response(
+                "{\"resultStatus\":\"PARTIAL\",\"answer\":\"draft\"}", "stop"))
+                .reasonCode()).isEqualTo("AGENT_RESULT_PARTIAL");
+        assertThat(policy.evaluate(null, response(
+                "{\"resultStatus\":\"REJECTED\",\"answer\":\"no\"}", "stop"))
+                .status()).isEqualTo(ResultStatus.REJECTED);
+    }
+
     private ModelProviderResponse response(String content, String finishReason) {
         return new ModelProviderResponse(content, "model", "request", finishReason, 1, 1, 0, 10);
     }

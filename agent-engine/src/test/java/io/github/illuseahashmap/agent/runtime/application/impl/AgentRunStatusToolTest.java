@@ -23,10 +23,10 @@ class AgentRunStatusToolTest {
         AgentRunQueryRepository repository = mock(AgentRunQueryRepository.class);
         when(repository.findDetail("tenant-a", 10L)).thenReturn(Optional.of(new AgentRunDetailView(
                 new AgentRunView(10L, "review", "Review", 1, AgentRunStatus.SUCCEEDED,
-                        null, "process-1", "agent", null, null, null, null,
+                        null, "process-1", "agent", null, null, null, null, null,
                         OffsetDateTime.now(), OffsetDateTime.now()),
                 new AgentRunPayloadView("secret-input", "secret-output"),
-                List.of(), List.of(), List.of(), List.of(), List.of())));
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of())));
         AgentRunStatusTool tool = new AgentRunStatusTool(repository, new ObjectMapper());
 
         String output = tool.execute(new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(

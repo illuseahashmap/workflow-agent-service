@@ -41,7 +41,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(25);
+            assertThat(resultSet.getInt(1)).isEqualTo(31);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
@@ -54,6 +54,8 @@ class PlatformMigrationIntegrationTest {
         assertThat(tableExists("agent_provider")).isTrue();
         assertThat(tableExists("agent_run")).isTrue();
         assertThat(tableExists("agent_model_invocation")).isTrue();
+        assertThat(tableExists("agent_recovery_decision")).isTrue();
+        assertThat(tableExists("agent_run_operation")).isTrue();
         assertThat(columnExists("platform_outbox_event", "claim_expires_at")).isTrue();
         assertThat(columnExists("platform_outbox_event", "dead_lettered_at")).isTrue();
         assertThat(columnExists("platform_outbox_event", "resolution_reason")).isTrue();
@@ -120,6 +122,26 @@ class PlatformMigrationIntegrationTest {
                      """)) {
             assertThat(resultSet.next()).isTrue();
             assertThat(resultSet.getInt(1)).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void enablesForcedRowLevelSecurityForFlowableTenantTables() throws SQLException {
+        try (Connection connection = connection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("""
+                     SELECT COUNT(*)
+                     FROM pg_class table_info
+                     JOIN information_schema.columns columns
+                       ON columns.table_schema = 'public'
+                      AND columns.table_name = table_info.relname
+                      AND columns.column_name = 'tenant_id_'
+                     WHERE table_info.relname LIKE 'act_%'
+                       AND (table_info.relrowsecurity = FALSE
+                            OR table_info.relforcerowsecurity = FALSE)
+                     """)) {
+            assertThat(resultSet.next()).isTrue();
+            assertThat(resultSet.getInt(1)).isZero();
         }
     }
 

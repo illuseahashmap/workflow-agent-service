@@ -6,8 +6,10 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
-import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
-import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -57,7 +59,7 @@ public class AgentToolRegistry {
     public AgentTool require(String name) {
         AgentTool tool = tools.get(name);
         if (tool == null) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Agent tool is not registered: " + name);
+            throw toolProtocol("AGENT_TOOL_NOT_REGISTERED", "Agent tool is not registered: " + name);
         }
         return tool;
     }
@@ -66,18 +68,26 @@ public class AgentToolRegistry {
         return tools.keySet();
     }
 
+    public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(String tenantCode) {
+        return policyRepository.findAuthorized(tenantCode, tools.keySet()).stream()
+                .filter(definition -> tools.containsKey(definition.toolCode()))
+                .map(definition -> new ModelProviderRequest.ToolDefinition(
+                        definition.toolCode(), definition.toolName(), definition.inputSchema()))
+                .toList();
+    }
+
     public AgentTool.Result execute(String tenantCode, String toolCode, AgentTool.Request request) {
         AgentTool tool = require(toolCode);
         AgentToolDefinition definition = policyRepository.findAuthorized(tenantCode, toolCode)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN,
+                .orElseThrow(() -> toolProtocol("AGENT_TOOL_NOT_AUTHORIZED",
                         "Agent tool is not authorized for the current tenant: " + toolCode));
         if (!definition.readOnly() || !tool.readOnly() || !StringUtils.hasText(definition.inputSchema())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Agent tool policy is invalid: " + toolCode);
+            throw toolProtocol("AGENT_TOOL_POLICY_INVALID", "Agent tool policy is invalid: " + toolCode);
         }
         String argumentsJson = serialize(request.arguments());
         schemaValidator.validateInput(definition.inputSchema(), argumentsJson);
         if (!StringUtils.hasText(request.idempotencyKey())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool idempotency key is required");
+            throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_KEY_REQUIRED", "Agent tool idempotency key is required");
         }
         String idempotencyKey = request.idempotencyKey();
         String argumentsHash = hash(argumentsJson);
@@ -85,14 +95,14 @@ public class AgentToolRegistry {
         if (existing.isPresent()) {
             var audit = existing.get();
             if (!audit.argumentsHash().equals(argumentsHash)) {
-                throw new BusinessException(ErrorCode.CONFLICT,
+                throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_CONFLICT",
                         "Agent tool idempotency key was reused with different arguments");
             }
             return new AgentTool.Result(audit.output(), idempotencyKey);
         }
         AgentTool.Result result = tool.execute(request);
         if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Agent tool output is empty or too large");
+            throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
         }
         auditRepository.save(new AgentToolExecutionAuditRepository.Audit(
                 tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
@@ -113,7 +123,9 @@ public class AgentToolRegistry {
         try {
             return objectMapper.writeValueAsString(arguments == null ? Map.of() : arguments);
         } catch (JsonProcessingException exception) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool arguments must be JSON", exception);
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_TOOL_ARGUMENTS_INVALID", AgentFailureCategory.TOOL_PROTOCOL,
+                    false, ResultStatus.FAILED, "Agent tool arguments must be JSON"), exception);
         }
     }
 
@@ -123,7 +135,15 @@ public class AgentToolRegistry {
                     .digest(value.getBytes(StandardCharsets.UTF_8));
             return java.util.HexFormat.of().formatHex(digest);
         } catch (java.security.NoSuchAlgorithmException exception) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to hash Agent tool arguments", exception);
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_TOOL_HASH_ERROR", AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Unable to hash Agent tool arguments"), exception);
         }
+    }
+
+    private AgentExecutionException toolProtocol(String errorCode, String message) {
+        return new AgentExecutionException(new AgentFailure(
+                errorCode, AgentFailureCategory.TOOL_PROTOCOL, false,
+                ResultStatus.FAILED, message));
     }
 }

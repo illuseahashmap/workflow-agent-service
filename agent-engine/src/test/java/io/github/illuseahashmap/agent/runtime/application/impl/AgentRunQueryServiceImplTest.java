@@ -36,7 +36,7 @@ class AgentRunQueryServiceImplTest {
     void loadsRunDetailInsideCurrentTenant() {
         AgentRunDetailView detail = new AgentRunDetailView(
                 runView(), new AgentRunPayloadView(null, null),
-                List.of(), List.of(), List.of(), List.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
         when(repository.findDetail("tenant-a", 10L)).thenReturn(Optional.of(detail));
 
         AgentRunDetailView result = service.detail(10L);
@@ -84,6 +84,7 @@ class AgentRunQueryServiceImplTest {
                 "Review Agent",
                 1,
                 AgentRunStatus.QUEUED,
+                null,
                 null,
                 null,
                 null,

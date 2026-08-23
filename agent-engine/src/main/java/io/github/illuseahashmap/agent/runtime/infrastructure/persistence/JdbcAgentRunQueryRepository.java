@@ -7,6 +7,7 @@ import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunPayloadVie
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunStateHistoryView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunStepView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentRecoveryDecisionView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentModelInvocationView;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunQueryRepository;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType;
@@ -58,7 +59,10 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
         parameters.put("limit", criteria.pageSize());
         parameters.put("offset", (criteria.pageNum() - 1) * criteria.pageSize());
         List<AgentRunView> items = jdbcTemplate.query("""
-                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version
+                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version,
+                               (SELECT h.trace_id FROM agent_run_state_history h
+                                WHERE h.tenant_code = r.tenant_code AND h.agent_run_id = r.id
+                                ORDER BY h.created_at DESC, h.id DESC LIMIT 1) AS trace_id
                         """ + FROM_CLAUSE + where
                         + " ORDER BY r.created_at DESC, r.id DESC LIMIT :limit OFFSET :offset",
                 parameters,
@@ -70,7 +74,10 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
     public Optional<AgentRunDetailView> findDetail(String tenantCode, long runId) {
         Map<String, Object> parameters = Map.of("tenantCode", tenantCode, "runId", runId);
         List<AgentRunView> runs = jdbcTemplate.query("""
-                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version
+                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version,
+                               (SELECT h.trace_id FROM agent_run_state_history h
+                                WHERE h.tenant_code = r.tenant_code AND h.agent_run_id = r.id
+                                ORDER BY h.created_at DESC, h.id DESC LIMIT 1) AS trace_id
                         """ + FROM_CLAUSE + " WHERE r.tenant_code = :tenantCode AND r.id = :runId",
                 parameters,
                 (resultSet, rowNum) -> mapView(resultSet));
@@ -84,13 +91,17 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
                 findSteps(parameters),
                 findModelInvocations(parameters),
                 findCheckpoints(parameters),
-                findStateHistory(parameters)));
+                findStateHistory(parameters),
+                findRecoveryDecisions(parameters)));
     }
 
     @Override
     public List<AgentRunView> findByProcessInstance(String tenantCode, String processInstanceId) {
         return jdbcTemplate.query("""
-                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version
+                        SELECT r.*, d.agent_code, d.agent_name, v.version AS agent_version,
+                               (SELECT h.trace_id FROM agent_run_state_history h
+                                WHERE h.tenant_code = r.tenant_code AND h.agent_run_id = r.id
+                                ORDER BY h.created_at DESC, h.id DESC LIMIT 1) AS trace_id
                         """ + FROM_CLAUSE + " WHERE r.tenant_code = :tenantCode"
                         + " AND r.process_instance_id = :processInstanceId"
                         + " ORDER BY r.created_at ASC, r.id ASC",
@@ -215,6 +226,32 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
                         offsetDateTime(resultSet, "created_at")));
     }
 
+    private List<AgentRecoveryDecisionView> findRecoveryDecisions(Map<String, Object> parameters) {
+        return jdbcTemplate.query("""
+                        SELECT id, attempt_id, step_id, error_code, failure_category, action,
+                               retry_scheduled, requires_human_review, result_status, reason, created_at
+                        FROM agent_recovery_decision
+                        WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                        ORDER BY created_at, id
+                        """,
+                parameters,
+                (resultSet, rowNum) -> new AgentRecoveryDecisionView(
+                        resultSet.getLong("id"),
+                        resultSet.getLong("attempt_id"),
+                        resultSet.getLong("step_id"),
+                        resultSet.getString("error_code"),
+                        io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.valueOf(
+                                resultSet.getString("failure_category")),
+                        io.github.illuseahashmap.agent.runtime.domain.AgentRecoveryAction.valueOf(
+                                resultSet.getString("action")),
+                        resultSet.getBoolean("retry_scheduled"),
+                        resultSet.getBoolean("requires_human_review"),
+                        resultSet.getString("result_status") == null ? null
+                                : ResultStatus.valueOf(resultSet.getString("result_status")),
+                        resultSet.getString("reason"),
+                        offsetDateTime(resultSet, "created_at")));
+    }
+
     private AgentRunView mapView(ResultSet resultSet) throws SQLException {
         String resultStatus = resultSet.getString("result_status");
         return new AgentRunView(
@@ -227,6 +264,7 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
                 resultSet.getString("process_instance_id"),
                 resultSet.getString("activity_id"),
                 resultSet.getString("error_code"),
+                resultSet.getString("trace_id"),
                 resultSet.getObject("deadline_at", java.time.OffsetDateTime.class),
                 resultSet.getObject("started_at", java.time.OffsetDateTime.class),
                 resultSet.getObject("completed_at", java.time.OffsetDateTime.class),

@@ -14,6 +14,7 @@ public record AgentRunView(
         String processInstanceId,
         String activityId,
         String errorCode,
+        String traceId,
         OffsetDateTime deadlineAt,
         OffsetDateTime startedAt,
         OffsetDateTime completedAt,

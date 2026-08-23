@@ -79,6 +79,7 @@ class OpenAiCompatibleModelProviderAdapterTest {
         assertThat(requestBody.get()).contains("\"instructions\":\"system prompt\"");
         assertThat(requestBody.get()).contains("\"input\":\"user input\"");
         assertThat(requestBody.get()).doesNotContain("\"messages\"");
+        assertThat(adapter.capabilities(request("/v1/responses").baseUrl()).nativeToolCalling()).isFalse();
     }
 
     @Test
@@ -116,6 +117,7 @@ class OpenAiCompatibleModelProviderAdapterTest {
                 .isInstanceOfSatisfying(ModelProviderException.class, exception -> {
                     assertThat(exception.errorCode()).isEqualTo("PROVIDER_MODEL_NOT_FOUND");
                     assertThat(exception.getMessage()).doesNotContain("sensitive provider detail");
+                    assertThat(exception.safeDetail()).contains("sensitive provider detail");
                 });
     }
 

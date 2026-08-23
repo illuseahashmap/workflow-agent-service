@@ -22,7 +22,9 @@ function walk(directory, reports = []) {
 const reports = walk(process.cwd());
 const failures = [];
 for (const suite of expectedSuites) {
-  const report = reports.find((path) => path.endsWith(`TEST-${suite}.xml`));
+  // Surefire prefixes the fully-qualified test class name, for example
+  // TEST-io.github.workflow.AgentCompletionEventStoreIntegrationTest.xml.
+  const report = reports.find((path) => new RegExp(`TEST-(?:.*\\.)?${suite}\\.xml$`).test(path));
   if (!report) {
     failures.push(`${suite}: report is missing`);
     continue;

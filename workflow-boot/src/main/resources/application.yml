@@ -44,6 +44,7 @@ workflow:
       poll-delay-ms: ${WORKFLOW_AGENT_WORKER_POLL_DELAY_MS:1000}
       lease-seconds: ${WORKFLOW_AGENT_WORKER_LEASE_SECONDS:60}
       max-attempts: ${WORKFLOW_AGENT_WORKER_MAX_ATTEMPTS:3}
+      max-running-per-tenant: ${WORKFLOW_AGENT_WORKER_MAX_RUNNING_PER_TENANT:2}
       retry:
         max-delay-seconds: ${WORKFLOW_AGENT_WORKER_RETRY_MAX_DELAY_SECONDS:30}
         jitter-ratio: ${WORKFLOW_AGENT_WORKER_RETRY_JITTER_RATIO:0.25}

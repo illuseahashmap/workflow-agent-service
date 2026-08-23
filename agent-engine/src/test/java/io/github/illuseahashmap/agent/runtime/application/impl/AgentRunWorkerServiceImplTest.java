@@ -151,7 +151,7 @@ class AgentRunWorkerServiceImplTest {
     }
 
     private void configureClaim(AgentRun run) {
-        when(executionRepository.lockNextAvailable(any())).thenReturn(Optional.of(
+        when(executionRepository.lockNextAvailable(any(), any(Integer.class))).thenReturn(Optional.of(
                 new AgentRunExecutionSnapshot(run, "{\"input\":\"review this\"}")));
         when(executionRepository.nextAttemptNumber("tenant-a", 10L)).thenReturn(1);
         when(executionRepository.insertRunningAttempt(

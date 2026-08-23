@@ -14,6 +14,14 @@ public interface AgentRunExecutionRepository {
 
     Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now);
 
+    /**
+     * Claims one run while respecting a persistent per-tenant concurrency cap.
+     * The default keeps lightweight adapters source-compatible.
+     */
+    default Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now, int tenantConcurrencyLimit) {
+        return lockNextAvailable(now);
+    }
+
     int recoverExpired(Instant now);
 
     boolean renewLease(
@@ -42,6 +50,10 @@ public interface AgentRunExecutionRepository {
             String errorCode,
             Instant completedAt
     ) {
+        // Compatibility default for in-memory and legacy adapters.
+    }
+
+    default void insertRecoveryDecision(AgentRecoveryDecision decision) {
         // Compatibility default for in-memory and legacy adapters.
     }
 

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderPort;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderCapabilities;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
@@ -17,6 +18,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,14 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
     @Override
     public AgentProviderType providerType() {
         return AgentProviderType.OPENAI_COMPATIBLE;
+    }
+
+    @Override
+    public ModelProviderCapabilities capabilities(String baseUrl) {
+        boolean responses = isResponsesEndpoint(endpointUri(baseUrl));
+        return new ModelProviderCapabilities(
+                responses ? "OPENAI_RESPONSES_COMPATIBLE" : "OPENAI_CHAT_COMPLETIONS_COMPATIBLE",
+                !responses, false, false);
     }
 
     @Override
@@ -112,6 +122,11 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
             if (StringUtils.hasText(request.systemPrompt())) {
                 body.put("instructions", request.systemPrompt());
             }
+            // DeepSeek Ark's compatible Responses endpoint currently accepts the
+            // textual input contract, but rejects the OpenAI Responses `tools`
+            // payload. The runtime still injects the governed tool contract into
+            // instructions and validates every legacy TOOL_CALL server-side.
+            // Native tools remain enabled for Chat Completions below.
             body.put("input", request.userInput());
             return objectMapper.writeValueAsString(body);
         }
@@ -121,7 +136,56 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
             messages.addObject().put("role", "system").put("content", request.systemPrompt());
         }
         messages.addObject().put("role", "user").put("content", request.userInput());
+        if (request.toolResult() != null) {
+            ObjectNode assistant = messages.addObject().put("role", "assistant");
+            ArrayNode calls = assistant.putArray("tool_calls");
+            ObjectNode call = calls.addObject()
+                    .put("id", request.toolResult().callId())
+                    .put("type", "function")
+                    .putObject("function");
+            call.put("name", request.toolResult().toolName());
+            call.put("arguments", request.toolResult().argumentsJson());
+            messages.addObject().put("role", "tool")
+                    .put("tool_call_id", request.toolResult().callId())
+                    .put("content", request.toolResult().output());
+        }
+        addChatTools(body, request.tools());
         return objectMapper.writeValueAsString(body);
+    }
+
+    private void addChatTools(ObjectNode body, List<ModelProviderRequest.ToolDefinition> tools) {
+        if (tools.isEmpty()) {
+            return;
+        }
+        ArrayNode definitions = body.putArray("tools");
+        for (ModelProviderRequest.ToolDefinition tool : tools) {
+            ObjectNode function = definitions.addObject().put("type", "function").putObject("function");
+            function.put("name", tool.name());
+            function.put("description", tool.description());
+            function.set("parameters", schema(tool.inputSchema()));
+        }
+    }
+
+    private void addResponsesTools(ObjectNode body, List<ModelProviderRequest.ToolDefinition> tools)
+            throws IOException {
+        if (tools.isEmpty()) {
+            return;
+        }
+        ArrayNode definitions = body.putArray("tools");
+        for (ModelProviderRequest.ToolDefinition tool : tools) {
+            ObjectNode definition = definitions.addObject().put("type", "function");
+            definition.put("name", tool.name());
+            definition.put("description", tool.description());
+            definition.set("parameters", schema(tool.inputSchema()));
+        }
+    }
+
+    private JsonNode schema(String schema) {
+        try {
+            return objectMapper.readTree(schema);
+        } catch (IOException exception) {
+            return objectMapper.createObjectNode().put("type", "object");
+        }
     }
 
     private ModelProviderResponse parseResponse(String responseBody, long latencyMillis, boolean responsesApi) {
@@ -141,8 +205,15 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
 
     private ModelProviderResponse parseChatCompletionResponse(JsonNode root, long latencyMillis) {
             JsonNode choice = root.path("choices").path(0);
-            String content = choice.path("message").path("content").asText(null);
-            requireContent(content);
+            JsonNode message = choice.path("message");
+            ModelProviderResponse.ToolCall toolCall = parseChatToolCall(message.path("tool_calls"));
+            String content = message.path("content").asText(null);
+            if (!StringUtils.hasText(content) && toolCall != null) {
+                content = "";
+            }
+            if (toolCall == null) {
+                requireContent(content);
+            }
             JsonNode usage = root.path("usage");
             int reasoningTokens = usage.path("completion_tokens_details").path("reasoning_tokens").asInt(0);
             return new ModelProviderResponse(
@@ -153,7 +224,8 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
                     usage.path("prompt_tokens").asInt(0),
                     usage.path("completion_tokens").asInt(0),
                     reasoningTokens,
-                    latencyMillis);
+                    latencyMillis,
+                    toolCall);
     }
 
     private ModelProviderResponse parseResponsesApiResponse(JsonNode root, long latencyMillis) {
@@ -161,7 +233,13 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
         if (!StringUtils.hasText(content)) {
             content = findOutputText(root.path("output"));
         }
-        requireContent(content);
+        ModelProviderResponse.ToolCall toolCall = parseResponsesToolCall(root.path("output"));
+        if (!StringUtils.hasText(content) && toolCall != null) {
+            content = "";
+        }
+        if (toolCall == null) {
+            requireContent(content);
+        }
         JsonNode usage = root.path("usage");
         int reasoningTokens = usage.path("output_tokens_details").path("reasoning_tokens").asInt(0);
         return new ModelProviderResponse(
@@ -172,7 +250,34 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
                 usage.path("input_tokens").asInt(0),
                 usage.path("output_tokens").asInt(0),
                 reasoningTokens,
-                latencyMillis);
+                latencyMillis,
+                toolCall);
+    }
+
+    private ModelProviderResponse.ToolCall parseChatToolCall(JsonNode calls) {
+        if (!calls.isArray() || calls.isEmpty()) {
+            return null;
+        }
+        JsonNode call = calls.path(0);
+        String name = call.path("function").path("name").asText(null);
+        String arguments = call.path("function").path("arguments").asText(null);
+        return StringUtils.hasText(name) && arguments != null
+                ? new ModelProviderResponse.ToolCall(name, arguments, call.path("id").asText(null)) : null;
+    }
+
+    private ModelProviderResponse.ToolCall parseResponsesToolCall(JsonNode output) {
+        if (!output.isArray()) {
+            return null;
+        }
+        for (JsonNode item : output) {
+            if ("function_call".equals(item.path("type").asText())
+                    && StringUtils.hasText(item.path("name").asText(null))) {
+                return new ModelProviderResponse.ToolCall(
+                        item.path("name").asText(), item.path("arguments").asText("{}"),
+                        item.path("call_id").asText(null));
+            }
+        }
+        return null;
     }
 
     private String findOutputText(JsonNode output) {
@@ -212,7 +317,32 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
             };
         }
         return new ModelProviderException(
-                errorCode, failureKind, "Model Provider request failed with HTTP " + statusCode);
+                errorCode, failureKind, "Model Provider request failed with HTTP " + statusCode,
+                safeRemoteDetail(responseBody));
+    }
+
+    /** Extracts only a short, non-secret operator hint; raw provider payloads are never persisted. */
+    private String safeRemoteDetail(String responseBody) {
+        if (!StringUtils.hasText(responseBody)) {
+            return null;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            String detail = firstText(
+                    root.path("error").path("message"),
+                    root.path("message"),
+                    root.path("error").path("detail"));
+            if (!StringUtils.hasText(detail)) {
+                return null;
+            }
+            return detail.replaceAll("(?i)(api[-_ ]?key|authorization|bearer|token)\\s*[:=]\\s*[^,;\\s]+",
+                    "$1=[REDACTED]")
+                    .replaceAll("[\\r\\n\\t]+", " ")
+                    .strip()
+                    .substring(0, Math.min(400, detail.length()));
+        } catch (IOException exception) {
+            return null;
+        }
     }
 
     private String remoteErrorCode(String responseBody) {

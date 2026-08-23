@@ -16,7 +16,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
@@ -293,7 +293,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         }
         try {
             outputSchemaValidator.validateDefinition(outputSchema);
-        } catch (ModelProviderException exception) {
+        } catch (AgentExecutionException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Output Schema must be valid JSON", exception);
         }
     }
@@ -304,7 +304,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         }
         try {
             outputSchemaValidator.validateDefinition(inputSchema);
-        } catch (ModelProviderException exception) {
+        } catch (AgentExecutionException exception) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Input Schema must be valid JSON", exception);
         }
     }

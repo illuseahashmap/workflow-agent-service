@@ -4,6 +4,7 @@ public final class ModelProviderException extends RuntimeException {
 
     private final String errorCode;
     private final ModelProviderFailureKind failureKind;
+    private final String safeDetail;
 
     public ModelProviderException(
             String errorCode,
@@ -13,6 +14,7 @@ public final class ModelProviderException extends RuntimeException {
         super(message);
         this.errorCode = errorCode;
         this.failureKind = failureKind;
+        this.safeDetail = null;
     }
 
     public ModelProviderException(
@@ -24,6 +26,19 @@ public final class ModelProviderException extends RuntimeException {
         super(message, cause);
         this.errorCode = errorCode;
         this.failureKind = failureKind;
+        this.safeDetail = null;
+    }
+
+    public ModelProviderException(
+            String errorCode,
+            ModelProviderFailureKind failureKind,
+            String message,
+            String safeDetail
+    ) {
+        super(message);
+        this.errorCode = errorCode;
+        this.failureKind = failureKind;
+        this.safeDetail = safeDetail;
     }
 
     public String errorCode() {
@@ -32,5 +47,9 @@ public final class ModelProviderException extends RuntimeException {
 
     public ModelProviderFailureKind failureKind() {
         return failureKind;
+    }
+
+    public String safeDetail() {
+        return safeDetail;
     }
 }

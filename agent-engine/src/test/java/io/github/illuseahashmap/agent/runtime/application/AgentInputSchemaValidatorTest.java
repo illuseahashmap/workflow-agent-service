@@ -3,7 +3,6 @@ package io.github.illuseahashmap.agent.runtime.application;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import org.junit.jupiter.api.Test;
 
 class AgentInputSchemaValidatorTest {
@@ -30,7 +29,7 @@ class AgentInputSchemaValidatorTest {
                 + "\"properties\":{\"customer\":{\"type\":\"string\"}}}";
 
         assertThatThrownBy(() -> validator.validateInput(schema, "{}"))
-                .isInstanceOf(ModelProviderException.class)
+                .isInstanceOf(AgentExecutionException.class)
                 .hasMessageContaining("input contract");
     }
 }

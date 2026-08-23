@@ -2,8 +2,9 @@ package io.github.illuseahashmap.agent.runtime.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
@@ -58,14 +59,15 @@ public class AgentOutputSchemaValidator {
             JsonNode schemaNode = objectMapper.readTree(schema);
             JsonNode input = objectMapper.readTree(content);
             if (!matches(schemaNode, input)) {
-                throw new ModelProviderException(
-                        "AGENT_INPUT_SCHEMA_INVALID", ModelProviderFailureKind.PERMANENT,
-                        "Agent input did not satisfy the configured input contract");
+                throw new AgentExecutionException(new AgentFailure(
+                        "AGENT_INPUT_SCHEMA_INVALID", AgentFailureCategory.INPUT_CONTRACT,
+                        false, ResultStatus.FAILED, "Agent input did not satisfy the configured input contract"));
             }
         } catch (IOException exception) {
-            throw new ModelProviderException(
-                    "AGENT_INPUT_NOT_JSON", ModelProviderFailureKind.PERMANENT,
-                    "Agent input must be valid JSON when an input schema is configured", exception);
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_INPUT_NOT_JSON", AgentFailureCategory.INPUT_CONTRACT,
+                    false, ResultStatus.FAILED, "Agent input must be valid JSON when an input schema is configured"),
+                    exception);
         }
     }
 
@@ -141,12 +143,15 @@ public class AgentOutputSchemaValidator {
         };
     }
 
-    private ModelProviderException invalid(String message) {
-        return new ModelProviderException("AGENT_OUTPUT_SCHEMA_INVALID", ModelProviderFailureKind.PERMANENT, message);
+    private AgentExecutionException invalid(String message) {
+        return new AgentExecutionException(new AgentFailure(
+                "AGENT_OUTPUT_SCHEMA_INVALID", AgentFailureCategory.OUTPUT_CONTRACT,
+                false, ResultStatus.FAILED, message));
     }
 
-    private ModelProviderException invalidOutput(String code) {
-        return new ModelProviderException(code, ModelProviderFailureKind.PERMANENT,
-                "Agent output did not satisfy the configured result policy");
+    private AgentExecutionException invalidOutput(String code) {
+        return new AgentExecutionException(new AgentFailure(
+                code, AgentFailureCategory.OUTPUT_CONTRACT,
+                false, ResultStatus.FAILED, "Agent output did not satisfy the configured result policy"));
     }
 }

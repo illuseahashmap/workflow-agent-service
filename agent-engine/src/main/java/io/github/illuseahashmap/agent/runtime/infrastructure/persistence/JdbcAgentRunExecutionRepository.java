@@ -3,6 +3,7 @@ package io.github.illuseahashmap.agent.runtime.infrastructure.persistence;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRecoveryDecision;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStateTransition;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
@@ -78,17 +79,29 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
 
     @Override
     public Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now) {
+        return lockNextAvailable(now, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public Optional<AgentRunExecutionSnapshot> lockNextAvailable(Instant now, int tenantConcurrencyLimit) {
         return jdbcTemplate.query("""
                         SELECT *
                         FROM agent_run
                         WHERE status = 'QUEUED'
                           AND available_at <= :now
                           AND deadline_at > :now
+                          AND (
+                              :tenantConcurrencyLimit >= 2147483647
+                              OR (SELECT COUNT(*) FROM agent_run active
+                                  WHERE active.tenant_code = agent_run.tenant_code
+                                    AND active.status = 'RUNNING') < :tenantConcurrencyLimit
+                          )
                         ORDER BY available_at, id
                         FOR UPDATE SKIP LOCKED
                         LIMIT 1
                         """,
-                Map.of("now", timestamp(now)),
+                Map.of("now", timestamp(now),
+                        "tenantConcurrencyLimit", Math.max(1, tenantConcurrencyLimit)),
                 (resultSet, rowNum) -> new AgentRunExecutionSnapshot(
                         mapRun(resultSet), resultSet.getString("input_snapshot_json")))
                 .stream()
@@ -398,6 +411,34 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                 parameters);
         requireUpdated(updated, "Stale Agent attempt cannot fail the run");
         insertTransition(transition);
+    }
+
+    @Override
+    public void insertRecoveryDecision(AgentRecoveryDecision decision) {
+        jdbcTemplate.update("""
+                        INSERT INTO agent_recovery_decision (
+                            tenant_code, agent_run_id, attempt_id, step_id, error_code,
+                            failure_category, action, retry_scheduled, requires_human_review,
+                            result_status, reason, created_at
+                        ) VALUES (
+                            :tenantCode, :runId, :attemptId, :stepId, :errorCode,
+                            :failureCategory, :action, :retryScheduled, :requiresHumanReview,
+                            :resultStatus, :reason, :createdAt
+                        )
+                        """,
+                nullableMap(
+                        "tenantCode", decision.tenantCode(),
+                        "runId", decision.agentRunId(),
+                        "attemptId", decision.attemptId(),
+                        "stepId", decision.stepId(),
+                        "errorCode", decision.errorCode(),
+                        "failureCategory", decision.failureCategory().name(),
+                        "action", decision.action().name(),
+                        "retryScheduled", decision.retryScheduled(),
+                        "requiresHumanReview", decision.requiresHumanReview(),
+                        "resultStatus", decision.resultStatus() == null ? null : decision.resultStatus().name(),
+                        "reason", decision.reason(),
+                        "createdAt", timestamp(decision.createdAt())));
     }
 
     private void insertInvocation(

@@ -7,22 +7,25 @@ import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersionRe
 import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry;
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
-import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutorRegistry;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRecoveryDecision;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentResultPolicy;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRetryBackoffPolicy;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunLeaseHeartbeat;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRuntimeMetrics;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureDisposition;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunLease;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType;
@@ -62,11 +65,14 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private final String workerId;
     private final Duration leaseDuration;
     private final int maxAttempts;
+    private final int tenantConcurrencyLimit;
     private final AgentRunEventPublisher eventPublisher;
     private final AgentRunLeaseHeartbeat leaseHeartbeat;
     private final AgentResultPolicy resultPolicy;
     private final AgentRuntimeMetrics metrics;
     private final AgentRetryBackoffPolicy retryBackoffPolicy;
+    private final AgentRecoveryPolicy recoveryPolicy;
+    private final AgentFailureMapper failureMapper;
 
     @Autowired
     public AgentRunWorkerServiceImpl(
@@ -79,11 +85,14 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             @Value("${workflow.agent.worker.id:local-worker}") String workerId,
             @Value("${workflow.agent.worker.lease-seconds:60}") long leaseSeconds,
             @Value("${workflow.agent.worker.max-attempts:3}") int maxAttempts,
+            @Value("${workflow.agent.worker.max-running-per-tenant:2}") int tenantConcurrencyLimit,
             AgentRunEventPublisher eventPublisher,
             AgentRunLeaseHeartbeat leaseHeartbeat,
             AgentResultPolicy resultPolicy,
             AgentRuntimeMetrics metrics,
-            AgentRetryBackoffPolicy retryBackoffPolicy
+            AgentRetryBackoffPolicy retryBackoffPolicy,
+            AgentRecoveryPolicy recoveryPolicy,
+            AgentFailureMapper failureMapper
     ) {
         this.executionRepository = executionRepository;
         this.versionRepository = versionRepository;
@@ -94,11 +103,14 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         this.workerId = workerId + ":" + UUID.randomUUID();
         this.leaseDuration = Duration.ofSeconds(Math.max(5L, Math.min(leaseSeconds, 3_600L)));
         this.maxAttempts = maxAttempts;
+        this.tenantConcurrencyLimit = Math.max(1, Math.min(tenantConcurrencyLimit, 10_000));
         this.eventPublisher = eventPublisher;
         this.leaseHeartbeat = leaseHeartbeat;
         this.resultPolicy = resultPolicy;
         this.metrics = metrics;
         this.retryBackoffPolicy = retryBackoffPolicy;
+        this.recoveryPolicy = recoveryPolicy;
+        this.failureMapper = failureMapper;
     }
 
     public AgentRunWorkerServiceImpl(
@@ -117,11 +129,13 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 new AgentExecutorRegistry(List.of(new ModelOnlyAgentExecutor(
                         credentialResolver, providerRegistry, new AgentOutputSchemaValidator(objectMapper)))),
                 objectMapper, transactionTemplate, workerId, leaseSeconds, maxAttempts,
+                2,
                 AgentRunEventPublisher.NOOP,
                 AgentRunLeaseHeartbeat.NOOP,
                 new DefaultAgentResultPolicy(),
                 AgentRuntimeMetrics.NOOP,
-                ExponentialJitterRetryBackoffPolicy.defaults(java.util.random.RandomGenerator.getDefault()));
+                ExponentialJitterRetryBackoffPolicy.defaults(java.util.random.RandomGenerator.getDefault()),
+                new AgentRecoveryPolicy(), new AgentFailureMapper());
     }
 
     @Override
@@ -146,7 +160,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
 
     private ClaimedRun claim() {
         Instant now = Instant.now();
-        AgentRunExecutionSnapshot snapshot = executionRepository.lockNextAvailable(now).orElse(null);
+        AgentRunExecutionSnapshot snapshot = executionRepository
+                .lockNextAvailable(now, tenantConcurrencyLimit).orElse(null);
         if (snapshot == null) {
             return null;
         }
@@ -187,30 +202,29 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                         new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
                                 remainingTimeout(run, version.timeoutSeconds()), claimed.traceId(),
                                 run.processInstanceId()));
+            } catch (AgentExecutionException exception) {
+                LOG.warn("Agent execution contract failed: runId={}, traceId={}, errorCode={}",
+                        run.id(), claimed.traceId(), exception.failure().errorCode(), exception);
+                completeIfLeaseValid(lease, () -> completeFailed(
+                        claimed, providerId(run), requestedModel(run), exception.failure()));
+                return;
             } catch (ModelProviderException exception) {
                 LOG.warn("Agent provider execution failed: runId={}, traceId={}, errorCode={}",
                         run.id(), claimed.traceId(), exception.errorCode(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
-                        claimed,
-                        providerId(run),
-                        requestedModel(run),
-                        exception.errorCode(),
-                        ResultStatus.FAILED,
-                        exception.failureKind() != ModelProviderFailureKind.PERMANENT));
+                        claimed, providerId(run), requestedModel(run), failureMapper.fromProvider(exception)));
                 return;
             } catch (BusinessException exception) {
                 LOG.warn("Agent configuration failed: runId={}, traceId={}, message={}",
                         run.id(), claimed.traceId(), exception.getMessage(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
-                        claimed, providerId(run), requestedModel(run),
-                        "AGENT_CONFIGURATION_ERROR", ResultStatus.FAILED, false));
+                        claimed, providerId(run), requestedModel(run), failureMapper.configuration(exception)));
                 return;
             } catch (RuntimeException exception) {
                 LOG.error("Agent execution failed unexpectedly: runId={}, traceId={}",
                         run.id(), claimed.traceId(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
-                        claimed, providerId(run), requestedModel(run),
-                        "AGENT_EXECUTION_ERROR", ResultStatus.FAILED, false));
+                        claimed, providerId(run), requestedModel(run), failureMapper.unexpected(exception)));
                 return;
             }
             if (!lease.isValid()) {
@@ -222,7 +236,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                         executionResult.modelResponse(), executionResult.steps(), decision);
             } else {
                 completeFailed(claimed, executionResult.providerId(), executionResult.requestedModel(),
-                        decision.reasonCode(), decision.status(), false);
+                        new AgentFailure(decision.reasonCode(),
+                                io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.RESULT_POLICY,
+                                false, decision.status(), "Agent result was rejected by policy"));
             }
         }
     }
@@ -274,14 +290,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         }
     }
 
-    private void completeFailed(
-            ClaimedRun claimed,
-            long providerId,
-            String requestedModel,
-            String errorCode,
-            ResultStatus resultStatus,
-            boolean retryable
-    ) {
+    private void completeFailed(ClaimedRun claimed, long providerId, String requestedModel, AgentFailure failure) {
+        String errorCode = failure.errorCode();
+        ResultStatus resultStatus = failure.resultStatus();
+        boolean retryable = failure.retryable();
         transactionTemplate.executeWithoutResult(status -> {
             Instant now = Instant.now();
             boolean retriesRemaining = retryable
@@ -323,6 +335,11 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     resultStatus,
                     availableAt,
                     lastTransition(claimed.run()));
+            AgentRecoveryPolicy.Decision recovery = recoveryPolicy.decide(failure, retriesRemaining);
+            executionRepository.insertRecoveryDecision(new AgentRecoveryDecision(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), claimed.stepId(),
+                    errorCode, recovery.failureCategory(), recovery.action(), retriesRemaining,
+                    recovery.requiresHumanReview(), resultStatus, recovery.reason(), now));
             if (!retriesRemaining || !now.isBefore(claimed.run().deadlineAt())) {
                 eventPublisher.completed(claimed.run(), null);
                 metrics.completed(resultStatus);
@@ -353,9 +370,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         Duration configured = Duration.ofSeconds(configuredTimeoutSeconds);
         Duration timeout = remaining.compareTo(configured) < 0 ? remaining : configured;
         if (timeout.isZero() || timeout.isNegative()) {
-            throw new ModelProviderException(
-                    "AGENT_DEADLINE_EXCEEDED", ModelProviderFailureKind.PERMANENT,
-                    "Agent run deadline has been exceeded");
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_DEADLINE_EXCEEDED",
+                    AgentFailureCategory.DEADLINE,
+                    false, ResultStatus.FAILED, "Agent run deadline has been exceeded"));
         }
         return timeout;
     }
@@ -368,7 +386,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             }
             return input.isTextual() ? input.textValue() : objectMapper.writeValueAsString(input);
         } catch (JsonProcessingException exception) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to read Agent input", exception);
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_INPUT_SNAPSHOT_INVALID",
+                    AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Agent input snapshot could not be read"), exception);
         }
     }
 
@@ -381,7 +402,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     "resultStatus", decision.status().name(),
                     "resultReason", decision.reasonCode()));
         } catch (JsonProcessingException exception) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to serialize Agent output", exception);
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_OUTPUT_SNAPSHOT_ERROR",
+                    AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Agent output snapshot could not be serialized"), exception);
         }
     }
 

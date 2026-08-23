@@ -2,7 +2,7 @@
 
 状态：首个纵向执行闭环已完成；生产级 Agent MVP 尚未完成。
 
-更新时间：2026-08-18
+更新时间：2026-08-23
 
 本文只保留 MVP 的边界、依赖和验收，不再复制领域模型、SQL 和历史实现过程。长期原则见[长期设计总览](long-term-design.md)，当前工作顺序见[下一步计划](../status.md)，具体缺口见[待修复问题](../quality/known-issues.md)。
 
@@ -13,6 +13,7 @@
 - `MODEL_ONLY` Provider 执行、输入/输出 Schema 校验、基础结果策略、重试、租约心跳和 Recovery。
 - Flowable Agent Service Task、部署期绑定校验、Outbox/Inbox 完成事件和幂等流程恢复。
 - 首节点及审批后 Agent 的输入契约生成、前端动态输入和后端命令边界校验。
+- Provider 能力契约、脱敏错误摘要、类型化恢复决策、人工重试操作账本和租户级并发上限。
 
 ## MVP 剩余范围
 

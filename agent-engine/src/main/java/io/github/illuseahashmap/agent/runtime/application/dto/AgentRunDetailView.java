@@ -9,6 +9,7 @@ public record AgentRunDetailView(
         List<AgentRunStepView> steps,
         List<AgentModelInvocationView> modelInvocations,
         List<AgentRunCheckpointView> checkpoints,
-        List<AgentRunStateHistoryView> stateHistory
+        List<AgentRunStateHistoryView> stateHistory,
+        List<AgentRecoveryDecisionView> recoveryDecisions
 ) {
 }
