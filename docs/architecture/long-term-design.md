@@ -1,6 +1,6 @@
 # 长期设计总览
 
-更新时间：2026-08-18
+更新时间：2026-08-24
 
 本文是长期设计的索引，不重复实现细节。它回答“系统为什么这样划分、哪些边界不能破坏、未来如何扩展”。
 
@@ -27,6 +27,7 @@
 
 ## 四、详细设计索引
 
+- [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
 - [Agent 协作架构设计](agent-collaboration-design.md)：Agent 与 Flowable 的长期协作边界、领域模型和治理原则。
 - [Agent 资源治理](agent-resource-governance.md)：虚拟线程、租户公平调度、租约续期和分布式配额。
 - [证据驱动的 Agent 自治](evidence-governed-agent-autonomy.md)：自治等级、证据、升级和降级。

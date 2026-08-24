@@ -13,6 +13,7 @@
 - [API 契约](api/README.md)：机器可读接口契约和兼容性规则，不承担产品路线。
 - [学习知识库](learning/)：用于理解已实现设计的课程材料，不承担当前状态判断。
 - [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
+- [开发方向与防偏离门禁](architecture/development-direction-guardrails.md)：参考项目边界、技术主线、功能准入门禁和代表性验收闭环。
 - [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
 - [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。
 - [工作流与 Agent 交互契约](architecture/workflow-agent-interaction-contract.md)：当前交互契约和表单扩展边界。
