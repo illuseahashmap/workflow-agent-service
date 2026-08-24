@@ -28,6 +28,7 @@
 ## 四、详细设计索引
 
 - [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
+- [RAG 短期实施方案](rag-short-term-implementation-plan.md)：知识限界上下文、中立 Evidence 契约、可靠摄取和多 Retriever 扩展验收。
 - [Agent 协作架构设计](agent-collaboration-design.md)：Agent 与 Flowable 的长期协作边界、领域模型和治理原则。
 - [Agent 资源治理](agent-resource-governance.md)：虚拟线程、租户公平调度、租约续期和分布式配额。
 - [证据驱动的 Agent 自治](evidence-governed-agent-autonomy.md)：自治等级、证据、升级和降级。

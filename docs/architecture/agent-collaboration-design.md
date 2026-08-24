@@ -360,22 +360,26 @@ Citation
 }
 ```
 
-检索结果必须使用稳定结构，至少包含：
+检索结果必须围绕统一证据契约建模，不能固定为 `List<Chunk>`：
 
 ```text
-tenantCode
-sourceType
-sourceId
-documentId
-chunkId
-contentPreview
-score
-rankScore
-citation
-metadata
-permissionScope
-indexVersion
+RetrievalResult
+├── resultStatus
+├── evidence[]
+│   ├── ChunkEvidence
+│   ├── RelationPathEvidence
+│   ├── StructuredRecordEvidence
+│   └── ExternalEvidence
+├── citations[]
+├── retrievalTraceId
+├── qualitySummary
+└── abstained
 ```
+
+第一阶段只要求生产 `ChunkEvidence`，其中包含 `documentId`、`chunkId`、内容摘要、分数、
+权限范围和索引版本；但 Agent、BPMN 和工具调用审计只能依赖统一 Evidence/Citation 契约。
+后续图谱、结构化数据和 MCP/外部检索结果通过新增证据类型接入，不能建立第二套 Agent
+检索协议。详细近期边界见[RAG 短期实施方案](rag-short-term-implementation-plan.md)。
 
 第一阶段实现可以采用 PostgreSQL 全文检索、`pgvector` 或两者组合；也可以先接入现有内部知识检索服务。无论底层实现如何，Agent、BPMN 和工具调用审计只依赖上述稳定结果结构。
 
@@ -385,7 +389,8 @@ RAG 相关能力遵循“平台抽象要宽、首版实现要窄”的原则：
 - `Retriever` 第一阶段可以是 PostgreSQL 全文检索或 `pgvector` 向量召回，后续扩展到 BM25 + embedding 混合召回、cross-encoder rerank 和多路召回融合。
 - `ChunkingStrategy` 第一阶段采用固定按标题和长度切分，后续按文档类型支持 PDF、表格、代码、SOP 和语义切分。
 - `PermissionFilter` 第一阶段至少强制租户隔离和工具授权，后续扩展到部门、角色、流程实例、数据权限和字段级过滤。
-- `Citation` 第一阶段保存 `documentId`、`chunkId` 和版本，后续扩展页码、坐标、原文快照和证据链。
+- `Citation` 使用通用 `EvidenceReference`，第一阶段定位 `documentId`、`chunkId` 和版本，
+  后续扩展页码、坐标、结构化记录、关系路径、原文快照和证据链。
 
 PostgreSQL 可以作为第一阶段向量检索底座，但平台不应把领域模型绑定到 PostgreSQL 专有类型。只有在以下条件出现时才考虑额外接入专用向量库：单租户或全局索引规模超出 PostgreSQL 可接受范围、向量召回延迟无法满足 SLA、多模态或高维索引能力不足、需要独立横向扩缩容，或需要专用向量库提供的过滤、分片、在线重建和召回评估能力。
 
