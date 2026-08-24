@@ -801,6 +801,28 @@ paths:
       parameters: [{ $ref: '#/components/parameters/RunId' }]
       responses:
         '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunDetailApiResponse' } } } }
+  /agent-runs/process-instances/{processInstanceId}:
+    get:
+      tags: [Agent]
+      operationId: listAgentRunsByProcessInstance
+      summary: List Agent runs for a workflow instance
+      parameters:
+        - { name: processInstanceId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunListApiResponse' } } } }
+  /agent-runs/{runId}/retry:
+    post:
+      tags: [Agent]
+      operationId: retryAgentRun
+      summary: Retry a failed Agent run
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetryAgentRunCommand' }
+      responses:
+        '200': { description: Agent run retry accepted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /operations/agent-completion-events/dead-letters:
     get:
       tags: [Operations]
@@ -1121,6 +1143,11 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/AgentRunPage' } }
+    AgentRunListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/AgentRun' } } }
     AgentRunDetailApiResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
@@ -1561,6 +1588,12 @@ components:
         modelInvocations: { type: array, items: { type: object } }
         checkpoints: { type: array, items: { type: object } }
         stateHistory: { type: array, items: { type: object } }
+    RetryAgentRunCommand:
+      type: object
+      required: [reason, retryWindowSeconds]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        retryWindowSeconds: { type: integer, minimum: 30, maximum: 3600 }
     DeadLetterEvent:
       type: object
       required: [eventId, tenantCode, aggregateId, attemptCount, createdAt]

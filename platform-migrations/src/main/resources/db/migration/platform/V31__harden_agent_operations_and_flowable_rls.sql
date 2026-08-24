@@ -42,19 +42,19 @@ CREATE POLICY tenant_isolation_agent_run_operation ON agent_run_operation
 -- guessed into a tenant policy.
 DO $$
 DECLARE
-    table_name TEXT;
+    flowable_table_name TEXT;
 BEGIN
-    FOR table_name IN
-        SELECT table_name
-        FROM information_schema.columns
+    FOR flowable_table_name IN
+        SELECT columns.table_name
+        FROM information_schema.columns AS columns
         WHERE table_schema = current_schema()
           AND column_name = 'TENANT_ID_'
           AND table_name LIKE 'act_%'
-        GROUP BY table_name
+        GROUP BY columns.table_name
     LOOP
-        EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
-        EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_isolation_%I ON %I', table_name, table_name);
+        EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', flowable_table_name);
+        EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', flowable_table_name);
+        EXECUTE format('DROP POLICY IF EXISTS tenant_isolation_%I ON %I', flowable_table_name, flowable_table_name);
         EXECUTE format(
             'CREATE POLICY tenant_isolation_%I ON %I USING ('
                 || '(current_setting(''app.platform_admin'', true) = ''true'' '
@@ -64,7 +64,7 @@ BEGIN
                 || '(current_setting(''app.platform_admin'', true) = ''true'' '
                 || 'OR current_setting(''app.system_worker'', true) = ''true'' '
                 || 'OR tenant_id_ = current_setting(''app.tenant_code'', true))',
-            table_name, table_name
+            flowable_table_name, flowable_table_name
         );
     END LOOP;
 END $$;
