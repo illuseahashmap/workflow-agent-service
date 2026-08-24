@@ -49,6 +49,8 @@ class AgentCompletionFlowableTransactionIntegrationTest {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.flyway.baseline-on-migrate", () -> "true");
+        registry.add("spring.flyway.baseline-version", () -> "0");
         registry.add("flowable.database-schema-update", () -> "true");
         registry.add("flowable.async-executor-activate", () -> "false");
         registry.add("workflow.agent.worker.enabled", () -> "false");
