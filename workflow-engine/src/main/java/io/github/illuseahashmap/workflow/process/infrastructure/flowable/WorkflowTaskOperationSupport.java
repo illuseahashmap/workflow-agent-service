@@ -108,8 +108,11 @@ public final class WorkflowTaskOperationSupport {
     }
 
     public String resolveRejectTarget(Task task, String requestedTarget) {
-        String target = StringUtils.hasText(requestedTarget)
-                ? requestedTarget.trim() : findFirstUserTaskId(task.getProcessDefinitionId());
+        if (!StringUtils.hasText(requestedTarget)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Reject target activityId must be specified explicitly");
+        }
+        String target = requestedTarget.trim();
         if (!StringUtils.hasText(target) || findUserTask(task.getProcessDefinitionId(), target) == null) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Reject target user task does not exist");
         }
@@ -222,15 +225,6 @@ public final class WorkflowTaskOperationSupport {
                 taskService.deleteCandidateGroup(taskId, identityLink.getGroupId());
             }
         }
-    }
-
-    private String findFirstUserTaskId(String processDefinitionId) {
-        BpmnModel model = repositoryService.getBpmnModel(processDefinitionId);
-        if (model == null || model.getMainProcess() == null) {
-            return null;
-        }
-        return model.getMainProcess().getFlowElements().stream()
-                .filter(UserTask.class::isInstance).map(FlowElement::getId).findFirst().orElse(null);
     }
 
     private UserTask findUserTask(String processDefinitionId, String activityId) {

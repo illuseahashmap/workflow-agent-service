@@ -45,7 +45,7 @@
 
 ### P1-11 工具幂等并发与参数冲突
 
-- 当前：逻辑幂等键为 `runId + logicalStepId + toolCode`，参数哈希独立保存并比较；数据库实现通过带 claim owner、lease、fencing token 的 `INSERT ... ON CONFLICT ... RETURNING` 原子抢占 RUNNING 记录，FAILED 或过期 RUNNING 可由下一次 Attempt 重新领取；未抢占的 Worker 不会重复调用外部工具。V37 同时回填 V35/V36 窗口内创建的租户授权。
+- 当前：逻辑幂等键为 `runId + logicalStepId + toolCode`，参数哈希独立保存并比较；数据库实现通过带 claim owner、lease、fencing token 的 `INSERT ... ON CONFLICT ... RETURNING` 原子抢占 RUNNING 记录，FAILED 或过期 RUNNING 只有在参数哈希一致时才可由下一次 Attempt 重新领取；参数冲突会被拒绝，未抢占的 Worker 不会重复调用外部工具。V37 同时回填 V35/V36 窗口内创建的租户授权，并将无法证明结果的历史 RUNNING 记录标记为 UNKNOWN。
 - 缺口：仍需在真实 PostgreSQL 并发环境补充双 Worker 压力测试，以及 UNKNOWN 副作用结果的人工核验流。
 - 验收：同一逻辑步骤参数变化必须拒绝；并发调用最多一个外部执行者；已完成结果可复用。
 
@@ -94,5 +94,8 @@
 
 - Provider 能力契约、脱敏错误摘要、恢复决策账本、人工重试操作账本已落地。
 - Agent 工具注册、租户授权、输入 Schema、幂等键、执行审计和只读业务工具已落地。
+- Cookie 认证的 CSRF 豁免现在只对已认证的 SERVICE principal 生效；普通 Cookie 用户即使携带任意服务令牌头也仍需 CSRF Token。
+- Redis 流程锁已使用可配置的多续租线程、续租失效标记和事务提交前所有权校验；驳回未指定目标时不再猜测第一个 UserTask，而是要求调用方显式指定目标。
+- Agent Definition 发布依赖 `AgentToolCatalogPort`，不再直接依赖 Runtime Registry/Policy Repository 的实现；工具真实性校验仍集中在应用端口背后的目录实现。
 - OpenAPI lint、路由覆盖、兼容性检查、Checkstyle、SpotBugs、JaCoCo 和 ArchUnit 已接入质量门禁。
 - Token Cookie、CSRF、RLS 基础策略、Attempt 复合约束和完成事件幂等链路已完成首版。

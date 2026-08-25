@@ -8,6 +8,7 @@ public class WorkflowLockProperties {
     private String keyPrefix = "workflow-agent-service";
     private long waitSeconds = 3;
     private long ttlSeconds = 30;
+    private int renewalThreads = 4;
 
     public String getKeyPrefix() {
         return keyPrefix;
@@ -31,5 +32,13 @@ public class WorkflowLockProperties {
 
     public void setTtlSeconds(long ttlSeconds) {
         this.ttlSeconds = ttlSeconds;
+    }
+
+    public int getRenewalThreads() {
+        return renewalThreads;
+    }
+
+    public void setRenewalThreads(int renewalThreads) {
+        this.renewalThreads = renewalThreads;
     }
 }

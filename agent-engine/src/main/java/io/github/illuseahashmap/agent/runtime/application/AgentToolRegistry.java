@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
+import io.github.illuseahashmap.agent.definition.application.port.AgentToolCatalogPort;
+import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
@@ -25,7 +27,7 @@ import org.springframework.util.StringUtils;
 
 /** Central policy boundary for tenant authorization, schema validation and tool idempotency. */
 @Component
-public class AgentToolRegistry {
+public class AgentToolRegistry implements AgentToolCatalogPort {
 
     private static final int MAX_OUTPUT_CHARS = 20_000;
 
@@ -67,6 +69,60 @@ public class AgentToolRegistry {
 
     public Set<String> registeredToolNames() {
         return tools.keySet();
+    }
+
+    @Override
+    public void validatePublication(String tenantCode, AgentExecutionMode executionMode, String toolSetJson) {
+        try {
+            JsonNode root = objectMapper.readTree(toolSetJson);
+            if (root == null || !root.isArray()) {
+                throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                        io.github.illuseahashmap.workflow.shared.exception.ErrorCode.BAD_REQUEST,
+                        "Agent tool set must be a JSON array");
+            }
+            List<String> invalid = new java.util.ArrayList<>();
+            if (root.size() > 0 && executionMode != AgentExecutionMode.PLATFORM_AGENT) {
+                invalid.add("tool set requires PLATFORM_AGENT execution mode");
+            }
+            root.forEach(node -> {
+                if (!node.isTextual() || !StringUtils.hasText(node.asText())) {
+                    invalid.add("blank or non-text tool code");
+                    return;
+                }
+                String toolCode = node.asText().trim();
+                try {
+                    require(toolCode);
+                } catch (AgentExecutionException exception) {
+                    invalid.add(toolCode + " is not registered");
+                    return;
+                }
+                AgentToolDefinition definition = policyRepository.findAuthorized(tenantCode, toolCode).orElse(null);
+                if (definition == null) {
+                    invalid.add(toolCode + " is not authorized for the tenant");
+                    return;
+                }
+                if (!StringUtils.hasText(definition.inputSchema())) {
+                    invalid.add(toolCode + " has no input Schema");
+                    return;
+                }
+                try {
+                    schemaValidator.validateDefinition(definition.inputSchema());
+                } catch (AgentExecutionException exception) {
+                    invalid.add(toolCode + " has an invalid input Schema");
+                }
+            });
+            if (!invalid.isEmpty()) {
+                throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                        io.github.illuseahashmap.workflow.shared.exception.ErrorCode.BAD_REQUEST,
+                        "Agent tool set is invalid: " + String.join(", ", invalid));
+            }
+        } catch (io.github.illuseahashmap.workflow.shared.exception.BusinessException exception) {
+            throw exception;
+        } catch (JsonProcessingException exception) {
+            throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                    io.github.illuseahashmap.workflow.shared.exception.ErrorCode.BAD_REQUEST,
+                    "Agent tool set is invalid", exception);
+        }
     }
 
     public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(String tenantCode) {

@@ -11,6 +11,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jakarta.annotation.PreDestroy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Component
 public class RedisProcessInstanceLock implements ProcessInstanceLock {
@@ -33,15 +36,17 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
 
     private final StringRedisTemplate redisTemplate;
     private final WorkflowLockProperties properties;
-    private final ScheduledExecutorService renewalExecutor = Executors.newScheduledThreadPool(1, runnable -> {
-        Thread thread = new Thread(runnable, "workflow-lock-renewal");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ScheduledExecutorService renewalExecutor;
 
     public RedisProcessInstanceLock(StringRedisTemplate redisTemplate, WorkflowLockProperties properties) {
         this.redisTemplate = redisTemplate;
         this.properties = properties;
+        this.renewalExecutor = Executors.newScheduledThreadPool(
+                Math.max(1, properties.getRenewalThreads()), runnable -> {
+                    Thread thread = new Thread(runnable, "workflow-lock-renewal");
+                    thread.setDaemon(true);
+                    return thread;
+                });
     }
 
     @Override
@@ -52,9 +57,13 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
         String key = normalizePrefix(properties.getKeyPrefix()) + ":workflow:process-lock:" + processInstanceId;
         String value = UUID.randomUUID().toString();
         acquire(key, value);
-        ScheduledFuture<?> renewal = scheduleRenewal(key, value);
+        AtomicBoolean ownershipLost = new AtomicBoolean(false);
+        ScheduledFuture<?> renewal = scheduleRenewal(key, value, ownershipLost);
+        registerCommitOwnershipCheck(key, value, ownershipLost);
         try {
-            return operation.get();
+            T result = operation.get();
+            assertOwnership(key, value, ownershipLost);
+            return result;
         } finally {
             renewal.cancel(false);
             try {
@@ -65,7 +74,7 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
         }
     }
 
-    private ScheduledFuture<?> scheduleRenewal(String key, String value) {
+    private ScheduledFuture<?> scheduleRenewal(String key, String value, AtomicBoolean ownershipLost) {
         long ttlMillis = Duration.ofSeconds(properties.getTtlSeconds()).toMillis();
         long intervalMillis = Math.max(RETRY_INTERVAL_MILLIS, ttlMillis / 3);
         return renewalExecutor.scheduleAtFixedRate(() -> {
@@ -73,12 +82,34 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
                 Long result = redisTemplate.execute(
                         RENEW_SCRIPT, List.of(key), value, Long.toString(ttlMillis));
                 if (result == null || result == 0L) {
+                    ownershipLost.set(true);
                     LOGGER.warn("Workflow process lock ownership was lost before operation completed: key={}", key);
                 }
             } catch (RuntimeException exception) {
+                ownershipLost.set(true);
                 LOGGER.warn("Failed to renew workflow process lock: key={}", key, exception);
             }
         }, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private void registerCommitOwnershipCheck(String key, String value, AtomicBoolean ownershipLost) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void beforeCommit(boolean readOnly) {
+                assertOwnership(key, value, ownershipLost);
+            }
+        });
+    }
+
+    private void assertOwnership(String key, String value, AtomicBoolean ownershipLost) {
+        if (ownershipLost.get() || !value.equals(redisTemplate.opsForValue().get(key))) {
+            ownershipLost.set(true);
+            throw new BusinessException(ErrorCode.CONFLICT,
+                    "Process instance lock ownership was lost before commit");
+        }
     }
 
     @PreDestroy

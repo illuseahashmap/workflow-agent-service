@@ -6,6 +6,7 @@ import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalContext;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
+import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,7 +17,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.util.StringUtils;
 
 @Configuration
 @EnableMethodSecurity
@@ -45,8 +45,14 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(request -> "POST".equalsIgnoreCase(request.getMethod())
                                 && ("/auth/login".equals(request.getRequestURI())
                                 || "/auth/register".equals(request.getRequestURI())))
-                        .ignoringRequestMatchers(request -> StringUtils.hasText(
-                                request.getHeader(ServiceTokenAuthenticationFilter.TOKEN_HEADER))))
+                        .ignoringRequestMatchers(request -> {
+                            var authentication = org.springframework.security.core.context.SecurityContextHolder
+                                    .getContext().getAuthentication();
+                            Object principal = authentication == null ? null : authentication.getPrincipal();
+                            return authentication != null && authentication.isAuthenticated()
+                                    && principal instanceof CurrentPrincipal current
+                                    && "SERVICE".equals(current.principalType());
+                        }))
                 .sessionManagement(configurer -> configurer
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                         .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))

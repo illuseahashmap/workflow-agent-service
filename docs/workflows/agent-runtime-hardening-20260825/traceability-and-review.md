@@ -3,11 +3,12 @@
 | Requirement | Evidence | Result |
 |-------------|----------|--------|
 | AC-01 `knowledge_search` 未就绪时不可运行且不自动授权 | `platform-migrations/.../V35__disable_unready_knowledge_search.sql`; `docs/status.md`; `PlatformMigrationIntegrationTest` migration count | PASS |
-| AC-02 工具幂等键跨 Attempt 稳定且参数变化可区分 | `AgentToolRegistryTest` stable idempotency test; `AgentToolRegistry` computes `runId + logicalStepId + tool + argumentsHash` and passes it to the tool | PASS |
+| AC-02 工具幂等键跨 Attempt 稳定且参数变化可区分 | `AgentToolRegistryTest` stable idempotency and failed-retry conflict tests; stable key is `runId + logicalStepId + toolCode`, while `argumentsHash` is persisted and compared separately | PASS |
 | AC-03 Checkpoint 可作为新 Attempt 的恢复输入 | `PlatformAgentExecutorTest.resumesFromCheckpointWithoutCallingPlannerAgain`; worker loads latest checkpoint and persists each progress step | PASS |
 | AC-04 修复提示只暴露本次有效工具集合 | `PlatformAgentExecutorTest` asserts repair prompt contains bound tool and excludes hidden tool | PASS |
-| AC-05 AgentVersion 发布期验证工具真实性 | `AgentDefinitionServiceImpl.validateToolSet`; registered/tenant-authorized/schema/mode validation; existing definition service tests | PASS |
+| AC-05 AgentVersion 发布期验证工具真实性 | `AgentToolCatalogPort` plus runtime catalog adapter; registered/tenant-authorized/schema/mode validation; existing definition service tests | PASS |
 | AC-06 工程验证和文档追踪完成 | reactor test, OpenAPI response-model check, OpenAPI route coverage check, `git diff --check` | PASS |
+| AC-07 安全边界与流程操作语义 | SERVICE principal-only CSRF exemption; commit-time Redis lock ownership check; explicit reject target; V37 legacy RUNNING recovery | PASS |
 
 ## Review decision
 
