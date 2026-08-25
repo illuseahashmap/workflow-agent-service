@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.illuseahashmap.workflow.process.application.port.ProcessInstanceLock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionDefinition;
@@ -26,7 +27,8 @@ class ProcessInstanceTransactionExecutorTest {
         });
 
         assertThat(result).isEqualTo("done");
-        assertThat(events).containsExactly("lock-acquired", "transaction-begin", "operation",
+        assertThat(events).containsExactly("lock-acquired", "transaction-begin",
+                "commit-validation-registered", "operation",
                 "transaction-commit", "lock-released");
     }
 
@@ -37,6 +39,17 @@ class ProcessInstanceTransactionExecutorTest {
             events.add("lock-acquired");
             try {
                 return operation.get();
+            } finally {
+                events.add("lock-released");
+            }
+        }
+
+        @Override
+        public <T> T executeWithContext(String processInstanceId,
+                                        Function<LockContext, T> operation) {
+            events.add("lock-acquired");
+            try {
+                return operation.apply(() -> events.add("commit-validation-registered"));
             } finally {
                 events.add("lock-released");
             }

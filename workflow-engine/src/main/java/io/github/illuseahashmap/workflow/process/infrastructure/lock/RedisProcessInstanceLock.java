@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import jakarta.annotation.PreDestroy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -51,6 +52,12 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
 
     @Override
     public <T> T execute(String processInstanceId, Supplier<T> operation) {
+        return executeWithContext(processInstanceId, context -> operation.get());
+    }
+
+    @Override
+    public <T> T executeWithContext(String processInstanceId,
+                                    Function<ProcessInstanceLock.LockContext, T> operation) {
         if (!StringUtils.hasText(processInstanceId)) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Process instance does not exist");
         }
@@ -59,9 +66,8 @@ public class RedisProcessInstanceLock implements ProcessInstanceLock {
         acquire(key, value);
         AtomicBoolean ownershipLost = new AtomicBoolean(false);
         ScheduledFuture<?> renewal = scheduleRenewal(key, value, ownershipLost);
-        registerCommitOwnershipCheck(key, value, ownershipLost);
         try {
-            T result = operation.get();
+            T result = operation.apply(() -> registerCommitOwnershipCheck(key, value, ownershipLost));
             assertOwnership(key, value, ownershipLost);
             return result;
         } finally {

@@ -8,7 +8,7 @@
 | AC-04 修复提示只暴露本次有效工具集合 | `PlatformAgentExecutorTest` asserts repair prompt contains bound tool and excludes hidden tool | PASS |
 | AC-05 AgentVersion 发布期验证工具真实性 | `AgentToolCatalogPort` plus runtime catalog adapter; registered/tenant-authorized/schema/mode validation; existing definition service tests | PASS |
 | AC-06 工程验证和文档追踪完成 | reactor test, OpenAPI response-model check, OpenAPI route coverage check, `git diff --check` | PASS |
-| AC-07 安全边界与流程操作语义 | SERVICE principal-only CSRF exemption; commit-time Redis lock ownership check; explicit reject target; V37 legacy RUNNING recovery | PASS |
+| AC-07 安全边界与流程操作语义 | SERVICE principal-only CSRF exemption; transaction-bound Redis lock ownership check; explicit reject target; V38 legacy RUNNING recovery | PASS |
 
 ## Review decision
 

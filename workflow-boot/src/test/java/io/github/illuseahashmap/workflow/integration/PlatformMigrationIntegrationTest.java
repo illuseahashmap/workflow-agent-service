@@ -57,7 +57,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(37);
+            assertThat(resultSet.getInt(1)).isEqualTo(38);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
@@ -182,6 +182,55 @@ class PlatformMigrationIntegrationTest {
                     """)) {
                 assertThat(resultSet.next()).isTrue();
                 assertThat(resultSet.getInt(1)).isEqualTo(1);
+            }
+        }
+    }
+
+    @Test
+    void upgradesDatabaseThatAlreadyRanV37WithoutChangingV37Checksum() throws SQLException {
+        String schema = "upgrade_v37_" + java.util.UUID.randomUUID().toString().replace('-', '_');
+        Flyway beforeV38 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration/platform")
+                .target(MigrationVersion.fromVersion("37"))
+                .load();
+        beforeV38.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("SET search_path TO " + schema);
+            statement.execute("SET app.system_worker = 'true'");
+            statement.executeUpdate("""
+                    INSERT INTO agent_tool_execution_audit
+                        (tenant_code, tool_code, idempotency_key, arguments_hash, status, trace_id)
+                    VALUES ('tenant-a', 'agent_run_status', 'legacy-key', 'legacy-hash', 'RUNNING', 'legacy-trace')
+                    """);
+        }
+
+        Flyway afterV38 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration/platform")
+                .load();
+        afterV38.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("SET search_path TO " + schema);
+            try (ResultSet resultSet = statement.executeQuery("""
+                    SELECT status, error_code
+                    FROM agent_tool_execution_audit
+                    WHERE idempotency_key = 'legacy-key'
+                    """)) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getString("status")).isEqualTo("UNKNOWN");
+                assertThat(resultSet.getString("error_code"))
+                        .isEqualTo("AGENT_TOOL_LEGACY_CLAIM_UNKNOWN");
             }
         }
     }

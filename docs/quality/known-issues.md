@@ -45,7 +45,7 @@
 
 ### P1-11 工具幂等并发与参数冲突
 
-- 当前：逻辑幂等键为 `runId + logicalStepId + toolCode`，参数哈希独立保存并比较；数据库实现通过带 claim owner、lease、fencing token 的 `INSERT ... ON CONFLICT ... RETURNING` 原子抢占 RUNNING 记录，FAILED 或过期 RUNNING 只有在参数哈希一致时才可由下一次 Attempt 重新领取；参数冲突会被拒绝，未抢占的 Worker 不会重复调用外部工具。V37 同时回填 V35/V36 窗口内创建的租户授权，并将无法证明结果的历史 RUNNING 记录标记为 UNKNOWN。
+- 当前：逻辑幂等键为 `runId + logicalStepId + toolCode`，参数哈希独立保存并比较；数据库实现通过带 claim owner、lease、fencing token 的 `INSERT ... ON CONFLICT ... RETURNING` 原子抢占 RUNNING 记录，FAILED 或过期 RUNNING 只有在参数哈希一致时才可由下一次 Attempt 重新领取；参数冲突会被拒绝，未抢占的 Worker 不会重复调用外部工具。V37 回填 V35/V36 窗口内创建的租户授权，V38 将无法证明结果的历史 RUNNING 记录标记为 UNKNOWN。
 - 缺口：仍需在真实 PostgreSQL 并发环境补充双 Worker 压力测试，以及 UNKNOWN 副作用结果的人工核验流。
 - 验收：同一逻辑步骤参数变化必须拒绝；并发调用最多一个外部执行者；已完成结果可复用。
 

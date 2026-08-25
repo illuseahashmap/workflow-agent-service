@@ -24,7 +24,10 @@ public class ProcessInstanceTransactionExecutor {
     }
 
     public <T> T execute(String processInstanceId, Supplier<T> operation) {
-        return processInstanceLock.execute(processInstanceId,
-                () -> transactionTemplate.execute(status -> operation.get()));
+        return processInstanceLock.executeWithContext(processInstanceId, lockContext ->
+                transactionTemplate.execute(status -> {
+                    lockContext.registerCommitValidation();
+                    return operation.get();
+                }));
     }
 }
