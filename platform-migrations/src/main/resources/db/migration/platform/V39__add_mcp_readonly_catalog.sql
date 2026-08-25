@@ -90,13 +90,14 @@ BEGIN
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
-        EXECUTE format('CREATE POLICY tenant_isolation_%I ON %I USING ('
+        EXECUTE format('CREATE POLICY %I ON %I USING ('
             || '(current_setting(''app.platform_admin'', true) = ''true'' '
             || 'OR current_setting(''app.system_worker'', true) = ''true'' '
-            || 'OR tenant_code = current_setting(''app.tenant_code'', true)) '
+            || 'OR tenant_code = current_setting(''app.tenant_code'', true))) '
             || 'WITH CHECK ('
             || '(current_setting(''app.platform_admin'', true) = ''true'' '
             || 'OR current_setting(''app.system_worker'', true) = ''true'' '
-            || 'OR tenant_code = current_setting(''app.tenant_code'', true))', table_name, table_name);
+            || 'OR tenant_code = current_setting(''app.tenant_code'', true)))',
+            'tenant_isolation_' || table_name, table_name);
     END LOOP;
 END $$;
