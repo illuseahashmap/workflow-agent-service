@@ -31,10 +31,16 @@
 - 缺口：部分接口仍使用通用 `ApiResponse`，错误码、分页、权限要求和前端类型尚未完全从 DTO 契约生成。
 - 验收：核心接口的请求、成功响应、错误响应、分页和权限要求可由 OpenAPI 直接验证。
 
+### P1-2a 本次计划推进边界
+
+- 已完成：新增 `knowledge-engine` 的 RAG-1 中立检索契约；租户身份由可信上下文提供，结果强制表达证据、引用、Trace 和空结果语义。
+- 未完成：本条不等同于 OpenAPI 全量收敛，也不等同于 RAG 生产检索闭环；摄取、索引、Grounding 和评测仍需后续按实施方案推进。
+
 ### P1-3 Agent 状态恢复与多步骤 Checkpoint 尚未完成
 
-- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试。
-- 缺口：Worker 强杀、心跳失败、多步骤 Checkpoint 恢复、取消/暂停/恢复和跨实例压力测试仍需补齐。
+- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；模型结果与子步骤完成边界已持久化幂等 Checkpoint。
+- 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
+- 缺口：Worker 强杀、心跳失败后的从 Checkpoint 恢复、暂停/恢复和跨实例压力测试仍需补齐。
 - 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等。
 
 ### P1-4 结果策略与 Agent 运行规则仍需租户化

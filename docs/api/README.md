@@ -15,3 +15,9 @@ CI also scans all production `@RestController` mappings and fails when a route
 is not present in the bundled OpenAPI document. Successful JSON responses must
 reference endpoint-specific response models; direct use of an untyped
 `ApiResponse` is rejected so generated clients never degrade to `data: any`.
+
+Authenticated operations must declare their possible `401` and `403`
+responses. Resource and state-transition operations should declare `404` and
+`409` when applicable. These responses use the same stable envelope and error
+codes as `GlobalExceptionHandler`; adding a new error code requires updating
+`ErrorCode`, this contract, and compatibility tests together.

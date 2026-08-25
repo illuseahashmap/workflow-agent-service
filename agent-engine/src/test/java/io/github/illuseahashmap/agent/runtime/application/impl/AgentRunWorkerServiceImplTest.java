@@ -65,6 +65,14 @@ class AgentRunWorkerServiceImplTest {
         assertThat(executed).isTrue();
         assertThat(run.status()).isEqualTo(AgentRunStatus.SUCCEEDED);
         verify(executionRepository).saveClaimed(any(), any());
+        verify(executionRepository).insertCheckpoint(
+                org.mockito.ArgumentMatchers.eq("tenant-a"),
+                org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.eq(101L),
+                org.mockito.ArgumentMatchers.eq(1),
+                org.mockito.ArgumentMatchers.eq("MODEL_RESULT"),
+                org.mockito.ArgumentMatchers.contains("Mock result"),
+                any());
         verify(executionRepository).saveSucceeded(
                 any(),
                 org.mockito.ArgumentMatchers.eq(101L),

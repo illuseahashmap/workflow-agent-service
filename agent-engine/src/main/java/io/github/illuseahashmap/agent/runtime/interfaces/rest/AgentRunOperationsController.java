@@ -34,9 +34,21 @@ public class AgentRunOperationsController {
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/{runId}/cancel")
+    public ApiResponse<Void> cancel(
+            @PathVariable long runId,
+            @Valid @RequestBody CancelAgentRunCommand command
+    ) {
+        service.cancelActive(runId, command.reason());
+        return ApiResponse.ok(null);
+    }
+
     public record RetryAgentRunCommand(
             @NotBlank @Size(max = 1000) String reason,
             @Min(30) @Max(3600) int retryWindowSeconds
     ) {
+    }
+
+    public record CancelAgentRunCommand(@NotBlank @Size(max = 1000) String reason) {
     }
 }

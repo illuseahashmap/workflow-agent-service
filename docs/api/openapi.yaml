@@ -793,6 +793,8 @@ paths:
         - { name: status, in: query, schema: { type: string } }
       responses:
         '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunPageApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /agent-runs/{runId}:
     get:
       tags: [Agent]
@@ -801,6 +803,9 @@ paths:
       parameters: [{ $ref: '#/components/parameters/RunId' }]
       responses:
         '200': { description: Agent run detail, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunDetailApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /agent-runs/process-instances/{processInstanceId}:
     get:
       tags: [Agent]
@@ -810,6 +815,8 @@ paths:
         - { name: processInstanceId, in: path, required: true, schema: { type: string } }
       responses:
         '200': { description: Agent runs, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRunListApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /agent-runs/{runId}/retry:
     post:
       tags: [Agent]
@@ -823,6 +830,27 @@ paths:
             schema: { $ref: '#/components/schemas/RetryAgentRunCommand' }
       responses:
         '200': { description: Agent run retry accepted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /agent-runs/{runId}/cancel:
+    post:
+      tags: [Agent]
+      operationId: cancelAgentRun
+      summary: Cancel an active Agent run
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelAgentRunCommand' }
+      responses:
+        '200': { description: Agent run cancelled, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /operations/agent-completion-events/dead-letters:
     get:
       tags: [Operations]
@@ -1594,6 +1622,11 @@ components:
       properties:
         reason: { type: string, minLength: 1, maxLength: 1000 }
         retryWindowSeconds: { type: integer, minimum: 30, maximum: 3600 }
+    CancelAgentRunCommand:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
     DeadLetterEvent:
       type: object
       required: [eventId, tenantCode, aggregateId, attemptCount, createdAt]
@@ -1808,6 +1841,16 @@ components:
           schema: { $ref: '#/components/schemas/ApiResponse' }
     Unauthorized:
       description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+    NotFound:
+      description: Resource does not exist in the current tenant scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+    Conflict:
+      description: Operation conflicts with the current state
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiResponse' }

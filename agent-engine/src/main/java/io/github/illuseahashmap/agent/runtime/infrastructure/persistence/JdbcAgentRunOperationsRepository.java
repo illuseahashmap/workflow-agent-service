@@ -1,5 +1,6 @@
 package io.github.illuseahashmap.agent.runtime.infrastructure.persistence;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -55,24 +56,105 @@ public class JdbcAgentRunOperationsRepository
         if (previousStatuses.isEmpty()) {
             return false;
         }
-        recordOperation(tenantCode, runId, previousStatuses.getFirst(), operatorId,
-                traceId, reason, retryWindowSeconds);
+        recordOperation(tenantCode, runId, "RETRY", previousStatuses.getFirst(), "QUEUED",
+                operatorId, traceId, reason, retryWindowSeconds);
+        return true;
+    }
+
+    @Override
+    public boolean cancelActive(
+            String tenantCode, long runId, String operatorId, String traceId, String reason) {
+        Map<String, Object> parameters = Map.of(
+                "tenantCode", tenantCode, "runId", runId, "operatorId", operatorId,
+                "traceId", traceId, "reason", reason);
+        List<RunState> candidates = jdbcTemplate.query("""
+                SELECT status, current_attempt_id
+                FROM agent_run
+                WHERE id = :runId AND tenant_code = :tenantCode
+                  AND status IN ('QUEUED', 'RUNNING')
+                FOR UPDATE
+                """, parameters, (resultSet, rowNum) -> new RunState(
+                resultSet.getString("status"), resultSet.getObject("current_attempt_id", Long.class)));
+        if (candidates.isEmpty()) {
+            return false;
+        }
+        RunState candidate = candidates.getFirst();
+        if (candidate.attemptId() != null) {
+            jdbcTemplate.update("""
+                    UPDATE agent_run_attempt
+                    SET status = 'CANCELLED', error_code = 'OPERATOR_CANCELLED',
+                        completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                    WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                      AND id = :attemptId AND status = 'RUNNING'
+                    """, Map.of("tenantCode", tenantCode, "runId", runId,
+                    "attemptId", candidate.attemptId()));
+            jdbcTemplate.update("""
+                    UPDATE agent_run_step
+                    SET status = 'FAILED', error_code = 'OPERATOR_CANCELLED',
+                        completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                    WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                      AND attempt_id = :attemptId AND status IN ('PENDING', 'RUNNING')
+                    """, Map.of("tenantCode", tenantCode, "runId", runId,
+                    "attemptId", candidate.attemptId()));
+        }
+        int updated = jdbcTemplate.update("""
+                UPDATE agent_run
+                SET status = 'CANCELLED', current_attempt_id = NULL,
+                    lease_owner = NULL, lease_expires_at = NULL,
+                    completed_at = CURRENT_TIMESTAMP, result_status = NULL,
+                    error_code = 'OPERATOR_CANCELLED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = :runId AND tenant_code = :tenantCode
+                  AND status = :previousStatus
+                """, Map.of("tenantCode", tenantCode, "runId", runId,
+                "previousStatus", candidate.status()));
+        if (updated != 1) {
+            return false;
+        }
+        Map<String, Object> historyParameters = new HashMap<>();
+        historyParameters.put("tenantCode", tenantCode);
+        historyParameters.put("runId", runId);
+        historyParameters.put("attemptId", candidate.attemptId());
+        historyParameters.put("previousStatus", candidate.status());
+        historyParameters.put("operatorId", operatorId);
+        historyParameters.put("traceId", traceId);
+        jdbcTemplate.update("""
+                INSERT INTO agent_run_state_history (
+                    tenant_code, agent_run_id, attempt_id, old_status, new_status,
+                    reason_code, operator_type, operator_id, trace_id, created_at
+                ) VALUES (
+                    :tenantCode, :runId, :attemptId, :previousStatus, 'CANCELLED',
+                    'OPERATOR_CANCELLED', 'USER', :operatorId, :traceId, CURRENT_TIMESTAMP
+                )
+                """, historyParameters);
+        recordOperation(tenantCode, runId, "CANCEL", candidate.status(), "CANCELLED",
+                operatorId, traceId, reason);
         return true;
     }
 
     @Override
     public void recordOperation(
-            String tenantCode, long runId, String previousStatus, String operatorId,
-            String traceId, String reason, int retryWindowSeconds) {
+            String tenantCode, long runId, String operationType, String previousStatus,
+            String resultingStatus, String operatorId, String traceId, String reason,
+            Integer retryWindowSeconds) {
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("tenantCode", tenantCode);
+        parameters.put("runId", runId);
+        parameters.put("operationType", operationType);
+        parameters.put("previousStatus", previousStatus);
+        parameters.put("resultingStatus", resultingStatus);
+        parameters.put("operatorId", operatorId);
+        parameters.put("traceId", traceId);
+        parameters.put("reason", reason);
+        parameters.put("retryWindowSeconds", retryWindowSeconds);
         jdbcTemplate.update("""
                 INSERT INTO agent_run_operation (
                     tenant_code, agent_run_id, operation_type, previous_status,
                     resulting_status, operator_id, trace_id, reason, retry_window_seconds)
-                VALUES (:tenantCode, :runId, 'RETRY', :previousStatus,
-                        'QUEUED', :operatorId, :traceId, :reason, :retryWindowSeconds)
-                """, Map.of("tenantCode", tenantCode, "runId", runId,
-                "previousStatus", previousStatus, "operatorId", operatorId,
-                "traceId", traceId, "reason", reason,
-                "retryWindowSeconds", retryWindowSeconds));
+                VALUES (:tenantCode, :runId, :operationType, :previousStatus,
+                        :resultingStatus, :operatorId, :traceId, :reason, :retryWindowSeconds)
+                """, parameters);
+    }
+
+    private record RunState(String status, Long attemptId) {
     }
 }

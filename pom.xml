@@ -23,6 +23,7 @@
         <module>auth-engine</module>
         <module>rules-engine</module>
         <module>agent-engine</module>
+        <module>knowledge-engine</module>
         <module>workflow-engine</module>
         <module>platform-migrations</module>
         <module>workflow-boot</module>

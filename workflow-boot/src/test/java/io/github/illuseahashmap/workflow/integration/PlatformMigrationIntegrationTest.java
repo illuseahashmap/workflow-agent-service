@@ -24,6 +24,21 @@ class PlatformMigrationIntegrationTest {
 
     @BeforeAll
     static void migrateDatabase() {
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            // The platform migration must also protect Flowable tables that already exist
+            // when it runs. This representative table makes that dynamic branch testable
+            // without coupling the migration module to Flowable bootstrapping.
+            statement.executeUpdate("""
+                    CREATE TABLE act_ru_execution (
+                        id_ VARCHAR(64) PRIMARY KEY,
+                        tenant_id_ VARCHAR(64) NOT NULL
+                    )
+                    """);
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Unable to prepare Flowable RLS fixture", exception);
+        }
         Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration/platform")
@@ -142,6 +157,34 @@ class PlatformMigrationIntegrationTest {
                      """)) {
             assertThat(resultSet.next()).isTrue();
             assertThat(resultSet.getInt(1)).isZero();
+        }
+    }
+
+    @Test
+    void deniesFlowableRowsWithoutTrustedTenantAndHidesOtherTenantRows() throws SQLException {
+        try (Connection connection = connection(); Statement statement = connection.createStatement()) {
+            statement.execute("SET app.system_worker = 'true'");
+            statement.executeUpdate("""
+                    INSERT INTO act_ru_execution (id_, tenant_id_)
+                    VALUES ('execution-a', 'tenant-a'), ('execution-b', 'tenant-b')
+                    """);
+            statement.execute("RESET app.system_worker");
+
+            assertThat(countFlowableRows(statement, null)).isZero();
+            assertThat(countFlowableRows(statement, "tenant-a")).isEqualTo(1);
+            assertThat(countFlowableRows(statement, "tenant-b")).isEqualTo(1);
+            assertThat(countFlowableRows(statement, "tenant-missing")).isZero();
+        }
+    }
+
+    private int countFlowableRows(Statement statement, String tenantCode) throws SQLException {
+        statement.execute("RESET app.tenant_code");
+        if (tenantCode != null) {
+            statement.execute("SET app.tenant_code = '" + tenantCode + "'");
+        }
+        try (ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM act_ru_execution")) {
+            assertThat(resultSet.next()).isTrue();
+            return resultSet.getInt(1);
         }
     }
 

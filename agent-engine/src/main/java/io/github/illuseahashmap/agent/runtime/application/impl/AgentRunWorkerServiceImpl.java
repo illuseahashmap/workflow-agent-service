@@ -263,6 +263,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     claimed.run(), true, decision.accepted(),
                     transition(claimed.attemptId(), "MODEL_COMPLETED", claimed.traceId(), now));
             persistChildSteps(claimed, steps, now);
+            executionRepository.insertCheckpoint(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), 1,
+                    "MODEL_RESULT", outputSnapshot(response, decision), now);
             executionRepository.saveSucceeded(
                     claimed.run(),
                     claimed.attemptId(),
@@ -287,6 +290,23 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             executionRepository.insertCompletedStep(
                     claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), sequence++,
                     step.stepType(), step.status(), step.errorCode(), completedAt);
+            executionRepository.insertCheckpoint(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), sequence - 1,
+                    "STEP_COMPLETED", stepSnapshot(step), completedAt);
+        }
+    }
+
+    private String stepSnapshot(AgentExecutor.StepResult step) {
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                    "stepType", step.stepType(),
+                    "status", step.status(),
+                    "errorCode", step.errorCode() == null ? "" : step.errorCode()));
+        } catch (JsonProcessingException exception) {
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_CHECKPOINT_SNAPSHOT_ERROR",
+                    AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Agent checkpoint could not be serialized"), exception);
         }
     }
 

@@ -49,4 +49,22 @@ public class AgentRunOperationsServiceImpl implements AgentRunOperationsService 
                     "Agent run is not an operator-retryable terminal run");
         }
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelActive(long runId, String reason) {
+        if (runId <= 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent run id must be positive");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Cancellation reason must not be blank");
+        }
+        boolean cancelled = repository.cancelActive(
+                tenantProvider.current().tenantCode(), runId,
+                principalProvider.current().principalId(), UUID.randomUUID().toString(), reason.strip());
+        if (!cancelled) {
+            throw new BusinessException(ErrorCode.CONFLICT,
+                    "Agent run is not an active cancellable run");
+        }
+    }
 }

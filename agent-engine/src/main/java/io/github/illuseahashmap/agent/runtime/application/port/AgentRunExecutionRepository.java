@@ -53,6 +53,19 @@ public interface AgentRunExecutionRepository {
         // Compatibility default for in-memory and legacy adapters.
     }
 
+    /** Persists a durable boundary after a child step has completed. */
+    default void insertCheckpoint(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            int sequenceNo,
+            String checkpointType,
+            String snapshotJson,
+            Instant createdAt
+    ) {
+        // Compatibility default for in-memory and legacy adapters.
+    }
+
     default void insertRecoveryDecision(AgentRecoveryDecision decision) {
         // Compatibility default for in-memory and legacy adapters.
     }

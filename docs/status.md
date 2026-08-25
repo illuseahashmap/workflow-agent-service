@@ -8,14 +8,14 @@
 
 ### 平台与工作流
 
-- 已完成模块化单体拆分：`auth-engine`、`workflow-engine`、`rules-engine`、`agent-engine`、`platform-migrations`、`workflow-boot`。
+- 已完成模块化单体拆分：`auth-engine`、`workflow-engine`、`rules-engine`、`agent-engine`、`knowledge-engine`、`platform-migrations`、`workflow-boot`。
 - 已具备注册登录、HttpOnly Cookie、CSRF、租户/角色/权限、流程版本、派单规则版本和基础审计。
 - 已具备流程启动、审批、驳回、转办、终止、实例查询、参与人解析和流程图展示。
 - 已建立 PostgreSQL RLS、租户上下文、Redis 锁和可靠兜底命令。
 
 ### Agent 首个纵向闭环
 
-- 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计。
+- 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计；Worker 在模型结果和子步骤完成后持久化幂等 Checkpoint。
 - 已完成正式 AgentRun 执行链路：Provider 调用、Schema 校验、基础结果策略、重试、租约心跳、Recovery、Outbox/Inbox 和 Flowable 恢复。
 - 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
 - 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
@@ -43,10 +43,10 @@
 | P0 | 生产可观测性 | Trace、基础日志、健康检查和部分指标已有 | 指标、告警、审计查询和失败命令运维入口完整 |
 | P0 | 流程操作审计 | 基础审计已有 | 发起、领取、审批、驳回、转办、终止、规则命中可追溯 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
-| P1 | API 契约治理 | 路由已覆盖，部分响应模型仍需细化 | DTO、错误码、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类和一次输出修复已有，生产级能力未完成 | 工具/RAG/人工确认步骤、Checkpoint 恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
+| P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
+| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
-| P1 | 受治理 RAG 最小闭环 | 长期设计已有 KnowledgeRetrieval、RetrievalTrace、Citation 和评测方向，尚无实现 | 按[RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)完成中立契约、可靠摄取、混合检索、Agent 工具、Grounding、评测和多 Retriever 兼容验收 |
+| P1 | 受治理 RAG 最小闭环 | RAG-1 中立检索契约、证据引用和可信租户边界已落地 | 继续完成可靠摄取、混合检索、Agent 工具、Grounding、评测和多 Retriever 兼容验收 |
 | P1 | 受治理 MCP 最小闭环 | Provider Tool Calling、Tool Registry、租户授权、Schema、幂等和审计已有；尚无 MCP 协议接入 | 按[MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)完成连接器、目录快照、AgentVersion 工具绑定、只读 `tools/call`、安全与故障恢复验收 |
 
 ## 三、下一阶段顺序

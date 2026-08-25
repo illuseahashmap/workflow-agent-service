@@ -284,6 +284,37 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public void insertCheckpoint(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            int sequenceNo,
+            String checkpointType,
+            String snapshotJson,
+            Instant createdAt
+    ) {
+        jdbcTemplate.update("""
+                        INSERT INTO agent_run_checkpoint (
+                            tenant_code, agent_run_id, attempt_id, sequence_no,
+                            checkpoint_type, snapshot_json, created_at
+                        ) VALUES (
+                            :tenantCode, :runId, :attemptId, :sequenceNo,
+                            :checkpointType, :snapshotJson, :createdAt
+                        )
+                        ON CONFLICT (tenant_code, agent_run_id, attempt_id, sequence_no)
+                        DO NOTHING
+                        """,
+                Map.of(
+                        "tenantCode", tenantCode,
+                        "runId", runId,
+                        "attemptId", attemptId,
+                        "sequenceNo", sequenceNo,
+                        "checkpointType", checkpointType,
+                        "snapshotJson", snapshotJson,
+                        "createdAt", timestamp(createdAt)));
+    }
+
+    @Override
     public void saveClaimed(AgentRun run, AgentRunStateTransition transition) {
         int updated = jdbcTemplate.update("""
                         UPDATE agent_run
