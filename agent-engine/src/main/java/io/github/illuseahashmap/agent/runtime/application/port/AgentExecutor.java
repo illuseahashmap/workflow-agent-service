@@ -22,27 +22,29 @@ public interface AgentExecutor {
             String input,
             Duration timeout,
             String traceId,
+            long runId,
             String processInstanceId,
             String nodeToolSetJson,
-            BiConsumer<Integer, StepResult> progressListener
+            String checkpointStateJson,
+            BiConsumer<Integer, StepProgress> progressListener
     ) {
         public Command(String tenantCode, AgentDefinitionVersion version, AgentProvider provider,
                        String input, Duration timeout, String traceId) {
-            this(tenantCode, version, provider, input, timeout, traceId, null, null, null);
+            this(tenantCode, version, provider, input, timeout, traceId, 0, null, null, null, null);
         }
 
         public Command(
                 String tenantCode, AgentDefinitionVersion version, AgentProvider provider,
                 String input, Duration timeout, String traceId, String processInstanceId) {
-            this(tenantCode, version, provider, input, timeout, traceId, processInstanceId, null, null);
+            this(tenantCode, version, provider, input, timeout, traceId, 0, processInstanceId, null, null, null);
         }
 
         public Command(
                 String tenantCode, AgentDefinitionVersion version, AgentProvider provider,
                 String input, Duration timeout, String traceId, String processInstanceId,
                 String nodeToolSetJson) {
-            this(tenantCode, version, provider, input, timeout, traceId, processInstanceId,
-                    nodeToolSetJson, null);
+            this(tenantCode, version, provider, input, timeout, traceId, 0, processInstanceId,
+                    nodeToolSetJson, null, null);
         }
     }
 
@@ -62,6 +64,21 @@ public interface AgentExecutor {
         }
     }
 
-    record StepResult(String stepType, String status, String errorCode) {
+    record StepResult(String stepType, String status, String errorCode, String logicalStepId) {
+        public StepResult(String stepType, String status, String errorCode) {
+            this(stepType, status, errorCode, stepType);
+        }
+    }
+
+    record StepProgress(StepResult result, CheckpointState checkpoint) {
+    }
+
+    record CheckpointState(String logicalStepId, int nextStep, String context,
+                           String previousToolResultJson) {
+        public CheckpointState {
+            if (nextStep < 1) {
+                throw new IllegalArgumentException("nextStep must be positive");
+            }
+        }
     }
 }

@@ -22,5 +22,28 @@ public interface AgentRunGateway {
             String requestedBy,
             long timeoutSeconds
     ) {
+
+        /**
+         * Compatibility constructor for callers created before BPMN node tool
+         * binding became part of the workflow-to-agent contract.
+         */
+        public AgentRunRequest(
+                String tenantCode,
+                long agentVersionId,
+                String processInstanceId,
+                String executionId,
+                String activityId,
+                String activityActivationId,
+                String inputSnapshotJson,
+                String outputMappingJson,
+                String processFailurePolicy,
+                String idempotencyKey,
+                String requestedBy,
+                long timeoutSeconds
+        ) {
+            this(tenantCode, agentVersionId, processInstanceId, executionId, activityId,
+                    activityActivationId, inputSnapshotJson, outputMappingJson,
+                    processFailurePolicy, null, idempotencyKey, requestedBy, timeoutSeconds);
+        }
     }
 }

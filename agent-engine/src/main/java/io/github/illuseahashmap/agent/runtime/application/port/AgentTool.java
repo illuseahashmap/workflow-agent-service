@@ -19,16 +19,32 @@ public interface AgentTool {
     Result execute(Request request);
 
     record Request(String tenantCode, Map<String, Object> arguments, Duration timeout,
-                   String traceId, String idempotencyKey, String processInstanceId) {
+                   String traceId, String idempotencyKey, String processInstanceId,
+                   long runId, String logicalStepId) {
+
+        public Request withIdempotencyKey(String stableIdempotencyKey) {
+            return new Request(tenantCode, arguments, timeout, traceId, stableIdempotencyKey,
+                    processInstanceId, runId, logicalStepId);
+        }
+        public Request(String tenantCode, Map<String, Object> arguments, Duration timeout,
+                       String traceId, String idempotencyKey, String processInstanceId) {
+            this(tenantCode, arguments, timeout, traceId, idempotencyKey, processInstanceId, 0, null);
+        }
+
         public Request(String tenantCode, Map<String, Object> arguments,
                        Duration timeout, String traceId) {
             this(tenantCode, arguments, timeout, traceId,
-                    traceId + ":" + Integer.toHexString(arguments == null ? 0 : arguments.hashCode()), null);
+                    traceId + ":" + Integer.toHexString(arguments == null ? 0 : arguments.hashCode()), null, 0, null);
         }
 
         public Request(String tenantCode, Map<String, Object> arguments,
                        Duration timeout, String traceId, String idempotencyKey) {
-            this(tenantCode, arguments, timeout, traceId, idempotencyKey, null);
+            this(tenantCode, arguments, timeout, traceId, idempotencyKey, null, 0, null);
+        }
+
+        public Request(String tenantCode, Map<String, Object> arguments, Duration timeout,
+                       String traceId, String processInstanceId, long runId, String logicalStepId) {
+            this(tenantCode, arguments, timeout, traceId, null, processInstanceId, runId, logicalStepId);
         }
     }
 

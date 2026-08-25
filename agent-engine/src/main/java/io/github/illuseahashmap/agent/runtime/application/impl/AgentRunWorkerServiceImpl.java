@@ -175,6 +175,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             leaseExpiresAt = run.deadlineAt();
         }
         String traceId = UUID.randomUUID().toString();
+        String checkpointStateJson = executionRepository
+                .findLatestCheckpoint(run.tenantCode(), run.id())
+                .map(AgentRunExecutionRepository.CheckpointSnapshot::snapshotJson)
+                .orElse(null);
         stateMachine.startLease(
                 run,
                 new AgentRunLease(attemptId, workerId, leaseExpiresAt),
@@ -182,7 +186,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         executionRepository.saveClaimed(run, lastTransition(run));
         metrics.claimed();
         return new ClaimedRun(
-                run, attemptId, attemptNumber, stepId, traceId, snapshot.inputSnapshotJson());
+                run, attemptId, attemptNumber, stepId, traceId, snapshot.inputSnapshotJson(), checkpointStateJson);
     }
 
     private void execute(ClaimedRun claimed) {
@@ -202,8 +206,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 executionResult = executorRegistry.require(version.executionMode()).execute(
                         new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
                                 remainingTimeout(run, version.timeoutSeconds()), claimed.traceId(),
-                                run.processInstanceId(), nodeToolSetJson,
-                                (sequence, step) -> persistProgress(claimed, sequence, step)));
+                                run.id(), run.processInstanceId(), nodeToolSetJson, claimed.checkpointStateJson(),
+                                (sequence, progress) -> persistProgress(claimed, sequence, progress)));
             } catch (AgentExecutionException exception) {
                 LOG.warn("Agent execution contract failed: runId={}, traceId={}, errorCode={}",
                         run.id(), claimed.traceId(), exception.failure().errorCode(), exception);
@@ -287,17 +291,29 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     }
 
     /** Persist each logical executor step before the next model/tool step starts. */
-    private void persistProgress(ClaimedRun claimed, int sequence, AgentExecutor.StepResult step) {
+    private void persistProgress(ClaimedRun claimed, int sequence, AgentExecutor.StepProgress progress) {
         transactionTemplate.executeWithoutResult(status -> {
             Instant now = Instant.now();
             int ledgerSequence = sequence + 1;
+            AgentExecutor.StepResult step = progress.result();
             executionRepository.insertCompletedStep(
                     claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
                     step.stepType(), step.status(), step.errorCode(), now);
             executionRepository.insertCheckpoint(
                     claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
-                    "STEP_COMPLETED", stepSnapshot(step), now);
+                    "STEP_COMPLETED", checkpointSnapshot(progress.checkpoint()), now);
         });
+    }
+
+    private String checkpointSnapshot(AgentExecutor.CheckpointState checkpoint) {
+        try {
+            return objectMapper.writeValueAsString(checkpoint);
+        } catch (JsonProcessingException exception) {
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_CHECKPOINT_SNAPSHOT_ERROR",
+                    AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Agent checkpoint could not be serialized"), exception);
+        }
     }
 
     private void persistChildSteps(
@@ -486,7 +502,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             int attemptNumber,
             long stepId,
             String traceId,
-            String inputSnapshotJson
+            String inputSnapshotJson,
+            String checkpointStateJson
     ) {
     }
 }

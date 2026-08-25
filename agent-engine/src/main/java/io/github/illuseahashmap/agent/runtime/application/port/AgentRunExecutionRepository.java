@@ -39,6 +39,11 @@ public interface AgentRunExecutionRepository {
 
     long insertRunningStep(String tenantCode, long runId, long attemptId, Instant startedAt);
 
+    /** Returns the last complete checkpoint across prior attempts for this run. */
+    default Optional<CheckpointSnapshot> findLatestCheckpoint(String tenantCode, long runId) {
+        return Optional.empty();
+    }
+
     /** Persists a completed child step after an executor has returned its bounded result. */
     default void insertCompletedStep(
             String tenantCode,
@@ -64,6 +69,9 @@ public interface AgentRunExecutionRepository {
             Instant createdAt
     ) {
         // Compatibility default for in-memory and legacy adapters.
+    }
+
+    record CheckpointSnapshot(int sequenceNo, String checkpointType, String snapshotJson) {
     }
 
     default void insertRecoveryDecision(AgentRecoveryDecision decision) {

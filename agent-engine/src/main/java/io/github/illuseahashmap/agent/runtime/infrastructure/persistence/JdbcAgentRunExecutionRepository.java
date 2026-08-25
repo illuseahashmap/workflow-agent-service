@@ -253,6 +253,26 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public Optional<AgentRunExecutionRepository.CheckpointSnapshot> findLatestCheckpoint(
+            String tenantCode, long runId) {
+        return jdbcTemplate.query("""
+                        SELECT sequence_no, checkpoint_type, snapshot_json
+                        FROM agent_run_checkpoint
+                        WHERE tenant_code = :tenantCode
+                          AND agent_run_id = :runId
+                          AND checkpoint_type = 'STEP_COMPLETED'
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT 1
+                        """,
+                Map.of("tenantCode", tenantCode, "runId", runId),
+                (resultSet, rowNum) -> new AgentRunExecutionRepository.CheckpointSnapshot(
+                        resultSet.getInt("sequence_no"),
+                        resultSet.getString("checkpoint_type"),
+                        resultSet.getString("snapshot_json")))
+                .stream().findFirst();
+    }
+
+    @Override
     public void insertCompletedStep(
             String tenantCode,
             long runId,

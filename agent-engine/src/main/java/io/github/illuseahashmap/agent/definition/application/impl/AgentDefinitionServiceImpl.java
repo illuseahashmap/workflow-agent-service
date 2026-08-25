@@ -20,6 +20,9 @@ import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
+import io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
@@ -48,6 +51,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
     private final CurrentPrincipalProvider principalProvider;
     private final ObjectMapper objectMapper;
     private final AgentOutputSchemaValidator outputSchemaValidator;
+    private final AgentToolRegistry toolRegistry;
+    private final AgentToolPolicyRepository toolPolicyRepository;
 
     @Autowired
     public AgentDefinitionServiceImpl(
@@ -57,7 +62,9 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             TenantProvider tenantProvider,
             CurrentPrincipalProvider principalProvider,
             ObjectMapper objectMapper,
-            AgentOutputSchemaValidator outputSchemaValidator
+            AgentOutputSchemaValidator outputSchemaValidator,
+            AgentToolRegistry toolRegistry,
+            AgentToolPolicyRepository toolPolicyRepository
     ) {
         this.definitionRepository = definitionRepository;
         this.versionRepository = versionRepository;
@@ -66,6 +73,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         this.principalProvider = principalProvider;
         this.objectMapper = objectMapper;
         this.outputSchemaValidator = outputSchemaValidator;
+        this.toolRegistry = toolRegistry;
+        this.toolPolicyRepository = toolPolicyRepository;
     }
 
     public AgentDefinitionServiceImpl(
@@ -77,7 +86,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             ObjectMapper objectMapper
     ) {
         this(definitionRepository, versionRepository, providerRepository, tenantProvider,
-                principalProvider, objectMapper, new AgentOutputSchemaValidator(objectMapper));
+                principalProvider, objectMapper, new AgentOutputSchemaValidator(objectMapper),
+                new AgentToolRegistry(List.of()), AgentToolPolicyRepository.ALLOW_ALL);
     }
 
     @Override
@@ -240,7 +250,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         }
         validateOutputSchema(version.outputSchema());
         validateInputSchema(version.inputSchema());
-        validateToolSet(version.toolSetJson());
+        validateToolSet(version.toolSetJson(), version.executionMode());
         versionRepository.publish(tenantCode, definitionId, versionId, principalProvider.current().principalId());
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
     }
@@ -289,10 +299,47 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         }
     }
 
-    private void validateToolSet(String toolSetJson) {
+    private void validateToolSet(String toolSetJson, AgentExecutionMode executionMode) {
         try {
-            if (!objectMapper.readTree(toolSetJson).isArray()) {
+            JsonNode root = objectMapper.readTree(toolSetJson);
+            if (root == null || !root.isArray()) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool set must be a JSON array");
+            }
+            List<String> invalid = new ArrayList<>();
+            if (root.size() > 0 && executionMode != AgentExecutionMode.PLATFORM_AGENT) {
+                invalid.add("tool set requires PLATFORM_AGENT execution mode");
+            }
+            root.forEach(node -> {
+                if (!node.isTextual() || !StringUtils.hasText(node.asText())) {
+                    invalid.add("blank or non-text tool code");
+                    return;
+                }
+                String toolCode = node.asText().trim();
+                try {
+                    toolRegistry.require(toolCode);
+                } catch (AgentExecutionException exception) {
+                    invalid.add(toolCode + " is not registered");
+                    return;
+                }
+                AgentToolDefinition definition = toolPolicyRepository
+                        .findAuthorized(tenantCode(), toolCode).orElse(null);
+                if (definition == null) {
+                    invalid.add(toolCode + " is not authorized for the tenant");
+                    return;
+                }
+                if (!StringUtils.hasText(definition.inputSchema())) {
+                    invalid.add(toolCode + " has no input Schema");
+                    return;
+                }
+                try {
+                    outputSchemaValidator.validateDefinition(definition.inputSchema());
+                } catch (AgentExecutionException exception) {
+                    invalid.add(toolCode + " has an invalid input Schema");
+                }
+            });
+            if (!invalid.isEmpty()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST,
+                        "Agent tool set is invalid: " + String.join(", ", invalid));
             }
         } catch (BusinessException exception) {
             throw exception;

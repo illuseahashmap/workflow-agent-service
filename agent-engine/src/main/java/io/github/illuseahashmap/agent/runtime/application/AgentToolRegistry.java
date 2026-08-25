@@ -118,11 +118,11 @@ public class AgentToolRegistry {
         }
         String argumentsJson = serialize(request.arguments());
         schemaValidator.validateInput(definition.inputSchema(), argumentsJson);
-        if (!StringUtils.hasText(request.idempotencyKey())) {
+        String argumentsHash = hash(argumentsJson);
+        String idempotencyKey = stableIdempotencyKey(request, toolCode, argumentsHash);
+        if (!StringUtils.hasText(idempotencyKey)) {
             throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_KEY_REQUIRED", "Agent tool idempotency key is required");
         }
-        String idempotencyKey = request.idempotencyKey();
-        String argumentsHash = hash(argumentsJson);
         var existing = auditRepository.findByIdempotencyKey(tenantCode, toolCode, idempotencyKey);
         if (existing.isPresent()) {
             var audit = existing.get();
@@ -133,7 +133,7 @@ public class AgentToolRegistry {
             return new AgentTool.Result(audit.output(), idempotencyKey);
         }
 
-        AgentTool.Result result = tool.execute(request);
+        AgentTool.Result result = tool.execute(request.withIdempotencyKey(idempotencyKey));
         if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
             throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
         }
@@ -141,6 +141,14 @@ public class AgentToolRegistry {
                 tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
                 result.output(), null, request.traceId(), Instant.now()));
         return result;
+    }
+
+    private String stableIdempotencyKey(AgentTool.Request request, String toolCode, String argumentsHash) {
+        if (request.runId() > 0 && StringUtils.hasText(request.logicalStepId())) {
+            return request.runId() + ":" + request.logicalStepId().trim()
+                    + ":" + toolCode + ":" + argumentsHash;
+        }
+        return request.idempotencyKey();
     }
 
     private Set<String> availableToolCodes(String versionToolSetJson, String nodeToolSetJson) {

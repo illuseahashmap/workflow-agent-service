@@ -92,6 +92,31 @@ class AgentToolRegistryTest {
                 .containsExactly("lookup");
     }
 
+    @Test
+    void reusesStableRunStepKeyAcrossAttemptsAndTraces() {
+        var audits = new InMemoryAuditRepository();
+        var calls = new int[] {0};
+        AgentTool tool = new AgentTool() {
+            @Override public String name() { return "lookup"; }
+            @Override public Result execute(Request request) {
+                calls[0]++;
+                return new Result("{\"value\":1}", "ignored");
+            }
+        };
+        AgentToolRegistry registry = new AgentToolRegistry(
+                List.of(tool), AgentToolPolicyRepository.ALLOW_ALL, audits,
+                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+        registry.execute("tenant-a", "lookup", new AgentTool.Request(
+                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1",
+                null, null, 42L, "tool:1"));
+        AgentTool.Result replay = registry.execute("tenant-a", "lookup", new AgentTool.Request(
+                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-2",
+                null, null, 42L, "tool:1"));
+
+        assertThat(replay.output()).isEqualTo("{\"value\":1}");
+        assertThat(calls[0]).isEqualTo(1);
+    }
+
     private static final class InMemoryAuditRepository implements AgentToolExecutionAuditRepository {
         private final Map<String, Audit> entries = new HashMap<>();
 

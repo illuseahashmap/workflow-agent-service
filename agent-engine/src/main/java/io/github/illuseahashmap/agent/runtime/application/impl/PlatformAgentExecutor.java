@@ -122,16 +122,27 @@ public class PlatformAgentExecutor implements AgentExecutor {
                         command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson());
         List<ModelProviderRequest.ToolDefinition> nativeTools =
                 capabilities != null && capabilities.nativeToolCalling() ? effectiveTools : List.of();
-        ModelProviderResponse plan = adapter.invoke(new ModelProviderRequest(
-                provider.baseUrl(), credential, model,
-                version.systemPrompt() + "\n\n" + PLANNER_INSTRUCTION,
-                command.input(), phaseTimeout, command.traceId()));
-
         var steps = new ArrayList<AgentExecutor.StepResult>();
-        addStep(command, steps, "PLAN", "SUCCEEDED", null);
-        String context = "计划：\n" + plan.content() + "\n\n用户请求：\n" + command.input();
-        ModelProviderRequest.ToolResult previousToolResult = null;
-        for (int step = 1; step <= maxSteps; step++) {
+        AgentExecutor.CheckpointState checkpoint = readCheckpoint(command.checkpointStateJson());
+        String context;
+        ModelProviderRequest.ToolResult previousToolResult;
+        int firstToolStep;
+        if (checkpoint == null) {
+            ModelProviderResponse plan = adapter.invoke(new ModelProviderRequest(
+                    provider.baseUrl(), credential, model,
+                    version.systemPrompt() + "\n\n" + PLANNER_INSTRUCTION,
+                    command.input(), phaseTimeout, command.traceId()));
+            context = "计划：\n" + plan.content() + "\n\n用户请求：\n" + command.input();
+            previousToolResult = null;
+            firstToolStep = 1;
+            addStep(command, steps, "plan", "PLAN", "SUCCEEDED", null,
+                    new AgentExecutor.CheckpointState("plan", firstToolStep, bounded(context), null));
+        } else {
+            context = bounded(checkpoint.context());
+            previousToolResult = readToolResult(checkpoint.previousToolResultJson());
+            firstToolStep = checkpoint.nextStep();
+        }
+        for (int step = firstToolStep; step <= maxSteps; step++) {
             ModelProviderResponse answer = adapter.invoke(new ModelProviderRequest(
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION
@@ -145,7 +156,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                 answer = adapter.invoke(new ModelProviderRequest(
                         provider.baseUrl(), credential, model,
                         version.systemPrompt() + "\n\n" + TOOL_CALL_REPAIR_INSTRUCTION
-                                + "\nRegistered tools: " + registeredTools(),
+                                + "\n可用工具契约：\n" + toolInstructions(effectiveTools),
                     context + "\n\nPrevious invalid response:\n" + safeContent(answer),
                         phaseTimeout, command.traceId(), nativeTools, previousToolResult));
                 toolCall = parseToolCall(answer.content());
@@ -156,9 +167,13 @@ public class PlatformAgentExecutor implements AgentExecutor {
                         context, phaseTimeout, command.traceId());
                 answer = repairResult.response();
                 if (repairResult.repaired()) {
-                    addStep(command, steps, "OUTPUT_REPAIR", "SUCCEEDED", null);
+                    addStep(command, steps, "output-repair", "OUTPUT_REPAIR", "SUCCEEDED", null,
+                            new AgentExecutor.CheckpointState("output-repair", step,
+                                    bounded(context), serializeToolResult(previousToolResult)));
                 }
-                addStep(command, steps, "VALIDATION", "SUCCEEDED", null);
+                addStep(command, steps, "validation", "VALIDATION", "SUCCEEDED", null,
+                        new AgentExecutor.CheckpointState("validation", step,
+                                bounded(context), serializeToolResult(previousToolResult)));
                 return new Result(provider.id(), model, answer, steps,
                         command.progressListener() != null);
             }
@@ -166,25 +181,75 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson(), toolCall.name(),
                     new AgentTool.Request(command.tenantCode(), toolCall.arguments(),
                             phaseTimeout, command.traceId(),
-                            command.traceId() + ":" + step + ":" + toolCall.name(),
-                            command.processInstanceId()));
-            addStep(command, steps, "TOOL_CALL", "SUCCEEDED", null);
+                            command.runId() > 0 ? null : command.traceId() + ":tool:" + step + ":" + toolCall.name(),
+                            command.processInstanceId(), command.runId(), "tool:" + step));
             context = context + "\n\n工具 " + toolCall.name() + " 返回：\n" + toolResult.output();
             previousToolResult = toolCall.callId() == null ? null
                     : new ModelProviderRequest.ToolResult(
                             toolCall.callId(), toolCall.name(),
                             toolArgumentsJson(toolCall.arguments()), toolResult.output());
+            addStep(command, steps, "tool:" + step, "TOOL_CALL", "SUCCEEDED", null,
+                    new AgentExecutor.CheckpointState("tool:" + step, step + 1,
+                            bounded(context), serializeToolResult(previousToolResult)));
         }
         throw new IllegalStateException("Agent exceeded the maximum execution steps");
     }
 
     private void addStep(Command command, List<AgentExecutor.StepResult> steps,
-                         String type, String status, String errorCode) {
-        AgentExecutor.StepResult result = new AgentExecutor.StepResult(type, status, errorCode);
+                         String logicalStepId, String type, String status, String errorCode,
+                         AgentExecutor.CheckpointState checkpoint) {
+        AgentExecutor.StepResult result = new AgentExecutor.StepResult(type, status, errorCode, logicalStepId);
         steps.add(result);
         if (command.progressListener() != null) {
-            command.progressListener().accept(steps.size(), result);
+            command.progressListener().accept(steps.size(), new AgentExecutor.StepProgress(result, checkpoint));
         }
+    }
+
+    private AgentExecutor.CheckpointState readCheckpoint(String snapshotJson) {
+        if (!StringUtils.hasText(snapshotJson)) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(snapshotJson, AgentExecutor.CheckpointState.class);
+        } catch (JsonProcessingException exception) {
+            throw checkpointFailure("Agent checkpoint could not be restored", exception);
+        }
+    }
+
+    private ModelProviderRequest.ToolResult readToolResult(String snapshotJson) {
+        if (!StringUtils.hasText(snapshotJson)) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(snapshotJson, ModelProviderRequest.ToolResult.class);
+        } catch (JsonProcessingException exception) {
+            throw checkpointFailure("Agent checkpoint tool result could not be restored", exception);
+        }
+    }
+
+    private String serializeToolResult(ModelProviderRequest.ToolResult result) {
+        if (result == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (JsonProcessingException exception) {
+            throw checkpointFailure("Agent checkpoint tool result could not be serialized", exception);
+        }
+    }
+
+    private String bounded(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= 40_000 ? value : value.substring(value.length() - 40_000);
+    }
+
+    private AgentExecutionException checkpointFailure(String message, Exception cause) {
+        return new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                "AGENT_CHECKPOINT_INVALID",
+                io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.EXECUTION_UNEXPECTED,
+                false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED, message), cause);
     }
 
     private OutputRepairResult repairOutputIfRequired(
@@ -218,10 +283,6 @@ public class PlatformAgentExecutor implements AgentExecutor {
     }
 
     private record OutputRepairResult(ModelProviderResponse response, boolean repaired) {
-    }
-
-    private String registeredTools() {
-        return toolRegistry.registeredToolNames().stream().sorted().collect(Collectors.joining(", "));
     }
 
     private String toolInstructions(List<ModelProviderRequest.ToolDefinition> tools) {
