@@ -4,6 +4,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy;
 import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.definition.domain.AgentVersionStatus;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record AgentVersionView(
         long id,
@@ -23,6 +24,7 @@ public record AgentVersionView(
         String publishedBy,
         OffsetDateTime publishedAt,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        List<String> toolCodes
 ) {
 }

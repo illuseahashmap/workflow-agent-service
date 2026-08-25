@@ -13,6 +13,7 @@ public record AgentFlowableRunCommand(
         String inputSnapshotJson,
         String outputMappingJson,
         String processFailurePolicy,
+        String nodeToolSetJson,
         @NotBlank String idempotencyKey,
         String requestedBy,
         long timeoutSeconds
@@ -29,6 +30,15 @@ public record AgentFlowableRunCommand(
             String requestedBy, long timeoutSeconds) {
         this(agentVersionId, processInstanceId, executionId, activityId, activityActivationId,
                 inputSnapshotJson, "{}", "HOLD_FOR_OPERATIONS", idempotencyKey,
+                null, requestedBy, timeoutSeconds);
+    }
+
+    public AgentFlowableRunCommand(
+            long agentVersionId, String processInstanceId, String executionId, String activityId,
+            String activityActivationId, String inputSnapshotJson, String outputMappingJson,
+            String processFailurePolicy, String idempotencyKey, String requestedBy, long timeoutSeconds) {
+        this(agentVersionId, processInstanceId, executionId, activityId, activityActivationId,
+                inputSnapshotJson, outputMappingJson, processFailurePolicy, null, idempotencyKey,
                 requestedBy, timeoutSeconds);
     }
 }

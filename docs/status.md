@@ -15,13 +15,14 @@
 
 ### Agent 首个纵向闭环
 
-- 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计；Worker 在模型结果和子步骤完成后持久化幂等 Checkpoint。
+- 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计；平台 Agent Worker 在每个逻辑步骤完成后持久化幂等 Step/Checkpoint，传统执行器保留完成后兼容写入。
 - 已完成正式 AgentRun 执行链路：Provider 调用、Schema 校验、基础结果策略、重试、租约心跳、Recovery、Outbox/Inbox 和 Flowable 恢复。
 - 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
-- 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
+- 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；AgentVersion 已冻结工具代码集合，BPMN 节点只能继续收紧，当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
 - Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Chat Completions 使用结构化工具调用，DeepSeek Ark Responses 端点暂按其兼容性使用受控文本工具协议，避免发送该端点不接受的 `tools` 参数。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。后续应以 Provider 能力协商替代按端点判断。
 - 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、幂等键和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
-- 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。
+- 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
+- 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；真实 pgvector 检索和摄取 Worker 仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
@@ -46,7 +47,7 @@
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
-| P1 | 受治理 RAG 最小闭环 | RAG-1 中立检索契约、证据引用和可信租户边界已落地 | 继续完成可靠摄取、混合检索、Agent 工具、Grounding、评测和多 Retriever 兼容验收 |
+| P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace 和 `knowledge_search` 工具边界已落地 | 完成真实摄取、pgvector/混合检索、Grounding、评测和多 Retriever 兼容验收 |
 | P1 | 受治理 MCP 最小闭环 | Provider Tool Calling、Tool Registry、租户授权、Schema、幂等和审计已有；尚无 MCP 协议接入 | 按[MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)完成连接器、目录快照、AgentVersion 工具绑定、只读 `tools/call`、安全与故障恢复验收 |
 
 ## 三、下一阶段顺序

@@ -1,6 +1,6 @@
 # 待修复问题与下一步整改
 
-更新时间：2026-08-23
+更新时间：2026-08-25
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
@@ -31,17 +31,23 @@
 - 缺口：部分接口仍使用通用 `ApiResponse`，错误码、分页、权限要求和前端类型尚未完全从 DTO 契约生成。
 - 验收：核心接口的请求、成功响应、错误响应、分页和权限要求可由 OpenAPI 直接验证。
 
-### P1-2a 本次计划推进边界
+### P1-2a RAG 生产检索闭环仍未完成
 
-- 已完成：新增 `knowledge-engine` 的 RAG-1 中立检索契约；租户身份由可信上下文提供，结果强制表达证据、引用、Trace 和空结果语义。
-- 未完成：本条不等同于 OpenAPI 全量收敛，也不等同于 RAG 生产检索闭环；摄取、索引、Grounding 和评测仍需后续按实施方案推进。
+- 已完成：`Evidence` 多态契约、应用层授权范围求交、检索 Trace 元数据、知识源/文档版本/索引版本/摄取任务生命周期模型、RLS 表结构和 `knowledge_search` 只读工具边界。
+- 未完成：PostgreSQL/pgvector Retriever、真实摄取 Worker、Grounding 策略、离线评测集和生产 Trace Repository 尚未接入；当前仍是 RAG-1 到 RAG-2 的工程骨架，不宣称 RAG 闭环。
 
 ### P1-3 Agent 状态恢复与多步骤 Checkpoint 尚未完成
 
-- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；模型结果与子步骤完成边界已持久化幂等 Checkpoint。
+- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；平台 Agent 每个逻辑步骤完成后立即持久化 Step 和 Checkpoint，不再只在整个循环结束后批量写入。
 - 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
 - 缺口：Worker 强杀、心跳失败后的从 Checkpoint 恢复、暂停/恢复和跨实例压力测试仍需补齐。
 - 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等。
+
+### P1-9 Agent 工具快照已落地，目录版本化仍需补齐
+
+- 当前：AgentVersion 保存不可变工具代码集合；BPMN 节点只能进一步收紧；运行时执行集合为平台注册工具 ∩ 租户授权 ∩ AgentVersion 集合 ∩ 节点子集，未绑定工具会被拒绝。
+- 缺口：工具 Schema/描述的目录版本尚未独立快照，MCP 连接器和工具目录兼容检查仍按 MCP 实施方案推进。
+- 验收：发布版本引用不可变 ToolSet 快照，工具目录变更不能改变历史运行语义。
 
 ### P1-4 结果策略与 Agent 运行规则仍需租户化
 

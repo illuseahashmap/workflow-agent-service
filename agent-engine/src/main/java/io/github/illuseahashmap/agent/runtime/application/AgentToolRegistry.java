@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.agent.runtime.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition;
@@ -76,8 +77,39 @@ public class AgentToolRegistry {
                 .toList();
     }
 
+    /** Returns the immutable AgentVersion set intersected with the BPMN node set and tenant grants. */
+    public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(
+            String tenantCode, String versionToolSetJson, String nodeToolSetJson) {
+        Set<String> versionTools = parseToolSet(versionToolSetJson, "AgentVersion tool set");
+        Set<String> nodeTools = StringUtils.hasText(nodeToolSetJson)
+                ? parseToolSet(nodeToolSetJson, "BPMN node tool set") : versionTools;
+        Set<String> effectiveTools = versionTools.stream()
+                .filter(nodeTools::contains)
+                .collect(Collectors.toUnmodifiableSet());
+        return policyRepository.findAuthorized(tenantCode, effectiveTools).stream()
+                .filter(definition -> tools.containsKey(definition.toolCode()))
+                .map(definition -> new ModelProviderRequest.ToolDefinition(
+                        definition.toolCode(), definition.toolName(), definition.inputSchema()))
+                .toList();
+    }
+
     public AgentTool.Result execute(String tenantCode, String toolCode, AgentTool.Request request) {
+        return execute(tenantCode, null, null, toolCode, request);
+    }
+
+    public AgentTool.Result execute(
+            String tenantCode,
+            String versionToolSetJson,
+            String nodeToolSetJson,
+            String toolCode,
+            AgentTool.Request request
+    ) {
         AgentTool tool = require(toolCode);
+        if (versionToolSetJson != null
+                && !availableToolCodes(versionToolSetJson, nodeToolSetJson).contains(toolCode)) {
+            throw toolProtocol("AGENT_TOOL_NOT_BOUND_TO_VERSION",
+                    "Agent tool is not bound to the current Agent version/node: " + toolCode);
+        }
         AgentToolDefinition definition = policyRepository.findAuthorized(tenantCode, toolCode)
                 .orElseThrow(() -> toolProtocol("AGENT_TOOL_NOT_AUTHORIZED",
                         "Agent tool is not authorized for the current tenant: " + toolCode));
@@ -100,6 +132,7 @@ public class AgentToolRegistry {
             }
             return new AgentTool.Result(audit.output(), idempotencyKey);
         }
+
         AgentTool.Result result = tool.execute(request);
         if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
             throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
@@ -108,6 +141,36 @@ public class AgentToolRegistry {
                 tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
                 result.output(), null, request.traceId(), Instant.now()));
         return result;
+    }
+
+    private Set<String> availableToolCodes(String versionToolSetJson, String nodeToolSetJson) {
+        Set<String> versionTools = parseToolSet(versionToolSetJson, "AgentVersion tool set");
+        if (!StringUtils.hasText(nodeToolSetJson)) {
+            return versionTools;
+        }
+        versionTools.retainAll(parseToolSet(nodeToolSetJson, "BPMN node tool set"));
+        return versionTools;
+    }
+
+    private Set<String> parseToolSet(String json, String label) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            if (!StringUtils.hasText(json) || root == null || !root.isArray()) {
+                throw toolProtocol("AGENT_TOOL_SET_INVALID", label + " must be a JSON array");
+            }
+            Set<String> result = new java.util.LinkedHashSet<>();
+            for (var item : root) {
+                if (!item.isTextual() || !StringUtils.hasText(item.asText())) {
+                    throw toolProtocol("AGENT_TOOL_SET_INVALID", label + " contains an invalid tool code");
+                }
+                result.add(item.asText());
+            }
+            return result;
+        } catch (AgentExecutionException exception) {
+            throw exception;
+        } catch (JsonProcessingException exception) {
+            throw toolProtocol("AGENT_TOOL_SET_INVALID", label + " must be valid JSON");
+        }
     }
 
     private Map<String, AgentTool> index(List<AgentTool> registeredTools) {

@@ -121,6 +121,7 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
         Instant now = Instant.now();
         String input = command.inputSnapshotJson() == null || command.inputSnapshotJson().isBlank()
                 ? "{}" : command.inputSnapshotJson();
+        input = addRuntimeToolSet(input, command.nodeToolSetJson());
         AgentRun run = executionRepository.insertQueued(new AgentRunExecutionRepository.Submission(
                 tenantCode,
                 version.id(),
@@ -148,6 +149,25 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
             return objectMapper.writeValueAsString(Map.of("input", input));
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Unable to serialize Agent input", exception);
+        }
+    }
+
+    private String addRuntimeToolSet(String inputSnapshot, String nodeToolSetJson) {
+        if (nodeToolSetJson == null || nodeToolSetJson.isBlank()) {
+            return inputSnapshot;
+        }
+        try {
+            var root = objectMapper.readTree(inputSnapshot);
+            var nodeToolSet = objectMapper.readTree(nodeToolSetJson);
+            if (root == null || !root.isObject() || nodeToolSet == null || !nodeToolSet.isArray()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent node tool set must be valid JSON");
+            }
+            ((com.fasterxml.jackson.databind.node.ObjectNode) root).set("nodeToolSet", nodeToolSet);
+            return objectMapper.writeValueAsString(root);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent node tool set must be valid JSON", exception);
         }
     }
 }

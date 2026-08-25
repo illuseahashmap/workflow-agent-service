@@ -6,7 +6,7 @@ import java.util.Objects;
 /** Immutable retrieval result with explicit abstention and traceability semantics. */
 public record RetrievalResult(
         RetrievalStatus status,
-        List<ChunkEvidence> evidence,
+        List<Evidence> evidence,
         List<Citation> citations,
         String retrievalTraceId,
         String strategy,

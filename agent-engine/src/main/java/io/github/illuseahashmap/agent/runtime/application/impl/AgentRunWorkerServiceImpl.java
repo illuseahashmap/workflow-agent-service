@@ -198,10 +198,12 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 AgentProvider provider = providerRepository.findById(run.tenantCode(), version.providerId())
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Agent Provider does not exist"));
                 String userInput = extractInput(claimed.inputSnapshotJson());
+                String nodeToolSetJson = extractNodeToolSet(claimed.inputSnapshotJson());
                 executionResult = executorRegistry.require(version.executionMode()).execute(
                         new AgentExecutor.Command(run.tenantCode(), version, provider, userInput,
                                 remainingTimeout(run, version.timeoutSeconds()), claimed.traceId(),
-                                run.processInstanceId()));
+                                run.processInstanceId(), nodeToolSetJson,
+                                (sequence, step) -> persistProgress(claimed, sequence, step)));
             } catch (AgentExecutionException exception) {
                 LOG.warn("Agent execution contract failed: runId={}, traceId={}, errorCode={}",
                         run.id(), claimed.traceId(), exception.failure().errorCode(), exception);
@@ -233,7 +235,8 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             AgentResultPolicy.Decision decision = resultPolicy.evaluate(version, executionResult.modelResponse());
             if (decision.accepted()) {
                 completeSucceeded(claimed, executionResult.providerId(), executionResult.requestedModel(),
-                        executionResult.modelResponse(), executionResult.steps(), decision);
+                        executionResult.modelResponse(), executionResult.steps(),
+                        executionResult.progressPersisted(), decision);
             } else {
                 completeFailed(claimed, executionResult.providerId(), executionResult.requestedModel(),
                         new AgentFailure(decision.reasonCode(),
@@ -255,6 +258,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             String requestedModel,
             ModelProviderResponse response,
             List<AgentExecutor.StepResult> steps,
+            boolean progressPersisted,
             AgentResultPolicy.Decision decision
     ) {
         transactionTemplate.executeWithoutResult(status -> {
@@ -262,7 +266,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             stateMachine.markSucceeded(
                     claimed.run(), true, decision.accepted(),
                     transition(claimed.attemptId(), "MODEL_COMPLETED", claimed.traceId(), now));
-            persistChildSteps(claimed, steps, now);
+            if (!progressPersisted) {
+                persistChildSteps(claimed, steps, now);
+            }
             executionRepository.insertCheckpoint(
                     claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), 1,
                     "MODEL_RESULT", outputSnapshot(response, decision), now);
@@ -277,6 +283,20 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     lastTransition(claimed.run()));
             eventPublisher.completed(claimed.run(), outputSnapshot(response, decision));
             metrics.completed(ResultStatus.SUCCESS);
+        });
+    }
+
+    /** Persist each logical executor step before the next model/tool step starts. */
+    private void persistProgress(ClaimedRun claimed, int sequence, AgentExecutor.StepResult step) {
+        transactionTemplate.executeWithoutResult(status -> {
+            Instant now = Instant.now();
+            int ledgerSequence = sequence + 1;
+            executionRepository.insertCompletedStep(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
+                    step.stepType(), step.status(), step.errorCode(), now);
+            executionRepository.insertCheckpoint(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
+                    "STEP_COMPLETED", stepSnapshot(step), now);
         });
     }
 
@@ -405,6 +425,18 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 return "";
             }
             return input.isTextual() ? input.textValue() : objectMapper.writeValueAsString(input);
+        } catch (JsonProcessingException exception) {
+            throw new AgentExecutionException(new AgentFailure(
+                    "AGENT_INPUT_SNAPSHOT_INVALID",
+                    AgentFailureCategory.EXECUTION_UNEXPECTED,
+                    false, ResultStatus.FAILED, "Agent input snapshot could not be read"), exception);
+        }
+    }
+
+    private String extractNodeToolSet(String inputSnapshotJson) {
+        try {
+            var node = objectMapper.readTree(inputSnapshotJson).path("nodeToolSet");
+            return node.isMissingNode() || node.isNull() ? null : objectMapper.writeValueAsString(node);
         } catch (JsonProcessingException exception) {
             throw new AgentExecutionException(new AgentFailure(
                     "AGENT_INPUT_SNAPSHOT_INVALID",

@@ -116,25 +116,26 @@ public class PlatformAgentExecutor implements AgentExecutor {
 
         schemaValidator.validateInput(version.inputSchema(), command.input());
         var adapter = providerRegistry.require(provider.type());
-        List<ModelProviderRequest.ToolDefinition> availableTools =
-                toolRegistry.availableToolDefinitions(command.tenantCode());
         var capabilities = adapter.capabilities(provider.baseUrl());
+        List<ModelProviderRequest.ToolDefinition> effectiveTools =
+                toolRegistry.availableToolDefinitions(
+                        command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson());
         List<ModelProviderRequest.ToolDefinition> nativeTools =
-                capabilities != null && capabilities.nativeToolCalling() ? availableTools : List.of();
+                capabilities != null && capabilities.nativeToolCalling() ? effectiveTools : List.of();
         ModelProviderResponse plan = adapter.invoke(new ModelProviderRequest(
                 provider.baseUrl(), credential, model,
                 version.systemPrompt() + "\n\n" + PLANNER_INSTRUCTION,
                 command.input(), phaseTimeout, command.traceId()));
 
         var steps = new ArrayList<AgentExecutor.StepResult>();
-        steps.add(new AgentExecutor.StepResult("PLAN", "SUCCEEDED", null));
+        addStep(command, steps, "PLAN", "SUCCEEDED", null);
         String context = "计划：\n" + plan.content() + "\n\n用户请求：\n" + command.input();
         ModelProviderRequest.ToolResult previousToolResult = null;
         for (int step = 1; step <= maxSteps; step++) {
             ModelProviderResponse answer = adapter.invoke(new ModelProviderRequest(
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION
-                            + "\n\n可用工具契约：\n" + toolInstructions(availableTools),
+                            + "\n\n可用工具契约：\n" + toolInstructions(effectiveTools),
                     context, phaseTimeout, command.traceId(), nativeTools, previousToolResult));
             ToolCall toolCall;
             try {
@@ -155,18 +156,19 @@ public class PlatformAgentExecutor implements AgentExecutor {
                         context, phaseTimeout, command.traceId());
                 answer = repairResult.response();
                 if (repairResult.repaired()) {
-                    steps.add(new AgentExecutor.StepResult("OUTPUT_REPAIR", "SUCCEEDED", null));
+                    addStep(command, steps, "OUTPUT_REPAIR", "SUCCEEDED", null);
                 }
-                steps.add(new AgentExecutor.StepResult("VALIDATION", "SUCCEEDED", null));
-                return new Result(provider.id(), model, answer, steps);
+                addStep(command, steps, "VALIDATION", "SUCCEEDED", null);
+                return new Result(provider.id(), model, answer, steps,
+                        command.progressListener() != null);
             }
             AgentTool.Result toolResult = toolRegistry.execute(
-                    command.tenantCode(), toolCall.name(),
+                    command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson(), toolCall.name(),
                     new AgentTool.Request(command.tenantCode(), toolCall.arguments(),
                             phaseTimeout, command.traceId(),
                             command.traceId() + ":" + step + ":" + toolCall.name(),
                             command.processInstanceId()));
-            steps.add(new AgentExecutor.StepResult("TOOL_CALL", "SUCCEEDED", null));
+            addStep(command, steps, "TOOL_CALL", "SUCCEEDED", null);
             context = context + "\n\n工具 " + toolCall.name() + " 返回：\n" + toolResult.output();
             previousToolResult = toolCall.callId() == null ? null
                     : new ModelProviderRequest.ToolResult(
@@ -174,6 +176,15 @@ public class PlatformAgentExecutor implements AgentExecutor {
                             toolArgumentsJson(toolCall.arguments()), toolResult.output());
         }
         throw new IllegalStateException("Agent exceeded the maximum execution steps");
+    }
+
+    private void addStep(Command command, List<AgentExecutor.StepResult> steps,
+                         String type, String status, String errorCode) {
+        AgentExecutor.StepResult result = new AgentExecutor.StepResult(type, status, errorCode);
+        steps.add(result);
+        if (command.progressListener() != null) {
+            command.progressListener().accept(steps.size(), result);
+        }
     }
 
     private OutputRepairResult repairOutputIfRequired(

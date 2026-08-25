@@ -10,7 +10,8 @@ public record AgentTaskBinding(
         String inputMappingJson,
         String outputMappingJson,
         AgentProcessFailurePolicy processFailurePolicy,
-        int processWaitTimeoutSeconds
+        int processWaitTimeoutSeconds,
+        String toolSetJson
 ) {
 
     public AgentTaskBinding {
@@ -24,6 +25,9 @@ public record AgentTaskBinding(
         if (processWaitTimeoutSeconds < 1 || processWaitTimeoutSeconds > 3600) {
             throw new IllegalArgumentException("processWaitTimeoutSeconds must be between 1 and 3600");
         }
+        if (toolSetJson != null && toolSetJson.isBlank()) {
+            toolSetJson = null;
+        }
     }
 
     public AgentTaskBinding(
@@ -31,6 +35,14 @@ public record AgentTaskBinding(
             String inputMappingJson, String outputMappingJson, String failurePolicy) {
         this(taskDefinitionKey, taskName, agentVersionId, inputMappingJson, outputMappingJson,
                 AgentProcessFailurePolicy.parseCompatible(failurePolicy), 300);
+    }
+
+    public AgentTaskBinding(
+            String taskDefinitionKey, String taskName, long agentVersionId,
+            String inputMappingJson, String outputMappingJson,
+            AgentProcessFailurePolicy processFailurePolicy, int processWaitTimeoutSeconds) {
+        this(taskDefinitionKey, taskName, agentVersionId, inputMappingJson, outputMappingJson,
+                processFailurePolicy, processWaitTimeoutSeconds, null);
     }
 
     private static void requireText(String value, String name) {

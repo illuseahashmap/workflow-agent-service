@@ -1,18 +1,18 @@
 package io.github.illuseahashmap.knowledge.retrieval.domain;
 
+import java.util.Map;
 import java.util.Objects;
 
-/** First-slice evidence produced by keyword/vector/hybrid retrievers. */
-public record ChunkEvidence(
+/** Evidence represented by a governed structured record. */
+public record StructuredRecordEvidence(
         EvidenceReference reference,
-        String text,
-        double score,
-        String title
+        Map<String, Object> fields,
+        double score
 ) implements Evidence {
-    public ChunkEvidence {
+
+    public StructuredRecordEvidence {
         reference = Objects.requireNonNull(reference, "reference must not be null");
-        text = Objects.requireNonNull(text, "text must not be null");
-        title = Objects.requireNonNullElse(title, "");
+        fields = Map.copyOf(Objects.requireNonNull(fields, "fields must not be null"));
         if (!Double.isFinite(score) || score < 0) {
             throw new IllegalArgumentException("score must be finite and non-negative");
         }
@@ -20,6 +20,6 @@ public record ChunkEvidence(
 
     @Override
     public EvidenceType type() {
-        return EvidenceType.CHUNK;
+        return EvidenceType.STRUCTURED_RECORD;
     }
 }

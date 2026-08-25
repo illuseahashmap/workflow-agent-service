@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 
 public record AgentVersionCommand(
         AgentExecutionMode executionMode,
@@ -15,18 +16,20 @@ public record AgentVersionCommand(
         @Min(1) @Max(3600) int timeoutSeconds,
         @NotNull AgentFailurePolicy failurePolicy,
         @Size(max = 20000) String inputSchema,
-        @Size(max = 20000) String outputSchema
+        @Size(max = 20000) String outputSchema,
+        List<@Size(max = 128) String> toolCodes
 ) {
 
     public AgentVersionCommand {
         executionMode = executionMode == null ? AgentExecutionMode.MODEL_ONLY : executionMode;
+        toolCodes = toolCodes == null ? List.of() : List.copyOf(toolCodes);
     }
 
     public AgentVersionCommand(
             Long providerId, String modelName, String systemPrompt, int timeoutSeconds,
             AgentFailurePolicy failurePolicy, String inputSchema, String outputSchema) {
         this(AgentExecutionMode.MODEL_ONLY, providerId, modelName, systemPrompt,
-                timeoutSeconds, failurePolicy, inputSchema, outputSchema);
+                timeoutSeconds, failurePolicy, inputSchema, outputSchema, List.of());
     }
 
     public AgentVersionCommand(
@@ -34,5 +37,12 @@ public record AgentVersionCommand(
             AgentFailurePolicy failurePolicy, String outputSchema) {
         this(AgentExecutionMode.MODEL_ONLY, providerId, modelName, systemPrompt,
                 timeoutSeconds, failurePolicy, null, outputSchema);
+    }
+
+    public AgentVersionCommand(
+            AgentExecutionMode executionMode, Long providerId, String modelName, String systemPrompt,
+            int timeoutSeconds, AgentFailurePolicy failurePolicy, String inputSchema, String outputSchema) {
+        this(executionMode, providerId, modelName, systemPrompt, timeoutSeconds, failurePolicy,
+                inputSchema, outputSchema, List.of());
     }
 }

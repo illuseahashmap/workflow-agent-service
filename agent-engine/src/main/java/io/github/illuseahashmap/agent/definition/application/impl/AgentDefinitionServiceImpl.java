@@ -1,5 +1,7 @@
 package io.github.illuseahashmap.agent.definition.application.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.definition.application.AgentDefinitionService;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionCommand;
@@ -24,7 +26,9 @@ import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -202,7 +206,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 command.systemPrompt() == null ? "" : command.systemPrompt().trim(), command.timeoutSeconds(),
                 command.failurePolicy(), normalizeNullable(command.inputSchema()),
                 normalizeNullable(command.outputSchema()), existing.createdBy(),
-                null, null, existing.createdAt(), existing.updatedAt());
+                null, null, existing.createdAt(), existing.updatedAt(), toolSetJson(command.toolCodes()));
         versionRepository.updateDraft(updated);
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
     }
@@ -236,6 +240,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         }
         validateOutputSchema(version.outputSchema());
         validateInputSchema(version.inputSchema());
+        validateToolSet(version.toolSetJson());
         versionRepository.publish(tenantCode, definitionId, versionId, principalProvider.current().principalId());
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
     }
@@ -265,7 +270,35 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 null,
                 null,
                 null,
-                null);
+                null,
+                source == null ? "[]" : source.toolSetJson());
+    }
+
+    private String toolSetJson(List<String> toolCodes) {
+        try {
+            var normalized = new LinkedHashSet<String>();
+            for (String toolCode : toolCodes == null ? List.<String>of() : toolCodes) {
+                if (toolCode == null || toolCode.isBlank()) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool code must not be blank");
+                }
+                normalized.add(toolCode.trim());
+            }
+            return objectMapper.writeValueAsString(normalized);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool set is invalid", exception);
+        }
+    }
+
+    private void validateToolSet(String toolSetJson) {
+        try {
+            if (!objectMapper.readTree(toolSetJson).isArray()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool set must be a JSON array");
+            }
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Agent tool set is invalid", exception);
+        }
     }
 
     private AgentProvider validateProvider(String tenantCode, Long providerId, boolean publishing) {
@@ -350,7 +383,25 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 providerName, version.modelName(), version.systemPrompt(), version.timeoutSeconds(),
                 version.failurePolicy(), version.inputSchema(), version.outputSchema(), version.createdBy(),
                 version.publishedBy(),
-                version.publishedAt(), version.createdAt(), version.updatedAt());
+                version.publishedAt(), version.createdAt(), version.updatedAt(), parseToolCodes(version.toolSetJson()));
+    }
+
+    private List<String> parseToolCodes(String toolSetJson) {
+        try {
+            JsonNode root = objectMapper.readTree(toolSetJson);
+            if (root == null || !root.isArray()) {
+                return List.of();
+            }
+            List<String> result = new ArrayList<>();
+            root.forEach(node -> {
+                if (node.isTextual() && StringUtils.hasText(node.asText())) {
+                    result.add(node.asText());
+                }
+            });
+            return List.copyOf(result);
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
     }
 
     private String tenantCode() {

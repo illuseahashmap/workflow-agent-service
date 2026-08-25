@@ -68,6 +68,7 @@ public class AgentTaskExecutionListener implements ExecutionListener {
                 input,
                 outputMapping,
                 processFailurePolicy,
+                binding.getAttributeValue(null, "toolSet"),
                 "flowable:" + execution.getProcessInstanceId() + ":" + execution.getCurrentActivityId()
                         + ":" + activationId,
                 null,

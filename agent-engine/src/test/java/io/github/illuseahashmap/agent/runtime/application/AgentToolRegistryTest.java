@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +73,23 @@ class AgentToolRegistryTest {
                 Duration.ofSeconds(1), "trace-1", "key-1");
         assertThatThrownBy(() -> registry.execute("tenant-a", "lookup", second))
                 .hasMessageContaining("different arguments");
+    }
+
+    @Test
+    void exposesOnlyTheVersionAndNodeToolIntersection() {
+        AgentTool lookup = new AgentTool() {
+            @Override public String name() { return "lookup"; }
+            @Override public Result execute(Request request) { return new Result("{}", request.idempotencyKey()); }
+        };
+        AgentTool other = new AgentTool() {
+            @Override public String name() { return "other"; }
+            @Override public Result execute(Request request) { return new Result("{}", request.idempotencyKey()); }
+        };
+        AgentToolRegistry registry = new AgentToolRegistry(List.of(lookup, other));
+
+        assertThat(registry.availableToolDefinitions("tenant-a", "[\"lookup\",\"other\"]",
+                "[\"lookup\"]")).extracting(ModelProviderRequest.ToolDefinition::name)
+                .containsExactly("lookup");
     }
 
     private static final class InMemoryAuditRepository implements AgentToolExecutionAuditRepository {

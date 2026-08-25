@@ -64,7 +64,7 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
                         inputMapping,
                         outputMapping,
                         processFailurePolicy,
-                        timeout(extension)));
+                        timeout(extension), validJsonArray(extension.getAttribute("toolSet"), "toolSet")));
             }
             return List.copyOf(bindings);
         } catch (BusinessException exception) {
@@ -87,6 +87,22 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
                 throw invalid("Agent task " + field + " must be a JSON object");
             }
             return json;
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalid("Agent task " + field + " must be valid JSON");
+        }
+    }
+
+    private String validJsonArray(String value, String field) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            if (!objectMapper.readTree(value).isArray()) {
+                throw invalid("Agent task " + field + " must be a JSON array");
+            }
+            return value;
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {

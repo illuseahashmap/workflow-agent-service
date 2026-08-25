@@ -34,6 +34,11 @@ public record RetrievalRequest(
         strategyHint = Objects.requireNonNullElse(strategyHint, StrategyHint.AUTO);
     }
 
+    public RetrievalRequest withAuthorizedScopes(List<String> authorizedScopes) {
+        return new RetrievalRequest(query, authorizedScopes, filters, asOfTime, maxResults,
+                strategyHint, maxHops, requiredEvidenceTypes);
+    }
+
     public enum StrategyHint {
         AUTO,
         KEYWORD,

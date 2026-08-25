@@ -127,10 +127,12 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         return jdbcTemplate.queryForObject("""
                         INSERT INTO agent_definition_version (
                             tenant_code, definition_id, version, status, execution_mode, provider_id, model_name,
-                            system_prompt, timeout_seconds, failure_policy, input_schema, output_schema, created_by
+                            system_prompt, timeout_seconds, failure_policy, input_schema, output_schema,
+                            tool_set_json, created_by
                         ) VALUES (
                             :tenantCode, :definitionId, :version, :status, :executionMode, :providerId, :modelName,
-                            :systemPrompt, :timeoutSeconds, :failurePolicy, :inputSchema, :outputSchema, :createdBy
+                            :systemPrompt, :timeoutSeconds, :failurePolicy, :inputSchema, :outputSchema,
+                            CAST(:toolSetJson AS jsonb), :createdBy
                         ) RETURNING *
                         """,
                 versionParameters(version),
@@ -149,6 +151,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
                             failure_policy = :failurePolicy,
                             input_schema = :inputSchema,
                             output_schema = :outputSchema,
+                            tool_set_json = CAST(:toolSetJson AS jsonb),
                             updated_at = CURRENT_TIMESTAMP
                         WHERE tenant_code = :tenantCode AND definition_id = :definitionId
                           AND id = :id AND status = 'DRAFT'
@@ -186,6 +189,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         parameters.put("failurePolicy", version.failurePolicy().name());
         parameters.put("inputSchema", version.inputSchema());
         parameters.put("outputSchema", version.outputSchema());
+        parameters.put("toolSetJson", version.toolSetJson());
         parameters.put("createdBy", version.createdBy());
         return parameters;
     }
@@ -210,6 +214,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
                 resultSet.getString("published_by"),
                 resultSet.getObject("published_at", java.time.OffsetDateTime.class),
                 resultSet.getObject("created_at", java.time.OffsetDateTime.class),
-                resultSet.getObject("updated_at", java.time.OffsetDateTime.class));
+                resultSet.getObject("updated_at", java.time.OffsetDateTime.class),
+                resultSet.getString("tool_set_json"));
     }
 }

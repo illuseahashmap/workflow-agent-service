@@ -167,7 +167,8 @@ class PlatformAgentExecutorTest {
         return new AgentDefinitionVersion(1L, "tenant-a", 1L, 1, AgentVersionStatus.PUBLISHED,
                 AgentExecutionMode.PLATFORM_AGENT, 1L, "model", "system", 60,
                 AgentFailurePolicy.FAIL_PROCESS, null, "{\"type\":\"object\"}",
-                "user", "user", OffsetDateTime.now(), OffsetDateTime.now(), OffsetDateTime.now());
+                "user", "user", OffsetDateTime.now(), OffsetDateTime.now(), OffsetDateTime.now(),
+                "[\"lookup\",\"context\"]");
     }
 
     private AgentProvider provider() {

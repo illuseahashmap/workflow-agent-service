@@ -1537,6 +1537,7 @@ components:
         publishedAt: { type: string, format: date-time, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        toolCodes: { type: array, items: { type: string, maxLength: 128 } }
     PublishedAgentVersion:
       type: object
       required: [id, definitionId, agentCode, agentName, version, executionMode, timeoutSeconds, contractFingerprint]
@@ -1796,6 +1797,7 @@ components:
           enum: [FAIL_PROCESS, CONTINUE_EMPTY, MANUAL_REVIEW]
         inputSchema: { type: string, maxLength: 20000 }
         outputSchema: { type: string, maxLength: 20000 }
+        toolCodes: { type: array, items: { type: string, maxLength: 128 }, maxItems: 128 }
     AgentProviderCommand:
       type: object
       required: [providerCode, providerName, baseUrl, defaultModel]
