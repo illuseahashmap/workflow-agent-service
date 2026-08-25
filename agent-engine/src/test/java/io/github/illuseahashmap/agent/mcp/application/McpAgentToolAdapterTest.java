@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import io.github.illuseahashmap.agent.mcp.application.port.McpCatalogRepository;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
@@ -28,10 +31,10 @@ class McpAgentToolAdapterTest {
                 .thenReturn(java.util.Optional.of(snapshot));
         when(repository.findConnectorVersionForSnapshot("tenant-a", snapshot.id()))
                 .thenReturn(java.util.Optional.of(connector));
-        when(client.initialize(connector, Duration.ofSeconds(5)))
+        when(client.initialize(eq(connector), any(Duration.class)))
                 .thenReturn(new McpClientPort.Session(connector, "session-1", "2025-03-26"));
         when(client.callTool(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("employee_directory"),
-                eq(Map.of("employee", "zhang")), eq(Duration.ofSeconds(5))))
+                eq(Map.of("employee", "zhang")), any(Duration.class)))
                 .thenReturn(new McpClientPort.CallResult("[{\"manager\":\"li\"}]", false));
 
         AgentTool tool = new McpAgentToolAdapter(repository, client)
@@ -41,5 +44,11 @@ class McpAgentToolAdapterTest {
 
         assertThat(result.output()).contains("li");
         assertThat(result.idempotencyKey()).isEqualTo("idempotency-1");
+        var initializeTimeout = org.mockito.ArgumentCaptor.forClass(Duration.class);
+        var callTimeout = org.mockito.ArgumentCaptor.forClass(Duration.class);
+        verify(client).initialize(eq(connector), initializeTimeout.capture());
+        verify(client).callTool(any(), anyString(), eq(Map.of("employee", "zhang")), callTimeout.capture());
+        assertThat(initializeTimeout.getValue()).isPositive().isLessThanOrEqualTo(Duration.ofSeconds(5));
+        assertThat(callTimeout.getValue()).isPositive().isLessThanOrEqualTo(Duration.ofSeconds(5));
     }
 }

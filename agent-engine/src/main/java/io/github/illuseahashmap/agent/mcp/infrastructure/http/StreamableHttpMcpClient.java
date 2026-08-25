@@ -42,27 +42,31 @@ public class StreamableHttpMcpClient implements McpClientPort {
     @Override
     public Session initialize(McpConnectorVersion connector, Duration timeout) {
         requireHttps(connector.endpointUrl());
+        java.time.Instant deadline = java.time.Instant.now().plus(timeout);
         JsonNode result = request(connector, null, "initialize", Map.of(
                 "protocolVersion", connector.protocolVersion(),
                 "capabilities", Map.of(),
-                "clientInfo", Map.of("name", "workflow-agent-service", "version", "0.1")), timeout);
+                "clientInfo", Map.of("name", "workflow-agent-service", "version", "0.1")),
+                remaining(deadline));
         String protocolVersion = result.path("protocolVersion").asText();
         if (protocolVersion.isBlank()) {
             throw protocol("MCP_PROTOCOL_ERROR", "MCP initialize response has no protocolVersion");
         }
         String sessionId = result.path("_sessionId").asText(null);
         Session session = new Session(connector, sessionId, protocolVersion);
-        notifyInitialized(session, timeout);
+        notifyInitialized(session, remaining(deadline));
         return session;
     }
 
     @Override
     public List<Tool> listTools(Session session, Duration timeout) {
         List<Tool> tools = new ArrayList<>();
+        java.time.Instant deadline = java.time.Instant.now().plus(timeout);
         String cursor = null;
         do {
             Map<String, Object> arguments = cursor == null ? Map.of() : Map.of("cursor", cursor);
-            JsonNode result = request(session.connector(), session.sessionId(), "tools/list", arguments, timeout);
+            JsonNode result = request(session.connector(), session.sessionId(), "tools/list", arguments,
+                    remaining(deadline));
             JsonNode items = result.path("tools");
             if (!items.isArray() || items.size() > 200) {
                 throw protocol("MCP_PROTOCOL_ERROR", "MCP tools/list returned an invalid or oversized tool list");
@@ -85,8 +89,10 @@ public class StreamableHttpMcpClient implements McpClientPort {
 
     @Override
     public CallResult callTool(Session session, String toolName, Map<String, Object> arguments, Duration timeout) {
+        java.time.Instant deadline = java.time.Instant.now().plus(timeout);
         JsonNode result = request(session.connector(), session.sessionId(), "tools/call",
-                Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments), timeout);
+                Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments),
+                remaining(deadline));
         boolean isError = result.path("isError").asBoolean(false);
         return new CallResult(result.path("content").toString(), isError);
     }
@@ -96,7 +102,8 @@ public class StreamableHttpMcpClient implements McpClientPort {
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("jsonrpc", "2.0");
-            payload.put("id", requestIds.incrementAndGet());
+            long requestId = requestIds.incrementAndGet();
+            payload.put("id", requestId);
             payload.put("method", method);
             payload.put("params", params);
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(connector.endpointUrl()))
@@ -113,26 +120,25 @@ public class StreamableHttpMcpClient implements McpClientPort {
             }
             HttpResponse<InputStream> response = httpClient.send(builder.build(),
                     HttpResponse.BodyHandlers.ofInputStream());
-            if (response.statusCode() / 100 != 2) {
-                throw statusFailure(response.statusCode());
+            try (InputStream bodyStream = response.body()) {
+                if (response.statusCode() / 100 != 2) {
+                    throw statusFailure(response.statusCode());
+                }
+                String body = readBounded(bodyStream);
+                JsonNode root = parseResponse(response, body, requestId);
+                if (root.has("error")) {
+                    throw protocol("MCP_PROTOCOL_ERROR", "MCP response contains a JSON-RPC error");
+                }
+                JsonNode result = root.path("result");
+                if (result.isMissingNode()) {
+                    throw protocol("MCP_PROTOCOL_ERROR", "MCP response has no result");
+                }
+                String responseSession = response.headers().firstValue("Mcp-Session-Id").orElse(null);
+                if (responseSession != null && result.isObject()) {
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) result).put("_sessionId", responseSession);
+                }
+                return result;
             }
-            String body = readBounded(response.body());
-            JsonNode root = objectMapper.readTree(responseBody(response, body));
-            if (!root.isObject()) {
-                throw protocol("MCP_PROTOCOL_ERROR", "MCP response must be a JSON-RPC object");
-            }
-            if (root.has("error")) {
-                throw protocol("MCP_PROTOCOL_ERROR", "MCP response contains a JSON-RPC error");
-            }
-            JsonNode result = root.path("result");
-            if (result.isMissingNode()) {
-                throw protocol("MCP_PROTOCOL_ERROR", "MCP response has no result");
-            }
-            String responseSession = response.headers().firstValue("Mcp-Session-Id").orElse(null);
-            if (responseSession != null && result.isObject()) {
-                ((com.fasterxml.jackson.databind.node.ObjectNode) result).put("_sessionId", responseSession);
-            }
-            return result;
         } catch (McpClientException exception) {
             throw exception;
         } catch (JsonProcessingException exception) {
@@ -189,12 +195,13 @@ public class StreamableHttpMcpClient implements McpClientPort {
         return new McpClientException(code, McpFailureKind.PROTOCOL_ERROR, false, message);
     }
 
-    private String responseBody(HttpResponse<?> response, String body) {
+    private JsonNode parseResponse(HttpResponse<?> response, String body, long requestId)
+            throws JsonProcessingException {
         String contentType = response.headers().firstValue("Content-Type").orElse("").toLowerCase();
         if (!contentType.contains("text/event-stream")) {
-            return body;
+            return matchingEnvelope(objectMapper.readTree(body), requestId);
         }
-        String lastData = null;
+        JsonNode matched = null;
         StringBuilder data = new StringBuilder();
         for (String line : body.split("\\R", -1)) {
             if (line.startsWith("data:")) {
@@ -203,17 +210,54 @@ public class StreamableHttpMcpClient implements McpClientPort {
                 }
                 data.append(line.substring(5).stripLeading());
             } else if (line.isBlank() && data.length() > 0) {
-                lastData = data.toString();
+                matched = firstMatching(matched, objectMapper.readTree(data.toString()), requestId);
                 data.setLength(0);
             }
         }
         if (data.length() > 0) {
-            lastData = data.toString();
+            matched = firstMatching(matched, objectMapper.readTree(data.toString()), requestId);
         }
-        if (lastData == null || lastData.isBlank()) {
+        if (matched == null) {
             throw protocol("MCP_PROTOCOL_ERROR", "MCP SSE response contains no data event");
         }
-        return lastData;
+        return matched;
+    }
+
+    private JsonNode matchingEnvelope(JsonNode candidate, long requestId) {
+        JsonNode matched = firstMatching(null, candidate, requestId);
+        if (matched == null) {
+            throw protocol("MCP_PROTOCOL_ERROR", "MCP response id did not match the request");
+        }
+        return matched;
+    }
+
+    private JsonNode firstMatching(JsonNode current, JsonNode candidate, long requestId) {
+        if (current != null) {
+            return current;
+        }
+        if (candidate.isArray()) {
+            for (JsonNode item : candidate) {
+                JsonNode matched = firstMatching(null, item, requestId);
+                if (matched != null) {
+                    return matched;
+                }
+            }
+            return null;
+        }
+        if (candidate.isObject() && candidate.has("id")
+                && candidate.path("id").asLong(Long.MIN_VALUE) == requestId) {
+            return candidate;
+        }
+        return null;
+    }
+
+    private Duration remaining(java.time.Instant deadline) {
+        Duration duration = Duration.between(java.time.Instant.now(), deadline);
+        if (duration.isZero() || duration.isNegative()) {
+            throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
+                    "MCP request exceeded the total timeout budget");
+        }
+        return duration;
     }
 
     private void notifyInitialized(Session session, Duration timeout) {
