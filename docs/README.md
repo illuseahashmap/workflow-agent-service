@@ -15,6 +15,7 @@
 - [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
 - [开发方向与防偏离门禁](architecture/development-direction-guardrails.md)：参考项目边界、技术主线、功能准入门禁和代表性验收闭环。
 - [RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)：知识模块、中立检索契约、可靠摄取、Evidence/Citation、评测和图谱扩展边界。
+- [MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)：连接器、工具目录快照、AgentVersion 绑定、协议调用、安全和可靠性闭环。
 - [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
 - [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。
 - [工作流与 Agent 交互契约](architecture/workflow-agent-interaction-contract.md)：当前交互契约和表单扩展边界。

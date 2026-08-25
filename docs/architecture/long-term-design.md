@@ -1,6 +1,6 @@
 # 长期设计总览
 
-更新时间：2026-08-24
+更新时间：2026-08-25
 
 本文是长期设计的索引，不重复实现细节。它回答“系统为什么这样划分、哪些边界不能破坏、未来如何扩展”。
 
@@ -29,6 +29,7 @@
 
 - [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
 - [RAG 短期实施方案](rag-short-term-implementation-plan.md)：知识限界上下文、中立 Evidence 契约、可靠摄取和多 Retriever 扩展验收。
+- [MCP 短期实施方案](mcp-short-term-implementation-plan.md)：MCP 作为受治理工具适配器的连接、目录版本、AgentVersion 绑定、调用和故障边界。
 - [Agent 协作架构设计](agent-collaboration-design.md)：Agent 与 Flowable 的长期协作边界、领域模型和治理原则。
 - [Agent 资源治理](agent-resource-governance.md)：虚拟线程、租户公平调度、租约续期和分布式配额。
 - [证据驱动的 Agent 自治](evidence-governed-agent-autonomy.md)：自治等级、证据、升级和降级。

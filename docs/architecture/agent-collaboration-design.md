@@ -86,6 +86,11 @@ AgentDefinition
 
 企业工具采用平台注册、租户授权、Agent 版本选择的三级关系。第一阶段优先支持受治理的 OpenAPI/HTTP 和 MCP 连接器；禁止租户上传任意可执行代码或配置未经策略校验的任意目标地址。工具执行器负责注入租户凭据、校验参数、执行超时和幂等策略，模型只能看到工具 Schema，不能读取凭据。
 
+MCP 只作为统一 `AgentTool` 的基础设施适配器：Provider Tool Calling 负责表达调用意图，
+Tool Registry 负责权限与策略，MCP Client 负责 `initialize`、`tools/list` 和 `tools/call`。
+它不得绕过 AgentVersion 工具快照，也不得另建一套 Agent 运行状态。近期可开发规格见
+[MCP 短期实施方案](mcp-short-term-implementation-plan.md)。
+
 平台不负责理解“请假”“采购”或“设备故障”等具体领域。领域知识通过流程变量、文件输入、租户授权的数据源和只读检索工具进入 Agent。领域模板可以后续增加，但不能成为 `agent-engine` 的硬编码依赖。
 
 ## 4. 核心原则

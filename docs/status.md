@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-08-24
+更新时间：2026-08-25
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -47,6 +47,7 @@
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类和一次输出修复已有，生产级能力未完成 | 工具/RAG/人工确认步骤、Checkpoint 恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 受治理 RAG 最小闭环 | 长期设计已有 KnowledgeRetrieval、RetrievalTrace、Citation 和评测方向，尚无实现 | 按[RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)完成中立契约、可靠摄取、混合检索、Agent 工具、Grounding、评测和多 Retriever 兼容验收 |
+| P1 | 受治理 MCP 最小闭环 | Provider Tool Calling、Tool Registry、租户授权、Schema、幂等和审计已有；尚无 MCP 协议接入 | 按[MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)完成连接器、目录快照、AgentVersion 工具绑定、只读 `tools/call`、安全与故障恢复验收 |
 
 ## 三、下一阶段顺序
 
@@ -54,12 +55,14 @@
 2. 再完成 P1 安全与契约：RLS 深度验证、API 响应模型和核心覆盖率。
 3. 再完善 Agent Runtime：结果策略、Checkpoint 恢复、出站安全、公平调度、取消和人工确认。
 4. 在不打断 P0/P1 加固的前提下，按 RAG-1 至 RAG-4 建立受治理知识检索闭环，为运行证据和后续渐进式自治提供可靠输入。
-5. 最后扩展组织、任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
+5. 并行完成 MCP-1 至 MCP-3 的只读闭环：连接器与目录版本、AgentVersion 精确绑定、`tools/call`、出站安全和故障测试；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+6. 最后扩展组织、任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
 
 ## 四、明确暂不做
 
 - Dify 类通用 Agent 内部流程画布。
 - 租户上传任意 Java、脚本、插件或任意目标 HTTP 工具。
+- 租户配置任意本地 MCP `stdio` 命令，以及未经审核即动态使用 MCP 工具。
 - 无边界的多 Agent 自主协作、复杂记忆和开放式工具生态。
 - 在组织、表单和任务中心基础能力之前扩展高级企业功能。
 
