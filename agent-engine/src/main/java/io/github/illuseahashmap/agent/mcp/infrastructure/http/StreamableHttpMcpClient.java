@@ -198,6 +198,11 @@ public class StreamableHttpMcpClient implements McpClientPort {
     private JsonNode parseResponse(HttpResponse<?> response, String body, long requestId)
             throws JsonProcessingException {
         String contentType = response.headers().firstValue("Content-Type").orElse("").toLowerCase();
+        return parseResponseBody(contentType, body, requestId);
+    }
+
+    JsonNode parseResponseBody(String contentType, String body, long requestId)
+            throws JsonProcessingException {
         if (!contentType.contains("text/event-stream")) {
             return matchingEnvelope(objectMapper.readTree(body), requestId);
         }
@@ -245,6 +250,7 @@ public class StreamableHttpMcpClient implements McpClientPort {
             return null;
         }
         if (candidate.isObject() && candidate.has("id")
+                && (candidate.has("result") || candidate.has("error"))
                 && candidate.path("id").asLong(Long.MIN_VALUE) == requestId) {
             return candidate;
         }
