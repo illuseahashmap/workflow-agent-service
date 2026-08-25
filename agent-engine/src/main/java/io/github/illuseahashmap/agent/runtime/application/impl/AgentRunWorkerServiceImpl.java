@@ -294,19 +294,15 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
     private void persistProgress(ClaimedRun claimed, int sequence, AgentExecutor.StepProgress progress) {
         transactionTemplate.executeWithoutResult(status -> {
             Instant now = Instant.now();
-            if (!executionRepository.isCurrentLeaseValid(
-                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), workerId, now)) {
+            int ledgerSequence = sequence + 1;
+            AgentExecutor.StepResult step = progress.result();
+            if (!executionRepository.insertProgressIfCurrentLeaseValid(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), workerId,
+                    ledgerSequence, step.stepType(), step.status(), step.errorCode(),
+                    "STEP_COMPLETED", checkpointSnapshot(progress.checkpoint()), now)) {
                 status.setRollbackOnly();
                 return;
             }
-            int ledgerSequence = sequence + 1;
-            AgentExecutor.StepResult step = progress.result();
-            executionRepository.insertCompletedStep(
-                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
-                    step.stepType(), step.status(), step.errorCode(), now);
-            executionRepository.insertCheckpoint(
-                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), ledgerSequence,
-                    "STEP_COMPLETED", checkpointSnapshot(progress.checkpoint()), now);
         });
     }
 

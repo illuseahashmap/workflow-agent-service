@@ -18,9 +18,6 @@ BEGIN
     INSERT INTO agent_tool_tenant_grant (tenant_code, tool_code)
     VALUES (NEW.tenant_code, 'agent_run_status')
     ON CONFLICT (tenant_code, tool_code) DO NOTHING;
-    INSERT INTO agent_tool_tenant_grant (tenant_code, tool_code)
-    VALUES (NEW.tenant_code, 'workflow_process_context')
-    ON CONFLICT (tenant_code, tool_code) DO NOTHING;
     RETURN NEW;
 END;
 $$;

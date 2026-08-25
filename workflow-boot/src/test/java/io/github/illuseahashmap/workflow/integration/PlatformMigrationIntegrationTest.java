@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.postgresql.util.PSQLException;
@@ -56,7 +57,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(36);
+            assertThat(resultSet.getInt(1)).isEqualTo(37);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
@@ -137,6 +138,51 @@ class PlatformMigrationIntegrationTest {
                      """)) {
             assertThat(resultSet.next()).isTrue();
             assertThat(resultSet.getInt(1)).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void upgradesDatabaseThatAlreadyRanV35AndBackfillsWorkflowContextGrant() throws SQLException {
+        String schema = "upgrade_" + java.util.UUID.randomUUID().toString().replace('-', '_');
+        Flyway beforeV36 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration/platform")
+                .target(MigrationVersion.fromVersion("35"))
+                .load();
+        beforeV36.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("SET search_path TO " + schema);
+            statement.executeUpdate("""
+                    INSERT INTO workflow_tenant (tenant_id, tenant_code, tenant_name)
+                    VALUES ('upgrade-tenant', 'upgrade-tenant', 'Upgrade Tenant')
+                    """);
+        }
+
+        Flyway afterV36 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration/platform")
+                .load();
+        afterV36.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("SET search_path TO " + schema);
+            try (ResultSet resultSet = statement.executeQuery("""
+                    SELECT COUNT(*) FROM agent_tool_tenant_grant
+                    WHERE tenant_code = 'upgrade-tenant'
+                      AND tool_code = 'workflow_process_context'
+                    """)) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getInt(1)).isEqualTo(1);
+            }
         }
     }
 

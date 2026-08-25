@@ -76,6 +76,29 @@ public interface AgentRunExecutionRepository {
         // Compatibility default for in-memory and legacy adapters.
     }
 
+    default boolean insertProgressIfCurrentLeaseValid(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            int sequenceNo,
+            String stepType,
+            String status,
+            String errorCode,
+            String checkpointType,
+            String snapshotJson,
+            Instant now
+    ) {
+        if (!isCurrentLeaseValid(tenantCode, runId, attemptId, leaseOwner, now)) {
+            return false;
+        }
+        insertCompletedStep(tenantCode, runId, attemptId, sequenceNo,
+                stepType, status, errorCode, now);
+        insertCheckpoint(tenantCode, runId, attemptId, sequenceNo,
+                checkpointType, snapshotJson, now);
+        return true;
+    }
+
     record CheckpointSnapshot(int sequenceNo, String checkpointType, String snapshotJson) {
     }
 

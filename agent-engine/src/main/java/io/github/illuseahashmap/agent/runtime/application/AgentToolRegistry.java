@@ -123,9 +123,11 @@ public class AgentToolRegistry {
         if (!StringUtils.hasText(idempotencyKey)) {
             throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_KEY_REQUIRED", "Agent tool idempotency key is required");
         }
+        var now = Instant.now();
         var claim = auditRepository.tryClaim(new AgentToolExecutionAuditRepository.Audit(
                 tenantCode, toolCode, idempotencyKey, argumentsHash, "RUNNING", null,
-                null, request.traceId(), Instant.now()));
+                null, request.traceId(), now), request.traceId(),
+                now.plus(request.timeout()), now);
         if (!claim.acquired()) {
             var audit = claim.audit();
             if (!audit.argumentsHash().equals(argumentsHash)) {
@@ -146,12 +148,12 @@ public class AgentToolRegistry {
             }
             auditRepository.complete(new AgentToolExecutionAuditRepository.Audit(
                     tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
-                    result.output(), null, request.traceId(), Instant.now()));
+                    result.output(), null, request.traceId(), Instant.now()), request.traceId());
             return new AgentTool.Result(result.output(), idempotencyKey);
         } catch (RuntimeException exception) {
             auditRepository.complete(new AgentToolExecutionAuditRepository.Audit(
                     tenantCode, toolCode, idempotencyKey, argumentsHash, "FAILED", null,
-                    exception.getMessage(), request.traceId(), Instant.now()));
+                    "AGENT_TOOL_EXECUTION_FAILED", request.traceId(), Instant.now()), request.traceId());
             throw exception;
         }
     }

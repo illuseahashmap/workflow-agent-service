@@ -78,6 +78,40 @@ public class JdbcAgentToolGovernanceRepository
     }
 
     @Override
+    public Claim tryClaim(Audit reservation, String claimOwner, java.time.Instant leaseExpiresAt, java.time.Instant now) {
+        var parameters = auditParameters(reservation);
+        parameters.put("claimOwner", claimOwner);
+        parameters.put("leaseExpiresAt", Timestamp.from(leaseExpiresAt));
+        parameters.put("now", Timestamp.from(now));
+        var claimed = jdbcTemplate.query("""
+                        INSERT INTO agent_tool_execution_audit (
+                            tenant_code, tool_code, idempotency_key, arguments_hash,
+                            status, output_snapshot, error_code, trace_id, created_at,
+                            claim_owner, lease_expires_at, fencing_token
+                        ) VALUES (
+                            :tenantCode, :toolCode, :idempotencyKey, :argumentsHash,
+                            'RUNNING', NULL, NULL, :traceId, :createdAt,
+                            :claimOwner, :leaseExpiresAt, 1
+                        )
+                        ON CONFLICT (tenant_code, tool_code, idempotency_key) DO UPDATE
+                        SET status = 'RUNNING', output_snapshot = NULL, error_code = NULL,
+                            trace_id = :traceId, claim_owner = :claimOwner,
+                            lease_expires_at = :leaseExpiresAt,
+                            fencing_token = agent_tool_execution_audit.fencing_token + 1
+                        WHERE agent_tool_execution_audit.status = 'FAILED'
+                           OR (agent_tool_execution_audit.status = 'RUNNING'
+                               AND agent_tool_execution_audit.lease_expires_at <= :now)
+                        RETURNING tenant_code, tool_code, idempotency_key, arguments_hash,
+                                  status, output_snapshot, error_code, trace_id, created_at
+                        """, parameters, (resultSet, rowNum) -> mapAudit(resultSet));
+        if (!claimed.isEmpty()) {
+            return new Claim(true, claimed.getFirst());
+        }
+        return new Claim(false, findByIdempotencyKey(
+                reservation.tenantCode(), reservation.toolCode(), reservation.idempotencyKey()).orElseThrow());
+    }
+
+    @Override
     public void save(Audit audit) {
         var parameters = auditParameters(audit);
         jdbcTemplate.update("""
@@ -103,6 +137,23 @@ public class JdbcAgentToolGovernanceRepository
                           AND idempotency_key = :idempotencyKey
                           AND status = 'RUNNING'
                         """, auditParameters(audit));
+    }
+
+    @Override
+    public void complete(Audit audit, String claimOwner) {
+        var parameters = auditParameters(audit);
+        parameters.put("claimOwner", claimOwner);
+        jdbcTemplate.update("""
+                        UPDATE agent_tool_execution_audit
+                        SET status = :status, output_snapshot = :outputSnapshot,
+                            error_code = :errorCode, trace_id = :traceId,
+                            claim_owner = NULL, lease_expires_at = NULL
+                        WHERE tenant_code = :tenantCode
+                          AND tool_code = :toolCode
+                          AND idempotency_key = :idempotencyKey
+                          AND status = 'RUNNING'
+                          AND claim_owner = :claimOwner
+                        """, parameters);
     }
 
     private java.util.Map<String, Object> auditParameters(Audit audit) {

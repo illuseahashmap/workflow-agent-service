@@ -295,6 +295,44 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public boolean insertProgressIfCurrentLeaseValid(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            int sequenceNo,
+            String stepType,
+            String status,
+            String errorCode,
+            String checkpointType,
+            String snapshotJson,
+            Instant now
+    ) {
+        boolean locked = !jdbcTemplate.query("""
+                        SELECT 1
+                        FROM agent_run
+                        WHERE tenant_code = :tenantCode
+                          AND id = :runId
+                          AND status = 'RUNNING'
+                          AND current_attempt_id = :attemptId
+                          AND lease_owner = :leaseOwner
+                          AND lease_expires_at > :now
+                        FOR UPDATE
+                        """, Map.of(
+                        "tenantCode", tenantCode, "runId", runId, "attemptId", attemptId,
+                        "leaseOwner", leaseOwner, "now", timestamp(now)),
+                (resultSet, rowNum) -> resultSet.getInt(1)).isEmpty();
+        if (!locked) {
+            return false;
+        }
+        insertCompletedStep(tenantCode, runId, attemptId, sequenceNo,
+                stepType, status, errorCode, now);
+        insertCheckpoint(tenantCode, runId, attemptId, sequenceNo,
+                checkpointType, snapshotJson, now);
+        return true;
+    }
+
+    @Override
     public void insertCompletedStep(
             String tenantCode,
             long runId,
