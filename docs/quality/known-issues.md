@@ -17,6 +17,13 @@
 - 缺口：Prometheus 查询、告警、失败运行列表、流程发起/领取/审批/驳回/转办/终止/规则命中等操作还未统一接入审计查询。
 - 验收：可按租户、流程实例、AgentRun、Attempt、操作人和 Trace ID 定位一次失败，并回放关键状态变化。
 
+### P1-0 历史数据库可能记录过临时修改版 V37
+
+- 当前：仓库已恢复不可变的原始 V37，并将历史 RUNNING 记录处置迁移到 V38；新数据库和只执行过原始 V37 的数据库可以直接迁移。
+- 风险：如果某个数据库曾在临时修改版 V37 存在期间执行过迁移，Flyway 会因历史 checksum 与当前 V37 不同而拒绝启动。
+- 处理：必须由 DBA 按[ V37 checksum 兼容处理手册](../operations/flyway-v37-checksum-recovery.md)确认备份、结构和执行历史后再 repair；不得盲目 repair、跳过 validate 或再次修改 V37。
+- 验收：V37 checksum 与当前文件一致，V38 成功执行，应用启动无 `FlywayValidateException`。
+
 ## P1：隔离、可靠性与契约
 
 ### P1-1 Flowable 内部表 RLS 需要真实版本验证
