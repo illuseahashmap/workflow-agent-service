@@ -99,7 +99,9 @@ public class JdbcAgentToolGovernanceRepository
                             lease_expires_at = :leaseExpiresAt,
                             fencing_token = agent_tool_execution_audit.fencing_token + 1
                         WHERE agent_tool_execution_audit.status = 'FAILED'
+                          AND agent_tool_execution_audit.arguments_hash = :argumentsHash
                            OR (agent_tool_execution_audit.status = 'RUNNING'
+                               AND agent_tool_execution_audit.arguments_hash = :argumentsHash
                                AND agent_tool_execution_audit.lease_expires_at <= :now)
                         RETURNING tenant_code, tool_code, idempotency_key, arguments_hash,
                                   status, output_snapshot, error_code, trace_id, created_at

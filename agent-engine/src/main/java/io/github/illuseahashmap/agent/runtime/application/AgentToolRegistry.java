@@ -137,6 +137,10 @@ public class AgentToolRegistry {
             if ("SUCCEEDED".equals(audit.status())) {
                 return new AgentTool.Result(audit.output(), idempotencyKey);
             }
+            if ("UNKNOWN".equals(audit.status())) {
+                throw toolProtocol("AGENT_TOOL_EXECUTION_UNKNOWN",
+                        "Agent tool execution outcome requires manual verification");
+            }
             throw toolProtocol("AGENT_TOOL_EXECUTION_IN_PROGRESS",
                     "Agent tool execution is already claimed by another worker");
         }

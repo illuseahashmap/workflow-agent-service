@@ -208,6 +208,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                                 remainingTimeout(run, version.timeoutSeconds()), claimed.traceId(),
                                 run.id(), run.processInstanceId(), nodeToolSetJson, claimed.checkpointStateJson(),
                                 (sequence, progress) -> persistProgress(claimed, sequence, progress)));
+            } catch (io.github.illuseahashmap.agent.runtime.application.AgentLeaseLostException exception) {
+                LOG.info("Agent execution lease was lost; abandoning late worker: runId={}, attemptId={}",
+                        run.id(), claimed.attemptId());
+                return;
             } catch (AgentExecutionException exception) {
                 LOG.warn("Agent execution contract failed: runId={}, traceId={}, errorCode={}",
                         run.id(), claimed.traceId(), exception.failure().errorCode(), exception);
@@ -301,7 +305,7 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     ledgerSequence, step.stepType(), step.status(), step.errorCode(),
                     "STEP_COMPLETED", checkpointSnapshot(progress.checkpoint()), now)) {
                 status.setRollbackOnly();
-                return;
+                throw new io.github.illuseahashmap.agent.runtime.application.AgentLeaseLostException();
             }
         });
     }
