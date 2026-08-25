@@ -2,6 +2,8 @@ package io.github.illuseahashmap.agent.mcp.application;
 
 import io.github.illuseahashmap.agent.mcp.application.port.McpCatalogRepository;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
+import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
+import io.github.illuseahashmap.agent.mcp.application.port.McpFailureKind;
 import io.github.illuseahashmap.agent.mcp.domain.McpConnectorVersion;
 import io.github.illuseahashmap.agent.mcp.domain.McpToolSnapshot;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
@@ -49,17 +51,32 @@ public class McpAgentToolAdapter implements AgentToolResolver {
         @Override
         public Result execute(Request request) {
             McpToolSnapshot snapshot = repository.findSnapshotByRegistryCode(request.tenantCode(), toolCode)
-                    .orElseThrow(() -> new IllegalStateException("Published MCP tool snapshot not found"));
+                    .orElseThrow(() -> new McpClientException("MCP_TOOL_NOT_PUBLISHED",
+                            McpFailureKind.PROTOCOL_ERROR, false,
+                            "Published MCP tool snapshot not found"));
             McpConnectorVersion connector = repository.findConnectorVersionForSnapshot(
                     request.tenantCode(), snapshot.id()).orElseThrow(
-                    () -> new IllegalStateException("MCP connector version not found"));
+                    () -> new McpClientException("MCP_CONNECTOR_NOT_FOUND", McpFailureKind.PROTOCOL_ERROR,
+                            false, "MCP connector version not found"));
             String toolName = toolCode.substring(toolCode.indexOf(':', 4) + 1);
-            McpClientPort.Session session = client.initialize(connector, request.timeout());
-            McpClientPort.CallResult result = client.callTool(session, toolName, request.arguments(), request.timeout());
+            java.time.Instant deadline = java.time.Instant.now().plus(request.timeout());
+            McpClientPort.Session session = client.initialize(connector, remaining(deadline));
+            McpClientPort.CallResult result = client.callTool(session, toolName, request.arguments(),
+                    remaining(deadline));
             if (result.isError()) {
-                throw new IllegalStateException("MCP tool returned isError");
+                throw new McpClientException("MCP_TOOL_ERROR", McpFailureKind.TOOL_ERROR, false,
+                        "MCP tool returned an error result");
             }
             return new Result(result.output(), request.idempotencyKey());
+        }
+
+        private java.time.Duration remaining(java.time.Instant deadline) {
+            java.time.Duration remaining = java.time.Duration.between(java.time.Instant.now(), deadline);
+            if (remaining.isZero() || remaining.isNegative()) {
+                throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
+                        "MCP call exceeded the execution deadline");
+            }
+            return remaining;
         }
 
     }

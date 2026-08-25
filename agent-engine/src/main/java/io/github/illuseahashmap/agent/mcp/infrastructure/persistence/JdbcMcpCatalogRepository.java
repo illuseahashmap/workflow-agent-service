@@ -193,6 +193,24 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
                 )
                 WHERE version.tenant_code = :tenantCode AND version.id = :agentVersionId
                   AND version.status = 'DRAFT'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM agent_version_mcp_tool_binding binding
+                      WHERE binding.tenant_code = :tenantCode
+                        AND binding.agent_version_id = :agentVersionId
+                        AND binding.tool_snapshot_id = :snapshotId
+                  )
+                  AND EXISTS (
+                      SELECT 1
+                      FROM mcp_tool_snapshot published_snapshot
+                      JOIN mcp_tool_catalog_version published_catalog
+                        ON published_catalog.id = published_snapshot.catalog_version_id
+                       AND published_catalog.tenant_code = published_snapshot.tenant_code
+                      WHERE published_snapshot.tenant_code = :tenantCode
+                        AND published_snapshot.id = :snapshotId
+                        AND published_catalog.status = 'PUBLISHED'
+                        AND published_snapshot.risk_level = 'READ_ONLY'
+                  )
                 """, Map.of("tenantCode", tenantCode, "agentVersionId", agentVersionId,
                 "snapshotId", snapshotId));
         if (versionRows == 0) {

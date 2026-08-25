@@ -49,7 +49,7 @@
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace 和 `knowledge_search` 工具边界已落地 | 完成真实摄取、pgvector/混合检索、Grounding、评测和多 Retriever 兼容验收 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端协议与运行时切片已完成；真实 MCP Server 容器集成、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成 Docker 集成测试、出站安全与故障恢复验收后再称为生产可用只读 MCP 闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片已完成，绑定原子性、类型化错误和有界响应已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
 
 ## 三、下一阶段顺序
 

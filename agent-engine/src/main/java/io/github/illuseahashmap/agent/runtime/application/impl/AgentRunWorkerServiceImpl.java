@@ -7,6 +7,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersionRe
 import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry;
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
+import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProvider;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
@@ -223,6 +224,12 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                         run.id(), claimed.traceId(), exception.errorCode(), exception);
                 completeIfLeaseValid(lease, () -> completeFailed(
                         claimed, providerId(run), requestedModel(run), failureMapper.fromProvider(exception)));
+                return;
+            } catch (McpClientException exception) {
+                LOG.warn("MCP tool execution failed: runId={}, traceId={}, errorCode={}",
+                        run.id(), claimed.traceId(), exception.errorCode(), exception);
+                completeIfLeaseValid(lease, () -> completeFailed(
+                        claimed, providerId(run), requestedModel(run), failureMapper.fromMcp(exception)));
                 return;
             } catch (BusinessException exception) {
                 LOG.warn("Agent configuration failed: runId={}, traceId={}, message={}",

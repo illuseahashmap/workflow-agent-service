@@ -2,6 +2,8 @@ package io.github.illuseahashmap.agent.runtime.application.impl;
 
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderFailureKind;
+import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
+import io.github.illuseahashmap.agent.mcp.application.port.McpFailureKind;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
@@ -30,6 +32,16 @@ public class AgentFailureMapper {
                 ResultStatus.FAILED, safeMessage(exception));
     }
 
+    public AgentFailure fromMcp(McpClientException exception) {
+        AgentFailureCategory category = switch (exception.failureKind()) {
+            case TIMEOUT -> AgentFailureCategory.DEADLINE;
+            case UNAVAILABLE, RATE_LIMITED -> AgentFailureCategory.PROVIDER_TRANSIENT;
+            case AUTHENTICATION, PROTOCOL_ERROR, TOOL_ERROR -> AgentFailureCategory.TOOL_PROTOCOL;
+        };
+        return new AgentFailure(exception.errorCode(), category, exception.retryable(),
+                ResultStatus.FAILED, safeMcpMessage(exception.failureKind()));
+    }
+
     public AgentFailure configuration(BusinessException exception) {
         return new AgentFailure(
                 "AGENT_CONFIGURATION_ERROR", AgentFailureCategory.CONFIGURATION,
@@ -50,6 +62,17 @@ public class AgentFailureMapper {
             case RETRYABLE -> "模型服务暂时不可用，系统将按策略重试";
             case TIMEOUT -> "模型服务调用超时";
             case PERMANENT -> "模型服务拒绝或返回了不可识别的响应";
+        };
+    }
+
+    private String safeMcpMessage(McpFailureKind kind) {
+        return switch (kind) {
+            case TIMEOUT -> "MCP 服务调用超时，系统将按策略重试";
+            case UNAVAILABLE -> "MCP 服务暂时不可用，系统将按策略重试";
+            case RATE_LIMITED -> "MCP 服务触发限流，系统将按策略重试";
+            case AUTHENTICATION -> "MCP 服务认证失败，请修复连接凭据";
+            case PROTOCOL_ERROR -> "MCP 服务协议或目录不满足执行契约";
+            case TOOL_ERROR -> "MCP 工具返回了业务错误";
         };
     }
 }

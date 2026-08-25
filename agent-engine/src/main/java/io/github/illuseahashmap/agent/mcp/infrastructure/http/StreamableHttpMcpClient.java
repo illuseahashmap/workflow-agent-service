@@ -2,10 +2,14 @@ package io.github.illuseahashmap.agent.mcp.infrastructure.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
 import io.github.illuseahashmap.agent.mcp.application.port.McpCredentialResolver;
+import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
+import io.github.illuseahashmap.agent.mcp.application.port.McpFailureKind;
 import io.github.illuseahashmap.agent.mcp.domain.McpConnectorVersion;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -44,7 +48,7 @@ public class StreamableHttpMcpClient implements McpClientPort {
                 "clientInfo", Map.of("name", "workflow-agent-service", "version", "0.1")), timeout);
         String protocolVersion = result.path("protocolVersion").asText();
         if (protocolVersion.isBlank()) {
-            throw new IllegalStateException("MCP initialize response has no protocolVersion");
+            throw protocol("MCP_PROTOCOL_ERROR", "MCP initialize response has no protocolVersion");
         }
         String sessionId = result.path("_sessionId").asText(null);
         Session session = new Session(connector, sessionId, protocolVersion);
@@ -61,20 +65,20 @@ public class StreamableHttpMcpClient implements McpClientPort {
             JsonNode result = request(session.connector(), session.sessionId(), "tools/list", arguments, timeout);
             JsonNode items = result.path("tools");
             if (!items.isArray() || items.size() > 200) {
-                throw new IllegalStateException("MCP tools/list returned an invalid or oversized tool list");
+                throw protocol("MCP_PROTOCOL_ERROR", "MCP tools/list returned an invalid or oversized tool list");
             }
             for (JsonNode item : items) {
                 String name = item.path("name").asText();
                 JsonNode schema = item.path("inputSchema");
                 if (name.isBlank() || !schema.isObject()) {
-                    throw new IllegalStateException("MCP tool has an invalid name or inputSchema");
+                    throw protocol("MCP_PROTOCOL_ERROR", "MCP tool has an invalid name or inputSchema");
                 }
                 tools.add(new Tool(name, item.path("description").asText(""), schema.toString()));
             }
             cursor = result.path("nextCursor").asText(null);
         } while (cursor != null && !cursor.isBlank() && tools.size() <= 200);
         if (tools.size() > 200) {
-            throw new IllegalStateException("MCP tools/list exceeded the maximum tool count");
+            throw protocol("MCP_PROTOCOL_ERROR", "MCP tools/list exceeded the maximum tool count");
         }
         return List.copyOf(tools);
     }
@@ -107,34 +111,86 @@ public class StreamableHttpMcpClient implements McpClientPort {
             if (sessionId != null && !sessionId.isBlank()) {
                 builder.header("Mcp-Session-Id", sessionId);
             }
-            HttpResponse<byte[]> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
-            if (response.body().length > MAX_RESPONSE_BYTES || response.statusCode() / 100 != 2) {
-                throw new IllegalStateException("MCP request failed with status " + response.statusCode());
+            HttpResponse<InputStream> response = httpClient.send(builder.build(),
+                    HttpResponse.BodyHandlers.ofInputStream());
+            if (response.statusCode() / 100 != 2) {
+                throw statusFailure(response.statusCode());
             }
-            JsonNode root = objectMapper.readTree(responseBody(response));
+            String body = readBounded(response.body());
+            JsonNode root = objectMapper.readTree(responseBody(response, body));
+            if (!root.isObject()) {
+                throw protocol("MCP_PROTOCOL_ERROR", "MCP response must be a JSON-RPC object");
+            }
             if (root.has("error")) {
-                throw new IllegalStateException("MCP protocol error: " + root.path("error").path("code").asText());
+                throw protocol("MCP_PROTOCOL_ERROR", "MCP response contains a JSON-RPC error");
             }
             JsonNode result = root.path("result");
             if (result.isMissingNode()) {
-                throw new IllegalStateException("MCP response has no result");
+                throw protocol("MCP_PROTOCOL_ERROR", "MCP response has no result");
             }
             String responseSession = response.headers().firstValue("Mcp-Session-Id").orElse(null);
             if (responseSession != null && result.isObject()) {
                 ((com.fasterxml.jackson.databind.node.ObjectNode) result).put("_sessionId", responseSession);
             }
             return result;
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new IllegalStateException("MCP request failed", exception);
+        } catch (McpClientException exception) {
+            throw exception;
+        } catch (JsonProcessingException exception) {
+            throw new McpClientException("MCP_PROTOCOL_ERROR", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP response was not valid JSON", exception);
+        } catch (java.net.http.HttpTimeoutException exception) {
+            throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
+                    "MCP request timed out", exception);
+        } catch (IOException exception) {
+            throw new McpClientException("MCP_UNAVAILABLE", McpFailureKind.UNAVAILABLE, true,
+                    "MCP service is unavailable", exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new McpClientException("MCP_INTERRUPTED", McpFailureKind.UNAVAILABLE, true,
+                    "MCP request was interrupted", exception);
         }
     }
 
-    private String responseBody(HttpResponse<byte[]> response) {
+    private String readBounded(InputStream input) throws IOException {
+        try (InputStream stream = input; java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = stream.read(buffer)) >= 0) {
+                total += read;
+                if (total > MAX_RESPONSE_BYTES) {
+                    throw new McpClientException("MCP_RESPONSE_TOO_LARGE", McpFailureKind.PROTOCOL_ERROR,
+                            false, "MCP response exceeded the maximum size");
+                }
+                output.write(buffer, 0, read);
+            }
+            return output.toString(StandardCharsets.UTF_8);
+        }
+    }
+
+    private McpClientException statusFailure(int status) {
+        if (status == 401 || status == 403) {
+            return new McpClientException("MCP_AUTHENTICATION", McpFailureKind.AUTHENTICATION,
+                    false, "MCP service authentication failed");
+        }
+        if (status == 429) {
+            return new McpClientException("MCP_RATE_LIMITED", McpFailureKind.RATE_LIMITED,
+                    true, "MCP service rate limit exceeded");
+        }
+        if (status >= 500 || status == 408) {
+            return new McpClientException("MCP_UNAVAILABLE", McpFailureKind.UNAVAILABLE,
+                    true, "MCP service is temporarily unavailable");
+        }
+        return new McpClientException("MCP_PROTOCOL_ERROR", McpFailureKind.PROTOCOL_ERROR,
+                false, "MCP request failed with status " + status);
+    }
+
+    private McpClientException protocol(String code, String message) {
+        return new McpClientException(code, McpFailureKind.PROTOCOL_ERROR, false, message);
+    }
+
+    private String responseBody(HttpResponse<?> response, String body) {
         String contentType = response.headers().firstValue("Content-Type").orElse("").toLowerCase();
-        String body = new String(response.body(), StandardCharsets.UTF_8);
         if (!contentType.contains("text/event-stream")) {
             return body;
         }
@@ -155,7 +211,7 @@ public class StreamableHttpMcpClient implements McpClientPort {
             lastData = data.toString();
         }
         if (lastData == null || lastData.isBlank()) {
-            throw new IllegalStateException("MCP SSE response contains no data event");
+            throw protocol("MCP_PROTOCOL_ERROR", "MCP SSE response contains no data event");
         }
         return lastData;
     }
@@ -181,14 +237,20 @@ public class StreamableHttpMcpClient implements McpClientPort {
             }
             HttpResponse<Void> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.discarding());
             if (response.statusCode() / 100 != 2 && response.statusCode() != 202) {
-                throw new IllegalStateException("MCP initialized notification failed with status "
-                        + response.statusCode());
+                throw statusFailure(response.statusCode());
             }
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new IllegalStateException("MCP initialized notification failed", exception);
+        } catch (McpClientException exception) {
+            throw exception;
+        } catch (java.net.http.HttpTimeoutException exception) {
+            throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
+                    "MCP initialized notification timed out", exception);
+        } catch (IOException exception) {
+            throw new McpClientException("MCP_UNAVAILABLE", McpFailureKind.UNAVAILABLE, true,
+                    "MCP initialized notification failed", exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new McpClientException("MCP_INTERRUPTED", McpFailureKind.UNAVAILABLE, true,
+                    "MCP initialized notification was interrupted", exception);
         }
     }
 

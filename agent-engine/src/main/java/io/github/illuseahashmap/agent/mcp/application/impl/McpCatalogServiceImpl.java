@@ -35,11 +35,13 @@ public class McpCatalogServiceImpl implements McpCatalogService {
     private final CurrentPrincipalProvider principalProvider;
     private final ObjectMapper objectMapper;
     private final AgentOutputSchemaValidator schemaValidator;
+    private final McpCatalogPersistenceService persistenceService;
 
     public McpCatalogServiceImpl(McpCatalogRepository repository, McpClientPort client,
                                  McpToolRegistrationPort registration, TenantProvider tenantProvider,
                                  CurrentPrincipalProvider principalProvider, ObjectMapper objectMapper,
-                                 AgentOutputSchemaValidator schemaValidator) {
+                                 AgentOutputSchemaValidator schemaValidator,
+                                 McpCatalogPersistenceService persistenceService) {
         this.repository = repository;
         this.client = client;
         this.registration = registration;
@@ -47,6 +49,7 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         this.principalProvider = principalProvider;
         this.objectMapper = objectMapper;
         this.schemaValidator = schemaValidator;
+        this.persistenceService = persistenceService;
     }
 
     @Override
@@ -76,14 +79,12 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         List<McpToolSnapshot> snapshots = tools.stream().map(tool -> new McpToolSnapshot(null, tenant, 0,
                 tool.name(), tool.description(), tool.inputSchema(), fingerprint(tool.inputSchema()), "READ_ONLY")).toList();
         String fingerprint = fingerprint(tools.stream().map(tool -> tool.name() + tool.inputSchema()).sorted().toList().toString());
-        McpToolCatalogVersion catalog = repository.saveCatalog(new McpToolCatalogVersion(null, tenant,
-                connector.id(), "DRAFT", fingerprint));
         List<McpToolSnapshot> persisted = snapshots.stream().map(snapshot -> new McpToolSnapshot(null, tenant,
-                catalog.id(), snapshot.toolName(), snapshot.description(), snapshot.inputSchema(),
+                0, snapshot.toolName(), snapshot.description(), snapshot.inputSchema(),
                 snapshot.schemaFingerprint(), snapshot.riskLevel())).toList();
-        repository.saveSnapshots(persisted);
-        List<McpToolSnapshot> loaded = repository.findSnapshots(tenant, catalog.id());
-        return new McpDiscoveryView(catalog.id(), catalog.status(), fingerprint, loaded.stream()
+        McpCatalogPersistenceService.Result stored = persistenceService.persist(tenant, connector.id(), fingerprint, persisted);
+        return new McpDiscoveryView(stored.catalog().id(), stored.catalog().status(), fingerprint,
+                stored.snapshots().stream()
                 .map(snapshot -> new McpDiscoveryView.ToolView(snapshot.id(), snapshot.registryToolCode(),
                         snapshot.toolName(), snapshot.description(), snapshot.inputSchema())).toList());
     }

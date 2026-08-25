@@ -31,6 +31,7 @@ AgentVersion、AgentRun 和人工确认边界。
 - 没有真实 MCP Server 容器化集成、Flowable 继续运行和 Worker 重启故障测试；
 - 尚未完成 SSRF/DNS 重绑定、私网/元数据地址拒绝、限流、熔断和租户公平配额；
 - 当前每次调用重新建立 MCP 会话，尚无连接池/会话复用和凭据轮换；
+- MCP 错误已经映射到 AgentFailure，但完整 MCP SDK/批量 JSON-RPC/SSE 生命周期兼容性仍需真实协议测试后确认；
 - 尚未提供完整连接器管理前端，也不支持写工具、stdio 或运行时自动发现。
 
 因此“Provider 支持 Tool Calling”和“存在 Tool Registry”不等于已经接入 MCP。

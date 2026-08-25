@@ -69,7 +69,7 @@
 
 ### P1-12 MCP 只读闭环尚未达到生产验收
 
-- 当前：已完成 MCP-1/MCP-2 后端切片，包括 HTTPS Streamable HTTP 生命周期、目录审核发布、Schema 快照、AgentVersion 绑定、Registry 适配和只读 `tools/call`；工具凭据只通过服务端引用解析，不进入模型或 API 响应。
+- 当前：已完成 MCP-1/MCP-2 后端结构切片，包括 HTTPS Streamable HTTP 生命周期、目录审核发布、Schema 快照、AgentVersion 绑定、Registry 适配和只读 `tools/call`；绑定更新要求已发布目录和实际绑定同时成立，目录快照采用独立本地事务提交，MCP 超时/不可用/限流/认证/协议/工具错误已进入类型化恢复分类，响应读取有界且不先完整装入内存；工具凭据只通过服务端引用解析，不进入模型或 API 响应。
 - 缺口：尚未在 Docker 中跑确定性 HTTPS MCP Server 的真实协议集成；出站 SSRF/DNS 重绑定、私网/元数据地址拒绝、租户限流/熔断、凭据轮换、会话复用和 Worker 重启恢复仍未完成。
 - 边界：在上述验收前不得称为生产可用 MCP；不得开放写工具、stdio、任意 HTTP 工具或运行时发现即调用。
 - 验收：未授权租户、未绑定工具、Schema 不合法、超时、超限响应、MCP 协议错误和重启均有自动化负面测试，且 Flowable 不误推进。
