@@ -24,6 +24,7 @@
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
 - 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；由于真实 Retriever、权限策略和应用服务尚未装配，V35 已将该工具默认禁用且撤销租户授权，真实 pgvector 检索和摄取 Worker 仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
+- 已完成 MCP-1/MCP-2 后端只读切片：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接。当前尚未宣称生产级出站安全和真实容器化闭环。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
 - 已完成首节点及审批后 Agent 输入契约：后端按真实路径生成字段，前端动态渲染，命令边界再次校验必填输入。
@@ -48,7 +49,7 @@
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace 和 `knowledge_search` 工具边界已落地 | 完成真实摄取、pgvector/混合检索、Grounding、评测和多 Retriever 兼容验收 |
-| P1 | 受治理 MCP 最小闭环 | Provider Tool Calling、Tool Registry、租户授权、Schema、幂等和审计已有；尚无 MCP 协议接入 | 按[MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)完成连接器、目录快照、AgentVersion 工具绑定、只读 `tools/call`、安全与故障恢复验收 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端协议与运行时切片已完成；真实 MCP Server 容器集成、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成 Docker 集成测试、出站安全与故障恢复验收后再称为生产可用只读 MCP 闭环 |
 
 ## 三、下一阶段顺序
 
@@ -56,7 +57,7 @@
 2. 再完成 P1 安全与契约：RLS 深度验证、API 响应模型和核心覆盖率。
 3. 再完善 Agent Runtime：结果策略、Checkpoint 恢复、出站安全、公平调度、取消和人工确认。
 4. 在不打断 P0/P1 加固的前提下，按 RAG-1 至 RAG-4 建立受治理知识检索闭环，为运行证据和后续渐进式自治提供可靠输入。
-5. 并行完成 MCP-1 至 MCP-3 的只读闭环：连接器与目录版本、AgentVersion 精确绑定、`tools/call`、出站安全和故障测试；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+5. 先完成 MCP-2 收口：真实确定性 MCP Server 容器集成测试、HTTPS 出站安全、租户限流/熔断和重启恢复；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 6. 最后扩展组织、任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
 
 ## 四、明确暂不做

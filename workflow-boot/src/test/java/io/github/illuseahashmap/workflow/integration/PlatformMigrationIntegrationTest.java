@@ -57,7 +57,7 @@ class PlatformMigrationIntegrationTest {
                      WHERE success = TRUE AND version IS NOT NULL
                      """)) {
             assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(38);
+            assertThat(resultSet.getInt(1)).isEqualTo(39);
         }
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();

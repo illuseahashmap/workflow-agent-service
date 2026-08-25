@@ -1,7 +1,7 @@
 # MCP 短期实施方案与生产闭环
 
 更新时间：2026-08-25
-状态：下一阶段可开发规格
+状态：MCP-1/MCP-2 后端切片已实现，待真实容器化集成与生产出站治理验收
 
 本文定义 MCP 从连接器配置、工具发现到 Agent 运行时调用的近期闭环。MCP 是外部工具的
 标准协议适配器，不是新的 Agent 执行引擎，也不能绕过现有 Tool Registry、租户治理、
@@ -19,14 +19,19 @@ AgentVersion、AgentRun 和人工确认边界。
 - 租户工具授权、输入 Schema 校验、幂等键、输出大小限制和执行审计；
 - AgentRun/Attempt/Step、超时、重试、Checkpoint、Recovery 和 Flowable 恢复。
 
-当前尚未实现真正的 MCP 协议闭环：
+本次已实现以下后端切片：
 
-- 没有 MCP Connector、凭据引用和连接测试；
-- 没有 `initialize`、能力协商和 `tools/list`；
-- 没有工具目录版本和不可变 Schema 快照；
-- AgentVersion 尚未绑定确定的工具集合；
-- 没有把统一 `AgentTool` 调用转换为远程 `tools/call`；
-- 没有 MCP 专属的 SSRF、出站、超时、熔断、限流和协议兼容测试。
+- Connector/ConnectorVersion、目录版本、工具快照和 AgentVersion 绑定表，并启用租户 RLS；
+- HTTPS Streamable HTTP 的 initialize、notifications/initialized、分页 tools/list 和 tools/call；
+- 目录 Schema 校验、指纹、审核发布，以及 MCP 工具注册到既有 Registry；
+- `McpAgentToolAdapter` 通过现有 Registry 接入租户授权、版本冻结、Schema、幂等和审计链路。
+
+仍未完成真正生产级闭环的部分：
+
+- 没有真实 MCP Server 容器化集成、Flowable 继续运行和 Worker 重启故障测试；
+- 尚未完成 SSRF/DNS 重绑定、私网/元数据地址拒绝、限流、熔断和租户公平配额；
+- 当前每次调用重新建立 MCP 会话，尚无连接池/会话复用和凭据轮换；
+- 尚未提供完整连接器管理前端，也不支持写工具、stdio 或运行时自动发现。
 
 因此“Provider 支持 Tool Calling”和“存在 Tool Registry”不等于已经接入 MCP。
 

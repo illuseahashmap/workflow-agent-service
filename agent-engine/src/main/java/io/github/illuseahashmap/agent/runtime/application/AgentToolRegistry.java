@@ -9,6 +9,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentToolResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.Set;
@@ -36,6 +38,7 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
     private final AgentToolExecutionAuditRepository auditRepository;
     private final AgentOutputSchemaValidator schemaValidator;
     private final ObjectMapper objectMapper;
+    private final List<AgentToolResolver> resolvers;
 
     @Autowired
     public AgentToolRegistry(
@@ -43,24 +46,37 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
             AgentToolPolicyRepository policyRepository,
             AgentToolExecutionAuditRepository auditRepository,
             AgentOutputSchemaValidator schemaValidator,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            List<AgentToolResolver> resolvers
     ) {
         this.tools = index(tools);
         this.policyRepository = policyRepository;
         this.auditRepository = auditRepository;
         this.schemaValidator = schemaValidator;
         this.objectMapper = objectMapper;
+        this.resolvers = List.copyOf(resolvers);
     }
 
     /** Compatibility constructor for isolated executor tests. */
     public AgentToolRegistry(List<AgentTool> tools) {
         this(tools, AgentToolPolicyRepository.ALLOW_ALL,
                 AgentToolExecutionAuditRepository.NOOP,
-                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper(), List.of());
+    }
+
+    /** Compatibility constructor for policy and audit unit tests. */
+    public AgentToolRegistry(List<AgentTool> tools, AgentToolPolicyRepository policyRepository,
+                             AgentToolExecutionAuditRepository auditRepository,
+                             AgentOutputSchemaValidator schemaValidator, ObjectMapper objectMapper) {
+        this(tools, policyRepository, auditRepository, schemaValidator, objectMapper, List.of());
     }
 
     public AgentTool require(String name) {
         AgentTool tool = tools.get(name);
+        if (tool == null) {
+            tool = resolvers.stream().map(resolver -> resolver.resolve(name)).flatMap(Optional::stream)
+                    .findFirst().orElse(null);
+        }
         if (tool == null) {
             throw toolProtocol("AGENT_TOOL_NOT_REGISTERED", "Agent tool is not registered: " + name);
         }
@@ -127,7 +143,7 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
 
     public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(String tenantCode) {
         return policyRepository.findAuthorized(tenantCode, tools.keySet()).stream()
-                .filter(definition -> tools.containsKey(definition.toolCode()))
+                .filter(definition -> isRegistered(definition.toolCode()))
                 .map(definition -> new ModelProviderRequest.ToolDefinition(
                         definition.toolCode(), definition.toolName(), definition.inputSchema()))
                 .toList();
@@ -143,7 +159,7 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
                 .filter(nodeTools::contains)
                 .collect(Collectors.toUnmodifiableSet());
         return policyRepository.findAuthorized(tenantCode, effectiveTools).stream()
-                .filter(definition -> tools.containsKey(definition.toolCode()))
+                .filter(definition -> isRegistered(definition.toolCode()))
                 .map(definition -> new ModelProviderRequest.ToolDefinition(
                         definition.toolCode(), definition.toolName(), definition.inputSchema()))
                 .toList();
@@ -263,6 +279,11 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
                 (left, right) -> {
                     throw new IllegalStateException("Duplicate Agent tool: " + left.name());
                 }));
+    }
+
+    private boolean isRegistered(String toolCode) {
+        return tools.containsKey(toolCode) || resolvers.stream()
+                .anyMatch(resolver -> resolver.resolve(toolCode).isPresent());
     }
 
     private String serialize(Map<String, Object> arguments) {
