@@ -7,7 +7,24 @@ public interface AgentToolExecutionAuditRepository {
 
     Optional<Audit> findByIdempotencyKey(String tenantCode, String toolCode, String idempotencyKey);
 
+    default Claim tryClaim(Audit reservation) {
+        Optional<Audit> existing = findByIdempotencyKey(
+                reservation.tenantCode(), reservation.toolCode(), reservation.idempotencyKey());
+        if (existing.isPresent()) {
+            return new Claim(false, existing.get());
+        }
+        save(reservation);
+        return new Claim(true, reservation);
+    }
+
     void save(Audit audit);
+
+    default void complete(Audit audit) {
+        save(audit);
+    }
+
+    record Claim(boolean acquired, Audit audit) {
+    }
 
     record Audit(
             String tenantCode,

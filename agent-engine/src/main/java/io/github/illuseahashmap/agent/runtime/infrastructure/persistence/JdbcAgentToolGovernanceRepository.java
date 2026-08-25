@@ -57,7 +57,55 @@ public class JdbcAgentToolGovernanceRepository
     }
 
     @Override
+    public Claim tryClaim(Audit reservation) {
+        var claimed = jdbcTemplate.query("""
+                        INSERT INTO agent_tool_execution_audit (
+                            tenant_code, tool_code, idempotency_key, arguments_hash,
+                            status, output_snapshot, error_code, trace_id, created_at
+                        ) VALUES (
+                            :tenantCode, :toolCode, :idempotencyKey, :argumentsHash,
+                            'RUNNING', NULL, NULL, :traceId, :createdAt
+                        )
+                        ON CONFLICT (tenant_code, tool_code, idempotency_key) DO NOTHING
+                        RETURNING tenant_code, tool_code, idempotency_key, arguments_hash,
+                                  status, output_snapshot, error_code, trace_id, created_at
+                        """, auditParameters(reservation), (resultSet, rowNum) -> mapAudit(resultSet));
+        if (!claimed.isEmpty()) {
+            return new Claim(true, claimed.getFirst());
+        }
+        return new Claim(false, findByIdempotencyKey(
+                reservation.tenantCode(), reservation.toolCode(), reservation.idempotencyKey()).orElseThrow());
+    }
+
+    @Override
     public void save(Audit audit) {
+        var parameters = auditParameters(audit);
+        jdbcTemplate.update("""
+                        INSERT INTO agent_tool_execution_audit (
+                            tenant_code, tool_code, idempotency_key, arguments_hash,
+                            status, output_snapshot, error_code, trace_id, created_at
+                        ) VALUES (
+                            :tenantCode, :toolCode, :idempotencyKey, :argumentsHash,
+                            :status, :outputSnapshot, :errorCode, :traceId, :createdAt
+                        )
+                        ON CONFLICT (tenant_code, tool_code, idempotency_key) DO NOTHING
+                        """, parameters);
+    }
+
+    @Override
+    public void complete(Audit audit) {
+        jdbcTemplate.update("""
+                        UPDATE agent_tool_execution_audit
+                        SET status = :status, output_snapshot = :outputSnapshot,
+                            error_code = :errorCode, trace_id = :traceId
+                        WHERE tenant_code = :tenantCode
+                          AND tool_code = :toolCode
+                          AND idempotency_key = :idempotencyKey
+                          AND status = 'RUNNING'
+                        """, auditParameters(audit));
+    }
+
+    private java.util.Map<String, Object> auditParameters(Audit audit) {
         var parameters = new java.util.HashMap<String, Object>();
         parameters.put("tenantCode", audit.tenantCode());
         parameters.put("toolCode", audit.toolCode());
@@ -70,17 +118,7 @@ public class JdbcAgentToolGovernanceRepository
         // PostgreSQL cannot infer a JDBC type for java.time.Instant through
         // NamedParameterJdbcTemplate. Bind an explicit SQL timestamp value.
         parameters.put("createdAt", Timestamp.from(audit.createdAt()));
-        jdbcTemplate.update("""
-                        INSERT INTO agent_tool_execution_audit (
-                            tenant_code, tool_code, idempotency_key, arguments_hash,
-                            status, output_snapshot, error_code, trace_id, created_at
-                        ) VALUES (
-                            :tenantCode, :toolCode, :idempotencyKey, :argumentsHash,
-                            :status, :outputSnapshot, :errorCode, :traceId, :createdAt
-                        )
-                        ON CONFLICT (tenant_code, tool_code, idempotency_key) DO NOTHING
-                        """,
-                parameters);
+        return parameters;
     }
 
     private Audit mapAudit(ResultSet resultSet) throws SQLException {

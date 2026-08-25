@@ -117,6 +117,26 @@ class AgentToolRegistryTest {
         assertThat(calls[0]).isEqualTo(1);
     }
 
+    @Test
+    void rejectsDifferentArgumentsForTheSameStableRunStepKey() {
+        var audits = new InMemoryAuditRepository();
+        AgentTool tool = new AgentTool() {
+            @Override public String name() { return "lookup"; }
+            @Override public Result execute(Request request) { return new Result("{}", request.idempotencyKey()); }
+        };
+        AgentToolRegistry registry = new AgentToolRegistry(
+                List.of(tool), AgentToolPolicyRepository.ALLOW_ALL, audits,
+                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+        registry.execute("tenant-a", "lookup", new AgentTool.Request(
+                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1",
+                null, null, 42L, "tool:1"));
+
+        assertThatThrownBy(() -> registry.execute("tenant-a", "lookup", new AgentTool.Request(
+                "tenant-a", Map.of("id", 2), Duration.ofSeconds(1), "trace-2",
+                null, null, 42L, "tool:1")))
+                .hasMessageContaining("different arguments");
+    }
+
     private static final class InMemoryAuditRepository implements AgentToolExecutionAuditRepository {
         private final Map<String, Audit> entries = new HashMap<>();
 

@@ -38,10 +38,16 @@
 
 ### P1-3 Agent 状态恢复与多步骤 Checkpoint 尚未完成
 
-- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；平台 Agent 每个逻辑步骤完成后立即持久化 Step 和 Checkpoint，不再只在整个循环结束后批量写入。
+- 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；平台 Agent 每个逻辑步骤完成后立即持久化 Step 和 Checkpoint，Checkpoint 写入会再次校验当前 Attempt/租约，恢复读取按 Attempt 序号和步骤序号选择。
 - 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
 - 缺口：Worker 强杀、心跳失败后的从 Checkpoint 恢复、暂停/恢复和跨实例压力测试仍需补齐。
 - 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等。
+
+### P1-11 工具幂等并发与参数冲突
+
+- 当前：逻辑幂等键为 `runId + logicalStepId + toolCode`，参数哈希独立保存并比较；数据库实现通过 `INSERT ... ON CONFLICT ... RETURNING` 原子抢占 RUNNING 记录，未抢占的 Worker 不会重复调用外部工具。
+- 缺口：仍需在真实 PostgreSQL 并发环境补充双 Worker 压力测试，以及 RUNNING 记录超时回收策略。
+- 验收：同一逻辑步骤参数变化必须拒绝；并发调用最多一个外部执行者；已完成结果可复用。
 
 ### P1-9 Agent 工具快照已落地，目录版本化仍需补齐
 

@@ -44,6 +44,11 @@ public interface AgentRunExecutionRepository {
         return Optional.empty();
     }
 
+    default boolean isCurrentLeaseValid(
+            String tenantCode, long runId, long attemptId, String leaseOwner, Instant now) {
+        return true;
+    }
+
     /** Persists a completed child step after an executor has returned its bounded result. */
     default void insertCompletedStep(
             String tenantCode,

@@ -1,13 +1,6 @@
--- knowledge_search is a registered capability, but the real Retriever and
--- authorization adapter are not wired yet. Keep it unavailable by default.
-UPDATE agent_tool_definition
-SET enabled = FALSE,
-    updated_at = CURRENT_TIMESTAMP
-WHERE tool_code = 'knowledge_search';
-
-DELETE FROM agent_tool_tenant_grant
-WHERE tool_code = 'knowledge_search';
-
+-- V35 corrected knowledge_search exposure but accidentally dropped the
+-- workflow_process_context grant from the new-tenant trigger. Restore the
+-- complete set of safe built-in read-only tools for existing installations.
 CREATE OR REPLACE FUNCTION grant_builtin_agent_tools()
 RETURNS TRIGGER
 LANGUAGE plpgsql

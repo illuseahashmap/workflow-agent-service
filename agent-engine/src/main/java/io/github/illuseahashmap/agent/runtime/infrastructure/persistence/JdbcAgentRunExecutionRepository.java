@@ -256,12 +256,16 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     public Optional<AgentRunExecutionRepository.CheckpointSnapshot> findLatestCheckpoint(
             String tenantCode, long runId) {
         return jdbcTemplate.query("""
-                        SELECT sequence_no, checkpoint_type, snapshot_json
-                        FROM agent_run_checkpoint
-                        WHERE tenant_code = :tenantCode
-                          AND agent_run_id = :runId
-                          AND checkpoint_type = 'STEP_COMPLETED'
-                        ORDER BY created_at DESC, id DESC
+                        SELECT c.sequence_no, c.checkpoint_type, c.snapshot_json
+                        FROM agent_run_checkpoint c
+                        JOIN agent_run_attempt a
+                          ON a.id = c.attempt_id
+                         AND a.tenant_code = c.tenant_code
+                         AND a.agent_run_id = c.agent_run_id
+                        WHERE c.tenant_code = :tenantCode
+                          AND c.agent_run_id = :runId
+                          AND c.checkpoint_type = 'STEP_COMPLETED'
+                        ORDER BY a.attempt_no DESC, c.sequence_no DESC, c.created_at DESC, c.id DESC
                         LIMIT 1
                         """,
                 Map.of("tenantCode", tenantCode, "runId", runId),
@@ -270,6 +274,24 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         resultSet.getString("checkpoint_type"),
                         resultSet.getString("snapshot_json")))
                 .stream().findFirst();
+    }
+
+    @Override
+    public boolean isCurrentLeaseValid(
+            String tenantCode, long runId, long attemptId, String leaseOwner, Instant now) {
+        Integer count = jdbcTemplate.queryForObject("""
+                        SELECT COUNT(*)
+                        FROM agent_run
+                        WHERE tenant_code = :tenantCode
+                          AND id = :runId
+                          AND status = 'RUNNING'
+                          AND current_attempt_id = :attemptId
+                          AND lease_owner = :leaseOwner
+                          AND lease_expires_at > :now
+                        """, Map.of(
+                        "tenantCode", tenantCode, "runId", runId, "attemptId", attemptId,
+                        "leaseOwner", leaseOwner, "now", timestamp(now)), Integer.class);
+        return count != null && count > 0;
     }
 
     @Override

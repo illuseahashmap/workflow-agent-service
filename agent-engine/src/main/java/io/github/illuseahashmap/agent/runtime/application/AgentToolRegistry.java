@@ -123,30 +123,43 @@ public class AgentToolRegistry {
         if (!StringUtils.hasText(idempotencyKey)) {
             throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_KEY_REQUIRED", "Agent tool idempotency key is required");
         }
-        var existing = auditRepository.findByIdempotencyKey(tenantCode, toolCode, idempotencyKey);
-        if (existing.isPresent()) {
-            var audit = existing.get();
+        var claim = auditRepository.tryClaim(new AgentToolExecutionAuditRepository.Audit(
+                tenantCode, toolCode, idempotencyKey, argumentsHash, "RUNNING", null,
+                null, request.traceId(), Instant.now()));
+        if (!claim.acquired()) {
+            var audit = claim.audit();
             if (!audit.argumentsHash().equals(argumentsHash)) {
                 throw toolProtocol("AGENT_TOOL_IDEMPOTENCY_CONFLICT",
                         "Agent tool idempotency key was reused with different arguments");
             }
-            return new AgentTool.Result(audit.output(), idempotencyKey);
+            if ("SUCCEEDED".equals(audit.status())) {
+                return new AgentTool.Result(audit.output(), idempotencyKey);
+            }
+            throw toolProtocol("AGENT_TOOL_EXECUTION_IN_PROGRESS",
+                    "Agent tool execution is already claimed by another worker");
         }
 
-        AgentTool.Result result = tool.execute(request.withIdempotencyKey(idempotencyKey));
-        if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
-            throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
+        try {
+            AgentTool.Result result = tool.execute(request.withIdempotencyKey(idempotencyKey));
+            if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
+                throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
+            }
+            auditRepository.complete(new AgentToolExecutionAuditRepository.Audit(
+                    tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
+                    result.output(), null, request.traceId(), Instant.now()));
+            return new AgentTool.Result(result.output(), idempotencyKey);
+        } catch (RuntimeException exception) {
+            auditRepository.complete(new AgentToolExecutionAuditRepository.Audit(
+                    tenantCode, toolCode, idempotencyKey, argumentsHash, "FAILED", null,
+                    exception.getMessage(), request.traceId(), Instant.now()));
+            throw exception;
         }
-        auditRepository.save(new AgentToolExecutionAuditRepository.Audit(
-                tenantCode, toolCode, idempotencyKey, argumentsHash, "SUCCEEDED",
-                result.output(), null, request.traceId(), Instant.now()));
-        return result;
     }
 
     private String stableIdempotencyKey(AgentTool.Request request, String toolCode, String argumentsHash) {
         if (request.runId() > 0 && StringUtils.hasText(request.logicalStepId())) {
             return request.runId() + ":" + request.logicalStepId().trim()
-                    + ":" + toolCode + ":" + argumentsHash;
+                    + ":" + toolCode;
         }
         return request.idempotencyKey();
     }
