@@ -78,7 +78,19 @@ jobs:
         run: docker info
 
       - name: Verify all modules
-        run: mvn --batch-mode --no-transfer-progress verify
+        shell: bash
+        run: |
+          set -o pipefail
+          mvn --batch-mode --no-transfer-progress verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "Maven verification failed; summarizing failed test reports."
+            find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
+              | xargs -0 grep -E 'Tests run: [0-9]+, Failures: [1-9]|Tests run: [0-9]+, Failures: [0-9]+, Errors: [1-9]' \
+              | tail -n 20 \
+              | while IFS= read -r line; do echo "::error::$line"; done || true
+            exit "$status"
+          fi
 
       - name: Verify required integration tests executed
         run: node scripts/check-integration-test-results.mjs
