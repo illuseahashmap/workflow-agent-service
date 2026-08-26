@@ -155,6 +155,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
+                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .target(MigrationVersion.fromVersion("35"))
                 .load();
@@ -175,6 +176,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
+                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .load();
         afterV36.migrate();
@@ -202,6 +204,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
+                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .target(MigrationVersion.fromVersion("37"))
                 .load();
@@ -224,6 +227,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
+                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .load();
         afterV38.migrate();
