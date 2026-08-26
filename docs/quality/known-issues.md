@@ -1,6 +1,6 @@
 # 待修复问题与下一步整改
 
-更新时间：2026-08-25
+更新时间：2026-08-26
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
@@ -8,13 +8,13 @@
 
 ### P0-1 容器化集成测试尚未在本机闭环
 
-- 当前：CI 已执行 Docker 检查，并通过 `scripts/check-integration-test-results.mjs` 强制确认 PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全测试没有缺失或跳过；本机没有 Docker，因此本地报告不能作为发布验收。
+- 当前：CI 已执行 Docker 检查，并通过 `scripts/check-integration-test-results.mjs` 强制确认 PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全测试没有缺失或跳过；本次本机 `mvn verify` 的 16 个 Testcontainers 测试因未安装 Docker 全部跳过，门禁脚本已正确拒绝该结果。
 - 验收：发布分支完整 `mvn verify` 和集成测试通过，并归档 Surefire、JaCoCo、SpotBugs 报告。
 
 ### P0-2 生产可观测性与流程审计仍未完整闭环
 
-- 当前：已有 Trace ID、结构化日志、健康检查、基础 Agent 指标、状态历史、恢复决策和人工重试操作账本。
-- 缺口：Prometheus 查询、告警、失败运行列表、流程发起/领取/审批/驳回/转办/终止/规则命中等操作还未统一接入审计查询。
+- 当前：已有 Trace ID、结构化日志、健康检查、基础 Agent 指标、状态历史、恢复决策和人工重试操作账本；新增 `GET /workflow/management/audit/operations`，支持按当前租户、事件类型、流程实例、Trace ID、时间范围和分页查询流程操作审计。
+- 缺口：Prometheus 告警、失败运行列表和统一运维视图仍未完成；容器化环境下还需验证流程发起/领取/审批/驳回/转办/终止/规则命中事件的完整可追溯性。
 - 验收：可按租户、流程实例、AgentRun、Attempt、操作人和 Trace ID 定位一次失败，并回放关键状态变化。
 
 ### P1-0 历史数据库可能记录过临时修改版 V37

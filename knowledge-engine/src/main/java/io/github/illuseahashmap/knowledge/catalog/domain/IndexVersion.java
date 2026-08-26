@@ -12,11 +12,15 @@ public record IndexVersion(long id, String tenantCode, String sourceCode, int ve
         embeddingModel = text(embeddingModel, "embeddingModel");
         status = text(status, "status");
         createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
-        if (version < 1) throw new IllegalArgumentException("version must be positive");
+        if (version < 1) {
+            throw new IllegalArgumentException("version must be positive");
+        }
     }
     private static String text(String value, String name) {
         value = Objects.requireNonNull(value, name + " must not be null").trim();
-        if (value.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
         return value;
     }
 }

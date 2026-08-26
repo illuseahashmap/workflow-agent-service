@@ -11,7 +11,9 @@ public record KnowledgeSource(String tenantCode, String sourceCode, String name,
     }
     private static String text(String value, String name) {
         value = Objects.requireNonNull(value, name + " must not be null").trim();
-        if (value.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
         return value;
     }
 }

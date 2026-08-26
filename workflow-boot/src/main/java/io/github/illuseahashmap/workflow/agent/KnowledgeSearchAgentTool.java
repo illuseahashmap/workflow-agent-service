@@ -15,14 +15,18 @@ import org.springframework.stereotype.Component;
 @Component
 public final class KnowledgeSearchAgentTool implements AgentTool {
     private static final String INPUT_SCHEMA = """
-            {"type":"object","required":["query"],"properties":{"query":{"type":"string","minLength":1,"maxLength":2000},"knowledgeScopes":{"type":"array","items":{"type":"string"}},"maxResults":{"type":"integer","minimum":1,"maximum":20}}}
+            {"type":"object","required":["query"],"properties":{
+            "query":{"type":"string","minLength":1,"maxLength":2000},
+            "knowledgeScopes":{"type":"array","items":{"type":"string"}},
+            "maxResults":{"type":"integer","minimum":1,"maximum":20}}}
             """;
 
     private final ObjectProvider<KnowledgeRetrievalUseCase> useCaseProvider;
     private final ObjectMapper objectMapper;
 
-    public KnowledgeSearchAgentTool(ObjectProvider<KnowledgeRetrievalUseCase> useCaseProvider,
-                                    ObjectMapper objectMapper) {
+    public KnowledgeSearchAgentTool(
+            ObjectProvider<KnowledgeRetrievalUseCase> useCaseProvider,
+            ObjectMapper objectMapper) {
         this.useCaseProvider = useCaseProvider;
         this.objectMapper = objectMapper;
     }
