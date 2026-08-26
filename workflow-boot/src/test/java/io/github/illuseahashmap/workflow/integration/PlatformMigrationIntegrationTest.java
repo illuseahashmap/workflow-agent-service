@@ -43,6 +43,8 @@ class PlatformMigrationIntegrationTest {
         Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration/platform")
+                .baselineOnMigrate(true)
+                .baselineVersion(MigrationVersion.fromVersion("0"))
                 .load()
                 .migrate();
     }
