@@ -23,6 +23,10 @@ class PlatformMigrationIntegrationTest {
     @Container
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
+    @Container
+    private static final PostgreSQLContainer<?> UPGRADE_POSTGRES =
+            new PostgreSQLContainer<>("postgres:17-alpine");
+
     @BeforeAll
     static void migrateDatabase() {
         try (Connection connection = DriverManager.getConnection(
@@ -147,7 +151,8 @@ class PlatformMigrationIntegrationTest {
     void upgradesDatabaseThatAlreadyRanV35AndBackfillsWorkflowContextGrant() throws SQLException {
         String schema = "upgrade_" + java.util.UUID.randomUUID().toString().replace('-', '_');
         Flyway beforeV36 = Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .dataSource(UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(),
+                        UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration/platform")
@@ -156,7 +161,7 @@ class PlatformMigrationIntegrationTest {
         beforeV36.migrate();
 
         try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(), UPGRADE_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
             statement.execute("SET search_path TO " + schema);
             statement.executeUpdate("""
@@ -166,7 +171,8 @@ class PlatformMigrationIntegrationTest {
         }
 
         Flyway afterV36 = Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .dataSource(UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(),
+                        UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration/platform")
@@ -174,7 +180,7 @@ class PlatformMigrationIntegrationTest {
         afterV36.migrate();
 
         try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(), UPGRADE_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
             statement.execute("SET search_path TO " + schema);
             try (ResultSet resultSet = statement.executeQuery("""
@@ -192,7 +198,8 @@ class PlatformMigrationIntegrationTest {
     void upgradesDatabaseThatAlreadyRanV37WithoutChangingV37Checksum() throws SQLException {
         String schema = "upgrade_v37_" + java.util.UUID.randomUUID().toString().replace('-', '_');
         Flyway beforeV38 = Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .dataSource(UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(),
+                        UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration/platform")
@@ -201,7 +208,7 @@ class PlatformMigrationIntegrationTest {
         beforeV38.migrate();
 
         try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(), UPGRADE_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
             statement.execute("SET search_path TO " + schema);
             statement.execute("SET app.system_worker = 'true'");
@@ -213,7 +220,8 @@ class PlatformMigrationIntegrationTest {
         }
 
         Flyway afterV38 = Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .dataSource(UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(),
+                        UPGRADE_POSTGRES.getPassword())
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration/platform")
@@ -221,7 +229,7 @@ class PlatformMigrationIntegrationTest {
         afterV38.migrate();
 
         try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                UPGRADE_POSTGRES.getJdbcUrl(), UPGRADE_POSTGRES.getUsername(), UPGRADE_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
             statement.execute("SET search_path TO " + schema);
             try (ResultSet resultSet = statement.executeQuery("""
