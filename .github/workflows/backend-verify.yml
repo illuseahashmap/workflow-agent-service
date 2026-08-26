@@ -17,12 +17,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
@@ -58,19 +58,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
           cache: maven
 
       - name: Set up Node.js for quality checks
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
@@ -84,11 +84,22 @@ jobs:
           mvn --batch-mode --no-transfer-progress verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            echo "Maven verification failed; summarizing failed test reports."
+            echo "Maven verification failed; publishing actionable diagnostics."
+            {
+              echo '### Maven verification failure'
+              echo
+              echo 'Relevant Maven error lines:'
+              echo '```text'
+              grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" | tail -n 80 || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" \
+              | tail -n 30 \
+              | while IFS= read -r line; do echo "::error title=Maven verify::$line"; done || true
             find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
               | xargs -0 grep -E 'Tests run: [0-9]+, Failures: [1-9]|Tests run: [0-9]+, Failures: [0-9]+, Errors: [1-9]' \
               | tail -n 20 \
-              | while IFS= read -r line; do echo "::error::$line"; done || true
+              | while IFS= read -r line; do echo "::error title=Failed test::$line"; done || true
             exit "$status"
           fi
 
