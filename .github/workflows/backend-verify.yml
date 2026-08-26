@@ -85,9 +85,11 @@ jobs:
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             echo "Maven verification failed; publishing actionable diagnostics."
+            echo "::error title=Maven exit code::mvn verify exited with status $status"
             {
               echo '### Maven verification failure'
               echo
+              echo "Exit code: $status"
               echo 'Relevant Maven error lines:'
               echo '```text'
               grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" | tail -n 80 || true
@@ -96,6 +98,8 @@ jobs:
             grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" \
               | tail -n 30 \
               | while IFS= read -r line; do echo "::error title=Maven verify::$line"; done || true
+            tail -n 100 "$RUNNER_TEMP/maven-verify.log" \
+              | while IFS= read -r line; do echo "::error title=Maven tail::$line"; done || true
             find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
               | xargs -0 grep -E 'Tests run: [0-9]+, Failures: [1-9]|Tests run: [0-9]+, Failures: [0-9]+, Errors: [1-9]' \
               | tail -n 20 \
