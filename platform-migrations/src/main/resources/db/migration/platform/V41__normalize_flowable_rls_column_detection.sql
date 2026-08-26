@@ -24,11 +24,11 @@ BEGIN
             'CREATE POLICY tenant_isolation_%I ON %I USING ('
                 || '(current_setting(''app.platform_admin'', true) = ''true'' '
                 || 'OR current_setting(''app.system_worker'', true) = ''true'' '
-                || 'OR tenant_id_ = current_setting(''app.tenant_code'', true)) '
+                || 'OR tenant_id_ = current_setting(''app.tenant_code'', true))) '
                 || 'WITH CHECK ('
                 || '(current_setting(''app.platform_admin'', true) = ''true'' '
                 || 'OR current_setting(''app.system_worker'', true) = ''true'' '
-                || 'OR tenant_id_ = current_setting(''app.tenant_code'', true))',
+                || 'OR tenant_id_ = current_setting(''app.tenant_code'', true)))',
             flowable_table_name, flowable_table_name
         );
     END LOOP;
