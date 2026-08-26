@@ -160,13 +160,9 @@ class PlatformMigrationIntegrationTest {
 
     @Test
     void upgradesDatabaseThatAlreadyRanV35AndBackfillsWorkflowContextGrant() throws SQLException {
-        String schema = "upgrade_" + java.util.UUID.randomUUID().toString().replace('-', '_');
         Flyway beforeV36 = Flyway.configure()
                 .dataSource(UPGRADE_V35_POSTGRES.getJdbcUrl(), UPGRADE_V35_POSTGRES.getUsername(),
                         UPGRADE_V35_POSTGRES.getPassword())
-                .schemas(schema)
-                .defaultSchema(schema)
-                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .target(MigrationVersion.fromVersion("35"))
                 .load();
@@ -175,7 +171,6 @@ class PlatformMigrationIntegrationTest {
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V35_POSTGRES.getJdbcUrl(), UPGRADE_V35_POSTGRES.getUsername(), UPGRADE_V35_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
-            statement.execute("SET search_path TO " + schema);
             statement.executeUpdate("""
                     INSERT INTO workflow_tenant (tenant_id, tenant_code, tenant_name)
                     VALUES ('upgrade-tenant', 'upgrade-tenant', 'Upgrade Tenant')
@@ -185,9 +180,6 @@ class PlatformMigrationIntegrationTest {
         Flyway afterV36 = Flyway.configure()
                 .dataSource(UPGRADE_V35_POSTGRES.getJdbcUrl(), UPGRADE_V35_POSTGRES.getUsername(),
                         UPGRADE_V35_POSTGRES.getPassword())
-                .schemas(schema)
-                .defaultSchema(schema)
-                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .load();
         afterV36.migrate();
@@ -195,7 +187,6 @@ class PlatformMigrationIntegrationTest {
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V35_POSTGRES.getJdbcUrl(), UPGRADE_V35_POSTGRES.getUsername(), UPGRADE_V35_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
-            statement.execute("SET search_path TO " + schema);
             try (ResultSet resultSet = statement.executeQuery("""
                     SELECT COUNT(*) FROM agent_tool_tenant_grant
                     WHERE tenant_code = 'upgrade-tenant'
@@ -209,13 +200,9 @@ class PlatformMigrationIntegrationTest {
 
     @Test
     void upgradesDatabaseThatAlreadyRanV37WithoutChangingV37Checksum() throws SQLException {
-        String schema = "upgrade_v37_" + java.util.UUID.randomUUID().toString().replace('-', '_');
         Flyway beforeV38 = Flyway.configure()
                 .dataSource(UPGRADE_V37_POSTGRES.getJdbcUrl(), UPGRADE_V37_POSTGRES.getUsername(),
                         UPGRADE_V37_POSTGRES.getPassword())
-                .schemas(schema)
-                .defaultSchema(schema)
-                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .target(MigrationVersion.fromVersion("37"))
                 .load();
@@ -224,7 +211,6 @@ class PlatformMigrationIntegrationTest {
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V37_POSTGRES.getJdbcUrl(), UPGRADE_V37_POSTGRES.getUsername(), UPGRADE_V37_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
-            statement.execute("SET search_path TO " + schema);
             statement.execute("SET app.system_worker = 'true'");
             statement.executeUpdate("""
                     INSERT INTO agent_tool_execution_audit
@@ -236,9 +222,6 @@ class PlatformMigrationIntegrationTest {
         Flyway afterV38 = Flyway.configure()
                 .dataSource(UPGRADE_V37_POSTGRES.getJdbcUrl(), UPGRADE_V37_POSTGRES.getUsername(),
                         UPGRADE_V37_POSTGRES.getPassword())
-                .schemas(schema)
-                .defaultSchema(schema)
-                .initSql("SET search_path TO " + schema)
                 .locations("classpath:db/migration/platform")
                 .load();
         afterV38.migrate();
@@ -246,7 +229,6 @@ class PlatformMigrationIntegrationTest {
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V37_POSTGRES.getJdbcUrl(), UPGRADE_V37_POSTGRES.getUsername(), UPGRADE_V37_POSTGRES.getPassword());
              Statement statement = connection.createStatement()) {
-            statement.execute("SET search_path TO " + schema);
             try (ResultSet resultSet = statement.executeQuery("""
                     SELECT status, error_code
                     FROM agent_tool_execution_audit
