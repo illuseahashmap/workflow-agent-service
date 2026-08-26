@@ -176,6 +176,10 @@ class PlatformMigrationIntegrationTest {
                     INSERT INTO workflow_tenant (tenant_id, tenant_code, tenant_name)
                     VALUES ('upgrade-tenant', 'upgrade-tenant', 'Upgrade Tenant')
                     """);
+            statement.executeUpdate("""
+                    INSERT INTO auth_role (tenant_code, role_code, role_name, description)
+                    VALUES ('upgrade-tenant', 'TENANT_ADMIN', 'Tenant Administrator', 'Upgrade fixture role')
+                    """);
         }
 
         Flyway afterV36 = Flyway.configure()
