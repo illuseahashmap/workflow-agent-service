@@ -81,8 +81,10 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          set +e
           mvn --batch-mode --no-transfer-progress verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
           status=${PIPESTATUS[0]}
+          set -e
           if [ "$status" -ne 0 ]; then
             echo "Maven verification failed; publishing actionable diagnostics."
             echo "::error title=Maven exit code::mvn verify exited with status $status"
