@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.postgresql.util.PSQLException;
@@ -182,7 +183,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_V35_POSTGRES.getPassword())
                 .locations("classpath:db/migration/platform")
                 .load();
-        afterV36.migrate();
+        migrateAndExposeRootCause(afterV36, "V35 upgrade");
 
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V35_POSTGRES.getJdbcUrl(), UPGRADE_V35_POSTGRES.getUsername(), UPGRADE_V35_POSTGRES.getPassword());
@@ -224,7 +225,7 @@ class PlatformMigrationIntegrationTest {
                         UPGRADE_V37_POSTGRES.getPassword())
                 .locations("classpath:db/migration/platform")
                 .load();
-        afterV38.migrate();
+        migrateAndExposeRootCause(afterV38, "V37 upgrade");
 
         try (Connection connection = DriverManager.getConnection(
                 UPGRADE_V37_POSTGRES.getJdbcUrl(), UPGRADE_V37_POSTGRES.getUsername(), UPGRADE_V37_POSTGRES.getPassword());
@@ -289,6 +290,19 @@ class PlatformMigrationIntegrationTest {
         try (ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM act_ru_execution")) {
             assertThat(resultSet.next()).isTrue();
             return resultSet.getInt(1);
+        }
+    }
+
+    private void migrateAndExposeRootCause(Flyway flyway, String scenario) {
+        try {
+            flyway.migrate();
+        } catch (FlywayException exception) {
+            Throwable rootCause = exception;
+            while (rootCause.getCause() != null) {
+                rootCause = rootCause.getCause();
+            }
+            throw new IllegalStateException(
+                    scenario + " migration failed at the database boundary: " + rootCause.getMessage(), exception);
         }
     }
 
