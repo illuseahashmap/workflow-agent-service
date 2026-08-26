@@ -553,6 +553,56 @@ paths:
             schema: { $ref: '#/components/schemas/ProcessParticipantRequirementsRequest' }
       responses:
         '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ParticipantRequirementListApiResponse' } } } }
+  /mcp/connectors:
+    post:
+      tags: [Agent]
+      operationId: createMcpConnector
+      summary: Create an MCP connector version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/McpConnectorCommand' }
+      responses:
+        '200': { description: MCP connector version, content: { application/json: { schema: { $ref: '#/components/schemas/McpConnectorVersionApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /mcp/connector-versions/{id}/discover:
+    post:
+      tags: [Agent]
+      operationId: discoverMcpTools
+      summary: Discover and persist an MCP tool catalog
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: MCP discovery result, content: { application/json: { schema: { $ref: '#/components/schemas/McpDiscoveryApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /mcp/catalog-versions/{id}/publish:
+    post:
+      tags: [Agent]
+      operationId: publishMcpCatalog
+      summary: Publish an MCP tool catalog
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: MCP catalog published, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /mcp/agent-versions/{agentVersionId}/tools/{toolSnapshotId}:
+    post:
+      tags: [Agent]
+      operationId: bindMcpToolToAgentVersion
+      summary: Bind a published MCP tool snapshot to an Agent version
+      parameters:
+        - { name: agentVersionId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: toolSnapshotId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: MCP tool bound, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /workflow/process/status:
     get:
       tags: [Workflow]
@@ -1237,6 +1287,58 @@ components:
         reason: { type: string, nullable: true }
         traceId: { type: string, nullable: true }
         occurredAt: { type: string, format: date-time }
+
+    McpConnectorCommand:
+      type: object
+      required: [connectorCode, connectorName, endpointUrl]
+      properties:
+        connectorCode: { type: string, minLength: 1, maxLength: 128 }
+        connectorName: { type: string, minLength: 1, maxLength: 255 }
+        endpointUrl: { type: string, format: uri, pattern: '^https://.*', maxLength: 2048 }
+        protocolVersion: { type: string, maxLength: 64 }
+        credentialRef: { type: string, maxLength: 255 }
+        timeoutSeconds: { type: integer, minimum: 1, maximum: 300 }
+    McpConnectorVersion:
+      type: object
+      required: [id, connectorId, version, endpointUrl, protocolVersion, status, timeoutSeconds]
+      properties:
+        id: { type: integer, format: int64 }
+        connectorId: { type: integer, format: int64 }
+        version: { type: integer }
+        endpointUrl: { type: string, format: uri }
+        protocolVersion: { type: string, nullable: true }
+        status: { type: string }
+        timeoutSeconds: { type: integer }
+    McpConnectorVersionApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/McpConnectorVersion' } }
+    McpDiscovery:
+      type: object
+      required: [catalogVersionId, status, fingerprint, tools]
+      properties:
+        catalogVersionId: { type: integer, format: int64 }
+        status: { type: string }
+        fingerprint: { type: string }
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpToolSnapshot'
+    McpToolSnapshot:
+      type: object
+      required: [snapshotId, registryToolCode, name, inputSchema]
+      properties:
+        snapshotId: { type: integer, format: int64 }
+        registryToolCode: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        inputSchema: { type: string }
+    McpDiscoveryApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/McpDiscovery' } }
 
     BrowserAuthResponse:
       type: object
