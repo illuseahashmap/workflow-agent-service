@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorSummaryView;
+import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
 
 @RestController
 @RequestMapping("/mcp")
@@ -19,9 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class McpCatalogController {
 
     private final McpCatalogService service;
+    private final TenantProvider tenantProvider;
 
-    public McpCatalogController(McpCatalogService service) {
+    public McpCatalogController(McpCatalogService service, TenantProvider tenantProvider) {
         this.service = service;
+        this.tenantProvider = tenantProvider;
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/connectors")
+    public ApiResponse<List<McpConnectorSummaryView>> list() {
+        return ApiResponse.ok(service.list(tenantProvider.current().tenantCode()));
     }
 
     @PostMapping("/connectors")

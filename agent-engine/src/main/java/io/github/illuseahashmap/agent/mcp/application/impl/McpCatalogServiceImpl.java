@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.mcp.application.McpCatalogService;
 import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorCommand;
 import io.github.illuseahashmap.agent.mcp.application.dto.McpDiscoveryView;
 import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorVersionView;
+import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorSummaryView;
 import io.github.illuseahashmap.agent.mcp.application.port.McpCatalogRepository;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
 import io.github.illuseahashmap.agent.mcp.application.port.McpToolRegistrationPort;
@@ -50,6 +51,17 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         this.objectMapper = objectMapper;
         this.schemaValidator = schemaValidator;
         this.persistenceService = persistenceService;
+    }
+
+    @Override
+    public List<McpConnectorSummaryView> list(String tenantCode) {
+        return repository.findConnectorSummaries(tenantCode).stream()
+                .map(summary -> new McpConnectorSummaryView(summary.connectorId(), summary.connectorCode(),
+                        summary.connectorName(), summary.connectorStatus(), summary.connectorVersionId(),
+                        summary.connectorVersion(), summary.endpointUrl(), summary.protocolVersion(),
+                        summary.connectorVersionStatus(), summary.latestCatalogVersionId(),
+                        summary.latestCatalogStatus(), summary.toolCount()))
+                .toList();
     }
 
     @Override

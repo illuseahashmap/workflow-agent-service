@@ -554,6 +554,14 @@ paths:
       responses:
         '200': { description: Participant requirements, content: { application/json: { schema: { $ref: '#/components/schemas/ParticipantRequirementListApiResponse' } } } }
   /mcp/connectors:
+    get:
+      tags: [Agent]
+      operationId: listMcpConnectors
+      summary: List MCP connectors and their latest catalog status
+      responses:
+        '200': { description: MCP connector summaries, content: { application/json: { schema: { $ref: '#/components/schemas/McpConnectorSummaryListApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Agent]
       operationId: createMcpConnector
@@ -1314,6 +1322,30 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/McpConnectorVersion' } }
+    McpConnectorSummary:
+      type: object
+      required: [connectorId, connectorCode, connectorName, connectorStatus, connectorVersionId, connectorVersion, endpointUrl, protocolVersion, connectorVersionStatus, toolCount]
+      properties:
+        connectorId: { type: integer, format: int64 }
+        connectorCode: { type: string }
+        connectorName: { type: string }
+        connectorStatus: { type: string }
+        connectorVersionId: { type: integer, format: int64 }
+        connectorVersion: { type: integer }
+        endpointUrl: { type: string, format: uri }
+        protocolVersion: { type: string }
+        connectorVersionStatus: { type: string }
+        latestCatalogVersionId: { type: integer, format: int64, nullable: true }
+        latestCatalogStatus: { type: string, nullable: true }
+        toolCount: { type: integer }
+    McpConnectorSummaryListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/McpConnectorSummary' }
     McpDiscovery:
       type: object
       required: [catalogVersionId, status, fingerprint, tools]
