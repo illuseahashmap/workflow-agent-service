@@ -1,0 +1,31 @@
+groups:
+  - name: workflow-agent-runtime
+    interval: 30s
+    rules:
+      - alert: WorkflowAgentLeaseLossBurst
+        expr: increase(workflow_agent_lease_lost_total[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          service: workflow-agent
+        annotations:
+          summary: Agent lease loss is increasing
+          description: More than three Agent worker leases were lost in ten minutes.
+      - alert: WorkflowAgentRetryBurst
+        expr: sum(increase(workflow_agent_runs_retry_scheduled_total[10m])) >= 10
+        for: 5m
+        labels:
+          severity: warning
+          service: workflow-agent
+        annotations:
+          summary: Agent retry volume is elevated
+          description: Agent failures are being retried at an elevated rate; inspect the error dimension and provider health.
+      - alert: WorkflowAgentRecoveryBacklog
+        expr: increase(workflow_agent_runs_recovered_total[15m]) >= 5
+        for: 5m
+        labels:
+          severity: critical
+          service: workflow-agent
+        annotations:
+          summary: Agent recovery activity is elevated
+          description: Multiple expired Agent runs were recovered recently; inspect worker stability and lease duration.
