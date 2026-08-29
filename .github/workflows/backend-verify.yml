@@ -82,7 +82,7 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          mvn --batch-mode --no-transfer-progress verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
+          mvn --batch-mode --no-transfer-progress --errors verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
@@ -106,6 +106,14 @@ jobs:
               | xargs -0 grep -E 'Tests run: [0-9]+, Failures: [1-9]|Tests run: [0-9]+, Failures: [0-9]+, Errors: [1-9]' \
               | tail -n 20 \
               | while IFS= read -r line; do echo "::error title=Failed test::$line"; done || true
+            echo "::group::Surefire context failure details"
+            find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
+              | xargs -0 grep -l 'ApplicationContext failure threshold\|Failed to load ApplicationContext' \
+              | while IFS= read -r report; do
+                  echo "--- $report"
+                  sed -n '1,220p' "$report"
+                done || true
+            echo "::endgroup::"
             exit "$status"
           fi
 
