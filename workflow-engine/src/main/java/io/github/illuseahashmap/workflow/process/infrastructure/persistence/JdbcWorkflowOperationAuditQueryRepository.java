@@ -49,7 +49,7 @@ public class JdbcWorkflowOperationAuditQueryRepository implements WorkflowOperat
                        process_instance_id, process_definition_key, task_id, subject,
                        previous_state, next_state, reason, trace_id, occurred_at
                 FROM workflow_operation_audit
-                WHERE """ + filter + """
+                """ + "WHERE " + filter + """
                 ORDER BY occurred_at DESC, id DESC
                 LIMIT :limit OFFSET :offset
                 """, parameters, (resultSet, rowNum) -> map(resultSet));
