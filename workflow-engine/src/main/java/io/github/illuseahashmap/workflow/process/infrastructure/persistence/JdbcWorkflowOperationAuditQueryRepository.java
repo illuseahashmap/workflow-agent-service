@@ -33,11 +33,14 @@ public class JdbcWorkflowOperationAuditQueryRepository implements WorkflowOperat
         parameters.put("offset", (criteria.pageNumber() - 1) * criteria.pageSize());
         String filter = """
                 tenant_code = :tenantCode
-                AND (:eventType IS NULL OR event_type = :eventType)
-                AND (:processInstanceId IS NULL OR process_instance_id = :processInstanceId)
-                AND (:traceId IS NULL OR trace_id = :traceId)
-                AND (:occurredFrom IS NULL OR occurred_at >= :occurredFrom)
-                AND (:occurredTo IS NULL OR occurred_at <= :occurredTo)
+                AND (CAST(:eventType AS VARCHAR) IS NULL OR event_type = CAST(:eventType AS VARCHAR))
+                AND (CAST(:processInstanceId AS VARCHAR) IS NULL
+                     OR process_instance_id = CAST(:processInstanceId AS VARCHAR))
+                AND (CAST(:traceId AS VARCHAR) IS NULL OR trace_id = CAST(:traceId AS VARCHAR))
+                AND (CAST(:occurredFrom AS TIMESTAMPTZ) IS NULL
+                     OR occurred_at >= CAST(:occurredFrom AS TIMESTAMPTZ))
+                AND (CAST(:occurredTo AS TIMESTAMPTZ) IS NULL
+                     OR occurred_at <= CAST(:occurredTo AS TIMESTAMPTZ))
                 """;
         long total = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM workflow_operation_audit WHERE " + filter, parameters, Long.class);
