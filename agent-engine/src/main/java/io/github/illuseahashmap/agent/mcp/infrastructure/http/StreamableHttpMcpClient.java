@@ -34,9 +34,15 @@ public class StreamableHttpMcpClient implements McpClientPort {
     private final AtomicLong requestIds = new AtomicLong();
 
     public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver) {
+        this(objectMapper, credentialResolver,
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+    }
+
+    StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
+                            HttpClient httpClient) {
         this.objectMapper = objectMapper;
         this.credentialResolver = credentialResolver;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.httpClient = httpClient;
     }
 
     @Override

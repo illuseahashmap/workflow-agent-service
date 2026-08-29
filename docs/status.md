@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-08-26
+更新时间：2026-08-29
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -24,7 +24,7 @@
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
 - 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；由于真实 Retriever、权限策略和应用服务尚未装配，V35 已将该工具默认禁用且撤销租户授权，真实 pgvector 检索和摄取 Worker 仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
-- 已完成 MCP-1/MCP-2 后端只读切片：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接。当前尚未宣称生产级出站安全和真实容器化闭环。
+- 已完成 MCP-1/MCP-2 后端只读切片：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；新增确定性 HTTPS 协议集成测试，覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。当前仍未宣称生产级出站安全和真实容器化 Flowable 闭环。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
 - 已完成首节点及审批后 Agent 输入契约：后端按真实路径生成字段，前端动态渲染，命令边界再次校验必填输入。
@@ -42,14 +42,14 @@
 | 优先级 | 工作项 | 当前状态 | 下一步验收 |
 | --- | --- | --- | --- |
 | P0 | 容器化集成测试 | CI 可执行，本机可能因 Docker 不可用而跳过 | PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全集成测试稳定通过 |
-| P0 | 生产可观测性 | Trace、基础日志、健康检查、部分指标和租户隔离的审计查询已有 | Prometheus 告警、失败运行列表和统一运维视图完整 |
+| P0 | 生产可观测性 | Trace、基础日志、健康检查、部分指标、租户隔离审计查询和前端运行审计入口已有 | Prometheus 告警、容器环境验证和统一失败处置视图完整 |
 | P0 | 流程操作审计 | 基础写入与租户隔离查询 API 已有，支持事件、实例、Trace、时间范围和分页 | 通过容器化环境验证全链路事件可追溯，并补齐规则命中等覆盖 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace 和 `knowledge_search` 工具边界已落地 | 完成真实摄取、pgvector/混合检索、Grounding、评测和多 Retriever 兼容验收 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片已完成，绑定原子性、类型化错误和有界响应已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片和确定性 HTTPS 协议切片已完成，绑定原子性、类型化错误和有界响应已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
 
 ## 三、下一阶段顺序
 
