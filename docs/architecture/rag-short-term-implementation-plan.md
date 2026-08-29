@@ -10,6 +10,36 @@
 [开发方向与防偏离门禁](development-direction-guardrails.md)和
 [Agent 协作架构设计](agent-collaboration-design.md)。
 
+## 0. 交付范围与阶段零
+
+本文是 RAG 的分阶段实施规格，不表示所有章节都属于同一个短期迭代。组织关系解析与知识检索
+是两条并行但独立的产品能力线：
+
+```text
+组织关系解析
+→ ParticipantPolicyResolver
+→ 确定性参与人
+→ Flowable 人工任务
+
+知识检索
+→ Evidence / Citation / RetrievalTrace
+→ AgentToolRegistry
+→ Agent Runtime
+```
+
+两条线可以共享租户上下文、版本、审计和证据引用能力，但不得共享一个模糊的检索编排器，
+也不得让模型重新解释权威组织关系来决定审批人。组织关系后续应形成独立的
+`organization-engine` 限界上下文；本方案只定义它与 Evidence 和参与人策略的协作边界。
+
+在 RAG-1 之前必须完成阶段零：
+
+- 确认知识源、文档版本和 Agent 的租户授权模型；
+- 确认删除、禁用、撤权后的检索可见性和派生数据清理语义；
+- 确认原文存储端口、单文档/租户容量、摄取并发和每日配额；
+- 冻结 Embedding 模型、向量维度、检索最大耗时、最大返回字节数和索引兼容策略；
+- 在真实 Retriever、权限求交、Trace 持久化和结果策略完成前，保持 `knowledge_search` 禁用；
+- 明确 pgvector 不可用时的启动和降级策略，不得让部分基础设施能力静默伪装为可用。
+
 ## 1. 目标与价值
 
 首版目标不是增加一个“向量搜索接口”，而是建立受治理的知识检索能力：
@@ -223,7 +253,8 @@ Rerank、查询改写和多查询召回先保留端口，只有离线评测证�
 
 ### 7.3 多跳与图谱兼容验收
 
-首版不实现图检索，但必须提供一个测试用 `GraphRetriever` 或 Fake Retriever，证明：
+首版不实现生产图检索，也不把组织关系查询并入 RAG。只提供测试用 `GraphRetriever` 或 Fake
+Retriever，证明：
 
 ```text
 RelationPathEvidence:
@@ -233,8 +264,9 @@ RelationPathEvidence:
 可以经过同一 `RetrievalResult`、Citation、AgentTool 输出和运行审计返回，而无需修改
 `PlatformAgentExecutor`、AgentRun、Flowable 或公开查询接口。
 
-组织关系等权威结构化事实仍应优先通过受治理 MCP/Tool 查询；只有事实主要来自非结构化文档、
-并且需要跨文档关系推理时，才考虑多跳 RAG 或图谱 Retriever。
+组织关系等权威结构化事实应由独立的 `OrganizationGraphQueryPort` 和参与人策略解析，优先使用
+PostgreSQL 递归查询；只有事实主要来自非结构化文档、并且需要跨文档关系推理时，才考虑多跳
+RAG 或图谱 Retriever。图检索结果不能直接授予审批参与人权限。
 
 ## 8. Agent Runtime 集成
 
@@ -255,7 +287,9 @@ PlatformAgentExecutor
 - Agent 不能提交 tenantCode、索引版本或绕过权限的原始过滤表达式；
 - 每次检索形成 `RETRIEVAL` Step 和 `RetrievalTrace`；
 - 工具输出只包含受控证据摘要和引用，不注入无限原文；
-- Checkpoint 保存恢复所需引用和 Trace ID，不复制整个索引结果；
+- Checkpoint 保存恢复游标、逻辑步骤 ID、`RetrievalTrace` ID、受控输入上下文引用和
+  `EvidenceReference`，不复制完整原文、完整模型响应或模型私有思维链；仅保存 Trace ID
+  不足以支持恢复，不能将审计快照称为恢复点；
 - 检索失败、零召回和证据不足不能伪装成普通回答；
 - 必需知识步骤失败时，根据冻结策略执行重试、拒答、转人工或失败路由。
 
@@ -310,6 +344,16 @@ EvaluationDataset
 
 ## 12. 分阶段任务
 
+### RAG-0：治理前置与能力开关
+
+- 固定知识源、文档、索引、Embedding、租户授权和删除传播边界；
+- 固定容量、并发、超时、返回字节数和 pgvector capability check；
+- 明确 `knowledge_search` 的启用条件和禁用时的可观测诊断；
+- 建立最小评测数据集版本、阈值配置和发布决策模型。
+
+完成标准：没有真实 Retriever、权限求交、Trace 持久化和故障策略时，工具不会被自动授权或
+进入已发布 AgentVersion。
+
 ### RAG-1：模块与中立契约
 
 - 新增 `knowledge-engine` 和 ArchUnit 依赖门禁；
@@ -347,6 +391,20 @@ EvaluationDataset
 
 完成标准：同一 Agent 可以消费不同证据类型，且权限、Citation、Grounding 和人工接管语义一致。
 
+组织关系能力作为并行路线推进，不计入 RAG 完成判定：
+
+```text
+组织模型与有效期
+→ OrganizationGraphQueryPort
+→ 有限跳递归查询、环路检测和超时
+→ ParticipantPolicyResolver
+→ 任务激活时冻结参与人和关系路径
+→ Flowable 创建人工任务
+```
+
+首版必须支持直属上级、指定层级上级和部门负责人，并对空结果、多人结果、停用人员和失效关系
+执行显式策略；不得由模型决定参与人。
+
 ## 13. 明确暂不实现
 
 - 通用知识图谱、本体编辑器和图数据库集群；
@@ -372,3 +430,29 @@ RAG 短期能力完成时必须同时满足：
 7. 离线评测能够比较索引和 RetrievalProfile 版本，防止质量静默回退；
 8. 增加 GraphRetriever、StructuredRetriever 或外部 Retriever 时，不修改 AgentRun、Flowable
    恢复协议和公开检索契约。
+
+### 14.1 `knowledge_search` 发布门禁
+
+只有同时满足以下条件，才允许平台注册、租户授权和 AgentVersion 绑定 `knowledge_search`：
+
+```text
+真实 Retriever 已装配
++ 权限范围求交已生效
++ RetrievalTrace 可持久化
++ RETRIEVAL Step 和恢复游标已接入
++ 空结果、超时、低质量结果和越权测试通过
++ 固定评测集达到阈值
+```
+
+评测结果必须形成不可变的：
+
+```text
+EvaluationDatasetVersion
+→ EvaluationRun
+→ EvaluationCaseResult
+→ QualityGateDecision
+→ RetrievalProfileVersion 发布
+```
+
+`QualityGateDecision` 必须记录基线版本、阈值版本、失败样本和发布结论，不能只生成不可追溯的
+报表。

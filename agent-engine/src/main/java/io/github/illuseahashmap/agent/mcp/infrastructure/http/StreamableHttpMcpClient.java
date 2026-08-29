@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Minimal, bounded Streamable HTTP client for the read-only MCP slice. */
@@ -33,6 +34,7 @@ public class StreamableHttpMcpClient implements McpClientPort {
     private final McpCredentialResolver credentialResolver;
     private final AtomicLong requestIds = new AtomicLong();
 
+    @Autowired
     public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver) {
         this(objectMapper, credentialResolver,
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());

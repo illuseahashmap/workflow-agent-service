@@ -177,6 +177,7 @@ public class JdbcAgentToolGovernanceRepository
     }
 
     private Audit mapAudit(ResultSet resultSet) throws SQLException {
+        Timestamp createdAt = resultSet.getTimestamp("created_at");
         return new Audit(
                 resultSet.getString("tenant_code"),
                 resultSet.getString("tool_code"),
@@ -186,6 +187,6 @@ public class JdbcAgentToolGovernanceRepository
                 resultSet.getString("output_snapshot"),
                 resultSet.getString("error_code"),
                 resultSet.getString("trace_id"),
-                resultSet.getObject("created_at", Instant.class));
+                createdAt == null ? null : createdAt.toInstant());
     }
 }
