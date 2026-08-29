@@ -15,6 +15,9 @@ public interface AgentDefinitionRepository {
 
     void update(AgentDefinition definition);
 
+    /** Deletes a definition only while it has no published version or run history. */
+    boolean deleteIfUnused(String tenantCode, long id);
+
     record PageCriteria(int pageNum, int pageSize, String tenantCode, String keyword, Boolean enabled) {
     }
 }

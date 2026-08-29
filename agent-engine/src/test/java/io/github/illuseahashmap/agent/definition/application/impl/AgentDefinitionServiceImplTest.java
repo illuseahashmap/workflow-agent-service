@@ -81,6 +81,29 @@ class AgentDefinitionServiceImplTest {
     }
 
     @Test
+    void deletesUnusedDraftDefinition() {
+        when(definitionRepository.findById("tenant-a", 100L)).thenReturn(Optional.of(definition(true)));
+        when(versionRepository.findByDefinition("tenant-a", 100L)).thenReturn(List.of(draft()));
+        when(definitionRepository.deleteIfUnused("tenant-a", 100L)).thenReturn(true);
+
+        service.delete(100L);
+
+        verify(definitionRepository).deleteIfUnused("tenant-a", 100L);
+    }
+
+    @Test
+    void refusesToDeleteDefinitionWithPublishedVersion() {
+        when(definitionRepository.findById("tenant-a", 100L)).thenReturn(Optional.of(definition(true)));
+        when(versionRepository.findByDefinition("tenant-a", 100L)).thenReturn(List.of(publishedVersion()));
+
+        assertThatThrownBy(() -> service.delete(100L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("cannot be deleted");
+
+        verify(definitionRepository, never()).deleteIfUnused(any(), anyLong());
+    }
+
+    @Test
     void publishingOpenAiVersionRequiresEncryptedCredential() {
         AgentDefinitionVersion draft = draftWithProvider();
         AgentProvider provider = new AgentProvider(

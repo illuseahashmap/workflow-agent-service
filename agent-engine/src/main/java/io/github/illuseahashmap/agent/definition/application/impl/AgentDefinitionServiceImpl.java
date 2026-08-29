@@ -169,6 +169,23 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(long id) {
+        String tenantCode = tenantCode();
+        AgentDefinition definition = requireDefinition(tenantCode, id);
+        boolean hasPublishedVersion = versionRepository.findByDefinition(tenantCode, id).stream()
+                .anyMatch(AgentDefinitionVersion::published);
+        if (hasPublishedVersion) {
+            throw new BusinessException(ErrorCode.CONFLICT,
+                    "Published Agent definitions cannot be deleted; disable or keep the version history");
+        }
+        if (!definitionRepository.deleteIfUnused(tenantCode, definition.id())) {
+            throw new BusinessException(ErrorCode.CONFLICT,
+                    "Agent definition is in use or has execution history and cannot be deleted");
+        }
+    }
+
+    @Override
     public List<AgentVersionView> versions(long definitionId) {
         String tenantCode = tenantCode();
         requireDefinition(tenantCode, definitionId);

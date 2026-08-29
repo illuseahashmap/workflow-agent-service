@@ -12,6 +12,7 @@ public interface McpCatalogRepository {
     List<McpConnectorSummary> findConnectorSummaries(String tenantCode);
     McpConnector saveConnector(McpConnector connector);
     McpConnectorVersion saveConnectorVersion(McpConnectorVersion version);
+    int deleteDraftConnector(String tenantCode, long connectorId);
     int nextConnectorVersion(String tenantCode, long connectorId);
     Optional<McpConnectorVersion> findConnectorVersion(String tenantCode, long id);
     McpToolCatalogVersion saveCatalog(McpToolCatalogVersion catalog);
@@ -22,4 +23,5 @@ public interface McpCatalogRepository {
     Optional<McpConnectorVersion> findConnectorVersionForSnapshot(String tenantCode, long snapshotId);
     void publishCatalog(String tenantCode, long catalogVersionId, String reviewedBy);
     void bindSnapshotToAgentVersion(String tenantCode, long agentVersionId, long snapshotId);
+    void unbindSnapshotFromAgentVersion(String tenantCode, long agentVersionId, long snapshotId);
 }

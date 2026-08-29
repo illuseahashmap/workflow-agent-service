@@ -96,6 +96,26 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
     }
 
     @Override
+    public int deleteDraftConnector(String tenantCode, long connectorId) {
+        return jdbc.update("""
+                DELETE FROM mcp_connector connector
+                WHERE connector.tenant_code = :tenantCode
+                  AND connector.id = :connectorId
+                  AND connector.status = 'DRAFT'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM mcp_connector_version version
+                      JOIN mcp_tool_catalog_version catalog
+                        ON catalog.connector_version_id = version.id
+                       AND catalog.tenant_code = version.tenant_code
+                      WHERE version.connector_id = connector.id
+                        AND version.tenant_code = connector.tenant_code
+                        AND catalog.status = 'PUBLISHED'
+                  )
+                """, Map.of("tenantCode", tenantCode, "connectorId", connectorId));
+    }
+
+    @Override
     public int nextConnectorVersion(String tenantCode, long connectorId) {
         Integer version = jdbc.queryForObject("""
                 SELECT COALESCE(MAX(version), 0) + 1
@@ -260,6 +280,33 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
         if (versionRows == 0) {
             throw new IllegalStateException("Only a published MCP snapshot can be bound to a draft Agent version");
         }
+    }
+
+    @Override
+    public void unbindSnapshotFromAgentVersion(String tenantCode, long agentVersionId, long snapshotId) {
+        int deleted = jdbc.update("""
+                DELETE FROM agent_version_mcp_tool_binding
+                WHERE tenant_code = :tenantCode AND agent_version_id = :agentVersionId
+                  AND tool_snapshot_id = :snapshotId
+                  AND EXISTS (
+                      SELECT 1 FROM agent_definition_version version
+                      WHERE version.tenant_code = :tenantCode
+                        AND version.id = :agentVersionId AND version.status = 'DRAFT'
+                  )
+                """, Map.of("tenantCode", tenantCode, "agentVersionId", agentVersionId,
+                "snapshotId", snapshotId));
+        if (deleted == 0) {
+            return;
+        }
+        jdbc.update("""
+                UPDATE agent_definition_version version
+                SET tool_set_json = version.tool_set_json - snapshot.registry_code
+                FROM mcp_tool_snapshot snapshot
+                WHERE version.tenant_code = :tenantCode AND version.id = :agentVersionId
+                  AND version.status = 'DRAFT' AND snapshot.tenant_code = :tenantCode
+                  AND snapshot.id = :snapshotId
+                """, Map.of("tenantCode", tenantCode, "agentVersionId", agentVersionId,
+                "snapshotId", snapshotId));
     }
 
     private McpConnectorVersion mapConnectorVersion(java.sql.ResultSet rs) throws java.sql.SQLException {

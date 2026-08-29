@@ -95,6 +95,31 @@ public class JdbcAgentDefinitionRepository implements AgentDefinitionRepository 
                 definitionParameters(definition));
     }
 
+    @Override
+    public boolean deleteIfUnused(String tenantCode, long id) {
+        int affected = jdbcTemplate.update("""
+                DELETE FROM agent_definition definition
+                WHERE definition.tenant_code = :tenantCode
+                  AND definition.id = :id
+                  AND NOT EXISTS (
+                      SELECT 1 FROM agent_definition_version version
+                      WHERE version.tenant_code = definition.tenant_code
+                        AND version.definition_id = definition.id
+                        AND version.status = 'PUBLISHED'
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM agent_run run
+                      JOIN agent_definition_version version
+                        ON version.id = run.agent_version_id
+                       AND version.tenant_code = run.tenant_code
+                      WHERE run.tenant_code = definition.tenant_code
+                        AND version.definition_id = definition.id
+                  )
+                """, Map.of("tenantCode", tenantCode, "id", id));
+        return affected == 1;
+    }
+
     private Map<String, Object> definitionParameters(AgentDefinition definition) {
         var parameters = new java.util.HashMap<String, Object>();
         parameters.put("id", definition.id());

@@ -19,6 +19,8 @@ public interface AgentDefinitionService {
 
     AgentDefinitionView update(long id, AgentDefinitionCommand command);
 
+    void delete(long id);
+
     List<AgentVersionView> versions(long definitionId);
 
     AgentVersionView createDraft(long definitionId);

@@ -81,6 +81,16 @@ public class McpCatalogServiceImpl implements McpCatalogService {
     }
 
     @Override
+    @Transactional
+    public void deleteDraftConnector(long connectorId) {
+        String tenant = tenantProvider.current().tenantCode();
+        if (repository.deleteDraftConnector(tenant, connectorId) == 0) {
+            throw new BusinessException(ErrorCode.CONFLICT,
+                    "Only an unused draft MCP connector can be deleted");
+        }
+    }
+
+    @Override
     public McpDiscoveryView discover(long connectorVersionId) {
         String tenant = tenantProvider.current().tenantCode();
         McpConnectorVersion connector = repository.findConnectorVersion(tenant, connectorVersionId)
@@ -123,6 +133,26 @@ public class McpCatalogServiceImpl implements McpCatalogService {
     @Transactional
     public void bind(long agentVersionId, long toolSnapshotId) {
         repository.bindSnapshotToAgentVersion(tenantProvider.current().tenantCode(), agentVersionId, toolSnapshotId);
+    }
+
+    @Override
+    @Transactional
+    public void unbind(long agentVersionId, long toolSnapshotId) {
+        repository.unbindSnapshotFromAgentVersion(tenantProvider.current().tenantCode(), agentVersionId, toolSnapshotId);
+    }
+
+    @Override
+    public List<McpDiscoveryView.ToolView> publishedTools(long catalogVersionId) {
+        String tenant = tenantProvider.current().tenantCode();
+        McpToolCatalogVersion catalog = repository.findCatalog(tenant, catalogVersionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "MCP catalog version not found"));
+        if (!"PUBLISHED".equals(catalog.status())) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Only published MCP catalog tools can be used by an Agent");
+        }
+        return repository.findSnapshots(tenant, catalogVersionId).stream()
+                .map(snapshot -> new McpDiscoveryView.ToolView(snapshot.id(), snapshot.registryToolCode(),
+                        snapshot.toolName(), snapshot.description(), snapshot.inputSchema()))
+                .toList();
     }
 
     private String fingerprint(Object value) {

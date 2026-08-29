@@ -576,6 +576,17 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /mcp/connectors/{id}:
+    delete:
+      tags: [Agent]
+      operationId: deleteDraftMcpConnector
+      summary: Delete an unused draft MCP connector
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: MCP connector deleted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /mcp/connector-versions/{id}/discover:
     post:
       tags: [Agent]
@@ -598,6 +609,17 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /mcp/catalog-versions/{id}/tools:
+    get:
+      tags: [Agent]
+      operationId: listPublishedMcpTools
+      summary: List tools from a published MCP catalog snapshot
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: Published MCP tools, content: { application/json: { schema: { $ref: '#/components/schemas/McpToolViewListApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /mcp/agent-versions/{agentVersionId}/tools/{toolSnapshotId}:
     post:
       tags: [Agent]
@@ -609,6 +631,17 @@ paths:
       responses:
         '200': { description: MCP tool bound, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Agent]
+      operationId: unbindMcpToolFromAgentVersion
+      summary: Remove a MCP tool snapshot from a draft Agent version
+      parameters:
+        - { name: agentVersionId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: toolSnapshotId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: MCP tool unbound, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /workflow/process/status:
@@ -748,6 +781,24 @@ paths:
       responses:
         '200': { description: Assignment rule deleted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
   /agents/{id}:
+    delete:
+      tags: [Agent]
+      operationId: deleteAgent
+      summary: Delete an unused Agent definition
+      description: Deletes only a draft-only Agent definition with no execution history. Published definitions are retained for workflow and audit compatibility.
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200':
+          description: Agent deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
     post:
       tags: [Agent]
       operationId: updateAgent
@@ -1371,6 +1422,14 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/McpDiscovery' } }
+    McpToolViewListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/McpToolSnapshot' }
 
     BrowserAuthResponse:
       type: object

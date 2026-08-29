@@ -9,7 +9,10 @@ import java.util.List;
 public interface McpCatalogService {
     List<McpConnectorSummaryView> list(String tenantCode);
     McpConnectorVersionView create(McpConnectorCommand command);
+    void deleteDraftConnector(long connectorId);
     McpDiscoveryView discover(long connectorVersionId);
     void publish(long catalogVersionId);
     void bind(long agentVersionId, long toolSnapshotId);
+    void unbind(long agentVersionId, long toolSnapshotId);
+    List<McpDiscoveryView.ToolView> publishedTools(long catalogVersionId);
 }
