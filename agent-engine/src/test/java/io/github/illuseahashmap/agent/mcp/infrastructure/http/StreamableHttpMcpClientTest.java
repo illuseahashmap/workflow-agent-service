@@ -97,10 +97,17 @@ class StreamableHttpMcpClientTest {
                 .setHeader("Mcp-Session-Id", "session-1")
                 .setBody("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-03-26\"}}"));
         server.enqueue(new MockResponse().setResponseCode(202));
+        String toolJson = "{\"name\":\"employee_directory\","
+                + "\"description\":\"Read only\","
+                + "\"inputSchema\":{\"type\":\"object\"}}";
+        String listResponse = "{\"jsonrpc\":\"2.0\",\"id\":2,"
+                + "\"result\":{\"tools\":[" + toolJson + "]}}";
+        String listSse = String.join("\n\n",
+                "data: {\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}",
+                "data: [" + listResponse + "]");
         server.enqueue(new MockResponse()
                 .setHeader("Content-Type", "text/event-stream")
-                .setBody("data: {\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}\n\n"
-                        + "data: [{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"name\":\"employee_directory\",\"description\":\"Read only\",\"inputSchema\":{\"type\":\"object\"}}]}}]\n\n"));
+                .setBody(listSse));
         server.enqueue(new MockResponse()
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Li Si, Platform\"}]}}"));
