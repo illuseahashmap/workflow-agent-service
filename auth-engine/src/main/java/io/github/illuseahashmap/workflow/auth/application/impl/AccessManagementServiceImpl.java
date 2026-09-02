@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
+import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,16 @@ public class AccessManagementServiceImpl implements AccessManagementService {
         return membershipRepository.findMembers(tenantCode, keyword).stream()
                 .map(this::toView)
                 .toList();
+    }
+
+    @Override
+    public PageResult<TenantMemberView> pageMembers(String keyword, Integer pageNum, Integer pageSize) {
+        int normalizedPageNum = normalizePageNum(pageNum);
+        int normalizedPageSize = normalizePageSize(pageSize);
+        PageSlice<AuthMembershipRepository.TenantMember> page = membershipRepository.pageEnabledMembers(
+                currentTenantCode(), keyword, normalizedPageNum, normalizedPageSize);
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
+                page.items().stream().map(this::toView).toList());
     }
 
     @Override
@@ -121,6 +133,16 @@ public class AccessManagementServiceImpl implements AccessManagementService {
     }
 
     @Override
+    public PageResult<TenantRoleView> pageRoles(Integer pageNum, Integer pageSize) {
+        int normalizedPageNum = normalizePageNum(pageNum);
+        int normalizedPageSize = normalizePageSize(pageSize);
+        PageSlice<AuthAuthorizationRepository.RoleDefinition> page = authorizationRepository.pageRoles(
+                currentTenantCode(), normalizedPageNum, normalizedPageSize);
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
+                page.items().stream().map(this::toRoleView).toList());
+    }
+
+    @Override
     @Transactional
     public TenantRoleView saveRole(SaveTenantRoleRequest request) {
         String tenantCode = currentTenantCode();
@@ -151,6 +173,19 @@ public class AccessManagementServiceImpl implements AccessManagementService {
         return new TenantMemberView(member.userId(), member.username(), member.displayName(),
                 member.userEnabled() && member.membershipEnabled(),
                 member.tenantRoleCodes(), member.globalRoleCodes(), member.joinedAt());
+    }
+
+    private TenantRoleView toRoleView(AuthAuthorizationRepository.RoleDefinition role) {
+        return new TenantRoleView(role.roleCode(), role.roleName(), role.description(), role.enabled(),
+                BUILT_IN_ROLE_CODES.contains(role.roleCode()), role.permissions());
+    }
+
+    private int normalizePageNum(Integer value) {
+        return value == null || value < 1 ? 1 : value;
+    }
+
+    private int normalizePageSize(Integer value) {
+        return value == null || value < 1 ? 20 : Math.min(value, 100);
     }
 
     private void requireMembership(String userId, String tenantCode) {

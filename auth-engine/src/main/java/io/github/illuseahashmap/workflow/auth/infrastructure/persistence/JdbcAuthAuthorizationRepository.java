@@ -2,6 +2,7 @@ package io.github.illuseahashmap.workflow.auth.infrastructure.persistence;
 
 import io.github.illuseahashmap.workflow.auth.domain.AuthAuthorizationRepository;
 import io.github.illuseahashmap.workflow.auth.domain.PermissionScope;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -129,6 +130,44 @@ public class JdbcAuthAuthorizationRepository implements AuthAuthorizationReposit
                     Set.copyOf(permissionsByRole.getOrDefault(role.roleCode(), Set.of()))));
         }
         return List.copyOf(definitions);
+    }
+
+    @Override
+    public PageSlice<RoleDefinition> pageRoles(String tenantCode, int pageNumber, int pageSize) {
+        Long total = jdbcClient.sql("SELECT COUNT(*) FROM auth_role WHERE tenant_code = :tenantCode")
+                .param("tenantCode", tenantCode).query(Long.class).single();
+        List<RoleRow> roles = jdbcClient.sql("""
+                        SELECT role_code, role_name, description, enabled
+                        FROM auth_role
+                        WHERE tenant_code = :tenantCode
+                        ORDER BY role_code
+                        LIMIT :pageSize OFFSET :offset
+                        """)
+                .param("tenantCode", tenantCode).param("pageSize", pageSize)
+                .param("offset", (pageNumber - 1) * pageSize)
+                .query((resultSet, rowNumber) -> new RoleRow(
+                        resultSet.getString("role_code"), resultSet.getString("role_name"),
+                        resultSet.getString("description"), resultSet.getInt("enabled") == 1))
+                .list();
+        if (roles.isEmpty()) return new PageSlice<>(total == null ? 0 : total, pageNumber, pageSize, List.of());
+        List<String> roleCodes = roles.stream().map(RoleRow::roleCode).toList();
+        Map<String, Set<String>> permissionsByRole = new LinkedHashMap<>();
+        jdbcClient.sql("""
+                        SELECT role_code, permission_code
+                        FROM auth_role_permission
+                        WHERE tenant_code = :tenantCode AND role_code IN (:roleCodes)
+                        ORDER BY role_code, permission_code
+                        """)
+                .param("tenantCode", tenantCode).param("roleCodes", roleCodes)
+                .query((resultSet, rowNumber) -> new RolePermissionRow(
+                        resultSet.getString("role_code"), resultSet.getString("permission_code")))
+                .list().forEach(row -> permissionsByRole.computeIfAbsent(row.roleCode(), ignored -> new LinkedHashSet<>())
+                        .add(row.permissionCode()));
+        List<RoleDefinition> definitions = roles.stream()
+                .map(role -> new RoleDefinition(role.roleCode(), role.roleName(), role.description(), role.enabled(),
+                        Set.copyOf(permissionsByRole.getOrDefault(role.roleCode(), Set.of()))))
+                .toList();
+        return new PageSlice<>(total == null ? 0 : total, pageNumber, pageSize, definitions);
     }
 
     @Override

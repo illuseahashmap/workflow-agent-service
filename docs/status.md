@@ -26,6 +26,7 @@
 - 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；由于真实 Retriever、权限策略和应用服务尚未装配，V35 已将该工具默认禁用且撤销租户授权，真实 pgvector 检索和摄取 Worker 仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
 - 已完成 MCP-1/MCP-2 后端只读切片和基础配置闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；新增确定性 HTTPS 协议集成测试，覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。当前仍未宣称生产级出站安全和真实容器化 Flowable 闭环。
+- 前端状态展示已收敛到公共 `StatusBadge`/`TableTagCell` 契约：状态、版本、分类和筛选标签分别使用稳定变体；标签不再在组件内部截断，原始状态码通过悬浮提示保留；流程定义、Agent、工具目录、成员角色、租户、派单规则、参与人和审计页面统一状态列对齐。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
 - 已完成首节点及审批后 Agent 输入契约：后端按真实路径生成字段，前端动态渲染，命令边界再次校验必填输入。

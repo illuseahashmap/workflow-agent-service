@@ -7,9 +7,11 @@ import io.github.illuseahashmap.agent.mcp.domain.McpToolCatalogVersion;
 import io.github.illuseahashmap.agent.mcp.domain.McpToolSnapshot;
 import java.util.List;
 import java.util.Optional;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 
 public interface McpCatalogRepository {
     List<McpConnectorSummary> findConnectorSummaries(String tenantCode);
+    PageSlice<McpConnectorSummary> pageConnectorSummaries(String tenantCode, int pageNumber, int pageSize);
     McpConnector saveConnector(McpConnector connector);
     McpConnectorVersion saveConnectorVersion(McpConnectorVersion version);
     int deleteDraftConnector(String tenantCode, long connectorId);

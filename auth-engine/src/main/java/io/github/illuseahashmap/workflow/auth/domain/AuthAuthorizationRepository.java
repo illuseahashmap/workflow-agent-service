@@ -2,6 +2,7 @@ package io.github.illuseahashmap.workflow.auth.domain;
 
 import java.util.Set;
 import java.util.List;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 
 public interface AuthAuthorizationRepository {
 
@@ -14,6 +15,8 @@ public interface AuthAuthorizationRepository {
     Set<String> findPermissionCodes(String userId, String tenantCode);
 
     List<RoleDefinition> findRoles(String tenantCode);
+
+    PageSlice<RoleDefinition> pageRoles(String tenantCode, int pageNumber, int pageSize);
 
     List<PermissionDefinition> findPermissions();
 

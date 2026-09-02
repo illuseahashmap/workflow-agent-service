@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.List;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
+import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +64,20 @@ public class McpCatalogServiceImpl implements McpCatalogService {
                         summary.connectorVersionStatus(), summary.latestCatalogVersionId(),
                         summary.latestCatalogStatus(), summary.toolCount()))
                 .toList();
+    }
+
+    @Override
+    public PageResult<McpConnectorSummaryView> page(String tenantCode, Integer pageNum, Integer pageSize) {
+        int normalizedPageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int normalizedPageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
+        PageSlice<io.github.illuseahashmap.agent.mcp.domain.McpConnectorSummary> page =
+                repository.pageConnectorSummaries(tenantCode, normalizedPageNum, normalizedPageSize);
+        return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(), page.items().stream()
+                .map(summary -> new McpConnectorSummaryView(summary.connectorId(), summary.connectorCode(),
+                        summary.connectorName(), summary.connectorStatus(), summary.connectorVersionId(),
+                        summary.connectorVersion(), summary.endpointUrl(), summary.protocolVersion(),
+                        summary.connectorVersionStatus(), summary.latestCatalogVersionId(),
+                        summary.latestCatalogStatus(), summary.toolCount())).toList());
     }
 
     @Override

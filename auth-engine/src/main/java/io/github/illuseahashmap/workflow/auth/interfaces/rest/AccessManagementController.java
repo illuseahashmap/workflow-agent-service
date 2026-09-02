@@ -8,6 +8,7 @@ import io.github.illuseahashmap.workflow.auth.application.dto.TenantMemberView;
 import io.github.illuseahashmap.workflow.auth.application.dto.TenantRoleView;
 import io.github.illuseahashmap.workflow.auth.application.dto.UpdateMemberRolesRequest;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
+import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,8 +32,11 @@ public class AccessManagementController {
 
     @GetMapping("/members")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('member:manage')")
-    public ApiResponse<List<TenantMemberView>> members(@RequestParam(required = false) String keyword) {
-        return ApiResponse.ok(accessManagementService.members(keyword));
+    public ApiResponse<PageResult<TenantMemberView>> members(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+        return ApiResponse.ok(accessManagementService.pageMembers(keyword, pageNum, pageSize));
     }
 
     @PostMapping("/members")
@@ -59,8 +63,10 @@ public class AccessManagementController {
 
     @GetMapping("/roles")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAnyAuthority('member:manage','role:manage')")
-    public ApiResponse<List<TenantRoleView>> roles() {
-        return ApiResponse.ok(accessManagementService.roles());
+    public ApiResponse<PageResult<TenantRoleView>> roles(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+        return ApiResponse.ok(accessManagementService.pageRoles(pageNum, pageSize));
     }
 
     @PostMapping("/roles")

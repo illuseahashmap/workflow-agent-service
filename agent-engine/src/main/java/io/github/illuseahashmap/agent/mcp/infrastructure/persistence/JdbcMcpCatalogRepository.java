@@ -9,6 +9,7 @@ import io.github.illuseahashmap.agent.mcp.domain.McpToolSnapshot;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -62,6 +63,44 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
                 rs.getString("connector_version_status"),
                 rs.getObject("catalog_id", Long.class), rs.getString("catalog_status"),
                 rs.getInt("tool_count")));
+    }
+
+    @Override
+    public PageSlice<McpConnectorSummary> pageConnectorSummaries(String tenantCode, int pageNumber, int pageSize) {
+        String base = """
+                FROM mcp_connector connector
+                JOIN LATERAL (
+                    SELECT * FROM mcp_connector_version candidate
+                    WHERE candidate.tenant_code = connector.tenant_code AND candidate.connector_id = connector.id
+                    ORDER BY candidate.version DESC LIMIT 1
+                ) version ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT * FROM mcp_tool_catalog_version candidate
+                    WHERE candidate.tenant_code = version.tenant_code AND candidate.connector_version_id = version.id
+                    ORDER BY candidate.discovered_at DESC, candidate.id DESC LIMIT 1
+                ) catalog ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT COUNT(*)::int AS tool_count FROM mcp_tool_snapshot snapshot
+                    WHERE snapshot.tenant_code = catalog.tenant_code AND snapshot.catalog_version_id = catalog.id
+                ) tool_counts ON TRUE
+                WHERE connector.tenant_code = :tenantCode
+                """;
+        Long total = jdbc.queryForObject("SELECT COUNT(*) " + base, Map.of("tenantCode", tenantCode), Long.class);
+        List<McpConnectorSummary> records = jdbc.query("""
+                SELECT connector.id AS connector_id, connector.connector_code, connector.connector_name,
+                       connector.status AS connector_status, version.id AS connector_version_id,
+                       version.version AS connector_version, version.endpoint_url, version.protocol_version,
+                       version.status AS connector_version_status, catalog.id AS catalog_id,
+                       catalog.status AS catalog_status, COALESCE(tool_counts.tool_count, 0) AS tool_count
+                """ + base + " ORDER BY connector.updated_at DESC, connector.id DESC LIMIT :limit OFFSET :offset",
+                Map.of("tenantCode", tenantCode, "limit", pageSize, "offset", (pageNumber - 1) * pageSize),
+                (rs, row) -> new McpConnectorSummary(rs.getLong("connector_id"), rs.getString("connector_code"),
+                        rs.getString("connector_name"), rs.getString("connector_status"),
+                        rs.getLong("connector_version_id"), rs.getInt("connector_version"),
+                        rs.getString("endpoint_url"), rs.getString("protocol_version"),
+                        rs.getString("connector_version_status"), rs.getObject("catalog_id", Long.class),
+                        rs.getString("catalog_status"), rs.getInt("tool_count")));
+        return new PageSlice<>(total == null ? 0 : total, pageNumber, pageSize, records);
     }
 
     @Override

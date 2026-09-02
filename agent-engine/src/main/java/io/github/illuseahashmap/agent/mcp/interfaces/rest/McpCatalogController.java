@@ -5,6 +5,7 @@ import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorCommand;
 import io.github.illuseahashmap.agent.mcp.application.dto.McpDiscoveryView;
 import io.github.illuseahashmap.agent.mcp.application.dto.McpConnectorVersionView;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
+import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,8 +32,10 @@ public class McpCatalogController {
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/connectors")
-    public ApiResponse<List<McpConnectorSummaryView>> list() {
-        return ApiResponse.ok(service.list(tenantProvider.current().tenantCode()));
+    public ApiResponse<PageResult<McpConnectorSummaryView>> list(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "1") Integer pageNum,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") Integer pageSize) {
+        return ApiResponse.ok(service.page(tenantProvider.current().tenantCode(), pageNum, pageSize));
     }
 
     @PostMapping("/connectors")
