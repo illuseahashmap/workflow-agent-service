@@ -28,9 +28,9 @@ AgentVersion、AgentRun 和人工确认边界。
 
 仍未完成真正生产级闭环的部分：
 
-- 没有真实 MCP Server 容器化集成、Flowable 继续运行和 Worker 重启故障测试；
-- 尚未完成 SSRF/DNS 重绑定、私网/元数据地址拒绝、限流、熔断和租户公平配额；
-- 当前每次调用重新建立 MCP 会话，尚无连接池/会话复用和凭据轮换；
+- 没有真实 MCP Server 容器化集成、Flowable 继续运行和 Worker 强杀故障测试；
+- 已完成 MCP 调用入口的跨实例租户令牌桶、并发硬上限和连接器熔断，但真实多实例压力与配额对账仍待验收；
+- 已完成有界 TTL 会话复用和凭据指纹轮换；进程重启不复用内存会话，而是由持久化 AgentRun/Checkpoint 驱动重新初始化；
 - MCP 错误已经映射到 AgentFailure，但完整 MCP SDK/批量 JSON-RPC/SSE 生命周期兼容性仍需真实协议测试后确认；
 - 已提供连接器创建、发现、审核发布、未发布草稿删除和 Agent 版本工具绑定入口；删除遵守“未发布、无运行历史、无流程引用”的生命周期边界。仍不支持写工具、stdio 或运行时自动发现。
 
@@ -164,6 +164,7 @@ Registry 校验 → MCP 调用 → 结果回注 → AgentRun 完成”的可重�
 ### MCP-3：可靠性与安全闭环
 
 - 完成 SSRF/DNS 重绑定负面测试、凭据轮换、限流、熔断和租户公平配额。
+- 已完成调用入口的租户限流/并发硬上限、连接器熔断、会话复用、凭据指纹轮换和 Worker 接管后 Checkpoint 恢复单测；仍需真实多实例、强杀和容器化验收。
 - 覆盖超时、断连、重复请求、协议不兼容、工具删除、Schema 漂移和服务重启。
 - 审计关联 tenant、AgentVersion、Run/Attempt/Step、ConnectorVersion、CatalogVersion、
   ToolSnapshot、幂等键和 Trace ID。

@@ -23,6 +23,12 @@ import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.provider.infrastructure.mock.MockModelProviderAdapter;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionSnapshot;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutorRegistry;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunLeaseHeartbeat;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRuntimeMetrics;
+import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRun;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
 import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
@@ -144,6 +150,38 @@ class AgentRunWorkerServiceImplTest {
         assertThat(run.status()).isEqualTo(AgentRunStatus.FAILED);
     }
 
+    @Test
+    void workerTakeoverPassesTheDurableCheckpointToTheNextAttempt() {
+        AgentRun run = queuedRun();
+        configureClaim(run);
+        when(executionRepository.findLatestCheckpoint("tenant-a", 10L)).thenReturn(Optional.of(
+                new AgentRunExecutionRepository.CheckpointSnapshot(2, "STEP_COMPLETED",
+                        "{\"logicalStepId\":\"mcp:1\",\"nextStep\":2,\"context\":\"tool result\"}")));
+        AgentDefinitionVersion platformVersion = version(30L, AgentExecutionMode.PLATFORM_AGENT);
+        when(versionRepository.findByVersionId("tenant-a", 20L)).thenReturn(Optional.of(platformVersion));
+        when(providerRepository.findById("tenant-a", 30L)).thenReturn(Optional.of(provider(AgentProviderType.MOCK)));
+        AgentExecutor executor = mock(AgentExecutor.class);
+        when(executor.executionMode()).thenReturn(AgentExecutionMode.PLATFORM_AGENT);
+        when(executor.execute(any())).thenReturn(new AgentExecutor.Result(30L, "mock-model",
+                new ModelProviderResponse("{\"answer\":\"recovered\"}", "mock-model", "request", "stop",
+                        1, 1, 0, 1)));
+        AgentRunWorkerServiceImpl service = new AgentRunWorkerServiceImpl(
+                executionRepository, versionRepository, providerRepository,
+                new AgentExecutorRegistry(List.of(executor)), new ObjectMapper(),
+                new TransactionTemplate(transactionManager), "test-worker", 30, 3, 2,
+                AgentRunEventPublisher.NOOP, AgentRunLeaseHeartbeat.NOOP,
+                new DefaultAgentResultPolicy(), AgentRuntimeMetrics.NOOP,
+                ExponentialJitterRetryBackoffPolicy.defaults(java.util.random.RandomGenerator.getDefault()),
+                new AgentRecoveryPolicy(), new AgentFailureMapper());
+
+        assertThat(service.executeNext()).isTrue();
+
+        ArgumentCaptor<AgentExecutor.Command> command = ArgumentCaptor.forClass(AgentExecutor.Command.class);
+        verify(executor).execute(command.capture());
+        assertThat(command.getValue().checkpointStateJson()).contains("tool result");
+        assertThat(command.getValue().runId()).isEqualTo(10L);
+    }
+
     private AgentRunWorkerServiceImpl service(ModelProviderPort providerPort) {
         return new AgentRunWorkerServiceImpl(
                 executionRepository,
@@ -180,6 +218,10 @@ class AgentRunWorkerServiceImplTest {
     }
 
     private AgentDefinitionVersion version(long providerId) {
+        return version(providerId, AgentExecutionMode.MODEL_ONLY);
+    }
+
+    private AgentDefinitionVersion version(long providerId, AgentExecutionMode executionMode) {
         OffsetDateTime now = OffsetDateTime.now();
         return new AgentDefinitionVersion(
                 20L,
@@ -187,12 +229,14 @@ class AgentRunWorkerServiceImplTest {
                 1L,
                 1,
                 AgentVersionStatus.PUBLISHED,
+                executionMode,
                 providerId,
                 "mock-model",
                 "system prompt",
                 120,
                 AgentFailurePolicy.FAIL_PROCESS,
                 null,
+                "{}",
                 "admin",
                 "admin",
                 now,

@@ -4,11 +4,13 @@ import io.github.illuseahashmap.agent.mcp.application.port.McpCatalogRepository;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
 import io.github.illuseahashmap.agent.mcp.application.port.McpFailureKind;
+import io.github.illuseahashmap.agent.mcp.application.port.McpResourceGovernance;
 import io.github.illuseahashmap.agent.mcp.domain.McpConnectorVersion;
 import io.github.illuseahashmap.agent.mcp.domain.McpToolSnapshot;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentToolResolver;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Adapts one published read-only MCP snapshot to the existing AgentTool contract. */
@@ -17,10 +19,18 @@ public class McpAgentToolAdapter implements AgentToolResolver {
 
     private final McpCatalogRepository repository;
     private final McpClientPort client;
+    private final McpResourceGovernance resourceGovernance;
 
     public McpAgentToolAdapter(McpCatalogRepository repository, McpClientPort client) {
+        this(repository, client, McpResourceGovernance.NOOP);
+    }
+
+    @Autowired
+    public McpAgentToolAdapter(McpCatalogRepository repository, McpClientPort client,
+                               McpResourceGovernance resourceGovernance) {
         this.repository = repository;
         this.client = client;
+        this.resourceGovernance = resourceGovernance;
     }
 
     @Override
@@ -60,14 +70,25 @@ public class McpAgentToolAdapter implements AgentToolResolver {
                             false, "MCP connector version not found"));
             String toolName = toolCode.substring(toolCode.indexOf(':', 4) + 1);
             java.time.Instant deadline = java.time.Instant.now().plus(request.timeout());
-            McpClientPort.Session session = client.initialize(connector, remaining(deadline));
-            McpClientPort.CallResult result = client.callTool(session, toolName, request.arguments(),
-                    remaining(deadline));
-            if (result.isError()) {
-                throw new McpClientException("MCP_TOOL_ERROR", McpFailureKind.TOOL_ERROR, false,
-                        "MCP tool returned an error result");
+            McpResourceGovernance.Permit permit = resourceGovernance.acquire(
+                    request.tenantCode(), connector.id(), remaining(deadline));
+            try {
+                McpClientPort.Session session = client.initialize(connector, remaining(deadline));
+                McpClientPort.CallResult result = client.callTool(session, toolName, request.arguments(),
+                        remaining(deadline));
+                if (result.isError()) {
+                    throw new McpClientException("MCP_TOOL_ERROR", McpFailureKind.TOOL_ERROR, false,
+                            "MCP tool returned an error result");
+                }
+                resourceGovernance.succeeded(permit);
+                return new Result(result.output(), request.idempotencyKey());
+            } catch (McpClientException exception) {
+                resourceGovernance.failed(permit, exception.failureKind());
+                throw exception;
+            } catch (RuntimeException exception) {
+                resourceGovernance.failed(permit, McpFailureKind.UNAVAILABLE);
+                throw exception;
             }
-            return new Result(result.output(), request.idempotencyKey());
         }
 
         private java.time.Duration remaining(java.time.Instant deadline) {

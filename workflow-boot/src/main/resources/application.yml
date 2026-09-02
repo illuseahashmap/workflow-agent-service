@@ -31,6 +31,17 @@ workflow:
   agent:
     platform:
       max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
+    mcp:
+      session-cache:
+        max-entries: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_MAX_ENTRIES:256}
+        ttl-seconds: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_TTL_SECONDS:300}
+      governance:
+        max-concurrent-per-tenant: ${WORKFLOW_AGENT_MCP_MAX_CONCURRENT_PER_TENANT:2}
+        requests-per-minute-per-tenant: ${WORKFLOW_AGENT_MCP_REQUESTS_PER_MINUTE_PER_TENANT:60}
+        burst-per-tenant: ${WORKFLOW_AGENT_MCP_BURST_PER_TENANT:10}
+        circuit-failure-threshold: ${WORKFLOW_AGENT_MCP_CIRCUIT_FAILURE_THRESHOLD:5}
+        circuit-open-seconds: ${WORKFLOW_AGENT_MCP_CIRCUIT_OPEN_SECONDS:30}
+        permit-seconds: ${WORKFLOW_AGENT_MCP_PERMIT_SECONDS:180}
     provider:
       egress:
         allow-private-networks: ${WORKFLOW_AGENT_PROVIDER_ALLOW_PRIVATE_NETWORKS:false}

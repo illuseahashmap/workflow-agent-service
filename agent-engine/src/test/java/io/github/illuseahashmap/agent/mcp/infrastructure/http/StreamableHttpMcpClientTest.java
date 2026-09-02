@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.mcp.application.port.McpCredentialResolver;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
+import io.github.illuseahashmap.agent.mcp.application.port.McpSessionCache;
+import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
 import io.github.illuseahashmap.agent.mcp.domain.McpConnectorVersion;
 import java.time.Duration;
 import java.net.http.HttpClient;
@@ -24,6 +26,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class StreamableHttpMcpClientTest {
 
@@ -81,6 +84,35 @@ class StreamableHttpMcpClientTest {
     }
 
     @Test
+    void credentialRotationInvalidatesTheOldSessionBeforeRemoteCall() throws Exception {
+        String[] authorization = {"Bearer old"};
+        McpSessionCache cache = Mockito.mock(McpSessionCache.class);
+        StreamableHttpMcpClient client = new StreamableHttpMcpClient(new ObjectMapper(),
+                (McpCredentialResolver) (tenant, reference) -> authorization[0],
+                HttpClient.newHttpClient(), cache);
+        McpConnectorVersion connector = new McpConnectorVersion(1L, "tenant-a", 1L, 1,
+                "https://mcp.example.test/mcp", "2025-03-26", "credential", 10, "PUBLISHED");
+        McpClientPort.Session oldSession = new McpClientPort.Session(connector, "session-1", "2025-03-26",
+                fingerprint("Bearer old"));
+        authorization[0] = "Bearer rotated";
+
+        assertThatThrownBy(() -> client.listTools(oldSession, Duration.ofSeconds(1)))
+                .isInstanceOf(McpClientException.class)
+                .hasMessageContaining("rotated");
+        Mockito.verify(cache).invalidate(oldSession);
+    }
+
+    private String fingerprint(String value) throws Exception {
+        byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        StringBuilder result = new StringBuilder();
+        for (byte item : digest) {
+            result.append(String.format("%02x", item));
+        }
+        return result.toString();
+    }
+
+    @Test
     void completesHttpsInitializeListAndCallWithSessionAndSse() throws Exception {
         HeldCertificate certificate = new HeldCertificate.Builder()
                 .addSubjectAlternativeName("localhost")
@@ -121,11 +153,13 @@ class StreamableHttpMcpClientTest {
                 server.url("/mcp").toString(), "2025-03-26", "credential", 10, "PUBLISHED");
 
         var session = client.initialize(connector, Duration.ofSeconds(5));
+        var reusedSession = client.initialize(connector, Duration.ofSeconds(5));
         var tools = client.listTools(session, Duration.ofSeconds(5));
         var result = client.callTool(session, "employee_directory", java.util.Map.of("name", "张三"),
                 Duration.ofSeconds(5));
 
         assertThat(session.sessionId()).isEqualTo("session-1");
+        assertThat(reusedSession).isEqualTo(session);
         assertThat(tools).extracting(StreamableHttpMcpClient.Tool::name)
                 .containsExactly("employee_directory");
         assertThat(result.output()).contains("Li Si");

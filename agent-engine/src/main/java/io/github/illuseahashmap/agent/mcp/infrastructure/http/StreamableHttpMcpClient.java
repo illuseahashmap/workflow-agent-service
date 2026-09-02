@@ -7,6 +7,7 @@ import io.github.illuseahashmap.agent.mcp.application.port.McpClientPort;
 import io.github.illuseahashmap.agent.mcp.application.port.McpCredentialResolver;
 import io.github.illuseahashmap.agent.mcp.application.port.McpClientException;
 import io.github.illuseahashmap.agent.mcp.application.port.McpFailureKind;
+import io.github.illuseahashmap.agent.mcp.application.port.McpSessionCache;
 import io.github.illuseahashmap.agent.mcp.domain.McpConnectorVersion;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -32,24 +35,42 @@ public class StreamableHttpMcpClient implements McpClientPort {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final McpCredentialResolver credentialResolver;
+    private final McpSessionCache sessionCache;
     private final AtomicLong requestIds = new AtomicLong();
 
-    @Autowired
     public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver) {
         this(objectMapper, credentialResolver,
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+                new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300));
+    }
+
+    @Autowired
+    public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
+                                   McpSessionCache sessionCache) {
+        this(objectMapper, credentialResolver,
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), sessionCache);
     }
 
     StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
                             HttpClient httpClient) {
+        this(objectMapper, credentialResolver, httpClient, new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300));
+    }
+
+    StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
+                            HttpClient httpClient, McpSessionCache sessionCache) {
         this.objectMapper = objectMapper;
         this.credentialResolver = credentialResolver;
         this.httpClient = httpClient;
+        this.sessionCache = sessionCache;
     }
 
     @Override
     public Session initialize(McpConnectorVersion connector, Duration timeout) {
         requireHttps(connector.endpointUrl());
+        String credentialFingerprint = credentialFingerprint(connector);
+        var cached = sessionCache.find(connector, credentialFingerprint);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
         java.time.Instant deadline = java.time.Instant.now().plus(timeout);
         JsonNode result = request(connector, null, "initialize", Map.of(
                 "protocolVersion", connector.protocolVersion(),
@@ -61,20 +82,28 @@ public class StreamableHttpMcpClient implements McpClientPort {
             throw protocol("MCP_PROTOCOL_ERROR", "MCP initialize response has no protocolVersion");
         }
         String sessionId = result.path("_sessionId").asText(null);
-        Session session = new Session(connector, sessionId, protocolVersion);
+        Session session = new Session(connector, sessionId, protocolVersion, credentialFingerprint);
         notifyInitialized(session, remaining(deadline));
+        sessionCache.save(session);
         return session;
     }
 
     @Override
     public List<Tool> listTools(Session session, Duration timeout) {
+        ensureCredentialCurrent(session);
         List<Tool> tools = new ArrayList<>();
         java.time.Instant deadline = java.time.Instant.now().plus(timeout);
         String cursor = null;
         do {
             Map<String, Object> arguments = cursor == null ? Map.of() : Map.of("cursor", cursor);
-            JsonNode result = request(session.connector(), session.sessionId(), "tools/list", arguments,
-                    remaining(deadline));
+            JsonNode result;
+            try {
+                result = request(session.connector(), session.sessionId(), "tools/list", arguments,
+                        remaining(deadline));
+            } catch (McpClientException exception) {
+                invalidateOnSessionFailure(session, exception);
+                throw exception;
+            }
             JsonNode items = result.path("tools");
             if (!items.isArray() || items.size() > 200) {
                 throw protocol("MCP_PROTOCOL_ERROR", "MCP tools/list returned an invalid or oversized tool list");
@@ -97,12 +126,51 @@ public class StreamableHttpMcpClient implements McpClientPort {
 
     @Override
     public CallResult callTool(Session session, String toolName, Map<String, Object> arguments, Duration timeout) {
+        ensureCredentialCurrent(session);
         java.time.Instant deadline = java.time.Instant.now().plus(timeout);
-        JsonNode result = request(session.connector(), session.sessionId(), "tools/call",
-                Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments),
-                remaining(deadline));
+        JsonNode result;
+        try {
+            result = request(session.connector(), session.sessionId(), "tools/call",
+                    Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments),
+                    remaining(deadline));
+        } catch (McpClientException exception) {
+            invalidateOnSessionFailure(session, exception);
+            throw exception;
+        }
         boolean isError = result.path("isError").asBoolean(false);
         return new CallResult(result.path("content").toString(), isError);
+    }
+
+    private void ensureCredentialCurrent(Session session) {
+        String current = credentialFingerprint(session.connector());
+        if (!session.credentialFingerprint().isBlank() && !session.credentialFingerprint().equals(current)) {
+            sessionCache.invalidate(session);
+            throw new McpClientException("MCP_CREDENTIAL_ROTATED", McpFailureKind.UNAVAILABLE, true,
+                    "MCP credential rotated; session will be re-established");
+        }
+    }
+
+    private void invalidateOnSessionFailure(Session session, McpClientException exception) {
+        if (exception.failureKind() == McpFailureKind.AUTHENTICATION
+                || exception.failureKind() == McpFailureKind.PROTOCOL_ERROR) {
+            sessionCache.invalidate(session);
+        }
+    }
+
+    private String credentialFingerprint(McpConnectorVersion connector) {
+        String authorization = credentialResolver.resolveAuthorization(
+                connector.tenantCode(), connector.credentialRef());
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(
+                    (authorization == null ? "" : authorization).getBytes(StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder(digest.length * 2);
+            for (byte value : digest) {
+                result.append(String.format("%02x", value));
+            }
+            return result.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is required", exception);
+        }
     }
 
     private JsonNode request(McpConnectorVersion connector, String sessionId, String method,

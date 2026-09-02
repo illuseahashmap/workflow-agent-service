@@ -25,7 +25,7 @@
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
 - 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；由于真实 Retriever、权限策略和应用服务尚未装配，V35 已将该工具默认禁用且撤销租户授权，真实 pgvector 检索和摄取 Worker 仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
-- 已完成 MCP-1/MCP-2 后端只读切片和基础配置闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；新增确定性 HTTPS 协议集成测试，覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。当前仍未宣称生产级出站安全和真实容器化 Flowable 闭环。
+- 已完成 MCP-1/MCP-2 后端只读切片和基础配置闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；新增确定性 HTTPS 协议集成测试，覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全和真实容器化 Flowable 闭环。
 - 前端状态展示已收敛到公共 `StatusBadge`/`TableTagCell` 契约：状态、版本、分类和筛选标签分别使用稳定变体；标签不再在组件内部截断，原始状态码通过悬浮提示保留；流程定义、Agent、工具目录、成员角色、租户、派单规则、参与人和审计页面统一状态列对齐。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
@@ -52,7 +52,7 @@
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace 和 `knowledge_search` 工具边界已落地 | 完成真实摄取、pgvector/混合检索、Grounding、评测和多 Retriever 兼容验收 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片和确定性 HTTPS 协议切片已完成，绑定原子性、类型化错误和有界响应已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定、配额、熔断和恢复故障验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片和确定性 HTTPS 协议切片已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
 
 ## 三、下一阶段顺序
 
@@ -61,7 +61,7 @@
 3. 再完善 Agent Runtime：结果策略、Checkpoint 恢复、出站安全、公平调度、取消和人工确认。
 4. RAG 先执行阶段零治理前置，再按 RAG-1 至 RAG-4 建立受治理知识检索闭环；真实 Retriever、权限、Trace 和故障策略完成前保持 `knowledge_search` 禁用。
 5. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
-6. 先完成 MCP-2 收口：真实确定性 MCP Server 容器集成测试、HTTPS 出站安全、租户限流/熔断和重启恢复；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+6. 先完成 MCP-2 收口：真实确定性 MCP Server 容器集成测试、HTTPS 出站安全和多实例租户治理压力测试；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 7. 最后扩展任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
 
 ## 四、明确暂不做
