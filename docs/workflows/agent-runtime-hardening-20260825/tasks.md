@@ -1,0 +1,6 @@
+- [x] T-01 关闭 `knowledge_search` 的默认授权和自动启用 — AC-01
+- [x] T-02 稳定化工具幂等键并补充跨 Attempt/参数冲突测试 — AC-02
+- [x] T-03 实现版本化 Checkpoint 状态和新 Attempt 恢复入口 — AC-03
+- [x] T-04 限制工具修复 Prompt 的工具集合 — AC-04
+- [x] T-05 增加 AgentVersion 发布期工具注册/授权/Schema/模式校验 — AC-05
+- [x] T-06 更新测试、状态文档、问题清单和最终追踪记录 — AC-06

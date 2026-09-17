@@ -1,0 +1,133 @@
+name: Backend Verify
+
+on:
+  push:
+    branches:
+      - init
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Lint OpenAPI contract
+        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+
+      - name: Check OpenAPI endpoint coverage
+        run: |
+          npx --yes @redocly/cli@latest bundle docs/api/openapi.yaml \
+            --output "$RUNNER_TEMP/openapi-current.json" --ext json
+          node scripts/check-openapi-coverage.mjs "$RUNNER_TEMP/openapi-current.json" .
+          node scripts/check-openapi-response-models.mjs "$RUNNER_TEMP/openapi-current.json"
+
+      - name: Check OpenAPI compatibility
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          if ! git cat-file -e "origin/main:docs/api/openapi.yaml" 2>/dev/null; then
+            echo "No OpenAPI baseline exists on origin/main; compatibility check is not applicable yet."
+            exit 0
+          fi
+          git show "origin/main:docs/api/openapi.yaml" > "$RUNNER_TEMP/openapi-base.yaml"
+          npx --yes @redocly/cli@latest bundle "$RUNNER_TEMP/openapi-base.yaml" \
+            --output "$RUNNER_TEMP/openapi-base.json" --ext json
+          npx --yes @redocly/cli@latest bundle docs/api/openapi.yaml \
+            --output "$RUNNER_TEMP/openapi-current.json" --ext json
+          node scripts/check-openapi-compatibility.mjs \
+            "$RUNNER_TEMP/openapi-base.json" "$RUNNER_TEMP/openapi-current.json"
+
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Set up Node.js for quality checks
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify Docker infrastructure
+        run: docker info
+
+      - name: Verify all modules
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          mvn --batch-mode --no-transfer-progress --errors verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "Maven verification failed; publishing actionable diagnostics."
+            echo "::error title=Maven exit code::mvn verify exited with status $status"
+            {
+              echo '### Maven verification failure'
+              echo
+              echo "Exit code: $status"
+              echo 'Relevant Maven error lines:'
+              echo '```text'
+              grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" | tail -n 80 || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            grep -E '\[ERROR\]' "$RUNNER_TEMP/maven-verify.log" \
+              | tail -n 30 \
+              | while IFS= read -r line; do echo "::error title=Maven verify::$line"; done || true
+            tail -n 100 "$RUNNER_TEMP/maven-verify.log" \
+              | while IFS= read -r line; do echo "::error title=Maven tail::$line"; done || true
+            find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
+              | xargs -0 grep -E 'Tests run: [0-9]+, Failures: [1-9]|Tests run: [0-9]+, Failures: [0-9]+, Errors: [1-9]' \
+              | tail -n 20 \
+              | while IFS= read -r line; do echo "::error title=Failed test::$line"; done || true
+            echo "::group::Surefire context failure details"
+            find . -path '*/target/surefire-reports/*.txt' -type f -print0 \
+              | xargs -0 grep -l 'ApplicationContext failure threshold\|Failed to load ApplicationContext' \
+              | while IFS= read -r report; do
+                  echo "--- $report"
+                  sed -n '1,220p' "$report"
+                done || true
+            echo "::endgroup::"
+            exit "$status"
+          fi
+
+      - name: Verify required integration tests executed
+        run: node scripts/check-integration-test-results.mjs
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            **/target/surefire-reports/**
+            **/target/site/jacoco/**
+            **/target/spotbugsXml.xml
+          if-no-files-found: ignore
+          retention-days: 7

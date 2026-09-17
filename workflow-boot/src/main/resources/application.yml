@@ -1,0 +1,114 @@
+spring:
+  application:
+    name: workflow-agent-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: ${WORKFLOW_DB_URL}
+    username: ${WORKFLOW_DB_USERNAME}
+    password: ${WORKFLOW_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    baseline-version: 0
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+flowable:
+  database-schema-update: false
+  async-executor-activate: true
+  check-process-definitions: false
+
+workflow:
+  agent:
+    platform:
+      max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
+    mcp:
+      session-cache:
+        max-entries: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_MAX_ENTRIES:256}
+        ttl-seconds: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_TTL_SECONDS:300}
+      governance:
+        max-concurrent-per-tenant: ${WORKFLOW_AGENT_MCP_MAX_CONCURRENT_PER_TENANT:2}
+        requests-per-minute-per-tenant: ${WORKFLOW_AGENT_MCP_REQUESTS_PER_MINUTE_PER_TENANT:60}
+        burst-per-tenant: ${WORKFLOW_AGENT_MCP_BURST_PER_TENANT:10}
+        circuit-failure-threshold: ${WORKFLOW_AGENT_MCP_CIRCUIT_FAILURE_THRESHOLD:5}
+        circuit-open-seconds: ${WORKFLOW_AGENT_MCP_CIRCUIT_OPEN_SECONDS:30}
+        permit-seconds: ${WORKFLOW_AGENT_MCP_PERMIT_SECONDS:180}
+    provider:
+      egress:
+        allow-private-networks: ${WORKFLOW_AGENT_PROVIDER_ALLOW_PRIVATE_NETWORKS:false}
+        allow-http: ${WORKFLOW_AGENT_PROVIDER_ALLOW_HTTP:false}
+        maximum-response-bytes: ${WORKFLOW_AGENT_PROVIDER_MAXIMUM_RESPONSE_BYTES:1048576}
+    credentials:
+      master-key-base64: ${WORKFLOW_AGENT_CREDENTIAL_KEY_BASE64:${WORKFLOW_MASTER_KEY_BASE64:}}
+    worker:
+      enabled: ${WORKFLOW_AGENT_WORKER_ENABLED:true}
+      id: ${WORKFLOW_AGENT_WORKER_ID:local-worker}
+      poll-delay-ms: ${WORKFLOW_AGENT_WORKER_POLL_DELAY_MS:1000}
+      lease-seconds: ${WORKFLOW_AGENT_WORKER_LEASE_SECONDS:60}
+      max-attempts: ${WORKFLOW_AGENT_WORKER_MAX_ATTEMPTS:3}
+      max-running-per-tenant: ${WORKFLOW_AGENT_WORKER_MAX_RUNNING_PER_TENANT:2}
+      retry:
+        max-delay-seconds: ${WORKFLOW_AGENT_WORKER_RETRY_MAX_DELAY_SECONDS:30}
+        jitter-ratio: ${WORKFLOW_AGENT_WORKER_RETRY_JITTER_RATIO:0.25}
+      recovery-delay-ms: ${WORKFLOW_AGENT_WORKER_RECOVERY_DELAY_MS:10000}
+      execution-pool-size: ${WORKFLOW_AGENT_WORKER_EXECUTION_POOL_SIZE:2}
+      queue-capacity: ${WORKFLOW_AGENT_WORKER_QUEUE_CAPACITY:20}
+  runtime:
+    environment: ${WORKFLOW_ENV:production}
+  lock:
+    key-prefix: ${WORKFLOW_LOCK_KEY_PREFIX:workflow-agent-service}
+    wait-seconds: 3
+    ttl-seconds: 30
+  security:
+    enabled: true
+    master-key-base64: ${WORKFLOW_MASTER_KEY_BASE64:}
+    replay-window-seconds: 300
+    clock-skew-seconds: 30
+    nonce-cleanup-interval-ms: 600000
+    public-paths:
+      - /actuator/health
+      - /actuator/info
+      - /auth/register
+      - /auth/login
+      - /auth/csrf
+  auth:
+    self-registration:
+      enabled: ${WORKFLOW_SELF_REGISTRATION_ENABLED:false}
+      tenant-code: ${WORKFLOW_SELF_REGISTRATION_TENANT_CODE:default}
+    bootstrap-admin:
+      enabled: ${WORKFLOW_BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${WORKFLOW_BOOTSTRAP_ADMIN_USERNAME:}
+      password: ${WORKFLOW_BOOTSTRAP_ADMIN_PASSWORD:}
+      display-name: ${WORKFLOW_BOOTSTRAP_ADMIN_DISPLAY_NAME:Platform Administrator}
+    token:
+      issuer: workflow-agent-service
+      secret: ${WORKFLOW_AUTH_TOKEN_SECRET:}
+      ttl-seconds: ${WORKFLOW_AUTH_TOKEN_TTL_SECONDS:7200}
+      cookie-secure: ${WORKFLOW_AUTH_COOKIE_SECURE:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-none}]"

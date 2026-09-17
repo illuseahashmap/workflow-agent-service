@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: ${WORKFLOW_DB_URL:jdbc:postgresql://localhost:5432/workflow_agent}
+    username: ${WORKFLOW_DB_USERNAME:postgres}
+    password: ${WORKFLOW_DB_PASSWORD:root}
+
+flowable:
+  database-schema-update: true
+
+workflow:
+  knowledge:
+    retrieval:
+      enabled: true
+    ingestion:
+      enabled: true
+  runtime:
+    environment: development
+  agent:
+    provider:
+      egress:
+        allow-private-networks: true
+        allow-http: true
+  auth:
+    self-registration:
+      enabled: true
+    token:
+      cookie-secure: false
