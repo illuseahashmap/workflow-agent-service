@@ -10,6 +10,11 @@
 [开发方向与防偏离门禁](development-direction-guardrails.md)和
 [Agent 协作架构设计](agent-collaboration-design.md)。
 
+后续扩展 Embedding、向量存储、文档解析、多 Retriever 聚合和 Rerank 前，必须先完成
+LangChain4j 适配验证。`RetrievalProfile`、授权求交、Evidence/Citation/Trace、Grounding 和评测
+仍由平台定义；LangChain4j 只作为可替换基础设施实现，不得把其 `Document`、`Content`、
+`TextSegment` 或检索分数直接泄漏到领域契约。
+
 当前实现边界：已具备文档快照、确定性 Chunk、摄取任务租约与重试、索引版本生命周期、
 PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模型以及 AgentVersion 到已发布
 RetrievalProfile 的租户内绑定和可信运行时解析。当前已接通租户边界内的文档入库、摄取任务、

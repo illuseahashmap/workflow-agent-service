@@ -10,6 +10,11 @@ AgentVersion、AgentRun 和人工确认边界。
 当前完成状态仍以[下一步计划](../status.md)为准，长期原则遵循
 [Agent 协作架构设计](agent-collaboration-design.md)。
 
+后续补齐协议兼容和真实服务器验收前，优先评估以 LangChain4j MCP Client 实现现有
+`McpClientPort`，减少对 Streamable HTTP、SSE 和 JSON-RPC 协议细节的重复维护。连接器、目录
+审核、工具快照、AgentVersion 绑定、租户授权、凭据、配额、审计和恢复语义继续由平台拥有；
+不得直接把 LangChain4j 动态发现的工具绕过 Tool Registry 暴露给模型。
+
 ## 1. 当前基线与缺口
 
 当前代码已经具备：
