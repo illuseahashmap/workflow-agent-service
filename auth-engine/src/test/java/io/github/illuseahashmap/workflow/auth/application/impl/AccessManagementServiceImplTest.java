@@ -17,6 +17,7 @@ import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal;
 import io.github.illuseahashmap.workflow.shared.context.CurrentPrincipalProvider;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
+import io.github.illuseahashmap.workflow.shared.model.PageSlice;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -32,6 +33,16 @@ class AccessManagementServiceImplTest {
             Set.of("TENANT_ADMIN"), Set.of("role:manage"));
     private final AccessManagementServiceImpl service = new AccessManagementServiceImpl(
             userRepository, membershipRepository, authorizationRepository, principalProvider);
+
+    @Test
+    void rolePageKeepsKeywordAndPaginationInsideTheRepositoryBoundary() {
+        when(authorizationRepository.pageRoles("tenant-a", "finance", 2, 20))
+                .thenReturn(new PageSlice<>(0, 2, 20, List.of()));
+
+        service.pageRoles("finance", 2, 20);
+
+        verify(authorizationRepository).pageRoles("tenant-a", "finance", 2, 20);
+    }
 
     @Test
     void tenantAdministratorCannotGrantPlatformPermissionToCustomRole() {

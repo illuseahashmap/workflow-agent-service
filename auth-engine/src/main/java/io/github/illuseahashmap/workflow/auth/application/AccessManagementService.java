@@ -23,7 +23,7 @@ public interface AccessManagementService {
 
     List<TenantRoleView> roles();
 
-    PageResult<TenantRoleView> pageRoles(Integer pageNum, Integer pageSize);
+    PageResult<TenantRoleView> pageRoles(String keyword, Integer pageNum, Integer pageSize);
 
     TenantRoleView saveRole(SaveTenantRoleRequest request);
 

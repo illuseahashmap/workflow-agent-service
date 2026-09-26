@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -133,17 +134,37 @@ public class JdbcAuthAuthorizationRepository implements AuthAuthorizationReposit
     }
 
     @Override
-    public PageSlice<RoleDefinition> pageRoles(String tenantCode, int pageNumber, int pageSize) {
-        Long total = jdbcClient.sql("SELECT COUNT(*) FROM auth_role WHERE tenant_code = :tenantCode")
-                .param("tenantCode", tenantCode).query(Long.class).single();
+    public PageSlice<RoleDefinition> pageRoles(String tenantCode, String keyword, int pageNumber, int pageSize) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String keywordPattern = "%" + normalizedKeyword + "%";
+        Long total = jdbcClient.sql("""
+                        SELECT COUNT(*)
+                        FROM auth_role
+                        WHERE tenant_code = :tenantCode
+                          AND (:keyword = ''
+                            OR LOWER(role_code) LIKE :keywordPattern
+                            OR LOWER(role_name) LIKE :keywordPattern
+                            OR LOWER(COALESCE(description, '')) LIKE :keywordPattern)
+                        """)
+                .param("tenantCode", tenantCode)
+                .param("keyword", normalizedKeyword)
+                .param("keywordPattern", keywordPattern)
+                .query(Long.class).single();
         List<RoleRow> roles = jdbcClient.sql("""
                         SELECT role_code, role_name, description, enabled
                         FROM auth_role
                         WHERE tenant_code = :tenantCode
+                          AND (:keyword = ''
+                            OR LOWER(role_code) LIKE :keywordPattern
+                            OR LOWER(role_name) LIKE :keywordPattern
+                            OR LOWER(COALESCE(description, '')) LIKE :keywordPattern)
                         ORDER BY role_code
                         LIMIT :pageSize OFFSET :offset
                         """)
-                .param("tenantCode", tenantCode).param("pageSize", pageSize)
+                .param("tenantCode", tenantCode)
+                .param("keyword", normalizedKeyword)
+                .param("keywordPattern", keywordPattern)
+                .param("pageSize", pageSize)
                 .param("offset", (pageNumber - 1) * pageSize)
                 .query((resultSet, rowNumber) -> new RoleRow(
                         resultSet.getString("role_code"), resultSet.getString("role_name"),

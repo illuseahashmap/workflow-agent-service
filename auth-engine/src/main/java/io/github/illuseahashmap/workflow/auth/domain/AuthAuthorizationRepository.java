@@ -16,7 +16,7 @@ public interface AuthAuthorizationRepository {
 
     List<RoleDefinition> findRoles(String tenantCode);
 
-    PageSlice<RoleDefinition> pageRoles(String tenantCode, int pageNumber, int pageSize);
+    PageSlice<RoleDefinition> pageRoles(String tenantCode, String keyword, int pageNumber, int pageSize);
 
     List<PermissionDefinition> findPermissions();
 

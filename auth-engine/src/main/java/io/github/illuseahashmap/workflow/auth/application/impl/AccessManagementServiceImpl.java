@@ -133,11 +133,11 @@ public class AccessManagementServiceImpl implements AccessManagementService {
     }
 
     @Override
-    public PageResult<TenantRoleView> pageRoles(Integer pageNum, Integer pageSize) {
+    public PageResult<TenantRoleView> pageRoles(String keyword, Integer pageNum, Integer pageSize) {
         int normalizedPageNum = normalizePageNum(pageNum);
         int normalizedPageSize = normalizePageSize(pageSize);
         PageSlice<AuthAuthorizationRepository.RoleDefinition> page = authorizationRepository.pageRoles(
-                currentTenantCode(), normalizedPageNum, normalizedPageSize);
+                currentTenantCode(), keyword, normalizedPageNum, normalizedPageSize);
         return new PageResult<>(page.total(), page.pageNumber(), page.pageSize(),
                 page.items().stream().map(this::toRoleView).toList());
     }

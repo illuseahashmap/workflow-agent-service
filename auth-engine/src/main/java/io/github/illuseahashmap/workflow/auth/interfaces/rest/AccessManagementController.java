@@ -64,9 +64,10 @@ public class AccessManagementController {
     @GetMapping("/roles")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAnyAuthority('member:manage','role:manage')")
     public ApiResponse<PageResult<TenantRoleView>> roles(
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize) {
-        return ApiResponse.ok(accessManagementService.pageRoles(pageNum, pageSize));
+        return ApiResponse.ok(accessManagementService.pageRoles(keyword, pageNum, pageSize));
     }
 
     @PostMapping("/roles")
