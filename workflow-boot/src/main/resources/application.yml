@@ -32,6 +32,7 @@ workflow:
     platform:
       max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
     mcp:
+      client: ${WORKFLOW_AGENT_MCP_CLIENT:langchain4j}
       session-cache:
         max-entries: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_MAX_ENTRIES:256}
         ttl-seconds: ${WORKFLOW_AGENT_MCP_SESSION_CACHE_TTL_SECONDS:300}
@@ -43,6 +44,8 @@ workflow:
         circuit-open-seconds: ${WORKFLOW_AGENT_MCP_CIRCUIT_OPEN_SECONDS:30}
         permit-seconds: ${WORKFLOW_AGENT_MCP_PERMIT_SECONDS:180}
     provider:
+      openai:
+        adapter: ${WORKFLOW_AGENT_PROVIDER_OPENAI_ADAPTER:langchain4j}
       egress:
         allow-private-networks: ${WORKFLOW_AGENT_PROVIDER_ALLOW_PRIVATE_NETWORKS:false}
         allow-http: ${WORKFLOW_AGENT_PROVIDER_ALLOW_HTTP:false}

@@ -128,7 +128,9 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
     }
 
     private java.util.List<String> requestScopes(RetrievalRequest request, java.util.List<String> profileScopes) {
-        if (request.knowledgeScopes().isEmpty()) return profileScopes;
+        if (request.knowledgeScopes().isEmpty()) {
+            return profileScopes;
+        }
         return request.knowledgeScopes().stream().filter(profileScopes::contains).toList();
     }
 

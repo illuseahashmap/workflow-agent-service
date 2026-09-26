@@ -45,9 +45,13 @@ ModelProviderResponse
 
 OpenAI 的 URL、Bearer Header、请求 JSON、HTTP 状态码和响应解析全部留在基础设施 Adapter。领域模型不知道 HTTP，也不依赖任何模型 SDK。
 
-当前 `OPENAI_COMPATIBLE` Adapter 支持两种常见入口：Base URL 以 `/responses` 结尾时使用 Responses API 的 `instructions + input` 协议；以 `/chat/completions` 结尾或只填写 API 根地址时使用 Chat Completions 的 `messages` 协议。协议差异只存在于基础设施层，不会扩散到应用服务和领域对象。
+当前 `OPENAI_COMPATIBLE` Adapter 支持两种常见入口：Base URL 以 `/responses` 结尾时使用 Responses API 的结构化 `input` 协议；以 `/chat/completions` 结尾或只填写 API 根地址时使用 Chat Completions 的 `messages` 协议。协议差异只存在于基础设施层，不会扩散到应用服务和领域对象。
 
-当前没有引入 LangChain4j。单次模型调用用 JDK HTTP Client 足够清晰；等到工具调用、结构化输出兼容、流式响应和多 Provider 能力协商明显增多时，再评估框架收益。
+随着工具调用、MCP 和多 Provider 协议复杂度增加，当前 Chat Completions 已默认通过
+LangChain4j 实现，但仍藏在 `ModelProviderPort` 的基础设施适配器之后。平台继续拥有 Provider
+能力契约、凭据、故障分类、审计和运行账本；DeepSeek Ark 的 `/responses` 兼容入口使用 LangChain4j
+有界实现。可通过 `WORKFLOW_AGENT_PROVIDER_OPENAI_ADAPTER=legacy` 回滚，避免框架迁移与业务运行
+语义绑定在一起。
 
 ## 3. API Key 为什么只在 Worker 内解密
 

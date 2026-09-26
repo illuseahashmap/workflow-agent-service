@@ -45,6 +45,12 @@ class PlatformAgentExecutorTest {
                 "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-1"));
 
         assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"done\"}");
+        ArgumentCaptor<io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest> requests =
+                ArgumentCaptor.forClass(io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest.class);
+        verify(adapter, atLeast(2)).invoke(requests.capture());
+        assertThat(requests.getAllValues().getFirst().timeout())
+                .isGreaterThan(Duration.ofSeconds(9))
+                .isLessThanOrEqualTo(Duration.ofSeconds(10));
     }
 
     @Test

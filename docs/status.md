@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-09-05
+更新时间：2026-09-26
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -50,7 +50,7 @@
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
 | P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
-| P1 | LangChain4j 基础设施复用 | 已有 Provider、MCP、工具调用和 RAG 稳定应用端口，但部分模型协议、MCP 客户端、检索基础组件与 LangChain4j 能力重叠 | 完成适配验证，优先复用模型协议、MCP Client、文档解析、Embedding、向量存储和 Rerank；平台继续拥有治理与可靠执行语义 |
+| P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
 | P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片和确定性 HTTPS 协议切片已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
@@ -60,10 +60,10 @@
 1. 先完成 P0 生产基线：集成测试、可观测性和流程审计。
 2. 再完成 P1 安全与契约：RLS 深度验证、API 响应模型和核心覆盖率。
 3. 再完善 Agent Runtime：结果策略、Checkpoint 恢复、出站安全、公平调度、取消和人工确认。
-4. 在继续扩展 RAG 和 MCP 前完成 LangChain4j 适配验证：优先验证 `McpClientPort`、模型 Provider、文档解析、Embedding 和 Rerank 适配；只有经过测试确认不适配平台约束的能力才保留自研实现。
+4. LangChain4j 第一阶段已经完成：`ModelProviderPort` 的 Chat Completions 和 `McpClientPort` 默认由 LangChain4j 适配器实现；下一步继续验证文档解析、Embedding、向量存储和 Rerank。只有经过测试确认不适配平台约束的能力才保留自研实现。
 5. RAG 进入下一短期主线：Profile/文档/摄取/主体范围管理、V47 专用权限、摄取调度和 `knowledge_search` 只读 Agent 链路已完成；下一步基于稳定端口接入 pgvector/混合检索、Grounding 和评测，在完成生产验收前保持只读和严格 Profile/主体授权边界。
 6. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
-7. 完成 MCP-2 收口：先评估以 LangChain4j MCP Client 替换手写协议细节，再完成真实确定性 MCP Server 容器集成测试、HTTPS 出站安全和多实例租户治理压力测试；人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+7. 完成 MCP-2 收口：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call 语义；继续完成真实确定性 MCP Server 容器集成测试、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 8. 最后扩展任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
 
 ### LangChain4j 采用边界
@@ -95,6 +95,12 @@
 4. 替换必须保持已有租户、版本、权限、审计、Checkpoint 和 Flowable 结果契约不变。
 5. 适配验证至少比较协议兼容、故障分类、恢复行为、可观测性、依赖稳定性和删除的自研代码量；不能只因框架存在就迁移。
 6. 新增模型协议、MCP 传输、Embedding、向量库或 Rerank 能力时，应先评估 LangChain4j；无明确缺口不得继续手写同类通用组件。
+
+当前默认实现与回滚边界：
+
+- `WORKFLOW_AGENT_PROVIDER_OPENAI_ADAPTER=langchain4j`：默认使用 LangChain4j Chat Model；`/chat/completions` 使用 `OpenAiChatModel`，`/responses` 使用 `OpenAiResponsesChatModel`；设为 `legacy` 可回滚。两条协议均复用平台有界 HTTP、超时和类型化失败边界。
+- `WORKFLOW_AGENT_MCP_CLIENT=langchain4j`：默认使用 LangChain4j MCP Client；设为 `legacy` 可回滚。
+- MCP 的 JSON-RPC、初始化、工具发现和调用语义由 LangChain4j 维护；平台只保留 HTTPS、凭据注入、硬响应上限、超时、会话生命周期和故障分类等基础设施约束。
 
 ## 四、明确暂不做
 

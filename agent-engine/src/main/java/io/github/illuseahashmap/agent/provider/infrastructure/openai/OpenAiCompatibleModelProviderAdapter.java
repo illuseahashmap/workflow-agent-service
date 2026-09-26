@@ -22,10 +22,12 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
 
 @Component
+@ConditionalOnProperty(name = "workflow.agent.provider.openai.adapter", havingValue = "legacy")
 public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);

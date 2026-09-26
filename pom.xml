@@ -38,12 +38,20 @@
         <jacoco.minimum.branch>0.15</jacoco.minimum.branch>
         <spotbugs.version>4.9.8.2</spotbugs.version>
         <testcontainers.version>1.21.3</testcontainers.version>
+        <langchain4j.version>1.20.1</langchain4j.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-bom</artifactId>
+                <version>${langchain4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.flowable</groupId>
                 <artifactId>flowable-spring-boot-starter-process</artifactId>

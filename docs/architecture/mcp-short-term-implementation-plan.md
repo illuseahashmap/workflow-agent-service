@@ -1,6 +1,6 @@
 # MCP 短期实施方案与生产闭环
 
-更新时间：2026-08-29
+更新时间：2026-09-26
 状态：MCP-1/MCP-2 后端切片已实现，待真实容器化集成与生产出站治理验收
 
 本文定义 MCP 从连接器配置、工具发现到 Agent 运行时调用的近期闭环。MCP 是外部工具的
@@ -10,10 +10,12 @@ AgentVersion、AgentRun 和人工确认边界。
 当前完成状态仍以[下一步计划](../status.md)为准，长期原则遵循
 [Agent 协作架构设计](agent-collaboration-design.md)。
 
-后续补齐协议兼容和真实服务器验收前，优先评估以 LangChain4j MCP Client 实现现有
-`McpClientPort`，减少对 Streamable HTTP、SSE 和 JSON-RPC 协议细节的重复维护。连接器、目录
-审核、工具快照、AgentVersion 绑定、租户授权、凭据、配额、审计和恢复语义继续由平台拥有；
-不得直接把 LangChain4j 动态发现的工具绕过 Tool Registry 暴露给模型。
+`McpClientPort` 已默认由 LangChain4j MCP Client 实现，initialize、工具目录、JSON-RPC 响应关联
+和 tools/call 语义不再由平台重复实现。为保持现有安全边界，平台保留一个有界 HTTPS Transport，
+只负责凭据注入、硬响应大小限制、超时和会话头，不承载 MCP 领域语义。连接器、目录审核、工具
+快照、AgentVersion 绑定、租户授权、配额、审计和恢复语义继续由平台拥有；不得直接把
+LangChain4j 动态发现的工具绕过 Tool Registry 暴露给模型。旧客户端仅作为
+`WORKFLOW_AGENT_MCP_CLIENT=legacy` 的短期回滚路径。
 
 ## 1. 当前基线与缺口
 

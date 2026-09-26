@@ -24,10 +24,14 @@ public final class PostgresKnowledgeAccessPolicy implements KnowledgeAccessPolic
     @Override
     public List<String> authorize(String tenantCode, String principalId,
                                   List<String> profileScopes, List<String> requestedScopes) {
-        if (principalId == null || principalId.isBlank()) return List.of();
+        if (principalId == null || principalId.isBlank()) {
+            return List.of();
+        }
         List<String> candidates = requestedScopes == null || requestedScopes.isEmpty()
                 ? profileScopes : requestedScopes.stream().filter(profileScopes::contains).toList();
-        if (candidates.isEmpty()) return List.of();
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
         return jdbcTemplate.query("""
                 SELECT scope_code
                 FROM knowledge_principal_scope_grant

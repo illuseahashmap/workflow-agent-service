@@ -9,14 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 /** PostgreSQL adapter; all statements are tenant-scoped and profile publication is atomic. */
 @Component
 public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPort {
     private final NamedParameterJdbcTemplate jdbc;
 
-    public PostgresKnowledgeManagementAdapter(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public PostgresKnowledgeManagementAdapter(NamedParameterJdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
 
     @Override
     public Page<ProfileView> profiles(String tenant, int page, int size, String keyword, String status) {
@@ -61,9 +62,17 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     public ProfileView createProfile(String tenant, CreateProfile c) {
         requireText(c.profileCode(), "profileCode");
         requireText(c.strategy(), "strategy");
-        if (c.maxResults() < 1 || c.maxResults() > 50 || c.minimumScore() < 0) throw new IllegalArgumentException("invalid retrieval limits");
-        if (!indexExists(tenant, c.indexVersionId())) throw new IllegalArgumentException("index version is not available for this tenant");
-        Integer next = jdbc.queryForObject("SELECT COALESCE(MAX(version),0)+1 FROM knowledge_retrieval_profile_version WHERE tenant_code=:tenant AND profile_code=:code", params(tenant).addValue("code", c.profileCode()), Integer.class);
+        if (c.maxResults() < 1 || c.maxResults() > 50 || c.minimumScore() < 0) {
+            throw new IllegalArgumentException("invalid retrieval limits");
+        }
+        if (!indexExists(tenant, c.indexVersionId())) {
+            throw new IllegalArgumentException("index version is not available for this tenant");
+        }
+        Integer next = jdbc.queryForObject("""
+                SELECT COALESCE(MAX(version), 0) + 1
+                FROM knowledge_retrieval_profile_version
+                WHERE tenant_code = :tenant AND profile_code = :code
+                """, params(tenant).addValue("code", c.profileCode()), Integer.class);
         long id = jdbc.queryForObject("""
                 INSERT INTO knowledge_retrieval_profile_version
                   (tenant_code, profile_code, version, strategy, max_results, minimum_score, index_version_id, status)
@@ -78,18 +87,35 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     @Override
     @Transactional
     public ProfileView publishProfile(String tenant, long id) {
-        int updated = jdbc.update("UPDATE knowledge_retrieval_profile_version SET status='PUBLISHED' WHERE id=:id AND tenant_code=:tenant AND status='DRAFT'", params(tenant).addValue("id", id));
-        if (updated != 1) throw new IllegalArgumentException("only a tenant draft profile can be published");
+        int updated = jdbc.update("""
+                UPDATE knowledge_retrieval_profile_version SET status = 'PUBLISHED'
+                WHERE id = :id AND tenant_code = :tenant AND status = 'DRAFT'
+                """, params(tenant).addValue("id", id));
+        if (updated != 1) {
+            throw new IllegalArgumentException("only a tenant draft profile can be published");
+        }
         return findProfile(tenant, id);
     }
 
     @Override
     @Transactional
     public DocumentView createDocument(String tenant, CreateDocument c) {
-        requireText(c.sourceCode(), "sourceCode"); requireText(c.externalDocumentId(), "externalDocumentId");
-        requireText(c.contentHash(), "contentHash"); requireText(c.content(), "content");
-        Long sourceId = jdbc.query("SELECT id FROM knowledge_source WHERE tenant_code=:tenant AND source_code=:source", params(tenant).addValue("source", c.sourceCode()), r -> r.next() ? r.getLong(1) : null);
-        if (sourceId == null) jdbc.update("INSERT INTO knowledge_source(tenant_code,source_code,name) VALUES(:tenant,:source,:name)", params(tenant).addValue("source", c.sourceCode()).addValue("name", c.sourceName() == null ? c.sourceCode() : c.sourceName()));
+        requireText(c.sourceCode(), "sourceCode");
+        requireText(c.externalDocumentId(), "externalDocumentId");
+        requireText(c.contentHash(), "contentHash");
+        requireText(c.content(), "content");
+        Long sourceId = jdbc.query("""
+                SELECT id FROM knowledge_source
+                WHERE tenant_code = :tenant AND source_code = :source
+                """, params(tenant).addValue("source", c.sourceCode()),
+                resultSet -> resultSet.next() ? resultSet.getLong(1) : null);
+        if (sourceId == null) {
+            jdbc.update("""
+                    INSERT INTO knowledge_source(tenant_code, source_code, name)
+                    VALUES(:tenant, :source, :name)
+                    """, params(tenant).addValue("source", c.sourceCode())
+                    .addValue("name", c.sourceName() == null ? c.sourceCode() : c.sourceName()));
+        }
         long documentId = jdbc.queryForObject("""
                 INSERT INTO knowledge_document_version(tenant_code,source_code,external_document_id,version,content_hash,status)
                 VALUES(:tenant,:source,:externalId,:version,:hash,'READY')
@@ -109,13 +135,24 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 DO UPDATE SET status='QUEUED', available_at=CURRENT_TIMESTAMP, error_code=NULL, updated_at=CURRENT_TIMESTAMP
                 RETURNING id
                 """, params(tenant).addValue("source", c.sourceCode()).addValue("hash", c.contentHash()), Long.class);
-        return jdbc.queryForObject("SELECT id,source_code,external_document_id,version,content_hash,status,created_at FROM knowledge_document_version WHERE id=:id AND tenant_code=:tenant", params(tenant).addValue("id", documentId), (r,n) -> new DocumentView(r.getLong("id"),r.getString("source_code"),r.getString("external_document_id"),r.getInt("version"),r.getString("content_hash"),r.getString("status"),job,instant(r.getTimestamp("created_at"))));
+        return jdbc.queryForObject("""
+                SELECT id, source_code, external_document_id, version, content_hash, status, created_at
+                FROM knowledge_document_version WHERE id = :id AND tenant_code = :tenant
+                """, params(tenant).addValue("id", documentId), (r, n) -> new DocumentView(
+                r.getLong("id"), r.getString("source_code"), r.getString("external_document_id"),
+                r.getInt("version"), r.getString("content_hash"), r.getString("status"), job,
+                instant(r.getTimestamp("created_at"))));
     }
 
-    @Override public Page<JobView> ingestionJobs(String tenant, int page, int size, String status) {
+    @Override
+    public Page<JobView> ingestionJobs(String tenant, int page, int size, String status) {
         int offset = (page - 1) * size;
         var p = params(tenant).addValue("offset", offset).addValue("size", size).addValue("status", status);
-        long total = jdbc.queryForObject("SELECT count(*) FROM knowledge_ingestion_job WHERE tenant_code=:tenant AND (CAST(:status AS VARCHAR) IS NULL OR status=:status)", p, Long.class);
+        long total = jdbc.queryForObject("""
+                SELECT count(*) FROM knowledge_ingestion_job
+                WHERE tenant_code = :tenant
+                  AND (CAST(:status AS VARCHAR) IS NULL OR status = :status)
+                """, p, Long.class);
         List<JobView> rows = jdbc.query("""
                 SELECT id, source_code, document_hash, status, attempt, available_at, error_code, updated_at
                 FROM knowledge_ingestion_job
@@ -125,17 +162,95 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 r.getString("document_hash"), r.getString("status"), r.getInt("attempt"),
                 instant(r.getTimestamp("available_at")),
                 r.getString("error_code"), instant(r.getTimestamp("updated_at"))));
-    return new Page<>(total, page, size, rows);
+        return new Page<>(total, page, size, rows);
     }
-    @Override public List<ScopeGrantView> grants(String tenant, String principal) { return jdbc.query("SELECT principal_id,scope_code,created_at FROM knowledge_principal_scope_grant WHERE tenant_code=:tenant AND principal_id=:principal ORDER BY scope_code", params(tenant).addValue("principal",principal),(r,n)->new ScopeGrantView(r.getString(1),r.getString(2),instant(r.getTimestamp(3)))); }
-    @Override @Transactional public void grant(String tenant, GrantScope c) { jdbc.update("INSERT INTO knowledge_principal_scope_grant(tenant_code,principal_id,scope_code) VALUES(:tenant,:principal,:scope) ON CONFLICT DO NOTHING", params(tenant).addValue("principal",c.principalId()).addValue("scope",c.scopeCode())); }
-    @Override @Transactional public void revoke(String tenant, GrantScope c) { jdbc.update("DELETE FROM knowledge_principal_scope_grant WHERE tenant_code=:tenant AND principal_id=:principal AND scope_code=:scope", params(tenant).addValue("principal",c.principalId()).addValue("scope",c.scopeCode())); }
 
-    private ProfileView findProfile(String tenant, long id) { return jdbc.queryForObject("SELECT id,profile_code,version,strategy,max_results,minimum_score,index_version_id,status,created_at FROM knowledge_retrieval_profile_version WHERE id=:id AND tenant_code=:tenant",params(tenant).addValue("id",id),(r,n)->profile(r.getLong(1),tenant,r.getString(2),r.getInt(3),r.getString(4),r.getInt(5),r.getDouble(6),r.getLong(7),r.getString(8),instant(r.getTimestamp(9)))); }
-    private ProfileView profile(long id,String tenant,String code,int version,String strategy,int max,double min,long index,String status,Instant at){ return new ProfileView(id,code,version,strategy,max,min,index,status,jdbc.query("SELECT scope_code FROM knowledge_retrieval_profile_scope WHERE tenant_code=:tenant AND profile_version_id=:id ORDER BY scope_code",params(tenant).addValue("id",id),(r,n)->r.getString(1)),at); }
-    private void insertScopes(String tenant,long id,List<String> scopes){ if(scopes==null)return; scopes.stream().filter(s->s!=null&&!s.isBlank()).distinct().forEach(s->jdbc.update("INSERT INTO knowledge_retrieval_profile_scope(profile_version_id,tenant_code,scope_code) VALUES(:id,:tenant,:scope)",params(tenant).addValue("id",id).addValue("scope",s.trim()))); }
-    private boolean indexExists(String tenant,long id){ Integer n=jdbc.queryForObject("SELECT count(*) FROM knowledge_index_version WHERE tenant_code=:tenant AND id=:id AND status IN ('READY','ACTIVE')",params(tenant).addValue("id",id),Integer.class); return n!=null&&n>0; }
-    private Instant instant(Timestamp value) { return value == null ? Instant.EPOCH : value.toInstant(); }
-    private MapSqlParameterSource params(String tenant){return new MapSqlParameterSource("tenant",tenant);}
-    private void requireText(String v,String name){if(v==null||v.isBlank())throw new IllegalArgumentException(name+" must not be blank");}
+    @Override
+    public List<ScopeGrantView> grants(String tenant, String principal) {
+        return jdbc.query("""
+                SELECT principal_id, scope_code, created_at
+                FROM knowledge_principal_scope_grant
+                WHERE tenant_code = :tenant AND principal_id = :principal
+                ORDER BY scope_code
+                """, params(tenant).addValue("principal", principal),
+                (r, n) -> new ScopeGrantView(r.getString(1), r.getString(2),
+                        instant(r.getTimestamp(3))));
+    }
+
+    @Override
+    @Transactional
+    public void grant(String tenant, GrantScope command) {
+        jdbc.update("""
+                INSERT INTO knowledge_principal_scope_grant(tenant_code, principal_id, scope_code)
+                VALUES(:tenant, :principal, :scope) ON CONFLICT DO NOTHING
+                """, params(tenant).addValue("principal", command.principalId())
+                .addValue("scope", command.scopeCode()));
+    }
+
+    @Override
+    @Transactional
+    public void revoke(String tenant, GrantScope command) {
+        jdbc.update("""
+                DELETE FROM knowledge_principal_scope_grant
+                WHERE tenant_code = :tenant AND principal_id = :principal AND scope_code = :scope
+                """, params(tenant).addValue("principal", command.principalId())
+                .addValue("scope", command.scopeCode()));
+    }
+
+    private ProfileView findProfile(String tenant, long id) {
+        return jdbc.queryForObject("""
+                SELECT id, profile_code, version, strategy, max_results, minimum_score,
+                       index_version_id, status, created_at
+                FROM knowledge_retrieval_profile_version
+                WHERE id = :id AND tenant_code = :tenant
+                """, params(tenant).addValue("id", id),
+                (r, n) -> profile(r.getLong(1), tenant, r.getString(2), r.getInt(3),
+                        r.getString(4), r.getInt(5), r.getDouble(6), r.getLong(7),
+                        r.getString(8), instant(r.getTimestamp(9))));
+    }
+
+    private ProfileView profile(long id, String tenant, String code, int version,
+                                String strategy, int max, double minimumScore,
+                                long index, String status, Instant createdAt) {
+        List<String> scopes = jdbc.query("""
+                SELECT scope_code FROM knowledge_retrieval_profile_scope
+                WHERE tenant_code = :tenant AND profile_version_id = :id ORDER BY scope_code
+                """, params(tenant).addValue("id", id), (r, n) -> r.getString(1));
+        return new ProfileView(id, code, version, strategy, max, minimumScore,
+                index, status, scopes, createdAt);
+    }
+
+    private void insertScopes(String tenant, long id, List<String> scopes) {
+        if (scopes == null) {
+            return;
+        }
+        scopes.stream().filter(scope -> scope != null && !scope.isBlank()).distinct()
+                .forEach(scope -> jdbc.update("""
+                        INSERT INTO knowledge_retrieval_profile_scope(
+                            profile_version_id, tenant_code, scope_code)
+                        VALUES(:id, :tenant, :scope)
+                        """, params(tenant).addValue("id", id).addValue("scope", scope.trim())));
+    }
+
+    private boolean indexExists(String tenant, long id) {
+        Integer count = jdbc.queryForObject("""
+                SELECT count(*) FROM knowledge_index_version
+                WHERE tenant_code = :tenant AND id = :id AND status IN ('READY', 'ACTIVE')
+                """, params(tenant).addValue("id", id), Integer.class);
+        return count != null && count > 0;
+    }
+
+    private Instant instant(Timestamp value) {
+        return value == null ? Instant.EPOCH : value.toInstant();
+    }
+
+    private MapSqlParameterSource params(String tenant) {
+        return new MapSqlParameterSource("tenant", tenant);
+    }
+
+    private void requireText(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+    }
 }

@@ -25,10 +25,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /** Minimal, bounded Streamable HTTP client for the read-only MCP slice. */
 @Component
+@ConditionalOnProperty(name = "workflow.agent.mcp.client", havingValue = "legacy")
 public class StreamableHttpMcpClient implements McpClientPort {
 
     private static final int MAX_RESPONSE_BYTES = 1_000_000;

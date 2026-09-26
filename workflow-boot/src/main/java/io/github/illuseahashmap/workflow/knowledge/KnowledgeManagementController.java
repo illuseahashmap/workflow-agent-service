@@ -6,7 +6,14 @@ import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -33,7 +40,8 @@ public class KnowledgeManagementController {
 
     @PostMapping("/retrieval-profiles")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:profile:manage')")
-    public ApiResponse<KnowledgeManagementPort.ProfileView> createProfile(@Valid @RequestBody KnowledgeManagementPort.CreateProfile command) {
+    public ApiResponse<KnowledgeManagementPort.ProfileView> createProfile(
+            @Valid @RequestBody KnowledgeManagementPort.CreateProfile command) {
         return ApiResponse.ok(management.createProfile(tenant(), command));
     }
 
@@ -52,7 +60,8 @@ public class KnowledgeManagementController {
 
     @PostMapping("/documents")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:document:manage')")
-    public ApiResponse<KnowledgeManagementPort.DocumentView> createDocument(@Valid @RequestBody KnowledgeManagementPort.CreateDocument command) {
+    public ApiResponse<KnowledgeManagementPort.DocumentView> createDocument(
+            @Valid @RequestBody KnowledgeManagementPort.CreateDocument command) {
         return ApiResponse.ok(management.createDocument(tenant(), command));
     }
 
@@ -74,16 +83,26 @@ public class KnowledgeManagementController {
     @PostMapping("/scope-grants")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:scope:manage')")
     public ApiResponse<Void> grant(@Valid @RequestBody KnowledgeManagementPort.GrantScope command) {
-        management.grant(tenant(), command); return ApiResponse.ok();
+        management.grant(tenant(), command);
+        return ApiResponse.ok();
     }
 
     @DeleteMapping("/scope-grants")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:scope:manage')")
     public ApiResponse<Void> revoke(@RequestParam String principalId, @RequestParam String scopeCode) {
-        management.revoke(tenant(), new KnowledgeManagementPort.GrantScope(principalId, scopeCode)); return ApiResponse.ok();
+        management.revoke(tenant(), new KnowledgeManagementPort.GrantScope(principalId, scopeCode));
+        return ApiResponse.ok();
     }
 
-    private String tenant() { return tenants.current().tenantCode(); }
-    private int boundedPage(int value) { return Math.max(1, value); }
-    private int boundedSize(int value) { return Math.min(100, Math.max(1, value)); }
+    private String tenant() {
+        return tenants.current().tenantCode();
+    }
+
+    private int boundedPage(int value) {
+        return Math.max(1, value);
+    }
+
+    private int boundedSize(int value) {
+        return Math.min(100, Math.max(1, value));
+    }
 }

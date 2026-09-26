@@ -111,8 +111,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                 ? version.modelName() : provider.defaultModel();
         String credential = provider.type() == AgentProviderType.OPENAI_COMPATIBLE
                 ? credentialResolver.resolve(command.tenantCode(), provider.id()) : "";
-        Duration phaseTimeout = Duration.ofMillis(Math.max(1L,
-                command.timeout().toMillis() / (maxSteps + 1L)));
+        long deadlineNanos = System.nanoTime() + command.timeout().toNanos();
 
         schemaValidator.validateInput(version.inputSchema(), command.input());
         var adapter = providerRegistry.require(provider.type());
@@ -131,7 +130,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
             ModelProviderResponse plan = adapter.invoke(new ModelProviderRequest(
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + PLANNER_INSTRUCTION,
-                    command.input(), phaseTimeout, command.traceId()));
+                    command.input(), remainingTimeout(deadlineNanos), command.traceId()));
             context = "计划：\n" + plan.content() + "\n\n用户请求：\n" + command.input();
             previousToolResult = null;
             firstToolStep = 1;
@@ -147,7 +146,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION
                             + "\n\n可用工具契约：\n" + toolInstructions(effectiveTools),
-                    context, phaseTimeout, command.traceId(), nativeTools, previousToolResult));
+                    context, remainingTimeout(deadlineNanos), command.traceId(), nativeTools, previousToolResult));
             ToolCall toolCall;
             try {
                 toolCall = answer.toolCall() == null
@@ -158,13 +157,13 @@ public class PlatformAgentExecutor implements AgentExecutor {
                         version.systemPrompt() + "\n\n" + TOOL_CALL_REPAIR_INSTRUCTION
                                 + "\n可用工具契约：\n" + toolInstructions(effectiveTools),
                     context + "\n\nPrevious invalid response:\n" + safeContent(answer),
-                        phaseTimeout, command.traceId(), nativeTools, previousToolResult));
+                        remainingTimeout(deadlineNanos), command.traceId(), nativeTools, previousToolResult));
                 toolCall = parseToolCall(answer.content());
             }
             if (toolCall == null) {
                 OutputRepairResult repairResult = repairOutputIfRequired(adapter, provider.baseUrl(), version, model,
                         credential, answer,
-                        context, phaseTimeout, command.traceId());
+                        context, remainingTimeout(deadlineNanos), command.traceId());
                 answer = repairResult.response();
                 if (repairResult.repaired()) {
                     addStep(command, steps, "output-repair", "OUTPUT_REPAIR", "SUCCEEDED", null,
@@ -180,7 +179,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
             AgentTool.Result toolResult = toolRegistry.execute(
                     command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson(), toolCall.name(),
                     new AgentTool.Request(command.tenantCode(), toolCall.arguments(),
-                            phaseTimeout, command.traceId(),
+                            remainingTimeout(deadlineNanos), command.traceId(),
                             command.runId() > 0 ? null : command.traceId() + ":tool:" + step + ":" + toolCall.name(),
                             command.processInstanceId(), command.runId(), "tool:" + step, version.id(),
                             command.requestedBy()));
@@ -194,6 +193,11 @@ public class PlatformAgentExecutor implements AgentExecutor {
                             bounded(context), serializeToolResult(previousToolResult)));
         }
         throw new IllegalStateException("Agent exceeded the maximum execution steps");
+    }
+
+    private Duration remainingTimeout(long deadlineNanos) {
+        long remainingNanos = deadlineNanos - System.nanoTime();
+        return Duration.ofNanos(Math.max(1L, remainingNanos));
     }
 
     private void addStep(Command command, List<AgentExecutor.StepResult> steps,

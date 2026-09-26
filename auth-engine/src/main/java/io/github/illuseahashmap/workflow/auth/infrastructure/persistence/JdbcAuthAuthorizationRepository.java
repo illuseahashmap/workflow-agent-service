@@ -149,7 +149,9 @@ public class JdbcAuthAuthorizationRepository implements AuthAuthorizationReposit
                         resultSet.getString("role_code"), resultSet.getString("role_name"),
                         resultSet.getString("description"), resultSet.getInt("enabled") == 1))
                 .list();
-        if (roles.isEmpty()) return new PageSlice<>(total == null ? 0 : total, pageNumber, pageSize, List.of());
+        if (roles.isEmpty()) {
+            return new PageSlice<>(total == null ? 0 : total, pageNumber, pageSize, List.of());
+        }
         List<String> roleCodes = roles.stream().map(RoleRow::roleCode).toList();
         Map<String, Set<String>> permissionsByRole = new LinkedHashMap<>();
         jdbcClient.sql("""
