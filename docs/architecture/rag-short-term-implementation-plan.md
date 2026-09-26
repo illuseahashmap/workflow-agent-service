@@ -1,7 +1,7 @@
 # RAG 短期实施方案与长期扩展边界
 
 更新时间：2026-09-26
-状态：RAG-0/RAG-1 已完成，RAG-2 管理与关键词检索最小闭环已落地，生产化闭环待完成
+状态：RAG-0/RAG-1 已完成，RAG-2 与 RAG-3 首个本地关键词检索切片已通过，生产化闭环待完成
 
 本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
 知识源和外部检索服务时，不需要重写 Agent Runtime、Flowable 集成和证据治理模型。
@@ -20,7 +20,8 @@ LangChain4j 只作为可替换基础设施实现，不得把其 `Document`、`Co
 PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模型以及 AgentVersion 到已发布
 RetrievalProfile 的租户内绑定和可信运行时解析。当前已接通租户边界内的文档入库、摄取任务、
 Profile 管理/发布、主体范围授权 API，且本地 profile 可显式装配摄取 Worker 与关键词检索应用服务。
-仍未完成专用权限策略、pgvector 混合检索、Grounding、评测门禁和 Docker 端到端验证，因此本文件
+知识管理已使用独立权限；本地浏览器已跑通全文检索、Evidence 回注、流程路由和后续审批。
+仍未完成 pgvector 混合检索、Grounding、评测门禁和 Docker 端到端验证，因此本文件
 不能作为“RAG 生产闭环已完成”的依据。
 
 ## 0. 交付范围与阶段零
@@ -380,16 +381,17 @@ EvaluationDataset
 
 - 已实现文本/Markdown 领域摄取、确定性 Chunk、索引版本和 PostgreSQL 全文检索基础设施；
 - 已实现摄取任务租约、重试、幂等、失败恢复和候选索引原子激活；
-- pgvector、Embedding、任务创建/调度入口和生产检索应用装配仍待实现；
+- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 仍待实现；
 - 租户 RLS 已进入迁移，但配额和删除传播仍需结合真实任务入口验收。
 
 阶段完成标准：服务重启、重复摄取和重建索引不会产生丢失、重复激活或跨租户结果；
-完成 RAG-3 的权限、Agent 绑定、Grounding 和端到端验收后，才可启用 `knowledge_search`。
+`knowledge_search` 已在真实 Retriever、权限求交、Trace、Profile 绑定和失败边界具备后，以只读方式启用；
+Grounding、评测和容器故障验收完成前不得将其标记为生产级 RAG。
 
 ### RAG-3：Agent、证据与质量闭环
 
-- 注册并授权 `knowledge_search`；
-- 写入 RETRIEVAL Step、RetrievalTrace 和 Citation；
+- 已注册并授权只读 `knowledge_search`，并要求 AgentVersion 绑定已发布 RetrievalProfile；
+- 已接入 RetrievalTrace、EvidenceReference 和运行恢复上下文；独立 RETRIEVAL Step 与 Citation 展示仍需继续收口；
 - 实现最小 GroundingPolicy、拒答和人工复核路由；
 - 实现版本化评测集、离线指标和发布回归测试。
 
@@ -447,14 +449,13 @@ RAG 短期能力完成时必须同时满足：
 
 ### 14.1 `knowledge_search` 发布门禁
 
-只有同时满足以下条件，才允许平台注册、租户授权和 AgentVersion 绑定 `knowledge_search`：
+`knowledge_search` 的只读最小启用门禁为：真实 Retriever、权限范围求交、Trace、Profile 绑定、
+空结果/超时/越权失败边界均已生效。当前已满足该门禁并启用。升级为生产级 RAG 还必须满足：
 
 ```text
-真实 Retriever 已装配
-+ 权限范围求交已生效
-+ RetrievalTrace 可持久化
-+ RETRIEVAL Step 和恢复游标已接入
-+ 空结果、超时、低质量结果和越权测试通过
+独立 RETRIEVAL Step 和恢复游标验收通过
++ Grounding 对零证据、低质量证据和引用不一致执行确定处置
++ Docker 重启、并发、越权和删除传播测试通过
 + 固定评测集达到阈值
 ```
 

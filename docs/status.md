@@ -23,9 +23,9 @@
 - Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Chat Completions 使用结构化工具调用，DeepSeek Ark Responses 端点暂按其兼容性使用受控文本工具协议，避免发送该端点不接受的 `tools` 参数。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。后续应以 Provider 能力协商替代按端点判断。
 - 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、稳定幂等键、带租约的数据库原子抢占和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
-- 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、`RetrievalProfileVersion` 模型、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；RAG-2 已新增文档快照、确定性 Chunk 切分、索引构建端口、`knowledge_chunk` 全文检索表、PostgreSQL 文档/索引/Trace 适配器和租约 Worker。当前已增加 AgentVersion 到 RetrievalProfile 的数据库绑定、提交人随 AgentRun 快照传递及主体知识范围授权表/适配器，并新增租户边界内的 Profile 草稿/发布、文档入库与摄取任务、主体范围授权管理 API；前端已提供主体范围授权入口，避免运行时因缺少主体授权而只能失败。V47 已为 Profile、文档、摄取查询和范围授权建立独立权限，前端已提供 ACTIVE 索引选择、Profile 草稿/发布和文本/Markdown 文档提交入口；workflow-boot 已接入按启用租户轮询的摄取调度器，任务会通过租约 Worker 有界领取并执行。V48 已在已有检索应用、Profile 绑定和主体范围授权边界内恢复 `knowledge_search` 只读工具，AgentVersion 可绑定已发布 Profile 后进入真实检索链路；pgvector/混合检索和 Grounding 仍未接入。
+- 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、`RetrievalProfileVersion` 模型、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；RAG-2 已新增文档快照、确定性 Chunk 切分、索引构建端口、`knowledge_chunk` 全文检索表、PostgreSQL 文档/索引/Trace 适配器和租约 Worker。当前已增加 AgentVersion 到 RetrievalProfile 的数据库绑定、提交人随 AgentRun 快照传递及主体知识范围授权表/适配器，并新增租户边界内的 Profile 草稿/发布、文档入库与摄取任务、主体范围授权管理 API；前端已提供主体范围授权入口，避免运行时因缺少主体授权而只能失败。V47 已为 Profile、文档、摄取查询和范围授权建立独立权限，前端已提供 ACTIVE 索引选择、Profile 草稿/发布和文本/Markdown 文档提交入口；workflow-boot 已接入按启用租户轮询的摄取调度器，任务会通过租约 Worker 有界领取并执行。V48 已在已有检索应用、Profile 绑定和主体范围授权边界内恢复 `knowledge_search` 只读工具，AgentVersion 可绑定已发布 Profile 后进入真实检索链路；本地浏览器已验证全文检索证据回注、流程路由和后续审批完成。pgvector/混合检索、Grounding 和离线评测仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
-- 已完成 MCP-1/MCP-2 后端只读切片和基础配置闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；新增确定性 HTTPS 协议集成测试，覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全和真实容器化 Flowable 闭环。
+- 已完成 MCP-1/MCP-2 只读配置与运行闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；确定性 HTTPS 协议测试覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。本地浏览器已验证“模型选择工具 → MCP 调用 → 返回 `count` → AgentRun 成功 → Flowable 完成”。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全、真实容器化故障恢复和多实例压力验收完成。
 - 前端状态展示已收敛到公共 `StatusBadge`/`TableTagCell` 契约：状态、版本、分类和筛选标签分别使用稳定变体；标签不再在组件内部截断，原始状态码通过悬浮提示保留；流程定义、Agent、工具目录、成员角色、租户、派单规则、参与人和审计页面统一状态列对齐。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
@@ -53,7 +53,7 @@
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 后端结构切片和确定性 HTTPS 协议切片已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；真实 MCP Server 容器集成、协议兼容、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成官方 SDK/完整协议评估、Docker 集成测试、AgentRun/Flowable 端到端和出站安全验收后再称为可重复只读 MCP 纵向闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；真实容器、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成 Docker 故障恢复、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
 
 ## 三、下一阶段顺序
 
@@ -100,7 +100,7 @@
 
 - `WORKFLOW_AGENT_PROVIDER_OPENAI_ADAPTER=langchain4j`：默认使用 LangChain4j Chat Model；`/chat/completions` 使用 `OpenAiChatModel`，`/responses` 使用 `OpenAiResponsesChatModel`；设为 `legacy` 可回滚。两条协议均复用平台有界 HTTP、超时和类型化失败边界。
 - `WORKFLOW_AGENT_MCP_CLIENT=langchain4j`：默认使用 LangChain4j MCP Client；设为 `legacy` 可回滚。
-- MCP 的 JSON-RPC、初始化、工具发现和调用语义由 LangChain4j 维护；平台只保留 HTTPS、凭据注入、硬响应上限、超时、会话生命周期和故障分类等基础设施约束。
+- MCP 的 JSON-RPC、初始化、工具发现和调用语义由 LangChain4j 维护；平台只保留 HTTPS、凭据注入、硬响应上限、超时、会话生命周期和故障分类等基础设施约束。模型规划与后续工具调用共享同一个绝对截止时间，每一步只获得剩余预算，避免按最大步骤数机械切分导致正常调用提前超时。
 
 ## 四、明确暂不做
 
@@ -115,7 +115,16 @@
 
 首个纵向闭环不等于 Agent MVP 完成。只有执行、恢复、幂等、权限、审计、取消、人工交互和 Flowable 集成全部通过容器化集成测试，才可将 Agent MVP 标记为完成。
 
-最近一次验证：`agent_process` 第 3 版已验证“发起流程 → 生成输入契约 → 填写业务字段 → Agent 执行 → 后续节点继续运行”。
+最近一次本地纵向验证（2026-09-26）：
+
+| 场景 | 流程实例 | 结果 |
+| --- | --- | --- |
+| LLM | `7350d588-b952-11f1-afff-00155d46a074` | 模型调用成功，AgentRun 完成，Flowable 流程结束 |
+| MCP | `612dd907-b951-11f1-afff-00155d46a074` | 模型选择只读 MCP 工具，返回 `{"count":5}`，AgentRun 与流程均完成 |
+| RAG | `8a814331-b952-11f1-afff-00155d46a074` | `retrievalStatus=FULL`，命中 `employee-handbook.md` 第 1 版，按证据路由到直属负责人并完成审批 |
+
+以上证明本地配置与运行纵向链路可用，不替代 Docker、强杀、跨实例、出站安全和质量评测门禁。
+
 ### Agent Runtime 近期加固
 
 - Provider 适配器通过能力契约声明协议和原生 Tool Calling 能力，运行时不再直接根据凭证推断能力；Responses 兼容端点继续使用受控文本工具协议。

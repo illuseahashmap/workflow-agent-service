@@ -1,7 +1,7 @@
 # MCP 短期实施方案与生产闭环
 
 更新时间：2026-09-26
-状态：MCP-1/MCP-2 后端切片已实现，待真实容器化集成与生产出站治理验收
+状态：MCP-1/MCP-2 本地只读纵向闭环已通过，待真实容器化故障恢复与生产出站治理验收
 
 本文定义 MCP 从连接器配置、工具发现到 Agent 运行时调用的近期闭环。MCP 是外部工具的
 标准协议适配器，不是新的 Agent 执行引擎，也不能绕过现有 Tool Registry、租户治理、
@@ -33,9 +33,10 @@ LangChain4j 动态发现的工具绕过 Tool Registry 暴露给模型。旧客�
 - 目录 Schema 校验、指纹、审核发布，以及 MCP 工具注册到既有 Registry；
 - `McpAgentToolAdapter` 通过现有 Registry 接入租户授权、版本冻结、Schema、幂等和审计链路。
 
-仍未完成真正生产级闭环的部分：
+本地浏览器已跑通“配置并绑定已发布目录 → 模型选择工具 → MCP `tools/call` → 结果回注 →
+AgentRun 成功 → Flowable 完成”，测试工具返回 `{"count":5}`。仍未完成真正生产级闭环的部分：
 
-- 没有真实 MCP Server 容器化集成、Flowable 继续运行和 Worker 强杀故障测试；
+- 没有真实 MCP Server 容器化故障注入、多实例 Flowable 继续运行和 Worker 强杀测试；
 - 已完成 MCP 调用入口的跨实例租户令牌桶、并发硬上限和连接器熔断，但真实多实例压力与配额对账仍待验收；
 - 已完成有界 TTL 会话复用和凭据指纹轮换；进程重启不复用内存会话，而是由持久化 AgentRun/Checkpoint 驱动重新初始化；
 - MCP 错误已经映射到 AgentFailure，但完整 MCP SDK/批量 JSON-RPC/SSE 生命周期兼容性仍需真实协议测试后确认；
@@ -167,6 +168,8 @@ MCP Server 后续修改或删除工具时，不得静默改变已发布 AgentVer
 
 验收：形成“配置 Connector → 发现并发布目录 → AgentVersion 绑定 → 模型发起 Tool Call →
 Registry 校验 → MCP 调用 → 结果回注 → AgentRun 完成”的可重复集成测试。
+
+当前结果：本地浏览器纵向场景已通过；Docker、强杀和跨实例场景纳入 MCP-3 生产验收。
 
 ### MCP-3：可靠性与安全闭环
 
