@@ -29,3 +29,39 @@ groups:
         annotations:
           summary: Agent recovery activity is elevated
           description: Multiple expired Agent runs were recovered recently; inspect worker stability and lease duration.
+      - alert: WorkflowAgentQueueStalled
+        expr: workflow_agent_queue_oldest_age_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+          service: workflow-agent
+        annotations:
+          summary: Agent queue has been stalled for more than five minutes
+          description: Inspect worker capacity, provider latency and tenant concurrency limits before scaling.
+      - alert: WorkflowAgentExpiredLeases
+        expr: workflow_agent_leases_expired_current > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: workflow-agent
+        annotations:
+          summary: Agent runs have expired worker leases
+          description: Recovery should reclaim these runs; inspect workers if the gauge does not return to zero.
+      - alert: WorkflowAgentCompletionDeadLetters
+        expr: workflow_agent_completion_deadletters_current > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: workflow-agent
+        annotations:
+          summary: Agent completion events require operator resolution
+          description: Flowable may remain blocked at Agent nodes until completion events are replayed or explicitly ignored.
+      - alert: WorkflowAgentPauseRequestStalled
+        expr: workflow_agent_pause_requests_current > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: workflow-agent
+        annotations:
+          summary: Agent pause requests have not reached a safe boundary
+          description: Inspect the active model or tool call and its timeout; cooperative pause does not kill in-flight I/O.

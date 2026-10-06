@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunDetailView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunPayloadView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentRuntimeOverviewView;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunQueryRepository;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
@@ -74,6 +75,16 @@ class AgentRunQueryServiceImplTest {
         assertThatThrownBy(() -> service.findByProcessInstance(" "))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Process instance id must not be blank");
+    }
+
+    @Test
+    void loadsTenantScopedOperationalOverview() {
+        AgentRuntimeOverviewView overview = new AgentRuntimeOverviewView(
+                2, 1, 1, 3, 1, 1, 0, 9, 2, 1, 0, null, OffsetDateTime.now());
+        when(repository.overview("tenant-a")).thenReturn(overview);
+
+        assertThat(service.overview()).isSameAs(overview);
+        verify(repository).overview("tenant-a");
     }
 
     private AgentRunView runView() {

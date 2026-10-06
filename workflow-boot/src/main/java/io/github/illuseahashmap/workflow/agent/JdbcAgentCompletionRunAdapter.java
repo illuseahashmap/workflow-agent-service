@@ -22,7 +22,7 @@ public class JdbcAgentCompletionRunAdapter implements AgentCompletionRunPort {
     public Optional<CompletedAgentRun> lockCompletedRun(String tenantCode, long runId) {
         return jdbcTemplate.query("""
                         SELECT id, tenant_code, process_instance_id, execution_id, activity_id,
-                               activity_activation_id, current_attempt_id, status, error_code,
+                               activity_activation_id, current_attempt_id, status, result_status, error_code,
                                output_snapshot_json, output_mapping_json, process_failure_policy
                         FROM agent_run
                         WHERE id = :runId AND tenant_code = :tenantCode
@@ -35,7 +35,8 @@ public class JdbcAgentCompletionRunAdapter implements AgentCompletionRunPort {
                         rs.getString("process_instance_id"), rs.getString("execution_id"),
                         rs.getString("activity_id"), rs.getString("activity_activation_id"),
                         rs.getObject("current_attempt_id", Long.class), rs.getString("status"),
-                        rs.getString("error_code"), rs.getString("output_snapshot_json"),
+                        rs.getString("result_status"), rs.getString("error_code"),
+                        rs.getString("output_snapshot_json"),
                         rs.getString("output_mapping_json"), rs.getString("process_failure_policy")))
                 .stream().findFirst();
     }

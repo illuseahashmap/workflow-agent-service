@@ -67,16 +67,13 @@ class PlatformMigrationIntegrationTest {
 
     @Test
     void migratesCleanDatabaseThroughLatestPlatformVersion() throws SQLException {
-        try (Connection connection = connection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("""
-                     SELECT COUNT(*)
-                     FROM flyway_schema_history
-                     WHERE success = TRUE AND version IS NOT NULL AND version <> '0'
-                     """)) {
-            assertThat(resultSet.next()).isTrue();
-            assertThat(resultSet.getInt(1)).isEqualTo(41);
-        }
+        Flyway flyway = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .locations("classpath:db/migration/platform")
+                .baselineOnMigrate(true)
+                .baselineVersion(MigrationVersion.fromVersion("0"))
+                .load();
+        assertThat(flyway.info().pending()).isEmpty();
         assertThat(tableExists("workflow_node_assignment_rule")).isTrue();
         assertThat(tableExists("auth_user_tenant")).isTrue();
         assertThat(tableExists("workflow_assignment_fallback_command")).isTrue();
@@ -90,6 +87,13 @@ class PlatformMigrationIntegrationTest {
         assertThat(tableExists("agent_model_invocation")).isTrue();
         assertThat(tableExists("agent_recovery_decision")).isTrue();
         assertThat(tableExists("agent_run_operation")).isTrue();
+        assertThat(columnExists("agent_run", "pause_requested_at")).isTrue();
+        assertThat(columnExists("agent_run", "paused_at")).isTrue();
+        assertThat(columnExists("agent_run", "pause_reason")).isTrue();
+        assertThat(tableExists("knowledge_chunk")).isTrue();
+        assertThat(tableExists("knowledge_document_content")).isTrue();
+        assertThat(tableExists("knowledge_retrieval_profile_version")).isTrue();
+        assertThat(tableExists("knowledge_principal_scope_grant")).isTrue();
         assertThat(columnExists("platform_outbox_event", "claim_expires_at")).isTrue();
         assertThat(columnExists("platform_outbox_event", "dead_lettered_at")).isTrue();
         assertThat(columnExists("platform_outbox_event", "resolution_reason")).isTrue();

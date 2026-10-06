@@ -33,7 +33,42 @@ class AgentCompletionRecoveryServiceTest {
 
         verify(executionPort).removeLocalVariable("execution-a", "agentRunErrorCode");
         verify(executionPort).trigger("execution-a", Map.of(
-                "agentRunId", 10L, "agentRunStatus", "SUCCEEDED", "decision", "APPROVE"));
+                "agentRunId", 10L, "agentRunStatus", "SUCCEEDED", "agentResultStatus", "SUCCESS",
+                "agentReviewRequired", false, "decision", "APPROVE"));
+        verify(runPort).markWorkflowHandled("tenant-a", 10);
+    }
+
+    @Test
+    void routesFailedRunToBpmnHumanReviewBranch() {
+        var command = new AgentCompletionCommand("tenant-a", 10, 20, "activation-a", "trace-a");
+        when(runPort.lockCompletedRun("tenant-a", 10)).thenReturn(Optional.of(failedRun("MANUAL_REVIEW")));
+        when(executionPort.lockWaitingExecution("process-a", "execution-a", "agent-task"))
+                .thenReturn(Optional.of(new AgentWorkflowExecutionPort.WaitingExecution(
+                        "execution-a", "agent-task", "activation-a")));
+
+        service.recover(command);
+
+        verify(executionPort).trigger("execution-a", Map.of(
+                "agentRunId", 10L, "agentRunStatus", "FAILED", "agentResultStatus", "PARTIAL",
+                "agentRunErrorCode", "AGENT_RESULT_PARTIAL", "agentReviewRequired", true));
+        verify(runPort).markWorkflowHandled("tenant-a", 10);
+    }
+
+    @Test
+    void keepsFailedRunAtAgentActivityForOperationsPolicy() {
+        var command = new AgentCompletionCommand("tenant-a", 10, 20, "activation-a", "trace-a");
+        when(runPort.lockCompletedRun("tenant-a", 10))
+                .thenReturn(Optional.of(failedRun("HOLD_FOR_OPERATIONS")));
+        when(executionPort.lockWaitingExecution("process-a", "execution-a", "agent-task"))
+                .thenReturn(Optional.of(new AgentWorkflowExecutionPort.WaitingExecution(
+                        "execution-a", "agent-task", "activation-a")));
+
+        service.recover(command);
+
+        verify(executionPort).setLocalVariables("execution-a", Map.of(
+                "agentRunId", 10L, "agentRunStatus", "FAILED", "agentResultStatus", "PARTIAL",
+                "agentRunErrorCode", "AGENT_RESULT_PARTIAL", "agentReviewRequired", false));
+        verify(executionPort, never()).trigger(eq("execution-a"), org.mockito.ArgumentMatchers.anyMap());
         verify(runPort).markWorkflowHandled("tenant-a", 10);
     }
 
@@ -51,8 +86,15 @@ class AgentCompletionRecoveryServiceTest {
     private AgentCompletionRunPort.CompletedAgentRun run(Long attemptId) {
         return new AgentCompletionRunPort.CompletedAgentRun(
                 10, "tenant-a", "process-a", "execution-a", "agent-task", "activation-a",
-                attemptId, "SUCCEEDED", null,
+                attemptId, "SUCCEEDED", "SUCCESS", null,
                 "{\"content\":{\"result\":\"APPROVE\"}}",
                 "{\"result\":\"decision\"}", "HOLD_FOR_OPERATIONS");
+    }
+
+    private AgentCompletionRunPort.CompletedAgentRun failedRun(String processFailurePolicy) {
+        return new AgentCompletionRunPort.CompletedAgentRun(
+                10, "tenant-a", "process-a", "execution-a", "agent-task", "activation-a",
+                20L, "FAILED", "PARTIAL", "AGENT_RESULT_PARTIAL", null,
+                "{}", processFailurePolicy);
     }
 }

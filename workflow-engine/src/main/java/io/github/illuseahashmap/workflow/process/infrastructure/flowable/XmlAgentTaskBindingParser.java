@@ -7,8 +7,12 @@ import io.github.illuseahashmap.workflow.process.domain.AgentTaskBinding;
 import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
 import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import java.io.StringReader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
@@ -57,6 +61,9 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
                 String inputMapping = validJsonObject(extension.getAttribute("inputMapping"), "inputMapping");
                 String outputMapping = validJsonObject(extension.getAttribute("outputMapping"), "outputMapping");
                 AgentProcessFailurePolicy processFailurePolicy = failurePolicy(extension);
+                if (processFailurePolicy == AgentProcessFailurePolicy.MANUAL_REVIEW) {
+                    validateManualReviewPath(document, required(task, "id"));
+                }
                 bindings.add(new AgentTaskBinding(
                         required(task, "id"),
                         task.getAttribute("name"),
@@ -78,6 +85,48 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
         if (!"receiveTask".equals(task.getLocalName())) {
             throw invalid("workflow:agentTask must belong to a bpmn:receiveTask");
         }
+    }
+
+    private void validateManualReviewPath(org.w3c.dom.Document document, String taskId) {
+        Map<String, Element> elementsById = new HashMap<>();
+        NodeList elements = document.getElementsByTagNameNS("*", "*");
+        for (int index = 0; index < elements.getLength(); index++) {
+            if (elements.item(index) instanceof Element element && element.hasAttribute("id")) {
+                elementsById.put(element.getAttribute("id"), element);
+            }
+        }
+
+        Map<String, List<PathEdge>> outgoing = new HashMap<>();
+        NodeList sequenceFlows = document.getElementsByTagNameNS("*", "sequenceFlow");
+        for (int index = 0; index < sequenceFlows.getLength(); index++) {
+            Element flow = (Element) sequenceFlows.item(index);
+            String sourceRef = flow.getAttribute("sourceRef");
+            String targetRef = flow.getAttribute("targetRef");
+            boolean reviewCondition = flow.getTextContent().contains("agentReviewRequired");
+            outgoing.computeIfAbsent(sourceRef, ignored -> new ArrayList<>())
+                    .add(new PathEdge(targetRef, reviewCondition));
+        }
+
+        var queue = new ArrayDeque<PathState>();
+        var visited = new HashSet<PathState>();
+        queue.add(new PathState(taskId, false));
+        while (!queue.isEmpty()) {
+            PathState current = queue.removeFirst();
+            if (!visited.add(current)) {
+                continue;
+            }
+            Element element = elementsById.get(current.elementId());
+            if (current.reviewConditionSeen()
+                    && element != null && "userTask".equals(element.getLocalName())) {
+                return;
+            }
+            for (PathEdge edge : outgoing.getOrDefault(current.elementId(), List.of())) {
+                queue.addLast(new PathState(
+                        edge.targetRef(), current.reviewConditionSeen() || edge.reviewCondition()));
+            }
+        }
+        throw invalid("Agent task " + taskId
+                + " uses MANUAL_REVIEW but has no agentReviewRequired path to a bpmn:userTask");
     }
 
     private String validJsonObject(String value, String field) {
@@ -168,5 +217,11 @@ public class XmlAgentTaskBindingParser implements AgentTaskBindingParser {
 
     private BusinessException invalid(String message) {
         return new BusinessException(ErrorCode.BAD_REQUEST, message);
+    }
+
+    private record PathEdge(String targetRef, boolean reviewCondition) {
+    }
+
+    private record PathState(String elementId, boolean reviewConditionSeen) {
     }
 }

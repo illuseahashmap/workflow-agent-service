@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-09-26
+更新时间：2026-10-06
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -32,6 +32,7 @@
 - 已完成首节点及审批后 Agent 输入契约：后端按真实路径生成字段，前端动态渲染，命令边界再次校验必填输入。
 - 已提供租户安全的流程实例 AgentRun 关联查询：`GET /agent-runs/process-instances/{processInstanceId}`，外部系统可以跟踪执行状态而不接触内部状态机。
 - 已提供受权限保护的失败运行处置命令：修复 Provider、凭证或 Agent 配置后，可通过 `POST /agent-runs/{runId}/retry` 显式开启 30～3600 秒的新执行窗口并创建新的 Attempt；流程仍停留在原 Agent 节点，只有新 Attempt 成功后才恢复 Flowable，不能无限延长原始运行。
+- Agent 节点失败策略已形成三种明确语义：`HOLD_FOR_OPERATIONS` 保持在当前节点等待运维，`CONTINUE_EMPTY` 携带失败上下文继续，`MANUAL_REVIEW` 写入稳定的 `agentReviewRequired`、Run/结果状态与错误码变量并恢复 Flowable，由 BPMN 网关进入显式人工复核任务；不再由 Agent Runtime 暗中创建另一套人工任务状态机。
 - 输入映射首版只允许标量、对象字段和整个数组；输出映射支持数组索引和通配投影。
 
 ### 工程质量基线
@@ -43,12 +44,12 @@
 
 | 优先级 | 工作项 | 当前状态 | 下一步验收 |
 | --- | --- | --- | --- |
-| P0 | 容器化集成测试 | CI 可执行，本机可能因 Docker 不可用而跳过 | PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全集成测试稳定通过 |
-| P0 | 生产可观测性 | Trace、基础日志、健康检查、部分指标、基础 Prometheus 告警规则、租户隔离审计查询和前端运行审计入口已有 | 接入 Alertmanager、容器环境验证和统一失败处置联动完整 |
+| 已完成 | 容器化集成测试基线 | 本机 Docker Engine 29 已恢复；父构建固定 docker-java API 1.44。`mvn verify` 共执行 271 个测试，0 失败、0 错误、0 跳过，5 个 PostgreSQL/Redis/Flowable/Flyway/RLS/HTTP 安全基础设施套件通过强制门禁 | 在 CI 持续运行并归档 Surefire、JaCoCo、SpotBugs 报告；真实强杀和多实例压力仍按专项验收 |
+| P0 | 生产可观测性 | 已有租户隔离的 Runtime 健康摘要、低基数运行/积压/暂停/恢复/死信/租约指标、Prometheus 告警、Runbook、流程操作审计和前端状态化处置入口 | 接入 Alertmanager，并在容器与多实例环境验证告警、审计和处置联动 |
 | P0 | 流程操作审计 | 基础写入与租户隔离查询 API 已有，支持事件、实例、Trace、时间范围和分页 | 通过容器化环境验证全链路事件可追溯，并补齐规则命中等覆盖 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试和结果/子步骤 Checkpoint 已有 | 基于 Checkpoint 的恢复、取消/暂停/恢复、出站策略、跨实例公平调度、Guardrail 和故障测试完成 |
+| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试、子步骤 Checkpoint、取消及协作式暂停/恢复已落地；浏览器已验证排队暂停、恢复和 Worker 重启后重新领取 | 完成真实强杀/租约过期/跨实例压力、出站策略、公平调度、Guardrail 和高风险写工具确认 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收 |
@@ -59,7 +60,7 @@
 
 1. 先完成 P0 生产基线：集成测试、可观测性和流程审计。
 2. 再完成 P1 安全与契约：RLS 深度验证、API 响应模型和核心覆盖率。
-3. 再完善 Agent Runtime：结果策略、Checkpoint 恢复、出站安全、公平调度、取消和人工确认。
+3. 再完善 Agent Runtime：失败转显式 BPMN 人工复核、状态化运维处置和协作式暂停/恢复已落地；继续完成 Grounding/业务规则门禁、真实强杀恢复、出站安全、公平调度和高风险写工具人工确认。
 4. LangChain4j 第一阶段已经完成：`ModelProviderPort` 的 Chat Completions 和 `McpClientPort` 默认由 LangChain4j 适配器实现；下一步继续验证文档解析、Embedding、向量存储和 Rerank。只有经过测试确认不适配平台约束的能力才保留自研实现。
 5. RAG 进入下一短期主线：Profile/文档/摄取/主体范围管理、V47 专用权限、摄取调度和 `knowledge_search` 只读 Agent 链路已完成；下一步基于稳定端口接入 pgvector/混合检索、Grounding 和评测，在完成生产验收前保持只读和严格 Profile/主体授权边界。
 6. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
@@ -127,6 +128,10 @@
 
 ### Agent Runtime 近期加固
 
+- 已提供租户范围 Runtime 健康摘要，统一展示状态分布、最老排队时间、过期租约和需人工介入数量；定时健康指标只使用状态、结果等低基数标签，不把 tenantCode、runId 或 traceId 写入指标标签。
+- 已实现协作式暂停/恢复：排队运行立即暂停，运行中请求在模型/工具调用后的持久化安全边界生效；恢复保留最后完整 Checkpoint 并重新排队，暂停、恢复、取消和重试均写入状态历史与操作账本。
+- 前端运行记录页根据实际状态只展示合法动作，并在详情中统一呈现失败分类、错误码、Attempt、Step、恢复决策和安全诊断；本地浏览器已验证 `QUEUED -> PAUSED -> QUEUED -> Worker 重新领取` 以及输入契约失败的可定位信息。
+- 已补充 Agent Runtime Prometheus 告警与逐项 Runbook；Alertmanager 接线、容器故障注入和真实多实例演练仍属于发布验收，不以本地浏览器验证替代。
 - Provider 适配器通过能力契约声明协议和原生 Tool Calling 能力，运行时不再直接根据凭证推断能力；Responses 兼容端点继续使用受控文本工具协议。
 - Provider HTTP 错误只提取有长度限制且脱敏的诊断摘要，完整原始响应不落库；恢复决策账本会向授权运维界面提供可操作上下文。
 - Agent Worker 领取查询支持租户级并发上限，避免单一租户占满所有执行槽位；上限通过 `WORKFLOW_AGENT_WORKER_MAX_RUNNING_PER_TENANT` 配置。

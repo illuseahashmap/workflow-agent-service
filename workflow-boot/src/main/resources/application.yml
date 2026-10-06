@@ -13,6 +13,9 @@ spring:
     enabled: true
     baseline-on-migrate: false
     baseline-version: 0
+    url: ${WORKFLOW_MIGRATION_DB_URL:${spring.datasource.url}}
+    username: ${WORKFLOW_MIGRATION_DB_USERNAME:${spring.datasource.username}}
+    password: ${WORKFLOW_MIGRATION_DB_PASSWORD:${spring.datasource.password}}
 
 server:
   port: 8080

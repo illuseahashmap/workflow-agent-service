@@ -43,6 +43,24 @@ public class AgentRunOperationsController {
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/operations/{runId}/pause")
+    public ApiResponse<Void> pause(
+            @PathVariable long runId,
+            @Valid @RequestBody PauseAgentRunCommand command
+    ) {
+        service.pauseActive(runId, command.reason());
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/operations/{runId}/resume")
+    public ApiResponse<Void> resume(
+            @PathVariable long runId,
+            @Valid @RequestBody ResumeAgentRunCommand command
+    ) {
+        service.resumePaused(runId, command.reason(), command.resumeWindowSeconds());
+        return ApiResponse.ok(null);
+    }
+
     public record RetryAgentRunCommand(
             @NotBlank @Size(max = 1000) String reason,
             @Min(30) @Max(3600) int retryWindowSeconds
@@ -50,5 +68,14 @@ public class AgentRunOperationsController {
     }
 
     public record CancelAgentRunCommand(@NotBlank @Size(max = 1000) String reason) {
+    }
+
+    public record PauseAgentRunCommand(@NotBlank @Size(max = 1000) String reason) {
+    }
+
+    public record ResumeAgentRunCommand(
+            @NotBlank @Size(max = 1000) String reason,
+            @Min(30) @Max(3600) int resumeWindowSeconds
+    ) {
     }
 }

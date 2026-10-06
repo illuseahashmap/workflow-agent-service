@@ -41,10 +41,6 @@ public class AgentBindingDeploymentValidator {
             if (binding.processWaitTimeoutSeconds() > version.agentRunTimeoutSeconds()) {
                 throw invalid("Process wait timeout cannot exceed the Agent run timeout");
             }
-            if (binding.processFailurePolicy()
-                    == io.github.illuseahashmap.workflow.process.domain.AgentProcessFailurePolicy.MANUAL_REVIEW) {
-                throw invalid("MANUAL_REVIEW is unavailable until the human review task is implemented");
-            }
             validateInputMappings(version.inputSchemaJson(), binding.inputMappingJson());
             validateOutputMappings(version.outputSchemaJson(), binding.outputMappingJson());
         }

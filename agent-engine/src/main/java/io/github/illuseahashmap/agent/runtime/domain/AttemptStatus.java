@@ -7,6 +7,7 @@ public enum AttemptStatus {
 
     QUEUED,
     RUNNING,
+    PAUSED,
     SUCCEEDED,
     FAILED,
     TIMED_OUT,

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.illuseahashmap.workflow.WorkflowAgentServiceApplication;
 import io.github.illuseahashmap.workflow.process.application.AgentCompletionContractException;
+import io.github.illuseahashmap.workflow.process.application.AgentWorkflowVariables;
 import io.github.illuseahashmap.workflow.process.infrastructure.flowable.AgentTaskExecutionListener;
 import io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext;
 import java.nio.charset.StandardCharsets;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +41,8 @@ class AgentCompletionFlowableTransactionIntegrationTest {
     private RepositoryService repositoryService;
     @Autowired
     private RuntimeService runtimeService;
+    @Autowired
+    private TaskService taskService;
     @Autowired
     private AgentFlowableCompletionProcessor processor;
     @Autowired
@@ -100,11 +104,64 @@ class AgentCompletionFlowableTransactionIntegrationTest {
         });
     }
 
+    @Test
+    void manualReviewFailureRoutesToExplicitHumanTaskAndCommitsRecoveryMarkers() {
+        Fixture fixture = system(this::manualReviewFixture);
+
+        systemRun(() -> transactionTemplate.executeWithoutResult(
+                status -> processor.process(fixture.eventId(), fixture.workerId())));
+
+        var reviewTask = taskService.createTaskQuery()
+                .processInstanceId(fixture.processInstanceId())
+                .taskDefinitionKey("human-review")
+                .singleResult();
+        assertThat(reviewTask).isNotNull();
+        assertThat(runtimeService.getVariable(
+                fixture.processInstanceId(), AgentWorkflowVariables.REVIEW_REQUIRED)).isEqualTo(true);
+        assertThat(runtimeService.getVariable(
+                fixture.processInstanceId(), AgentWorkflowVariables.RUN_ID)).isEqualTo(fixture.runId());
+        assertThat(runtimeService.getVariable(
+                fixture.processInstanceId(), AgentWorkflowVariables.RUN_STATUS)).isEqualTo("FAILED");
+        assertThat(runtimeService.getVariable(
+                fixture.processInstanceId(), AgentWorkflowVariables.RESULT_STATUS)).isEqualTo("PARTIAL");
+        assertThat(runtimeService.getVariable(
+                fixture.processInstanceId(), AgentWorkflowVariables.ERROR_CODE))
+                .isEqualTo("AGENT_EVIDENCE_INSUFFICIENT");
+        system(() -> {
+            assertThat(value("SELECT status FROM platform_outbox_event WHERE event_id = :id", fixture.eventId()))
+                    .isEqualTo("DELIVERED");
+            assertThat(value("SELECT completed_at::text FROM platform_inbox_event WHERE event_id = :id",
+                    fixture.eventId())).isNotBlank();
+            assertThat(value("SELECT workflow_resumed_at::text FROM agent_run WHERE id = :id",
+                    fixture.runId())).isNotBlank();
+            return null;
+        });
+    }
+
     private Fixture fixture(String outputMapping) {
+        return fixture(outputMapping, false, "SUCCEEDED", "SUCCESS", null,
+                "HOLD_FOR_OPERATIONS", "SUCCEEDED");
+    }
+
+    private Fixture manualReviewFixture() {
+        return fixture("{}", true, "FAILED", "PARTIAL", "AGENT_EVIDENCE_INSUFFICIENT",
+                "MANUAL_REVIEW", "FAILED");
+    }
+
+    private Fixture fixture(
+            String outputMapping,
+            boolean manualReviewFlow,
+            String runStatus,
+            String resultStatus,
+            String errorCode,
+            String failurePolicy,
+            String attemptStatus
+    ) {
         String suffix = UUID.randomUUID().toString().replace("-", "");
         String processKey = "agent_completion_" + suffix;
         repositoryService.createDeployment().addBytes(processKey + ".bpmn20.xml",
-                bpmn(processKey).getBytes(StandardCharsets.UTF_8)).deploy();
+                (manualReviewFlow ? manualReviewBpmn(processKey) : bpmn(processKey))
+                        .getBytes(StandardCharsets.UTF_8)).deploy();
         var process = runtimeService.startProcessInstanceByKey(processKey);
         var execution = runtimeService.createExecutionQuery()
                 .processInstanceId(process.getId()).activityId("agent-task").singleResult();
@@ -130,22 +187,24 @@ class AgentCompletionFlowableTransactionIntegrationTest {
                 INSERT INTO agent_run (
                     tenant_code, idempotency_key, agent_version_id, status, trigger_type,
                     process_instance_id, execution_id, activity_id, activity_activation_id,
-                    deadline_at, completed_at, result_status, output_snapshot_json,
+                    deadline_at, completed_at, result_status, error_code, output_snapshot_json,
                     output_mapping_json, process_failure_policy)
-                VALUES ('tenant-a', :key, :versionId, 'SUCCEEDED', 'FLOWABLE',
+                VALUES ('tenant-a', :key, :versionId, :runStatus, 'FLOWABLE',
                     :processId, :executionId, 'agent-task', :activationId,
-                    CURRENT_TIMESTAMP + INTERVAL '5 minutes', CURRENT_TIMESTAMP, 'SUCCESS',
-                    '{"content":{"result":"APPROVE"}}', CAST(:mapping AS jsonb),
-                    'HOLD_FOR_OPERATIONS') RETURNING id
+                    CURRENT_TIMESTAMP + INTERVAL '5 minutes', CURRENT_TIMESTAMP, :resultStatus,
+                    :errorCode, '{"content":{"result":"APPROVE"}}', CAST(:mapping AS jsonb),
+                    :failurePolicy) RETURNING id
                 """, map("key", "run-" + suffix, "versionId", versionId,
                 "processId", process.getId(), "executionId", execution.getId(),
-                "activationId", activationId, "mapping", outputMapping), Long.class);
+                "activationId", activationId, "mapping", outputMapping,
+                "runStatus", runStatus, "resultStatus", resultStatus,
+                "errorCode", errorCode, "failurePolicy", failurePolicy), Long.class);
         long attemptId = jdbcTemplate.queryForObject("""
                 INSERT INTO agent_run_attempt (
                     tenant_code, agent_run_id, attempt_no, status, started_at, completed_at)
-                VALUES ('tenant-a', :runId, 1, 'SUCCEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                VALUES ('tenant-a', :runId, 1, :attemptStatus, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
-                """, Map.of("runId", runId), Long.class);
+                """, Map.of("runId", runId, "attemptStatus", attemptStatus), Long.class);
         jdbcTemplate.update("UPDATE agent_run SET current_attempt_id = :attemptId WHERE id = :runId",
                 Map.of("attemptId", attemptId, "runId", runId));
 
@@ -203,6 +262,30 @@ class AgentCompletionFlowableTransactionIntegrationTest {
                     <sequenceFlow id="to-agent" sourceRef="start" targetRef="agent-task" />
                     <receiveTask id="agent-task" />
                     <sequenceFlow id="to-end" sourceRef="agent-task" targetRef="end" />
+                    <endEvent id="end" />
+                  </process>
+                </definitions>
+                """.formatted(processKey);
+    }
+
+    private String manualReviewBpmn(String processKey) {
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    targetNamespace="agent-completion-test">
+                  <process id="%s" isExecutable="true">
+                    <startEvent id="start" />
+                    <sequenceFlow id="to-agent" sourceRef="start" targetRef="agent-task" />
+                    <receiveTask id="agent-task" />
+                    <sequenceFlow id="to-review-gateway" sourceRef="agent-task" targetRef="review-gateway" />
+                    <exclusiveGateway id="review-gateway" default="to-end" />
+                    <sequenceFlow id="to-human-review" sourceRef="review-gateway" targetRef="human-review">
+                      <conditionExpression xsi:type="tFormalExpression">${agentReviewRequired}</conditionExpression>
+                    </sequenceFlow>
+                    <sequenceFlow id="to-end" sourceRef="review-gateway" targetRef="end" />
+                    <userTask id="human-review" name="Agent 人工复核" />
+                    <sequenceFlow id="review-to-end" sourceRef="human-review" targetRef="end" />
                     <endEvent id="end" />
                   </process>
                 </definitions>

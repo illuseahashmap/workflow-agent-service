@@ -334,6 +334,68 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
     }
 
     @Override
+    public boolean pauseIfRequested(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            String traceId,
+            Instant now
+    ) {
+        boolean requested = !jdbcTemplate.query("""
+                        SELECT 1
+                        FROM agent_run
+                        WHERE tenant_code = :tenantCode
+                          AND id = :runId
+                          AND status = 'RUNNING'
+                          AND current_attempt_id = :attemptId
+                          AND lease_owner = :leaseOwner
+                          AND lease_expires_at > :now
+                          AND pause_requested_at IS NOT NULL
+                        FOR UPDATE
+                        """, Map.of(
+                        "tenantCode", tenantCode, "runId", runId, "attemptId", attemptId,
+                        "leaseOwner", leaseOwner, "now", timestamp(now)),
+                (resultSet, rowNum) -> resultSet.getInt(1)).isEmpty();
+        if (!requested) {
+            return false;
+        }
+        jdbcTemplate.update("""
+                UPDATE agent_run_attempt
+                SET status = 'PAUSED', completed_at = :now, updated_at = :now
+                WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                  AND id = :attemptId AND status = 'RUNNING'
+                """, Map.of("tenantCode", tenantCode, "runId", runId,
+                "attemptId", attemptId, "now", timestamp(now)));
+        jdbcTemplate.update("""
+                UPDATE agent_run_step
+                SET status = 'PAUSED', completed_at = :now, updated_at = :now
+                WHERE tenant_code = :tenantCode AND agent_run_id = :runId
+                  AND attempt_id = :attemptId AND status IN ('PENDING', 'RUNNING')
+                """, Map.of("tenantCode", tenantCode, "runId", runId,
+                "attemptId", attemptId, "now", timestamp(now)));
+        int updated = jdbcTemplate.update("""
+                UPDATE agent_run
+                SET status = 'PAUSED', current_attempt_id = NULL,
+                    lease_owner = NULL, lease_expires_at = NULL,
+                    paused_at = :now, updated_at = :now
+                WHERE tenant_code = :tenantCode AND id = :runId
+                  AND status = 'RUNNING' AND current_attempt_id = :attemptId
+                  AND lease_owner = :leaseOwner AND pause_requested_at IS NOT NULL
+                """, Map.of("tenantCode", tenantCode, "runId", runId,
+                "attemptId", attemptId, "leaseOwner", leaseOwner, "now", timestamp(now)));
+        if (updated != 1) {
+            return false;
+        }
+        insertTransition(new AgentRunStateTransition(
+                tenantCode, runId, attemptId, AgentRunStatus.RUNNING, AgentRunStatus.PAUSED,
+                "OPERATOR_PAUSED_AT_CHECKPOINT",
+                io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType.WORKER,
+                leaseOwner, traceId, now));
+        return true;
+    }
+
+    @Override
     public void insertCompletedStep(
             String tenantCode,
             long runId,
@@ -450,6 +512,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         UPDATE agent_run
                         SET status = 'SUCCEEDED', current_attempt_id = :attemptId,
                             lease_owner = NULL, lease_expires_at = NULL,
+                            pause_requested_at = NULL,
                             result_status = 'SUCCESS', error_code = NULL,
                             output_snapshot_json = CAST(:outputSnapshotJson AS jsonb),
                             completed_at = :completedAt, updated_at = :completedAt
@@ -512,6 +575,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                             current_attempt_id = CASE WHEN :terminal THEN :attemptId ELSE NULL END,
                             lease_owner = NULL,
                             lease_expires_at = NULL,
+                            pause_requested_at = CASE WHEN :terminal THEN NULL ELSE pause_requested_at END,
                             available_at = :availableAt,
                             result_status = :resultStatus,
                             error_code = :errorCode,

@@ -8,6 +8,7 @@ import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunStateHisto
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunStepView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRecoveryDecisionView;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentRuntimeOverviewView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentModelInvocationView;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunQueryRepository;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.OffsetDateTime;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -107,6 +109,50 @@ public class JdbcAgentRunQueryRepository implements AgentRunQueryRepository {
                         + " ORDER BY r.created_at ASC, r.id ASC",
                 Map.of("tenantCode", tenantCode, "processInstanceId", processInstanceId),
                 (resultSet, rowNum) -> mapView(resultSet));
+    }
+
+    @Override
+    public AgentRuntimeOverviewView overview(String tenantCode) {
+        return jdbcTemplate.queryForObject("""
+                SELECT
+                    COUNT(*) FILTER (WHERE r.status = 'QUEUED') AS queued,
+                    COUNT(*) FILTER (WHERE r.status = 'RUNNING') AS running,
+                    COUNT(*) FILTER (WHERE r.status = 'RUNNING' AND r.pause_requested_at IS NOT NULL)
+                        AS pause_requested,
+                    COUNT(*) FILTER (WHERE r.status = 'PAUSED') AS paused,
+                    COUNT(*) FILTER (WHERE r.status = 'QUEUED' AND EXISTS (
+                        SELECT 1 FROM agent_run_attempt a
+                        WHERE a.tenant_code = r.tenant_code AND a.agent_run_id = r.id)) AS retry_waiting,
+                    COUNT(*) FILTER (WHERE EXISTS (
+                        SELECT 1 FROM agent_recovery_decision d
+                        WHERE d.tenant_code = r.tenant_code AND d.agent_run_id = r.id
+                          AND d.requires_human_review = TRUE
+                          AND NOT EXISTS (
+                              SELECT 1 FROM agent_recovery_decision newer
+                              WHERE newer.tenant_code = d.tenant_code
+                                AND newer.agent_run_id = d.agent_run_id
+                                AND newer.id > d.id))) AS review_required,
+                    COUNT(*) FILTER (WHERE r.status = 'RUNNING'
+                        AND r.lease_expires_at <= CURRENT_TIMESTAMP) AS expired_leases,
+                    COUNT(*) FILTER (WHERE r.status = 'SUCCEEDED'
+                        AND r.completed_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours') AS succeeded_24h,
+                    COUNT(*) FILTER (WHERE r.status = 'FAILED'
+                        AND r.completed_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours') AS failed_24h,
+                    COUNT(*) FILTER (WHERE r.status = 'TIMED_OUT'
+                        AND r.completed_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours') AS timed_out_24h,
+                    COUNT(*) FILTER (WHERE r.status = 'CANCELLED'
+                        AND r.completed_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours') AS cancelled_24h,
+                    MIN(r.created_at) FILTER (WHERE r.status = 'QUEUED') AS oldest_queued_at,
+                    CURRENT_TIMESTAMP AS generated_at
+                FROM agent_run r
+                WHERE r.tenant_code = :tenantCode
+                """, Map.of("tenantCode", tenantCode), (rs, rowNum) -> new AgentRuntimeOverviewView(
+                rs.getLong("queued"), rs.getLong("running"), rs.getLong("pause_requested"),
+                rs.getLong("paused"), rs.getLong("retry_waiting"), rs.getLong("review_required"),
+                rs.getLong("expired_leases"), rs.getLong("succeeded_24h"), rs.getLong("failed_24h"),
+                rs.getLong("timed_out_24h"), rs.getLong("cancelled_24h"),
+                rs.getObject("oldest_queued_at", OffsetDateTime.class),
+                rs.getObject("generated_at", OffsetDateTime.class)));
     }
 
     private AgentRunPayloadView findPayload(Map<String, Object> parameters) {

@@ -3,6 +3,7 @@ package io.github.illuseahashmap.agent.runtime.interfaces.rest;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunQueryService;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunDetailView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentRuntimeOverviewView;
 import io.github.illuseahashmap.workflow.shared.response.ApiResponse;
 import io.github.illuseahashmap.workflow.shared.response.PageResult;
 import java.util.List;
@@ -32,6 +33,11 @@ public class AgentRunController {
             @RequestParam(required = false) String status
     ) {
         return ApiResponse.ok(service.page(pageNum, pageSize, keyword, status));
+    }
+
+    @GetMapping("/operations/overview")
+    public ApiResponse<AgentRuntimeOverviewView> overview() {
+        return ApiResponse.ok(service.overview());
     }
 
     @GetMapping("/{runId}")

@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.agent.runtime.application.port;
 
 import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
+import java.time.Duration;
 
 /** Observability port that keeps the Agent application layer independent from Micrometer. */
 public interface AgentRuntimeMetrics {
@@ -16,6 +17,16 @@ public interface AgentRuntimeMetrics {
     void leaseLost();
 
     void recovered(int count);
+
+    default void pauseRequested() { }
+
+    default void paused() { }
+
+    default void resumed() { }
+
+    default void cancelled() { }
+
+    default void executionDuration(ResultStatus resultStatus, Duration duration) { }
 
     AgentRuntimeMetrics NOOP = new AgentRuntimeMetrics() {
         @Override public void claimed() { }

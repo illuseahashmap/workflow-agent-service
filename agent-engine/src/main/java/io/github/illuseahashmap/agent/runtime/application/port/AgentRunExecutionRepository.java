@@ -99,6 +99,18 @@ public interface AgentRunExecutionRepository {
         return true;
     }
 
+    /** Cooperatively pauses the current attempt after a durable execution boundary. */
+    default boolean pauseIfRequested(
+            String tenantCode,
+            long runId,
+            long attemptId,
+            String leaseOwner,
+            String traceId,
+            Instant now
+    ) {
+        return false;
+    }
+
     record CheckpointSnapshot(int sequenceNo, String checkpointType, String snapshotJson) {
     }
 

@@ -7,6 +7,7 @@ public enum AgentRunStatus {
 
     QUEUED,
     RUNNING,
+    PAUSED,
     SUCCEEDED,
     FAILED,
     TIMED_OUT,

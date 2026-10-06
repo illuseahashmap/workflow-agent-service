@@ -26,6 +26,12 @@ class XmlAgentTaskBindingParserTest {
                         flowable:delegateExpression="${agentTaskExecutionListener}" />
                   </bpmn:extensionElements>
                 </bpmn:receiveTask>
+                <bpmn:sequenceFlow id="to-review-gateway" sourceRef="agentReview" targetRef="reviewGateway" />
+                <bpmn:exclusiveGateway id="reviewGateway" />
+                <bpmn:sequenceFlow id="to-human-review" sourceRef="reviewGateway" targetRef="humanReview">
+                  <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${agentReviewRequired}</bpmn:conditionExpression>
+                </bpmn:sequenceFlow>
+                <bpmn:userTask id="humanReview" />
                 """)).getFirst();
 
         assertThat(binding.agentVersionId()).isEqualTo(42L);
@@ -45,10 +51,23 @@ class XmlAgentTaskBindingParserTest {
                 .hasMessageContaining("receiveTask");
     }
 
+    @Test
+    void rejectsManualReviewWithoutExplicitBpmnReviewPath() {
+        assertThatThrownBy(() -> parser.parse(bpmn("""
+                <bpmn:receiveTask id="agentReview">
+                  <bpmn:extensionElements>
+                    <workflow:agentTask agentVersionId="42" processFailurePolicy="MANUAL_REVIEW" />
+                  </bpmn:extensionElements>
+                </bpmn:receiveTask>
+                """))).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("agentReviewRequired path");
+    }
+
     private String bpmn(String task) {
         return """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                     xmlns:flowable="http://flowable.org/bpmn"
                     xmlns:workflow="http://workflow-agent.local/bpmn">
                   <bpmn:process id="test" isExecutable="true">

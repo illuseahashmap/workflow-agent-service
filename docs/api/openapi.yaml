@@ -23,6 +23,8 @@ tags:
     description: Platform tenant administration.
   - name: Audit
     description: Tenant-scoped operational audit evidence.
+  - name: Knowledge
+    description: Tenant-scoped knowledge profiles, ingestion, and scope authorization.
 paths:
   /auth/login:
     post:
@@ -932,6 +934,15 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /agent-runs/operations/overview:
+    get:
+      tags: [Agent]
+      operationId: getAgentRuntimeOverview
+      summary: Read the current tenant Agent runtime health snapshot
+      responses:
+        '200': { description: Runtime overview, content: { application/json: { schema: { $ref: '#/components/schemas/AgentRuntimeOverviewApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /agent-runs/process-instances/{processInstanceId}:
     get:
       tags: [Agent]
@@ -977,6 +988,40 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /agent-runs/operations/{runId}/pause:
+    post:
+      tags: [Agent]
+      operationId: pauseAgentRun
+      summary: Request a cooperative pause at the next durable boundary
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PauseAgentRunCommand' }
+      responses:
+        '200': { description: Pause accepted or already applied, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /agent-runs/operations/{runId}/resume:
+    post:
+      tags: [Agent]
+      operationId: resumeAgentRun
+      summary: Requeue a paused Agent run from its latest complete checkpoint
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResumeAgentRunCommand' }
+      responses:
+        '200': { description: Resume accepted or already applied, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /operations/agent-completion-events/dead-letters:
     get:
       tags: [Operations]
@@ -1009,6 +1054,113 @@ paths:
             schema: { $ref: '#/components/schemas/IgnoreAgentCompletionEventCommand' }
       responses:
         '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+  /knowledge/retrieval-profiles:
+    get:
+      tags: [Knowledge]
+      operationId: listKnowledgeRetrievalProfiles
+      summary: Page retrieval profile versions in the current tenant
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { $ref: '#/components/parameters/Keyword' }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Retrieval profiles, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeProfilePageApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Knowledge]
+      operationId: createKnowledgeRetrievalProfile
+      summary: Create a draft retrieval profile version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateKnowledgeProfileRequest' }
+      responses:
+        '200': { description: Retrieval profile created, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeProfileApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /knowledge/retrieval-profiles/{id}/publish:
+    post:
+      tags: [Knowledge]
+      operationId: publishKnowledgeRetrievalProfile
+      summary: Publish an immutable retrieval profile version
+      parameters: [{ $ref: '#/components/parameters/NumericId' }]
+      responses:
+        '200': { description: Retrieval profile published, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeProfileApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /knowledge/index-versions:
+    get:
+      tags: [Knowledge]
+      operationId: listKnowledgeIndexVersions
+      summary: List index versions available to retrieval profiles
+      parameters:
+        - { name: status, in: query, schema: { type: string, default: ACTIVE } }
+      responses:
+        '200': { description: Index versions, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeIndexListApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /knowledge/documents:
+    post:
+      tags: [Knowledge]
+      operationId: createKnowledgeDocumentVersion
+      summary: Store a text document version and enqueue ingestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateKnowledgeDocumentRequest' }
+      responses:
+        '200': { description: Document accepted for ingestion, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeDocumentApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /knowledge/ingestion-jobs:
+    get:
+      tags: [Knowledge]
+      operationId: listKnowledgeIngestionJobs
+      summary: Page ingestion jobs in the current tenant
+      parameters:
+        - { $ref: '#/components/parameters/PageNum' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Ingestion jobs, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeIngestionJobPageApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /knowledge/scope-grants:
+    get:
+      tags: [Knowledge]
+      operationId: listKnowledgeScopeGrants
+      summary: List knowledge scope grants for a tenant principal
+      parameters:
+        - { name: principalId, in: query, required: true, schema: { type: string, minLength: 1 } }
+      responses:
+        '200': { description: Scope grants, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeScopeGrantListApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Knowledge]
+      operationId: grantKnowledgeScope
+      summary: Grant a knowledge scope to a tenant principal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KnowledgeScopeGrantRequest' }
+      responses:
+        '200': { description: Scope granted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Knowledge]
+      operationId: revokeKnowledgeScope
+      summary: Revoke a knowledge scope from a tenant principal
+      parameters:
+        - { name: principalId, in: query, required: true, schema: { type: string, minLength: 1 } }
+        - { name: scopeCode, in: query, required: true, schema: { type: string, minLength: 1 } }
+      responses:
+        '200': { description: Scope revoked, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
 components:
   parameters:
     PageNum:
@@ -1307,6 +1459,11 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/AgentRunDetail' } }
+    AgentRuntimeOverviewApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AgentRuntimeOverview' } }
     DeadLetterListApiResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
@@ -1317,6 +1474,36 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/WorkflowOperationAuditPage' } }
+    KnowledgeProfilePageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/KnowledgeProfilePage' } }
+    KnowledgeProfileApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/KnowledgeProfile' } }
+    KnowledgeIndexListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/KnowledgeIndex' } } }
+    KnowledgeDocumentApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/KnowledgeDocument' } }
+    KnowledgeIngestionJobPageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/KnowledgeIngestionJobPage' } }
+    KnowledgeScopeGrantListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/KnowledgeScopeGrant' } } }
     WorkflowOperationAuditPage:
       type: object
       required: [total, pageNum, pageSize, records]
@@ -1346,6 +1533,98 @@ components:
         reason: { type: string, nullable: true }
         traceId: { type: string, nullable: true }
         occurredAt: { type: string, format: date-time }
+
+    CreateKnowledgeProfileRequest:
+      type: object
+      required: [profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes]
+      properties:
+        profileCode: { type: string, minLength: 1, maxLength: 128 }
+        strategy: { type: string, minLength: 1, maxLength: 64 }
+        maxResults: { type: integer, minimum: 1, maximum: 100 }
+        minimumScore: { type: number, format: double, minimum: 0, maximum: 1 }
+        indexVersionId: { type: integer, format: int64 }
+        knowledgeScopes: { type: array, items: { type: string, minLength: 1 } }
+    CreateKnowledgeDocumentRequest:
+      type: object
+      required: [sourceCode, sourceName, externalDocumentId, version, contentHash, content]
+      properties:
+        sourceCode: { type: string, minLength: 1, maxLength: 128 }
+        sourceName: { type: string, minLength: 1, maxLength: 255 }
+        externalDocumentId: { type: string, minLength: 1, maxLength: 255 }
+        version: { type: integer, minimum: 1 }
+        contentHash: { type: string, minLength: 1, maxLength: 128 }
+        content: { type: string, minLength: 1 }
+    KnowledgeScopeGrantRequest:
+      type: object
+      required: [principalId, scopeCode]
+      properties:
+        principalId: { type: string, minLength: 1, maxLength: 255 }
+        scopeCode: { type: string, minLength: 1, maxLength: 255 }
+    KnowledgeProfile:
+      type: object
+      required: [id, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status, knowledgeScopes, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        profileCode: { type: string }
+        version: { type: integer }
+        strategy: { type: string }
+        maxResults: { type: integer }
+        minimumScore: { type: number, format: double }
+        indexVersionId: { type: integer, format: int64 }
+        status: { type: string }
+        knowledgeScopes: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+    KnowledgeProfilePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/KnowledgeProfile' } } }
+    KnowledgeIndex:
+      type: object
+      required: [id, sourceCode, version, embeddingModel, status, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        sourceCode: { type: string }
+        version: { type: integer }
+        embeddingModel: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+    KnowledgeDocument:
+      type: object
+      required: [id, sourceCode, externalDocumentId, version, contentHash, status, ingestionJobId, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        sourceCode: { type: string }
+        externalDocumentId: { type: string }
+        version: { type: integer }
+        contentHash: { type: string }
+        status: { type: string }
+        ingestionJobId: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+    KnowledgeIngestionJob:
+      type: object
+      required: [id, sourceCode, documentHash, status, attempt, availableAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        sourceCode: { type: string }
+        documentHash: { type: string }
+        status: { type: string }
+        attempt: { type: integer }
+        availableAt: { type: string, format: date-time }
+        errorCode: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+    KnowledgeIngestionJobPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties: { records: { type: array, items: { $ref: '#/components/schemas/KnowledgeIngestionJob' } } }
+    KnowledgeScopeGrant:
+      type: object
+      required: [principalId, scopeCode, createdAt]
+      properties:
+        principalId: { type: string }
+        scopeCode: { type: string }
+        createdAt: { type: string, format: date-time }
 
     McpConnectorCommand:
       type: object
@@ -1861,6 +2140,23 @@ components:
         modelInvocations: { type: array, items: { type: object } }
         checkpoints: { type: array, items: { type: object } }
         stateHistory: { type: array, items: { type: object } }
+    AgentRuntimeOverview:
+      type: object
+      required: [queued, running, pauseRequested, paused, retryWaiting, reviewRequired, expiredLeases, succeededLast24Hours, failedLast24Hours, timedOutLast24Hours, cancelledLast24Hours, generatedAt]
+      properties:
+        queued: { type: integer, format: int64, minimum: 0 }
+        running: { type: integer, format: int64, minimum: 0 }
+        pauseRequested: { type: integer, format: int64, minimum: 0 }
+        paused: { type: integer, format: int64, minimum: 0 }
+        retryWaiting: { type: integer, format: int64, minimum: 0 }
+        reviewRequired: { type: integer, format: int64, minimum: 0 }
+        expiredLeases: { type: integer, format: int64, minimum: 0 }
+        succeededLast24Hours: { type: integer, format: int64, minimum: 0 }
+        failedLast24Hours: { type: integer, format: int64, minimum: 0 }
+        timedOutLast24Hours: { type: integer, format: int64, minimum: 0 }
+        cancelledLast24Hours: { type: integer, format: int64, minimum: 0 }
+        oldestQueuedAt: { type: string, format: date-time, nullable: true }
+        generatedAt: { type: string, format: date-time }
     RetryAgentRunCommand:
       type: object
       required: [reason, retryWindowSeconds]
@@ -1872,6 +2168,17 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 1000 }
+    PauseAgentRunCommand:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+    ResumeAgentRunCommand:
+      type: object
+      required: [reason, resumeWindowSeconds]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        resumeWindowSeconds: { type: integer, minimum: 30, maximum: 3600 }
     DeadLetterEvent:
       type: object
       required: [eventId, tenantCode, aggregateId, attemptCount, createdAt]

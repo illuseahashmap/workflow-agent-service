@@ -1,22 +1,17 @@
 # 待修复问题与下一步整改
 
-更新时间：2026-09-26
+更新时间：2026-10-06
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
 ## P0：发布与生产基线
 
-### P0-1 容器化集成测试尚未在本机闭环
-
-- 当前：CI 已执行 Docker 检查，并通过 `scripts/check-integration-test-results.mjs` 强制确认 PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全测试没有缺失或跳过；本次本机 `mvn verify` 的 16 个 Testcontainers 测试因未安装 Docker 全部跳过，门禁脚本已正确拒绝该结果。
-- 验收：发布分支完整 `mvn verify` 和集成测试通过，并归档 Surefire、JaCoCo、SpotBugs 报告。
-
 ### P0-2 生产可观测性与流程审计仍未完整闭环
 
-- 当前：已有 Trace ID、结构化日志、健康检查、基础 Agent 指标、状态历史、恢复决策和人工重试操作账本；新增 `GET /workflow/management/audit/operations`，支持按当前租户、事件类型、流程实例、Trace ID、时间范围和分页查询流程操作审计。
-- 当前新增：前端已提供受权限保护的运行审计入口，复用既有审计查询 API，支持事件、流程实例、Trace、操作者和时间结果展示。
-- 当前新增：仓库提供 `deploy/prometheus/workflow-agent-alerts.yml` 的基础告警规则，覆盖租约丢失、重试突增和恢复活动突增；部署方仍需接入 Prometheus/Alertmanager 并按环境调整阈值。
-- 缺口：容器化环境下流程发起/领取/审批/驳回/转办/终止/规则命中事件的完整可追溯性，以及失败运行与审计事件的统一处置联动仍未完成。
+- 当前：已有 Trace ID、结构化日志、健康检查、状态历史、恢复决策和运维操作账本；`GET /workflow/management/audit/operations` 支持按当前租户、事件类型、流程实例、Trace ID、时间范围和分页查询流程操作审计。
+- 当前新增：`GET /agent-runs/operations/overview` 提供租户范围状态分布、最老排队时间、过期租约和需人工介入数量；Micrometer 定时暴露运行、积压、暂停、恢复、死信和租约健康指标，禁止 tenantCode、runId、traceId 等高基数标签。
+- 当前新增：前端运行记录页展示健康摘要、失败分类和状态化操作；Prometheus 规则与 `docs/operations/agent-runtime-alert-runbook.md` 已覆盖积压、过期租约、暂停堆积、失败/死信和恢复异常。
+- 缺口：Alertmanager 尚未接线；容器化环境下流程全事件追溯、告警触发到处置联动及多实例指标准确性仍未演练。
 - 验收：可按租户、流程实例、AgentRun、Attempt、操作人和 Trace ID 定位一次失败，并回放关键状态变化。
 
 ### P1-0 历史数据库可能记录过临时修改版 V37
@@ -53,9 +48,16 @@
 
 - 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；平台 Agent 每个逻辑步骤完成后立即持久化 Step 和 Checkpoint，Checkpoint 写入会再次校验当前 Attempt/租约，恢复读取按 Attempt 序号和步骤序号选择。
 - 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
+- 当前已增加协作式暂停/恢复：QUEUED 可立即转为 PAUSED，RUNNING 在安全边界持久化后暂停；恢复保留 Checkpoint 并重新排队，重复命令幂等。浏览器已验证暂停、恢复、后端重启后重新领取和可操作失败详情。
 - 当前已验证：MCP Worker 接管能够从持久化 Checkpoint 恢复并重新初始化会话；内存会话不作为恢复事实来源。
-- 缺口：真实进程强杀、心跳失效、暂停/恢复和跨实例压力测试仍需补齐，现有恢复测试不能替代容器级故障注入。
+- 缺口：真实进程强杀、心跳失效、运行中外部调用边界暂停和跨实例压力测试仍需补齐，现有单元与浏览器恢复测试不能替代容器级故障注入。
 - 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等。
+
+### P1-3a 迁移账号与运行账号的最小权限部署尚未形成标准模板
+
+- 当前：应用支持通过 `WORKFLOW_MIGRATION_DB_URL/USERNAME/PASSWORD` 为 Flyway 配置独立迁移账号，未配置时兼容复用运行数据源；迁移版本唯一性已有自动测试，避免重复版本导致启动期失败。
+- 缺口：现有本地数据库的表所有者和运行账号授权并不统一，尚无可直接复用的“迁移账号建表 + 运行账号最小权限 + RLS 策略”初始化模板与升级验证。
+- 验收：全新数据库和存量升级均可由独立迁移账号完成，运行账号不是表所有者且仅具备所需权限，Flyway validate、应用启动和 RLS 负面测试全部通过。
 
 ### P1-11 工具幂等并发与参数冲突
 
@@ -88,8 +90,8 @@
 
 ### P1-4 结果策略与 Agent 运行规则仍需租户化
 
-- 当前：已支持 Schema 校验、空结果、部分结果、业务拒绝、内容过滤和显式 `resultStatus`，未通过策略不会恢复 Flowable。
-- 缺口：证据约束、Guardrail、租户业务规则、成本预算和人工确认尚未纳入版本化 Agent 契约。
+- 当前：已支持 Schema 校验、空结果、部分结果、业务拒绝、内容过滤和显式 `resultStatus`。流程失败策略现已区分保持运维、继续空结果和 BPMN 人工复核；人工复核模式会输出稳定的 `agentReviewRequired`、Run/结果状态和错误码变量，由流程图中的网关进入显式 UserTask。部署解析会沿 Agent 节点下游图验证存在引用 `agentReviewRequired` 的条件路径且最终到达 UserTask。单元测试已覆盖三种分支和错误图拒绝，真实 Flowable/PostgreSQL 同事务路由测试已在 Testcontainers 环境通过。
+- 缺口：证据约束、Guardrail、租户业务规则、成本预算和高风险写工具执行前人工确认尚未纳入版本化 Agent 契约。
 - 验收：只有通过结构、业务、证据和 Guardrail 的结果才能推进流程，规则版本可追溯。
 
 ### P1-5 Provider 出站安全仍需纵深治理

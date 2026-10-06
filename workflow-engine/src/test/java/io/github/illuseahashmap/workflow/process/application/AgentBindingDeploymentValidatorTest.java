@@ -1,5 +1,6 @@
 package io.github.illuseahashmap.workflow.process.application;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -103,7 +104,7 @@ class AgentBindingDeploymentValidatorTest {
     }
 
     @Test
-    void rejectsManualReviewUntilHumanTaskCapabilityExists() {
+    void acceptsManualReviewAsExplicitBpmnRoutingPolicy() {
         when(catalog.findPublished("tenant-a", 42L)).thenReturn(Optional.of(
                 new AgentVersionCatalog.PublishedAgentVersion(
                         42L, "MODEL_ONLY", 300, null, null)));
@@ -111,7 +112,6 @@ class AgentBindingDeploymentValidatorTest {
                 "agentReview", "Review", 42L, "{}", "{}",
                 AgentProcessFailurePolicy.MANUAL_REVIEW, 120);
 
-        assertThatThrownBy(() -> validator.validate("tenant-a", List.of(binding)))
-                .hasMessageContaining("unavailable");
+        assertThatCode(() -> validator.validate("tenant-a", List.of(binding))).doesNotThrowAnyException();
     }
 }

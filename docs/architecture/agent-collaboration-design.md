@@ -203,6 +203,27 @@ Copilot 绑定在普通 User Task 上。流程停留在人工任务，Agent 提�
 
 该模式不增加新的运行语义，复用自主节点和普通人工任务。是否需要人工复核由 BPMN 显式表达，不隐藏在 Agent 黑盒中。
 
+Agent 节点选择 `MANUAL_REVIEW` 时，运行时在终态失败后恢复原 Flowable execution，并写入以下稳定流程变量：
+
+| 变量 | 含义 |
+| --- | --- |
+| `agentReviewRequired` | 失败进入人工复核时为 `true`，成功或继续空结果时为 `false` |
+| `agentRunId` | 产生该结果的 AgentRun ID |
+| `agentRunStatus` | AgentRun 终态，例如 `FAILED` |
+| `agentResultStatus` | 业务结果状态，例如 `PARTIAL`、`REJECTED` |
+| `agentRunErrorCode` | 稳定错误码；诊断详情仍从授权运行详情读取 |
+
+推荐流程显式建模为：
+
+```text
+AgentTask
+  → 排他网关
+      ├─ ${agentReviewRequired} → 人工复核 UserTask → 后续业务路径
+      └─ default                → 正常后续路径
+```
+
+人工任务的候选人、派单规则、SLA 和审批动作仍由 workflow 上下文负责；Agent 上下文只投影失败事实，不直接创建或分配人工任务。`HOLD_FOR_OPERATIONS` 与该模式不同：它不会离开 Agent 节点，而是等待授权运维人员修复配置并重试。
+
 ## 6. 模块与依赖边界
 
 目标模块关系：

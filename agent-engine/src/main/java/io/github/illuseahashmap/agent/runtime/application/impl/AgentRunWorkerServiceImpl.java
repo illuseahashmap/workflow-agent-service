@@ -14,6 +14,7 @@ import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutorRegistry;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
+import io.github.illuseahashmap.agent.runtime.application.AgentRunPausedException;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunWorkerService;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunExecutionRepository;
@@ -196,6 +197,9 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
         AgentRunLeaseHeartbeat.LeaseCommand leaseCommand = new AgentRunLeaseHeartbeat.LeaseCommand(
                 run.tenantCode(), run.id(), claimed.attemptId(), workerId, leaseDuration, run.deadlineAt());
         try (AgentRunLeaseHeartbeat.LeaseHandle lease = leaseHeartbeat.start(leaseCommand)) {
+            if (pauseAtSafeBoundary(claimed)) {
+                return;
+            }
             AgentExecutor.Result executionResult;
             AgentDefinitionVersion version;
             try {
@@ -212,6 +216,10 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                                 (sequence, progress) -> persistProgress(claimed, sequence, progress), claimed.requestedBy()));
             } catch (io.github.illuseahashmap.agent.runtime.application.AgentLeaseLostException exception) {
                 LOG.info("Agent execution lease was lost; abandoning late worker: runId={}, attemptId={}",
+                        run.id(), claimed.attemptId());
+                return;
+            } catch (AgentRunPausedException exception) {
+                LOG.info("Agent run paused at a durable boundary: runId={}, attemptId={}",
                         run.id(), claimed.attemptId());
                 return;
             } catch (AgentExecutionException exception) {
@@ -299,12 +307,13 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                     lastTransition(claimed.run()));
             eventPublisher.completed(claimed.run(), outputSnapshot(response, decision));
             metrics.completed(ResultStatus.SUCCESS);
+            metrics.executionDuration(ResultStatus.SUCCESS, executionDuration(claimed.run(), now));
         });
     }
 
     /** Persist each logical executor step before the next model/tool step starts. */
     private void persistProgress(ClaimedRun claimed, int sequence, AgentExecutor.StepProgress progress) {
-        transactionTemplate.executeWithoutResult(status -> {
+        boolean paused = Boolean.TRUE.equals(transactionTemplate.execute(status -> {
             Instant now = Instant.now();
             int ledgerSequence = sequence + 1;
             AgentExecutor.StepResult step = progress.result();
@@ -315,7 +324,24 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
                 status.setRollbackOnly();
                 throw new io.github.illuseahashmap.agent.runtime.application.AgentLeaseLostException();
             }
-        });
+            return executionRepository.pauseIfRequested(
+                    claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), workerId,
+                    claimed.traceId(), now);
+        }));
+        if (paused) {
+            metrics.paused();
+            throw new AgentRunPausedException();
+        }
+    }
+
+    private boolean pauseAtSafeBoundary(ClaimedRun claimed) {
+        boolean paused = Boolean.TRUE.equals(transactionTemplate.execute(status -> executionRepository.pauseIfRequested(
+                claimed.run().tenantCode(), claimed.run().id(), claimed.attemptId(), workerId,
+                claimed.traceId(), Instant.now())));
+        if (paused) {
+            metrics.paused();
+        }
+        return paused;
     }
 
     private String checkpointSnapshot(AgentExecutor.CheckpointState checkpoint) {
@@ -412,10 +438,17 @@ public class AgentRunWorkerServiceImpl implements AgentRunWorkerService {
             if (!retriesRemaining || !now.isBefore(claimed.run().deadlineAt())) {
                 eventPublisher.completed(claimed.run(), null);
                 metrics.completed(resultStatus);
+                metrics.executionDuration(resultStatus, executionDuration(claimed.run(), now));
             } else {
                 metrics.retryScheduled(errorCode);
             }
         });
+    }
+
+    private Duration executionDuration(AgentRun run, Instant completedAt) {
+        Instant startedAt = run.startedAt() == null ? run.createdAt() : run.startedAt();
+        return Duration.between(startedAt, completedAt).isNegative()
+                ? Duration.ZERO : Duration.between(startedAt, completedAt);
     }
 
     private long providerId(AgentRun run) {

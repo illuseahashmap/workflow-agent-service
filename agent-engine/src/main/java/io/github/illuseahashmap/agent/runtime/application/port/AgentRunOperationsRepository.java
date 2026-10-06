@@ -19,6 +19,23 @@ public interface AgentRunOperationsRepository {
             String reason
     );
 
+    OperationResult requestPause(
+            String tenantCode,
+            long runId,
+            String operatorId,
+            String traceId,
+            String reason
+    );
+
+    OperationResult resumePaused(
+            String tenantCode,
+            long runId,
+            String operatorId,
+            String traceId,
+            String reason,
+            int resumeWindowSeconds
+    );
+
     default void recordOperation(
             String tenantCode,
             long runId,
@@ -56,5 +73,11 @@ public interface AgentRunOperationsRepository {
     ) {
         recordOperation(tenantCode, runId, operationType, previousStatus, resultingStatus,
                 operatorId, traceId, reason, null);
+    }
+
+    enum OperationResult {
+        APPLIED,
+        ALREADY_APPLIED,
+        REJECTED
     }
 }

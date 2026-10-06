@@ -2,8 +2,10 @@ package io.github.illuseahashmap.agent.runtime.application.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -180,6 +182,24 @@ class AgentRunWorkerServiceImplTest {
         verify(executor).execute(command.capture());
         assertThat(command.getValue().checkpointStateJson()).contains("tool result");
         assertThat(command.getValue().runId()).isEqualTo(10L);
+    }
+
+    @Test
+    void pausesAtTheFirstSafeBoundaryBeforeCallingExternalSystems() {
+        AgentRun run = queuedRun();
+        configureClaim(run);
+        when(executionRepository.pauseIfRequested(
+                org.mockito.ArgumentMatchers.eq("tenant-a"),
+                org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.eq(101L),
+                anyString(), anyString(), any())).thenReturn(true);
+        ModelProviderPort providerPort = mock(ModelProviderPort.class);
+        when(providerPort.providerType()).thenReturn(AgentProviderType.MOCK);
+
+        assertThat(service(providerPort).executeNext()).isTrue();
+
+        verify(versionRepository, never()).findByVersionId(anyString(), org.mockito.ArgumentMatchers.anyLong());
+        verify(providerPort, never()).invoke(any());
     }
 
     private AgentRunWorkerServiceImpl service(ModelProviderPort providerPort) {

@@ -18,6 +18,7 @@ public interface AgentCompletionRunPort {
             String activityActivationId,
             Long currentAttemptId,
             String status,
+            String resultStatus,
             String errorCode,
             String outputSnapshotJson,
             String outputMappingJson,

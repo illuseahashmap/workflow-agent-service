@@ -159,6 +159,11 @@ Optional database variables:
 WORKFLOW_DB_URL=jdbc:postgresql://localhost:5432/workflow_agent
 WORKFLOW_DB_USERNAME=postgres
 WORKFLOW_DB_PASSWORD=root
+# Optional: use a schema-owner account only for Flyway while the application
+# runs with a least-privilege account. Defaults to the three values above.
+WORKFLOW_MIGRATION_DB_URL=jdbc:postgresql://localhost:5432/workflow_agent
+WORKFLOW_MIGRATION_DB_USERNAME=postgres
+WORKFLOW_MIGRATION_DB_PASSWORD=root
 ```
 
 Redis defaults to `localhost:6379`. Production configuration has no database credential defaults, disables Flyway baselining,
@@ -175,4 +180,5 @@ mvn verify
 `verify` enforces the JDK/Maven baseline, Java conventions, SpotBugs high-priority findings, and a minimum tested-code
 coverage floor. ArchUnit tests prevent domain-to-framework, application-to-infrastructure, direct REST-to-domain,
 and cross-bounded-context infrastructure dependencies. Docker-enabled environments additionally run PostgreSQL,
-Redis, Flyway, Flowable, and HTTP security integration tests through Testcontainers.
+Redis, Flyway, Flowable, and HTTP security integration tests through Testcontainers. The parent build pins the
+docker-java API compatibility floor to `1.44`, so Docker Engine 29 does not fall back to the legacy `1.32` API.

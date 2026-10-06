@@ -3,6 +3,7 @@ package io.github.illuseahashmap.agent.runtime.application.impl;
 import io.github.illuseahashmap.agent.runtime.application.AgentRunQueryService;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunDetailView;
 import io.github.illuseahashmap.agent.runtime.application.dto.AgentRunView;
+import io.github.illuseahashmap.agent.runtime.application.dto.AgentRuntimeOverviewView;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentRunQueryRepository;
 import io.github.illuseahashmap.agent.runtime.domain.AgentRunStatus;
 import io.github.illuseahashmap.workflow.shared.context.TenantProvider;
@@ -56,6 +57,11 @@ public class AgentRunQueryServiceImpl implements AgentRunQueryService {
         }
         return repository.findByProcessInstance(
                 tenantProvider.current().tenantCode(), processInstanceId.trim());
+    }
+
+    @Override
+    public AgentRuntimeOverviewView overview() {
+        return repository.overview(tenantProvider.current().tenantCode());
     }
 
     private AgentRunStatus parseStatus(String value) {

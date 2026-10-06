@@ -39,20 +39,27 @@ public class AgentCompletionRecoveryService {
             return;
         }
         var variables = new HashMap<String, Object>();
-        variables.put("agentRunId", run.id());
-        variables.put("agentRunStatus", run.status());
+        variables.put(AgentWorkflowVariables.RUN_ID, run.id());
+        variables.put(AgentWorkflowVariables.RUN_STATUS, run.status());
+        variables.put(AgentWorkflowVariables.REVIEW_REQUIRED, false);
+        if (run.resultStatus() != null) {
+            variables.put(AgentWorkflowVariables.RESULT_STATUS, run.resultStatus());
+        }
         if ("SUCCEEDED".equals(run.status())) {
             // A failed attempt may have projected an operational error onto the waiting
             // execution. A later successful recovery supersedes that state, so clear the
             // stale local projection before the execution leaves the Agent activity.
-            executionPort.removeLocalVariable(run.executionId(), "agentRunErrorCode");
+            executionPort.removeLocalVariable(run.executionId(), AgentWorkflowVariables.ERROR_CODE);
             variables.putAll(outputMappingResolver.resolve(
                     run.outputSnapshotJson(), run.outputMappingJson()));
             executionPort.trigger(run.executionId(), variables);
         } else {
-            variables.put("agentRunErrorCode",
+            variables.put(AgentWorkflowVariables.ERROR_CODE,
                     run.errorCode() == null ? "AGENT_FAILED" : run.errorCode());
-            if ("CONTINUE_EMPTY".equals(run.processFailurePolicy())) {
+            if ("MANUAL_REVIEW".equals(run.processFailurePolicy())) {
+                variables.put(AgentWorkflowVariables.REVIEW_REQUIRED, true);
+                executionPort.trigger(run.executionId(), variables);
+            } else if ("CONTINUE_EMPTY".equals(run.processFailurePolicy())) {
                 executionPort.trigger(run.executionId(), variables);
             } else {
                 executionPort.setLocalVariables(run.executionId(), variables);
