@@ -2,6 +2,8 @@
 
 状态：后续设计方向，尚未实现。
 
+更新时间：2026-10-06
+
 本文收敛“让 Agent 使用运行证据逐步获得任务完成权”的长期方向。它建立在现有
 `AgentVersion`、`AgentRun`、Attempt、Step、Checkpoint、Outbox/Inbox 和 Flowable
 任务能力之上，不改变当前 Agent Runtime 生产可靠性问题优先处理的顺序。

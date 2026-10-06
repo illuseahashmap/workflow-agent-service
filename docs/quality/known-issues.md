@@ -14,14 +14,14 @@
 - 缺口：Alertmanager 尚未接线；容器化环境下流程全事件追溯、告警触发到处置联动及多实例指标准确性仍未演练。
 - 验收：可按租户、流程实例、AgentRun、Attempt、操作人和 Trace ID 定位一次失败，并回放关键状态变化。
 
+## P1：隔离、可靠性与契约
+
 ### P1-0 历史数据库可能记录过临时修改版 V37
 
 - 当前：仓库已恢复不可变的原始 V37，并将历史 RUNNING 记录处置迁移到 V38；新数据库和只执行过原始 V37 的数据库可以直接迁移。
 - 风险：如果某个数据库曾在临时修改版 V37 存在期间执行过迁移，Flyway 会因历史 checksum 与当前 V37 不同而拒绝启动。
 - 处理：必须由 DBA 按[ V37 checksum 兼容处理手册](../operations/flyway-v37-checksum-recovery.md)确认备份、结构和执行历史后再 repair；不得盲目 repair、跳过 validate 或再次修改 V37。
 - 验收：V37 checksum 与当前文件一致，V38 成功执行，应用启动无 `FlywayValidateException`。
-
-## P1：隔离、可靠性与契约
 
 ### P1-1 Flowable 内部表 RLS 需要真实版本验证
 
@@ -44,7 +44,7 @@
 - 已验证：本地浏览器已跑通全文检索、Evidence 回注、Agent 结果和 Flowable 后续审批，运行命中 `employee-handbook.md` 第 1 版且 `retrievalStatus=FULL`。
 - 未完成：Grounding 策略、离线评测集、pgvector/混合 Retriever 以及生产级 Trace 查询接口尚未接入；当前已具备按租户轮询的摄取调度、Profile/文档/主体范围管理入口和 PostgreSQL 文档/Chunk/全文检索基础设施，但仍不宣称生产级 RAG 闭环。
 
-### P1-3 Agent 状态恢复与多步骤 Checkpoint 尚未完成
+### P1-3 Agent Runtime 生产故障恢复验收尚未完成
 
 - 当前：已有 Attempt 隔离、租约心跳、`SKIP LOCKED`、随机抖动、旧 Attempt 迟到结果保护、失败分类和人工重试；平台 Agent 每个逻辑步骤完成后立即持久化 Step 和 Checkpoint，Checkpoint 写入会再次校验当前 Attempt/租约，恢复读取按 Attempt 序号和步骤序号选择。
 - 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
@@ -115,8 +115,8 @@
 
 ### P1-8 核心覆盖率和故障集成测试低于长期目标
 
-- 当前：JaCoCo 已配置真实 `check`，当前阈值是保守基线；单元测试、架构测试和部分 PostgreSQL/Flowable 集成测试已存在。
-- 缺口：核心模块逐步达到 60% 以上，Agent 完成事件、RLS、租约、重复消息、事务回滚和 Provider 兼容性还需更多真实环境测试。
+- 当前：JaCoCo 已配置真实 `check`，当前阈值是保守基线；2026-10-06 本地 `mvn verify` 的 271 个测试全部通过且 0 跳过，PostgreSQL、Redis、Flowable、Flyway、RLS 和 HTTP 安全的 5 个必需基础设施套件通过门禁。
+- 缺口：核心模块仍需逐步达到 60% 以上；Worker 强杀、租约过期、多实例竞争、重复消息、事务回滚和更多真实 Provider/MCP Server 兼容性场景仍需补齐。
 - 验收：关键安全、租约、状态机、恢复和流程推进路径达到更高覆盖率，不能只用 Mock 证明闭环。
 
 ## 暂不列入问题的已完成项

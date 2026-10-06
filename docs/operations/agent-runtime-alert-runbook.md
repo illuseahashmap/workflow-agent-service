@@ -1,5 +1,7 @@
 # Agent Runtime 告警处置手册
 
+更新时间：2026-10-06
+
 本手册对应 `deploy/prometheus/workflow-agent-alerts.yml`。指标只包含平台级低基数维度；具体租户、Run、Attempt 和 Trace 应通过 Agent 中心的运行态势与运行详情定位。
 
 ## 通用顺序

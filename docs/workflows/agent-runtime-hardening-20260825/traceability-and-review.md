@@ -1,5 +1,7 @@
 # Agent Runtime Hardening — Traceability and Review
 
+> 归档说明：下列 Findings 保留 2026-08-25 当时的验收事实。2026-10-06 后续验证已恢复 Docker Engine，271 个测试 0 跳过，5 个必需基础设施套件通过；`knowledge_search` 已在 V48 以受治理只读工具重新启用。当前缺口以 `docs/quality/known-issues.md` 为准。
+
 | Requirement | Evidence | Result |
 |-------------|----------|--------|
 | AC-01 `knowledge_search` 未就绪时不可运行且不自动授权 | `platform-migrations/.../V35__disable_unready_knowledge_search.sql`; `docs/status.md`; `PlatformMigrationIntegrationTest` migration count | PASS |

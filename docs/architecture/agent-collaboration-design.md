@@ -1,6 +1,6 @@
 # Agent 协作架构设计
 
-更新时间：2026-08-18
+更新时间：2026-10-06
 状态：长期架构基线；首个 Agent Service Task 纵向闭环已实施，取消/人工确认、Guardrail、资源治理和生产级自治仍属于后续能力。
 
 MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。

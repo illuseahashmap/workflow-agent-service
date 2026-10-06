@@ -7,3 +7,5 @@
 | T-P0-03 | 增加 JDBC 查询适配器和 Controller | AC-P0-02/03/04 | completed |
 | T-P0-04 | 增加单元/API/OpenAPI 验证 | AC-P0-03/05 | completed：单元测试与 OpenAPI 结构验证通过 |
 | T-P0-05 | 更新状态与问题记录并完成审查 | 全部 | completed with concerns：剩余环境与运维视图缺口已记录 |
+
+> 后续追踪（2026-10-06）：T-P0-01 的本机 Docker 阻塞已经解除，基础设施门禁以 271 个测试 0 跳过通过；历史表格保留当时结果，不作为当前状态入口。

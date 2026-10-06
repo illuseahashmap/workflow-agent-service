@@ -20,12 +20,12 @@
 - 已完成正式 AgentRun 执行链路：Provider 调用、Schema 校验、基础结果策略、重试、租约心跳、Recovery、Outbox/Inbox 和 Flowable 恢复；平台 Agent 的逻辑步骤 Checkpoint 现在包含恢复游标和受限上下文，并在新 Attempt 读取。
 - 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
 - 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；AgentVersion 已冻结工具代码集合，BPMN 节点只能继续收紧，当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
-- Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Chat Completions 使用结构化工具调用，DeepSeek Ark Responses 端点暂按其兼容性使用受控文本工具协议，避免发送该端点不接受的 `tools` 参数。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。后续应以 Provider 能力协商替代按端点判断。
+- Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Provider Adapter 通过能力契约声明原生 Tool Calling 支持，Chat Completions 使用结构化工具调用，不支持原生工具的 Responses 兼容端点使用受控文本工具协议。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。
 - 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、稳定幂等键、带租约的数据库原子抢占和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
 - 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、`RetrievalProfileVersion` 模型、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；RAG-2 已新增文档快照、确定性 Chunk 切分、索引构建端口、`knowledge_chunk` 全文检索表、PostgreSQL 文档/索引/Trace 适配器和租约 Worker。当前已增加 AgentVersion 到 RetrievalProfile 的数据库绑定、提交人随 AgentRun 快照传递及主体知识范围授权表/适配器，并新增租户边界内的 Profile 草稿/发布、文档入库与摄取任务、主体范围授权管理 API；前端已提供主体范围授权入口，避免运行时因缺少主体授权而只能失败。V47 已为 Profile、文档、摄取查询和范围授权建立独立权限，前端已提供 ACTIVE 索引选择、Profile 草稿/发布和文本/Markdown 文档提交入口；workflow-boot 已接入按启用租户轮询的摄取调度器，任务会通过租约 Worker 有界领取并执行。V48 已在已有检索应用、Profile 绑定和主体范围授权边界内恢复 `knowledge_search` 只读工具，AgentVersion 可绑定已发布 Profile 后进入真实检索链路；本地浏览器已验证全文检索证据回注、流程路由和后续审批完成。pgvector/混合检索、Grounding 和离线评测仍未接入。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
-- 已完成 MCP-1/MCP-2 只读配置与运行闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；确定性 HTTPS 协议测试覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。本地浏览器已验证“模型选择工具 → MCP 调用 → 返回 `count` → AgentRun 成功 → Flowable 完成”。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全、真实容器化故障恢复和多实例压力验收完成。
+- 已完成 MCP-1/MCP-2 只读配置与运行闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；确定性 HTTPS 协议测试覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。本地浏览器已验证“模型选择工具 → MCP 调用 → 返回 `count` → AgentRun 成功 → Flowable 完成”。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全、确定性 MCP Server 容器故障注入和多实例压力验收完成。
 - 前端状态展示已收敛到公共 `StatusBadge`/`TableTagCell` 契约：状态、版本、分类和筛选标签分别使用稳定变体；标签不再在组件内部截断，原始状态码通过悬浮提示保留；流程定义、Agent、工具目录、成员角色、租户、派单规则、参与人和审计页面统一状态列对齐。
 - 重试已使用可注入的指数退避 + 有界随机抖动，最终 `available_at` 在同一事务中持久化。
 - 已增加类型化失败模型与恢复决策账本：Provider 临时/永久故障、输出/输入契约、工具协议、结果策略、配置、业务拒绝、截止时间和未分类异常均在边界处明确归类，再由恢复策略选择重试、修复、人工介入或终止；运行详情可查询安全诊断信息、Trace ID、Attempt、Step 和恢复决策。
@@ -54,18 +54,17 @@
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；真实容器、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成 Docker 故障恢复、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；确定性 MCP Server 容器测试、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成真实 MCP Server 容器故障注入、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
 
 ## 三、下一阶段顺序
 
-1. 先完成 P0 生产基线：集成测试、可观测性和流程审计。
-2. 再完成 P1 安全与契约：RLS 深度验证、API 响应模型和核心覆盖率。
-3. 再完善 Agent Runtime：失败转显式 BPMN 人工复核、状态化运维处置和协作式暂停/恢复已落地；继续完成 Grounding/业务规则门禁、真实强杀恢复、出站安全、公平调度和高风险写工具人工确认。
-4. LangChain4j 第一阶段已经完成：`ModelProviderPort` 的 Chat Completions 和 `McpClientPort` 默认由 LangChain4j 适配器实现；下一步继续验证文档解析、Embedding、向量存储和 Rerank。只有经过测试确认不适配平台约束的能力才保留自研实现。
-5. RAG 进入下一短期主线：Profile/文档/摄取/主体范围管理、V47 专用权限、摄取调度和 `knowledge_search` 只读 Agent 链路已完成；下一步基于稳定端口接入 pgvector/混合检索、Grounding 和评测，在完成生产验收前保持只读和严格 Profile/主体授权边界。
+1. 完成剩余 P0 生产运营闭环：接入 Alertmanager，补齐流程全事件审计覆盖，并验证告警到处置的回放链路。容器化集成测试基线已经完成，不再作为待办重复开发。
+2. 并行完成 Agent Runtime 生产故障验收：Worker 强杀、租约过期、运行中外部调用边界暂停和多实例压力；同时继续 RLS 深度验证、API 契约和核心覆盖率。
+3. RAG 作为下一条主功能线：Profile/文档/摄取/主体授权和 `knowledge_search` 已闭环；优先通过稳定端口复用 LangChain4j 的 Embedding、向量存储与 Rerank，完成 pgvector/全文混合检索、Grounding、评测和摄取恢复。
+4. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；下一步完成确定性 MCP Server 容器故障注入、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+5. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。
 6. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
-7. 完成 MCP-2 收口：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call 语义；继续完成真实确定性 MCP Server 容器集成测试、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
-8. 最后扩展任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
+7. 最后扩展任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
 
 ### LangChain4j 采用边界
 
@@ -116,7 +115,7 @@
 
 首个纵向闭环不等于 Agent MVP 完成。只有执行、恢复、幂等、权限、审计、取消、人工交互和 Flowable 集成全部通过容器化集成测试，才可将 Agent MVP 标记为完成。
 
-最近一次本地纵向验证（2026-09-26）：
+最近一次 LLM/MCP/RAG 纵向验证（2026-09-26）：
 
 | 场景 | 流程实例 | 结果 |
 | --- | --- | --- |
@@ -124,7 +123,9 @@
 | MCP | `612dd907-b951-11f1-afff-00155d46a074` | 模型选择只读 MCP 工具，返回 `{"count":5}`，AgentRun 与流程均完成 |
 | RAG | `8a814331-b952-11f1-afff-00155d46a074` | `retrievalStatus=FULL`，命中 `employee-handbook.md` 第 1 版，按证据路由到直属负责人并完成审批 |
 
-以上证明本地配置与运行纵向链路可用，不替代 Docker、强杀、跨实例、出站安全和质量评测门禁。
+以上证明本地配置与运行纵向链路可用，不替代专项容器故障注入、Worker 强杀、跨实例、出站安全和质量评测门禁。
+
+最近一次工程质量基线（2026-10-06）：后端 9 个 Reactor 模块和 271 个测试全部通过，0 失败、0 错误、0 跳过；5 个必需基础设施集成套件通过门禁。前端格式、Lint、类型检查、39 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
 
 ### Agent Runtime 近期加固
 
