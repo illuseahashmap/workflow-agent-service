@@ -20,11 +20,12 @@
 
 ## MVP 剩余范围
 
-1. Worker 强杀、租约过期、运行中外部调用边界暂停和跨实例恢复压力验证。
-2. 完整 Guardrail、证据约束、高风险写工具审批和 UNKNOWN_OUTCOME 人工核验。
-3. Provider 出站安全、租户/Provider 跨实例公平配额、背压和降级。
-4. 版本化业务结果策略、成本预算和告警到处置的生产运营闭环。
-5. Flowable 深层 RLS、真实 Provider/MCP Server 兼容矩阵和端到端故障注入。
+1. 将每实例单线程 Heartbeat 演进为有界多线程或批量续租，补齐调度积压指标、容量模型、Worker 强杀、租约过期、运行中外部调用边界暂停和跨实例恢复压力验证。
+2. 将当前有界文本 Checkpoint 演进为版本化 Context 压缩与引用化恢复：确定性裁剪和去重优先，模型摘要只处理可丢失历史，工具/RAG/人工状态继续引用权威账本。
+3. 完整 Guardrail、证据约束、高风险写工具审批和 UNKNOWN_OUTCOME 人工核验。
+4. Provider 出站安全、租户/Provider 跨实例公平配额、背压和降级。
+5. 版本化业务结果策略、成本预算和告警到处置的生产运营闭环。
+6. Flowable 深层 RLS、真实 Provider/MCP Server 兼容矩阵和端到端故障注入。
 
 ## 不能突破的实现边界
 

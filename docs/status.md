@@ -49,7 +49,7 @@
 | P0 | 流程操作审计 | 基础写入与租户隔离查询 API 已有，支持事件、实例、Trace、时间范围和分页 | 通过容器化环境验证全链路事件可追溯，并补齐规则命中等覆盖 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试、子步骤 Checkpoint、取消及协作式暂停/恢复已落地；浏览器已验证排队暂停、恢复和 Worker 重启后重新领取 | 完成真实强杀/租约过期/跨实例压力、出站策略、公平调度、Guardrail 和高风险写工具确认 |
+| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试、子步骤 Checkpoint、取消及协作式暂停/恢复已落地；浏览器已验证排队暂停、恢复和 Worker 重启后重新领取；当前每实例使用单线程 Heartbeat 调度，Checkpoint 仍以有界文本上下文和最后一次工具结果为主 | 将 Heartbeat 演进为有界多线程或批量续租并补齐积压指标/高并发门禁；实现版本化 Checkpoint Context 压缩与引用化恢复，再完成真实强杀/租约过期/跨实例压力、出站策略、公平调度、Guardrail 和高风险写工具确认 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收 |
@@ -59,7 +59,7 @@
 ## 三、下一阶段顺序
 
 1. 完成剩余 P0 生产运营闭环：接入 Alertmanager，补齐流程全事件审计覆盖，并验证告警到处置的回放链路。容器化集成测试基线已经完成，不再作为待办重复开发。
-2. 并行完成 Agent Runtime 生产故障验收：Worker 强杀、租约过期、运行中外部调用边界暂停和多实例压力；同时继续 RLS 深度验证、API 契约和核心覆盖率。
+2. 并行完成 Agent Runtime 生产故障验收：先将每实例单线程 Heartbeat 演进为有界多线程或批量续租，增加续租延迟、调度积压和意外丢租指标，并验证 Worker 强杀、租约过期、运行中外部调用边界暂停和多实例压力；同时把 Checkpoint 的文本截断升级为版本化 Context 压缩与引用化恢复，继续 RLS 深度验证、API 契约和核心覆盖率。
 3. RAG 作为下一条主功能线：Profile/文档/摄取/主体授权和 `knowledge_search` 已闭环；优先通过稳定端口复用 LangChain4j 的 Embedding、向量存储与 Rerank，完成 pgvector/全文混合检索、Grounding、评测和摄取恢复。
 4. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；下一步完成确定性 MCP Server 容器故障注入、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 5. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。

@@ -50,8 +50,11 @@
 - 当前已增加受权限保护的活动运行取消命令：会清理租约、终止当前 Attempt、写入状态历史和操作账本；Worker 的迟到完成仍受 Attempt 条件保护。
 - 当前已增加协作式暂停/恢复：QUEUED 可立即转为 PAUSED，RUNNING 在安全边界持久化后暂停；恢复保留 Checkpoint 并重新排队，重复命令幂等。浏览器已验证暂停、恢复、后端重启后重新领取和可操作失败详情。
 - 当前已验证：MCP Worker 接管能够从持久化 Checkpoint 恢复并重新初始化会话；内存会话不作为恢复事实来源。
-- 缺口：真实进程强杀、心跳失效、运行中外部调用边界暂停和跨实例压力测试仍需补齐，现有单元与浏览器恢复测试不能替代容器级故障注入。
-- 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等。
+- 缺口：当前每个应用实例使用一个单线程 `ScheduledExecutorService` 串行续租全部活动 Run；数据库变慢、连接池等待、长 GC 或活动 Run 激增时可能产生 Heartbeat 排队并放大意外丢租。真实进程强杀、心跳失效、运行中外部调用边界暂停和跨实例压力测试仍需补齐，现有单元与浏览器恢复测试不能替代容器级故障注入。
+- 缺口：当前 Checkpoint 只保存 `logicalStepId/nextStep/context/previousToolResultJson`，`context` 超限后保留末尾 40000 字符。该实现只适合当前短链路串行工具循环，不能保证多工具、大结果、RAG 证据、人工中断或后续子 Agent 的确定性恢复。
+- 下一步：Heartbeat 采用可配置的有界调度池或按 Worker 批量续租，容量必须由数据库 P99、最大活动 Run 和 Lease 安全余量验证；增加续租执行延迟、调度滞后、待续租数量和非预期丢租指标，过载时优先背压新 Run，不能无界增加续租线程。
+- 下一步：实现版本化 `ContextAssemblyPolicy/CheckpointSchema`。先做确定性去重、按来源 Token 预算、不可变输入保留和大结果引用化，再对可丢失的对话历史使用模型摘要；工具执行状态、幂等记录、RetrievalTrace、EvidenceReference、人工审批状态和版本信息不得被摘要替代。
+- 验收：租约失效或 Worker 被杀后能从最后完整 Checkpoint 恢复；旧 Attempt 不能覆盖新 Attempt；终态操作幂等；在目标并发和故障注入下 Heartbeat 调度滞后不越过 Lease 安全余量；压缩前后固定评测用例的工具选择、参数、引用和最终业务结果保持一致。
 
 ### P1-3a 迁移账号与运行账号的最小权限部署尚未形成标准模板
 
