@@ -11,6 +11,33 @@ groups:
         annotations:
           summary: Agent lease loss is increasing
           description: More than three Agent worker leases were lost in ten minutes.
+      - alert: WorkflowAgentHeartbeatSchedulingDelay
+        expr: histogram_quantile(0.95, sum by (le) (rate(workflow_agent_lease_renewal_delay_seconds_bucket[10m]))) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: workflow-agent
+        annotations:
+          summary: Agent heartbeat scheduling is approaching the lease safety margin
+          description: The P95 heartbeat scheduling delay exceeded five seconds; inspect scheduler backlog, GC and database saturation.
+      - alert: WorkflowAgentHeartbeatQueueBacklog
+        expr: workflow_agent_heartbeat_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: workflow-agent
+        annotations:
+          summary: Agent heartbeat scheduler has a persistent backlog
+          description: Increase capacity only after checking renewal latency, database pool wait and active Run volume.
+      - alert: WorkflowAgentHeartbeatCapacityNearLimit
+        expr: workflow_agent_heartbeat_active_registrations / workflow_agent_heartbeat_registration_capacity > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          service: workflow-agent
+        annotations:
+          summary: Agent heartbeat registration capacity is nearly exhausted
+          description: More than 90% of the bounded heartbeat registrations are occupied; reduce run concurrency or raise the reviewed capacity before new runs are rejected.
       - alert: WorkflowAgentRetryBurst
         expr: sum(increase(workflow_agent_runs_retry_scheduled_total[10m])) >= 10
         for: 5m

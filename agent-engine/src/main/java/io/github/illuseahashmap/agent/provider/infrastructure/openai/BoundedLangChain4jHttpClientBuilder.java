@@ -101,7 +101,8 @@ final class BoundedLangChain4jHttpClientBuilder implements HttpClientBuilder {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(exception);
             } catch (IOException exception) {
-                throw new RuntimeException(exception);
+                throw new dev.langchain4j.exception.RetriableException(
+                        "Model Provider transport is unavailable", exception);
             }
         }
 

@@ -47,4 +47,23 @@ class WorkflowOperationAuditServiceTest {
         assertThat(captor.getValue().previousState()).isEqualTo("ACTIVE");
         assertThat(captor.getValue().nextState()).isEqualTo("COMPLETED");
     }
+
+    @Test
+    void recordsAsynchronousAgentDecisionAsSystemActor() {
+        WorkflowOperationAuditRepository repository = mock(WorkflowOperationAuditRepository.class);
+        WorkflowOperationAuditService service = new WorkflowOperationAuditService(
+                repository, mock(CurrentPrincipalProvider.class), mock(TenantProvider.class));
+
+        service.recordSystem("tenant-a", "AGENT_NODE_HELD", "process-1", null, null,
+                "agentRun=10,activity=agent-task", "WAITING", "HELD_FOR_OPERATIONS", "failure",
+                "durable-trace-1");
+
+        ArgumentCaptor<WorkflowOperationAudit> captor = ArgumentCaptor.forClass(WorkflowOperationAudit.class);
+        verify(repository).record(captor.capture());
+        assertThat(captor.getValue().tenantCode()).isEqualTo("tenant-a");
+        assertThat(captor.getValue().actorType()).isEqualTo("SYSTEM");
+        assertThat(captor.getValue().eventType()).isEqualTo("AGENT_NODE_HELD");
+        assertThat(captor.getValue().reason()).isEqualTo("failure");
+        assertThat(captor.getValue().traceId()).isEqualTo("durable-trace-1");
+    }
 }

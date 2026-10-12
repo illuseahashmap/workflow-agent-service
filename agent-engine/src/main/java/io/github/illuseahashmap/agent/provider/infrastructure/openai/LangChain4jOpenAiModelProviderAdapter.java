@@ -15,6 +15,10 @@ import dev.langchain4j.exception.RateLimitException;
 import dev.langchain4j.exception.RetriableException;
 import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.ResponseFormat;
+import dev.langchain4j.model.chat.request.ResponseFormatType;
+import dev.langchain4j.model.chat.request.json.JsonRawSchema;
+import dev.langchain4j.model.chat.request.json.JsonSchema;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiResponsesChatModel;
@@ -65,7 +69,7 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
         boolean responses = endpointUri(baseUrl).getPath().endsWith("/responses");
         return new ModelProviderCapabilities(
                 responses ? "OPENAI_RESPONSES_COMPATIBLE" : "OPENAI_CHAT_COMPLETIONS_COMPATIBLE",
-                !responses, false, false);
+                !responses, true, false);
     }
 
     @Override
@@ -76,9 +80,20 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
         boolean responsesApi = endpoint.getPath().endsWith("/responses");
         long startedNanos = System.nanoTime();
         try {
-            ChatResponse response = responsesApi
-                    ? invokeResponses(request, endpoint)
-                    : invokeChatCompletions(request, endpoint);
+            ChatResponse response;
+            try {
+                response = invokeProvider(request, endpoint, responsesApi, true);
+            } catch (NonRetriableException exception) {
+                if (!isStructuredSchemaUnsupported(request, exception)) {
+                    throw exception;
+                }
+                Duration remaining = request.timeout().minus(
+                        Duration.ofNanos(System.nanoTime() - startedNanos));
+                if (remaining.isZero() || remaining.isNegative()) {
+                    throw new TimeoutException("Structured-output compatibility fallback exceeded timeout");
+                }
+                response = invokeProvider(withTimeout(request, remaining), endpoint, responsesApi, false);
+            }
             long latencyMillis = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
             return toPlatformResponse(response, latencyMillis);
         } catch (BoundedLangChain4jHttpClientBuilder.ResponseTooLargeException exception) {
@@ -107,7 +122,15 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
         }
     }
 
-    private ChatResponse invokeChatCompletions(ModelProviderRequest request, URI endpoint) {
+    private ChatResponse invokeProvider(ModelProviderRequest request, URI endpoint,
+                                        boolean responsesApi, boolean strictSchema) {
+        return responsesApi
+                ? invokeResponses(request, endpoint, strictSchema)
+                : invokeChatCompletions(request, endpoint, strictSchema);
+    }
+
+    private ChatResponse invokeChatCompletions(ModelProviderRequest request, URI endpoint,
+                                               boolean strictSchema) {
         OpenAiChatModel model = OpenAiChatModel.builder()
                 .baseUrl(apiRoot(endpoint, "/chat/completions"))
                 .apiKey(request.credential())
@@ -116,10 +139,11 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
                 .maxRetries(0)
                 .httpClientBuilder(new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes))
                 .build();
-        return model.chat(chatRequest(request, true));
+        return model.chat(chatRequest(request, true, strictSchema));
     }
 
-    private ChatResponse invokeResponses(ModelProviderRequest request, URI endpoint) {
+    private ChatResponse invokeResponses(ModelProviderRequest request, URI endpoint,
+                                         boolean strictSchema) {
         BoundedLangChain4jHttpClientBuilder httpClient =
                 new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes);
         httpClient.readTimeout(request.timeout());
@@ -132,16 +156,21 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
         // Ark's Responses-compatible endpoint does not currently provide dependable
         // native tool calling. The governed tool contract remains in the platform prompt,
         // while LangChain4j owns the Responses request/response protocol.
-        return model.chat(chatRequest(request, false));
+        return model.chat(chatRequest(request, false, strictSchema));
     }
 
-    private ChatRequest chatRequest(ModelProviderRequest request, boolean nativeTools) {
+    private ChatRequest chatRequest(ModelProviderRequest request, boolean nativeTools,
+                                    boolean strictSchema) {
         List<ChatMessage> messages = new ArrayList<>();
         if (StringUtils.hasText(request.systemPrompt())) {
             messages.add(SystemMessage.from(request.systemPrompt()));
         }
         messages.add(UserMessage.from(request.userInput()));
-        if (nativeTools && request.toolResult() != null) {
+        if (request.toolResult() != null) {
+            if (!nativeTools) {
+                messages.add(UserMessage.from("Trusted tool result for "
+                        + request.toolResult().toolName() + ":\n" + request.toolResult().output()));
+            } else {
             ToolExecutionRequest call = ToolExecutionRequest.builder()
                     .id(request.toolResult().callId())
                     .name(request.toolResult().toolName())
@@ -149,11 +178,58 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
                     .build();
             messages.add(AiMessage.from(call));
             messages.add(ToolExecutionResultMessage.from(call, request.toolResult().output()));
+            }
         }
         List<ToolSpecification> tools = nativeTools
                 ? request.tools().stream().map(this::toolSpecification).toList()
                 : List.of();
-        return ChatRequest.builder().messages(messages).toolSpecifications(tools).build();
+        ChatRequest.Builder builder = ChatRequest.builder().messages(messages).toolSpecifications(tools);
+        if (request.structuredOutput() != null) {
+            builder.responseFormat(strictSchema
+                    ? strictResponseFormat(request.structuredOutput()) : ResponseFormat.JSON);
+        }
+        return builder.build();
+    }
+
+    private ResponseFormat strictResponseFormat(ModelProviderRequest.StructuredOutput output) {
+        if (!StringUtils.hasText(output.jsonSchema())) {
+            throw failure("PROVIDER_OUTPUT_SCHEMA_INVALID", ModelProviderFailureKind.PERMANENT,
+                    "Structured output JSON Schema is required", null);
+        }
+        String name = StringUtils.hasText(output.name()) ? output.name().trim() : "agent_output";
+        JsonSchema schema = JsonSchema.builder()
+                .name(name)
+                .rootElement(JsonRawSchema.from(output.jsonSchema()))
+                .build();
+        return ResponseFormat.builder()
+                .type(ResponseFormatType.JSON)
+                .jsonSchema(schema)
+                .build();
+    }
+
+    private boolean isStructuredSchemaUnsupported(ModelProviderRequest request, RuntimeException exception) {
+        if (request.structuredOutput() == null) {
+            return false;
+        }
+        StringBuilder messages = new StringBuilder();
+        for (Throwable current = exception; current != null; current = current.getCause()) {
+            if (current.getMessage() != null) {
+                messages.append(' ').append(current.getMessage().toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        String value = messages.toString();
+        boolean namesSchemaFeature = value.contains("json_schema")
+                || value.contains("response_format") || value.contains("structured output");
+        boolean explicitlyUnsupported = value.contains("unsupported") || value.contains("not support")
+                || value.contains("unknown") || value.contains("invalid");
+        return namesSchemaFeature && explicitlyUnsupported;
+    }
+
+    private ModelProviderRequest withTimeout(ModelProviderRequest request, Duration timeout) {
+        return new ModelProviderRequest(
+                request.baseUrl(), request.credential(), request.model(), request.systemPrompt(),
+                request.userInput(), timeout, request.traceId(), request.tools(),
+                request.toolResult(), request.structuredOutput());
     }
 
     private ToolSpecification toolSpecification(ModelProviderRequest.ToolDefinition tool) {

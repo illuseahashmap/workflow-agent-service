@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.agent.runtime.application.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.atLeast;
@@ -36,7 +37,7 @@ class PlatformAgentExecutorTest {
         ModelProviderPort adapter = mock(ModelProviderPort.class);
         when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
         when(adapter.invoke(any())).thenReturn(
-                response("plan: inspect request"), response("{\"answer\":\"done\"}"));
+                response(route()), response("{\"answer\":\"done\"}"));
         PlatformAgentExecutor executor = new PlatformAgentExecutor(
                 credentials, new ModelProviderRegistry(List.of(adapter)),
                 new AgentOutputSchemaValidator(new ObjectMapper()));
@@ -59,7 +60,7 @@ class PlatformAgentExecutorTest {
         ModelProviderPort adapter = mock(ModelProviderPort.class);
         when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
         when(adapter.invoke(any())).thenReturn(
-                response("plan"),
+                response(route("lookup")),
                 response("{\"action\":\"TOOL_CALL\",\"tool\":\"lookup\",\"arguments\":{\"id\":\"A-1\"}}"),
                 response("{\"answer\":\"found\"}"));
         AgentTool tool = new AgentTool() {
@@ -85,7 +86,7 @@ class PlatformAgentExecutorTest {
 
         assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"found\"}");
         assertThat(result.steps()).extracting(AgentExecutor.StepResult::stepType)
-                .contains("PLAN", "TOOL_CALL", "VALIDATION");
+                .contains("ROUTE", "TOOL_CALL", "VALIDATION");
     }
 
     @Test
@@ -94,7 +95,7 @@ class PlatformAgentExecutorTest {
         ModelProviderPort adapter = mock(ModelProviderPort.class);
         when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
         when(adapter.invoke(any())).thenReturn(
-                response("plan"),
+                response(route("context")),
                 response("{\"action\":\"TOOL_CALL\",\"tool\":\"context\"}"),
                 response("{\"answer\":\"done\"}"));
         AgentTool tool = new AgentTool() {
@@ -126,7 +127,7 @@ class PlatformAgentExecutorTest {
         ModelProviderPort adapter = mock(ModelProviderPort.class);
         when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
         when(adapter.invoke(any())).thenReturn(
-                response("plan"),
+                response(route("lookup")),
                 response("{\"action\":\"TOOL_CALL\"}"),
                 response("{\"action\":\"TOOL_CALL\",\"tool\":\"lookup\",\"arguments\":{}}"),
                 response("{\"answer\":\"done\"}"));
@@ -177,7 +178,7 @@ class PlatformAgentExecutorTest {
         ModelProviderPort adapter = mock(ModelProviderPort.class);
         when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
         when(adapter.invoke(any())).thenReturn(
-                response("plan"),
+                response(route()),
                 response("这不是 JSON"),
                 response("{\"answer\":\"repaired\"}"));
         PlatformAgentExecutor executor = new PlatformAgentExecutor(
@@ -210,6 +211,48 @@ class PlatformAgentExecutorTest {
         verify(adapter).invoke(any());
     }
 
+    @Test
+    void repairsInvalidRouteOnceAndPersistsStructuredRouteStep() {
+        AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(
+                response("not-json"), response(route()), response("{\"answer\":\"done\"}"));
+        PlatformAgentExecutor executor = new PlatformAgentExecutor(
+                credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(new ObjectMapper()));
+
+        AgentExecutor.Result result = executor.execute(new AgentExecutor.Command(
+                "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-route"));
+
+        assertThat(result.steps()).first().satisfies(step -> {
+            assertThat(step.stepType()).isEqualTo("ROUTE");
+            assertThat(step.logicalStepId()).isEqualTo("route:v1");
+        });
+        verify(adapter, org.mockito.Mockito.times(3)).invoke(any());
+    }
+
+    @Test
+    void abstainRouteStopsBeforeExecutionPhase() {
+        AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(response(
+                "{\"schemaVersion\":\"1\",\"mode\":\"ABSTAIN\","
+                        + "\"reason\":\"insufficient evidence\",\"requestedTools\":[],\"steps\":[]}"));
+        PlatformAgentExecutor executor = new PlatformAgentExecutor(
+                credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(new ObjectMapper()));
+
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command(
+                "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-abstain")))
+                .isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class)
+                .extracting(exception -> ((io.github.illuseahashmap.agent.runtime.application.AgentExecutionException)
+                        exception).failure().errorCode())
+                .isEqualTo("AGENT_ROUTE_NOT_EXECUTABLE");
+        verify(adapter).invoke(any());
+    }
+
     private AgentDefinitionVersion version() {
         return new AgentDefinitionVersion(1L, "tenant-a", 1L, 1, AgentVersionStatus.PUBLISHED,
                 AgentExecutionMode.PLATFORM_AGENT, 1L, "model", "system", 60,
@@ -226,5 +269,13 @@ class PlatformAgentExecutorTest {
 
     private ModelProviderResponse response(String content) {
         return new ModelProviderResponse(content, "model", "request", "stop", 1, 1, 0, 1);
+    }
+
+    private String route(String... tools) {
+        String requestedTools = java.util.Arrays.stream(tools)
+                .map(tool -> "\"" + tool + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        return "{\"schemaVersion\":\"1\",\"mode\":\"DIRECT\",\"reason\":\"bounded route\","
+                + "\"requestedTools\":[" + requestedTools + "],\"steps\":[\"execute\"]}";
     }
 }

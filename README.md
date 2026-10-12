@@ -170,6 +170,33 @@ Redis defaults to `localhost:6379`. Production configuration has no database cre
 and disables Flowable schema auto-update. Database migrations are managed by Flyway; only the explicit `local` profile lets
 Flowable update its own engine tables.
 
+Agent Runtime tuning keeps execution and lease renewal independently bounded:
+
+```text
+WORKFLOW_AGENT_WORKER_EXECUTION_POOL_SIZE=2
+WORKFLOW_AGENT_WORKER_HEARTBEAT_POOL_SIZE=4
+WORKFLOW_AGENT_WORKER_HEARTBEAT_MAXIMUM_TRACKED_RUNS=1024
+WORKFLOW_AGENT_WORKER_LEASE_SECONDS=60
+WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_CONTEXT_CHARACTERS=40000
+WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_INLINE_TOOL_RESULT_CHARACTERS=2048
+```
+
+For local Prometheus and Alertmanager validation, write a short-lived platform-admin Bearer token to a file outside Git,
+set `WORKFLOW_PROMETHEUS_TOKEN_FILE` to its absolute path, and run:
+
+```powershell
+docker compose -f deploy/docker-compose.observability.yml up -d
+```
+
+The default Alertmanager receiver intentionally sends no external notification. Production deployments must additionally
+set `WORKFLOW_ALERTMANAGER_WEBHOOK_URL_FILE` to a managed secret file and start with both compose files:
+
+```powershell
+docker compose -f deploy/docker-compose.observability.yml -f deploy/docker-compose.observability.production.yml up -d
+```
+
+Never commit the metrics token or webhook URL.
+
 ## Build
 
 ```shell

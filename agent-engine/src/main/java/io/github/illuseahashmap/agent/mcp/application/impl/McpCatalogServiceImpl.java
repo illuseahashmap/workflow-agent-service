@@ -31,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class McpCatalogServiceImpl implements McpCatalogService {
 
+    private static final String DEFAULT_PROTOCOL_VERSION = "2025-11-25";
+
     private final McpCatalogRepository repository;
     private final McpClientPort client;
     private final McpToolRegistrationPort registration;
@@ -91,7 +93,8 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         McpConnectorVersion version = repository.saveConnectorVersion(new McpConnectorVersion(null, tenant, connector.id(),
                 repository.nextConnectorVersion(tenant, connector.id()), command.endpointUrl().trim(),
                 command.protocolVersion() == null || command.protocolVersion().isBlank()
-                        ? "2025-03-26" : command.protocolVersion(), command.credentialRef(), timeout, "DRAFT"));
+                        ? DEFAULT_PROTOCOL_VERSION : command.protocolVersion(),
+                command.credentialRef(), timeout, "DRAFT"));
         return new McpConnectorVersionView(version.id(), version.connectorId(), version.version(),
                 version.endpointUrl(), version.protocolVersion(), version.status(), version.timeoutSeconds());
     }

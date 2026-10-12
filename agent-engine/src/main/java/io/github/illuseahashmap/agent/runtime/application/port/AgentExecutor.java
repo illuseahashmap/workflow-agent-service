@@ -83,12 +83,23 @@ public interface AgentExecutor {
     record StepProgress(StepResult result, CheckpointState checkpoint) {
     }
 
-    record CheckpointState(String logicalStepId, int nextStep, String context,
-                           String previousToolResultJson) {
+    record CheckpointState(String schemaVersion, String logicalStepId, int nextStep, String context,
+                           String contextDigest, String previousToolResultJson,
+                           String previousToolResultReference, List<String> routeTools) {
+        public static final String CURRENT_SCHEMA_VERSION = "3";
+
         public CheckpointState {
+            schemaVersion = schemaVersion == null || schemaVersion.isBlank() ? "1" : schemaVersion;
+            routeTools = routeTools == null ? List.of() : List.copyOf(routeTools);
             if (nextStep < 1) {
                 throw new IllegalArgumentException("nextStep must be positive");
             }
+        }
+
+        public CheckpointState(String logicalStepId, int nextStep, String context,
+                               String previousToolResultJson) {
+            this(CURRENT_SCHEMA_VERSION, logicalStepId, nextStep, context, null,
+                    previousToolResultJson, null, List.of());
         }
     }
 }

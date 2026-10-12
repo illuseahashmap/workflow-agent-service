@@ -145,7 +145,8 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         return policyRepository.findAuthorized(tenantCode, tools.keySet()).stream()
                 .filter(definition -> isRegistered(definition.toolCode()))
                 .map(definition -> new ModelProviderRequest.ToolDefinition(
-                        definition.toolCode(), definition.toolName(), definition.inputSchema()))
+                        definition.toolCode(), definition.toolName(), definition.inputSchema(),
+                        definition.capabilityType()))
                 .toList();
     }
 
@@ -161,12 +162,27 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         return policyRepository.findAuthorized(tenantCode, effectiveTools).stream()
                 .filter(definition -> isRegistered(definition.toolCode()))
                 .map(definition -> new ModelProviderRequest.ToolDefinition(
-                        definition.toolCode(), definition.toolName(), definition.inputSchema()))
+                        definition.toolCode(), definition.toolName(), definition.inputSchema(),
+                        definition.capabilityType()))
                 .toList();
     }
 
     public AgentTool.Result execute(String tenantCode, String toolCode, AgentTool.Request request) {
         return execute(tenantCode, null, null, toolCode, request);
+    }
+
+    /** Rehydrates a previously committed tool result without invoking the external tool again. */
+    public Optional<String> restoreSucceededOutput(
+            String tenantCode, String toolCode, String idempotencyKey
+    ) {
+        if (!StringUtils.hasText(tenantCode) || !StringUtils.hasText(toolCode)
+                || !StringUtils.hasText(idempotencyKey)) {
+            return Optional.empty();
+        }
+        return auditRepository.findByIdempotencyKey(tenantCode, toolCode, idempotencyKey)
+                .filter(audit -> "SUCCEEDED".equals(audit.status()))
+                .map(AgentToolExecutionAuditRepository.Audit::output)
+                .filter(StringUtils::hasText);
     }
 
     public AgentTool.Result execute(

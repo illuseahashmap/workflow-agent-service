@@ -24,7 +24,8 @@ public class JdbcAgentToolGovernanceRepository
     @Override
     public Optional<AgentToolDefinition> findAuthorized(String tenantCode, String toolCode) {
         return jdbcTemplate.query("""
-                        SELECT d.tool_code, d.tool_name, d.input_schema, d.read_only
+                        SELECT d.tool_code, d.tool_name, d.input_schema, d.read_only,
+                               d.capability_type, d.risk_level, d.side_effect
                         FROM agent_tool_definition d
                         JOIN agent_tool_tenant_grant g ON g.tool_code = d.tool_code
                         WHERE d.tool_code = :toolCode
@@ -37,7 +38,10 @@ public class JdbcAgentToolGovernanceRepository
                         resultSet.getString("tool_code"),
                         resultSet.getString("tool_name"),
                         resultSet.getString("input_schema"),
-                        resultSet.getBoolean("read_only")))
+                        resultSet.getBoolean("read_only"),
+                        resultSet.getString("capability_type"),
+                        resultSet.getString("risk_level"),
+                        resultSet.getBoolean("side_effect")))
                 .stream().findFirst();
     }
 

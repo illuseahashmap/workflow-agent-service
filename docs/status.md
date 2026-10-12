@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-10-10
+更新时间：2026-10-12
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -44,14 +44,14 @@
 
 | 优先级 | 工作项 | 当前状态 | 下一步验收 |
 | --- | --- | --- | --- |
-| 已完成 | 容器化集成测试基线 | 本机 Docker Engine 29 已恢复；父构建固定 docker-java API 1.44。`mvn verify` 共执行 271 个测试，0 失败、0 错误、0 跳过，5 个 PostgreSQL/Redis/Flowable/Flyway/RLS/HTTP 安全基础设施套件通过强制门禁 | 在 CI 持续运行并归档 Surefire、JaCoCo、SpotBugs 报告；真实强杀和多实例压力仍按专项验收 |
-| P0 | 生产可观测性 | 已有租户隔离的 Runtime 健康摘要、低基数运行/积压/暂停/恢复/死信/租约指标、Prometheus 告警、Runbook、流程操作审计和前端状态化处置入口 | 接入 Alertmanager，并在容器与多实例环境验证告警、审计和处置联动 |
-| P0 | 流程操作审计 | 基础写入与租户隔离查询 API 已有，支持事件、实例、Trace、时间范围和分页 | 通过容器化环境验证全链路事件可追溯，并补齐规则命中等覆盖 |
+| 已完成 | 容器化集成测试基线 | 历史基线曾在 Docker Engine 29 下以 docker-java API 1.44 完成 271 个测试、0 失败、0 错误、0 跳过，5 个 PostgreSQL/Redis/Flowable/Flyway/RLS/HTTP 安全基础设施套件通过强制门禁；2026-10-12 本机 Docker Desktop 引擎不可连接，本轮 `verify` 的容器套件被跳过，不覆盖该历史基线 | 恢复 Docker 后重新执行零跳过强制门禁并归档 Surefire、JaCoCo、SpotBugs 报告；真实强杀和多实例压力仍按专项验收 |
+| P0 | 生产可观测性 | 已有租户隔离的 Runtime 健康摘要、低基数运行/积压/暂停/恢复/死信/租约指标、Prometheus 告警、Runbook 和前端状态化处置入口；已增加本地 Alertmanager 模板、生产 Secret Webhook Overlay、续租调度延迟/耗时/队列/活动注册容量指标与告警；异步 Agent 节点处置审计保留持久命令 Trace ID | Docker Engine 恢复后执行真实告警触发、通知和处置回放，并在多实例环境校验指标准确性与外部 Receiver 可达性 |
+| P0 | 流程操作审计 | 租户隔离查询 API 支持事件、实例、Trace、时间范围和分页；人工流程操作及 Agent 节点成功、人工复核、空结果继续、运维保持决策均进入同一审计账本 | 通过容器化环境验证全链路可追溯，继续补齐派单规则命中/兜底决策证据 |
 | P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | MODEL_ONLY 与 PLATFORM_AGENT 两阶段切片、失败分类、抖动重试、子步骤 Checkpoint、取消及协作式暂停/恢复已落地；浏览器已验证排队暂停、恢复和 Worker 重启后重新领取；当前每实例使用单线程 Heartbeat 调度，Checkpoint 仍以有界文本上下文和最后一次工具结果为主 | 将 Heartbeat 演进为有界多线程或批量续租并补齐积压指标/高并发门禁；实现版本化 Checkpoint Context 压缩与引用化恢复，再完成真实强杀/租约过期/跨实例压力、出站策略、公平调度、Guardrail 和高风险写工具确认 |
+| P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；Checkpoint v3 保存 Schema、摘要、冻结路由工具集和工具账本引用，恢复时回填已提交结果且不会重复调用外部工具 | Docker 恢复后完成真实强杀、租约过期、运行中外部调用边界暂停和跨实例压力；将 RAG Evidence/超大对象外置并加入恢复等价评测，再推进集中式批量续租、公平调度、Guardrail 和高风险写工具确认 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
-| P1 | 结构化意图与能力路由 | 当前 `PLATFORM_AGENT` 的 `PLAN` 为自然语言计划，模型依据工具描述隐式选择 RAG/MCP，尚无可版本化、可校验和可评测的路由决策 | 将现有 `PLAN` 升级为结构化 `RouteDecision/ExecutionPlan`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；通过 LangChain4j Structured Output 生成和解析，平台按 AgentVersion、BPMN 节点、租户授权、主体权限及风险策略求交后执行；持久化路由 Step、版本和原因，Schema 修复最多一次，工作流中的不明确或不可执行结果进入既有 `MANUAL_REVIEW/HOLD_FOR_OPERATIONS/CONTINUE_EMPTY` 策略，不依赖向用户追问 |
+| P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收；确定性地把零召回、低质量证据和引用不一致映射为拒答、失败或人工复核，不能依赖模型自报 `confidence` 决定流程走向 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
@@ -59,9 +59,9 @@
 
 ## 三、下一阶段顺序
 
-1. 完成剩余 P0 生产运营闭环：接入 Alertmanager，补齐流程全事件审计覆盖，并验证告警到处置的回放链路。容器化集成测试基线已经完成，不再作为待办重复开发。
-2. 并行完成 Agent Runtime 生产故障验收：先将每实例单线程 Heartbeat 演进为有界多线程或批量续租，增加续租延迟、调度积压和意外丢租指标，并验证 Worker 强杀、租约过期、运行中外部调用边界暂停和多实例压力；同时把 Checkpoint 的文本截断升级为版本化 Context 压缩与引用化恢复，继续 RLS 深度验证、API 契约和核心覆盖率。
-3. 先收口执行前的结构化意图与能力路由：复用现有 `PLAN` 模型调用，输出版本化 `RouteDecision/ExecutionPlan`，不额外固定增加一次模型调用；LangChain4j 负责 Structured Output，平台负责能力求交、权限、失败策略、持久化和评测。工作流节点不得等待开放式追问，无法形成安全可执行计划时进入节点配置的人工复核、运维保持或空结果分支。
+1. 在 Docker Engine 恢复后完成 P0 环境验收：启动 Prometheus/Alertmanager 模板，触发续租延迟、积压和死信告警，回放到前端处置与流程审计；补齐派单规则命中/兜底决策证据。
+2. 完成 Agent Runtime 真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；普通工具结果已通过审计账本引用恢复，下一步外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。
+3. 完成结构化意图路由的真实 Provider 与评测验收：覆盖五种模式、一次修复、越权工具、模式不一致和 ABSTAIN，增加主体权限及风险策略的显式路由投影。
 4. RAG 作为下一条主功能线：Profile/文档/摄取/主体授权和 `knowledge_search` 已闭环；优先通过稳定端口复用 LangChain4j 的 Embedding、向量存储与 Rerank，完成 pgvector/全文混合检索、Grounding、评测和摄取恢复。Grounding 必须在执行后基于检索状态、Evidence/Citation 完整性和确定性规则触发流程处置，不能把相似度或模型自报 `confidence` 直接作为网关依据。
 5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；下一步完成确定性 MCP Server 容器故障注入、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 6. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。
@@ -117,17 +117,17 @@
 
 首个纵向闭环不等于 Agent MVP 完成。只有执行、恢复、幂等、权限、审计、取消、人工交互和 Flowable 集成全部通过容器化集成测试，才可将 Agent MVP 标记为完成。
 
-最近一次 LLM/MCP/RAG 纵向验证（2026-09-26）：
+最近一次 LLM/MCP/RAG 纵向验证（2026-10-12）：
 
 | 场景 | 流程实例 | 结果 |
 | --- | --- | --- |
-| LLM | `7350d588-b952-11f1-afff-00155d46a074` | 模型调用成功，AgentRun 完成，Flowable 流程结束 |
-| MCP | `612dd907-b951-11f1-afff-00155d46a074` | 模型选择只读 MCP 工具，返回 `{"count":5}`，AgentRun 与流程均完成 |
-| RAG | `8a814331-b952-11f1-afff-00155d46a074` | `retrievalStatus=FULL`，命中 `employee-handbook.md` 第 1 版，按证据路由到直属负责人并完成审批 |
+| LLM | `2237f384-c5e9-11f1-9c3f-00e04c6801c9` | AgentRun `46` 模型调用成功并输出 `APPROVE`，后续人工任务完成，Flowable 流程结束 |
+| MCP | `a0dc096f-c5ea-11f1-ad03-00e04c6801c9` | AgentRun `48` 选择只读 MCP 工具并完成远程调用，结果回注模型，AgentRun 与 Flowable 流程均完成 |
+| RAG | `da84796a-c5ea-11f1-ad03-00e04c6801c9` | AgentRun `49` 在一次网络握手临时故障后按可重试语义恢复，`retrievalStatus=FULL`，命中 `employee-handbook.md` 第 1 版并完成直属负责人审批 |
 
 以上证明本地配置与运行纵向链路可用，不替代专项容器故障注入、Worker 强杀、跨实例、出站安全和质量评测门禁。
 
-最近一次工程质量基线（2026-10-06）：后端 9 个 Reactor 模块和 271 个测试全部通过，0 失败、0 错误、0 跳过；5 个必需基础设施集成套件通过门禁。前端格式、Lint、类型检查、39 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
+最近一次本机质量门禁（2026-10-12）：后端 9 个 Reactor 模块执行干净 `verify`，286 个测试中 268 个通过、18 个因 Docker Engine 不可用跳过，0 失败、0 错误；迁移版本唯一性、Checkstyle、SpotBugs 和 JaCoCo 门禁全部通过。最近一次完整 Docker 质量基线（2026-10-06）仍为 271 个测试、0 跳过，5 个必需基础设施集成套件通过。前端最近基线为格式、Lint、类型检查、43 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
 
 ### Agent Runtime 近期加固
 

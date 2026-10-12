@@ -18,11 +18,17 @@ public class JdbcMcpToolRegistrationRepository implements McpToolRegistrationPor
     @Override
     public void registerReadOnlyTool(String tenantCode, McpToolSnapshot snapshot) {
         jdbc.update("""
-                INSERT INTO agent_tool_definition (tool_code, tool_name, input_schema, read_only, enabled)
-                VALUES (:toolCode, :toolName, :inputSchema, TRUE, TRUE)
+                INSERT INTO agent_tool_definition (
+                    tool_code, tool_name, input_schema, read_only, enabled,
+                    capability_type, risk_level, side_effect
+                )
+                VALUES (:toolCode, :toolName, :inputSchema, TRUE, TRUE, 'MCP', 'LOW', FALSE)
                 ON CONFLICT (tool_code) DO UPDATE
                 SET tool_name = EXCLUDED.tool_name, input_schema = EXCLUDED.input_schema,
-                    read_only = TRUE, enabled = TRUE
+                    read_only = TRUE, enabled = TRUE,
+                    capability_type = EXCLUDED.capability_type,
+                    risk_level = EXCLUDED.risk_level,
+                    side_effect = EXCLUDED.side_effect
                 """, Map.of("toolCode", snapshot.registryToolCode(), "toolName", snapshot.toolName(),
                 "inputSchema", snapshot.inputSchema()));
         jdbc.update("""

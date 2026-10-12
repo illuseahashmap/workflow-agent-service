@@ -72,7 +72,7 @@ class LangChain4jMcpClientAdapterTest {
                     return new MockResponse().setResponseCode(202);
                 }
                 String result = switch (method) {
-                case "initialize" -> "{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
+                case "initialize" -> "{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{},"
                         + "\"serverInfo\":{\"name\":\"test\",\"version\":\"1\"}}";
                 case "tools/list" -> "{\"tools\":[{\"name\":\"word_count\","
                         + "\"description\":\"Count a word\",\"inputSchema\":{\"type\":\"object\","

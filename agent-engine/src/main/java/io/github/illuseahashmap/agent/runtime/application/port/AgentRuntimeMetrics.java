@@ -18,6 +18,16 @@ public interface AgentRuntimeMetrics {
 
     void recovered(int count);
 
+    default void leaseRenewalDelay(Duration delay) { }
+
+    default void leaseRenewalDuration(Duration duration) { }
+
+    default void heartbeatQueueDepth(int depth) { }
+
+    default void heartbeatActiveRegistrations(int count) { }
+
+    default void heartbeatRegistrationCapacity(int capacity) { }
+
     default void pauseRequested() { }
 
     default void paused() { }

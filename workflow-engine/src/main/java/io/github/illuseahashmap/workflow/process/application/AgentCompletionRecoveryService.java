@@ -4,6 +4,7 @@ import io.github.illuseahashmap.workflow.process.application.dto.AgentCompletion
 import io.github.illuseahashmap.workflow.process.application.port.AgentCompletionRunPort;
 import io.github.illuseahashmap.workflow.process.application.port.AgentWorkflowExecutionPort;
 import java.util.HashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Workflow application use case for idempotently applying an Agent terminal result. */
@@ -13,15 +14,27 @@ public class AgentCompletionRecoveryService {
     private final AgentCompletionRunPort runPort;
     private final AgentWorkflowExecutionPort executionPort;
     private final AgentOutputMappingResolver outputMappingResolver;
+    private final WorkflowOperationAuditService auditService;
+
+    @Autowired
+    public AgentCompletionRecoveryService(
+            AgentCompletionRunPort runPort,
+            AgentWorkflowExecutionPort executionPort,
+            AgentOutputMappingResolver outputMappingResolver,
+            WorkflowOperationAuditService auditService
+    ) {
+        this.runPort = runPort;
+        this.executionPort = executionPort;
+        this.outputMappingResolver = outputMappingResolver;
+        this.auditService = auditService;
+    }
 
     public AgentCompletionRecoveryService(
             AgentCompletionRunPort runPort,
             AgentWorkflowExecutionPort executionPort,
             AgentOutputMappingResolver outputMappingResolver
     ) {
-        this.runPort = runPort;
-        this.executionPort = executionPort;
-        this.outputMappingResolver = outputMappingResolver;
+        this(runPort, executionPort, outputMappingResolver, null);
     }
 
     public void recover(AgentCompletionCommand command) {
@@ -53,19 +66,36 @@ public class AgentCompletionRecoveryService {
             variables.putAll(outputMappingResolver.resolve(
                     run.outputSnapshotJson(), run.outputMappingJson()));
             executionPort.trigger(run.executionId(), variables);
+            audit("AGENT_NODE_COMPLETED", run, "WAITING", "COMPLETED", null, command.traceId());
         } else {
             variables.put(AgentWorkflowVariables.ERROR_CODE,
                     run.errorCode() == null ? "AGENT_FAILED" : run.errorCode());
             if ("MANUAL_REVIEW".equals(run.processFailurePolicy())) {
                 variables.put(AgentWorkflowVariables.REVIEW_REQUIRED, true);
                 executionPort.trigger(run.executionId(), variables);
+                audit("AGENT_NODE_MANUAL_REVIEW", run, "WAITING", "REVIEW_REQUIRED",
+                        run.errorCode(), command.traceId());
             } else if ("CONTINUE_EMPTY".equals(run.processFailurePolicy())) {
                 executionPort.trigger(run.executionId(), variables);
+                audit("AGENT_NODE_CONTINUED_EMPTY", run, "WAITING", "COMPLETED_EMPTY",
+                        run.errorCode(), command.traceId());
             } else {
                 executionPort.setLocalVariables(run.executionId(), variables);
+                audit("AGENT_NODE_HELD", run, "WAITING", "HELD_FOR_OPERATIONS",
+                        run.errorCode(), command.traceId());
             }
         }
         runPort.markWorkflowHandled(run.tenantCode(), run.id());
+    }
+
+    private void audit(String eventType, AgentCompletionRunPort.CompletedAgentRun run,
+                       String previousState, String nextState, String reason, String traceId) {
+        if (auditService != null) {
+            auditService.recordSystem(
+                    run.tenantCode(), eventType, run.processInstanceId(), null, null,
+                    "agentRun=" + run.id() + ",activity=" + run.activityId(),
+                    previousState, nextState, reason, traceId);
+        }
     }
 
     private boolean same(String left, String right) {

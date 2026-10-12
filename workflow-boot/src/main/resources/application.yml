@@ -34,6 +34,9 @@ workflow:
   agent:
     platform:
       max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
+      checkpoint:
+        maximum-context-characters: ${WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_CONTEXT_CHARACTERS:40000}
+        maximum-inline-tool-result-characters: ${WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_INLINE_TOOL_RESULT_CHARACTERS:2048}
     mcp:
       client: ${WORKFLOW_AGENT_MCP_CLIENT:langchain4j}
       session-cache:
@@ -68,6 +71,8 @@ workflow:
       recovery-delay-ms: ${WORKFLOW_AGENT_WORKER_RECOVERY_DELAY_MS:10000}
       execution-pool-size: ${WORKFLOW_AGENT_WORKER_EXECUTION_POOL_SIZE:2}
       queue-capacity: ${WORKFLOW_AGENT_WORKER_QUEUE_CAPACITY:20}
+      heartbeat-pool-size: ${WORKFLOW_AGENT_WORKER_HEARTBEAT_POOL_SIZE:4}
+      heartbeat-maximum-tracked-runs: ${WORKFLOW_AGENT_WORKER_HEARTBEAT_MAXIMUM_TRACKED_RUNS:1024}
   runtime:
     environment: ${WORKFLOW_ENV:production}
   lock:

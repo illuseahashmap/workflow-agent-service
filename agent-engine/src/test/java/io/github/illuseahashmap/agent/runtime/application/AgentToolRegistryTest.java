@@ -76,6 +76,27 @@ class AgentToolRegistryTest {
     }
 
     @Test
+    void restoresOnlyCommittedToolOutputForCheckpointRecovery() {
+        var audits = new InMemoryAuditRepository();
+        AgentTool tool = new AgentTool() {
+            @Override public String name() { return "lookup"; }
+            @Override public Result execute(Request request) {
+                return new Result("{\"value\":1}", request.idempotencyKey());
+            }
+        };
+        AgentToolRegistry registry = new AgentToolRegistry(
+                List.of(tool), AgentToolPolicyRepository.ALLOW_ALL, audits,
+                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+        AgentTool.Result result = registry.execute("tenant-a", "lookup", new AgentTool.Request(
+                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1", "key-1"));
+
+        assertThat(registry.restoreSucceededOutput("tenant-a", "lookup", result.idempotencyKey()))
+                .contains("{\"value\":1}");
+        assertThat(registry.restoreSucceededOutput("tenant-b", "lookup", result.idempotencyKey()))
+                .isEmpty();
+    }
+
+    @Test
     void exposesOnlyTheVersionAndNodeToolIntersection() {
         AgentTool lookup = new AgentTool() {
             @Override public String name() { return "lookup"; }

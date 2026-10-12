@@ -10,9 +10,12 @@ import io.github.illuseahashmap.agent.provider.application.port.ModelProviderExc
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -93,6 +96,72 @@ class LangChain4jOpenAiModelProviderAdapterTest {
                         assertThat(exception.errorCode()).isEqualTo("PROVIDER_RESPONSE_TOO_LARGE"));
     }
 
+    @Test
+    void classifiesTransportFailuresAsRetryableProviderUnavailability() throws Exception {
+        int unavailablePort;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            unavailablePort = socket.getLocalPort();
+        }
+        ModelProviderRequest request = new ModelProviderRequest(
+                "http://127.0.0.1:" + unavailablePort + "/v1",
+                "secret", "test-model", "system prompt", "user input",
+                Duration.ofSeconds(1), "trace-transport", List.of(), null);
+
+        assertThatThrownBy(() -> adapter(1024 * 1024).invoke(request))
+                .isInstanceOfSatisfying(ModelProviderException.class, exception -> {
+                    assertThat(exception.errorCode()).isEqualTo("PROVIDER_UNAVAILABLE");
+                    assertThat(exception.failureKind().name()).isEqualTo("RETRYABLE");
+                });
+    }
+
+    @Test
+    void sendsThePublishedJsonSchemaToProvidersThatSupportIt() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(200, completion("structured"), requestBody);
+        ModelProviderRequest base = request(List.of());
+        ModelProviderRequest request = new ModelProviderRequest(
+                base.baseUrl(), base.credential(), base.model(), base.systemPrompt(), base.userInput(),
+                base.timeout(), base.traceId(), base.tools(), null,
+                new ModelProviderRequest.StructuredOutput("agent_result", """
+                        {"type":"object","properties":{"summary":{"type":"string"}},
+                         "required":["summary"],"additionalProperties":false}
+                        """));
+
+        adapter(1024 * 1024).invoke(request);
+
+        assertThat(requestBody.get()).contains("json_schema", "agent_result", "summary");
+    }
+
+    @Test
+    void fallsBackToJsonModeOnlyWhenProviderExplicitlyRejectsJsonSchema() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        List<String> bodies = new CopyOnWriteArrayList<>();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            bodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            if (calls.getAndIncrement() == 0) {
+                respond(exchange, 400, """
+                        {"error":{"message":"response_format json_schema is unsupported",
+                         "type":"invalid_request_error"}}
+                        """);
+            } else {
+                respond(exchange, 200, completion("fallback"));
+            }
+        });
+        server.start();
+        ModelProviderRequest base = request(List.of());
+        ModelProviderRequest request = new ModelProviderRequest(
+                base.baseUrl(), base.credential(), base.model(), base.systemPrompt(), base.userInput(),
+                base.timeout(), base.traceId(), base.tools(), null,
+                new ModelProviderRequest.StructuredOutput("agent_result", "{" +
+                        "\"type\":\"object\",\"additionalProperties\":true}"));
+
+        assertThat(adapter(1024 * 1024).invoke(request).content()).isEqualTo("fallback");
+        assertThat(bodies).hasSize(2);
+        assertThat(bodies.get(0)).contains("json_schema");
+        assertThat(bodies.get(1)).contains("json_object").doesNotContain("json_schema");
+    }
+
     private LangChain4jOpenAiModelProviderAdapter adapter(int maximumBytes) {
         return new LangChain4jOpenAiModelProviderAdapter(
                 new ObjectMapper(), new ProviderEndpointValidator(true), maximumBytes);
@@ -128,5 +197,14 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         exchange.sendResponseHeaders(status, bytes.length);
         exchange.getResponseBody().write(bytes);
         exchange.close();
+    }
+
+    private String completion(String content) {
+        return """
+                {"id":"request-1","model":"actual-model",
+                 "choices":[{"message":{"role":"assistant","content":"%s"},
+                   "finish_reason":"stop"}],
+                 "usage":{"prompt_tokens":1,"completion_tokens":1}}
+                """.formatted(content);
     }
 }

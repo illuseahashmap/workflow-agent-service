@@ -55,6 +55,42 @@ public class WorkflowOperationAuditService {
                 Instant.now()));
     }
 
+    /** Records an asynchronous platform decision without fabricating a human principal. */
+    public void recordSystem(
+            String tenantCode,
+            String eventType,
+            String processInstanceId,
+            String processDefinitionKey,
+            String taskId,
+            String subject,
+            String previousState,
+            String nextState,
+            String reason
+    ) {
+        recordSystem(tenantCode, eventType, processInstanceId, processDefinitionKey, taskId,
+                subject, previousState, nextState, reason, CurrentTraceContext.currentOrNull());
+    }
+
+    /** Records an asynchronous platform decision with the trace captured by its durable command. */
+    public void recordSystem(
+            String tenantCode,
+            String eventType,
+            String processInstanceId,
+            String processDefinitionKey,
+            String taskId,
+            String subject,
+            String previousState,
+            String nextState,
+            String reason,
+            String traceId
+    ) {
+        repository.record(new WorkflowOperationAudit(
+                eventType, tenantCode, "SYSTEM", "workflow-agent-runtime", "workflow-agent-runtime",
+                processInstanceId, processDefinitionKey, taskId, subject,
+                previousState, nextState, normalize(reason),
+                normalize(traceId), Instant.now()));
+    }
+
     private String normalize(String value) {
         if (value == null || value.isBlank()) {
             return null;

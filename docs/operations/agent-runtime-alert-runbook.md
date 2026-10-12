@@ -1,8 +1,15 @@
 # Agent Runtime 告警处置手册
 
-更新时间：2026-10-06
+更新时间：2026-10-12
 
 本手册对应 `deploy/prometheus/workflow-agent-alerts.yml`。指标只包含平台级低基数维度；具体租户、Run、Attempt 和 Trace 应通过 Agent 中心的运行态势与运行详情定位。
+
+本地接线使用 `deploy/docker-compose.observability.yml`。先把具有
+`ROLE_PLATFORM_ADMIN` 的短期 Bearer Token 写入工作区外的只读文件，再设置
+`WORKFLOW_PROMETHEUS_TOKEN_FILE` 为该绝对路径。Token 不进入 Git；生产环境必须由
+密钥管理系统轮换。仓库提供 `deploy/alertmanager/alertmanager.production.yml` 和
+`deploy/docker-compose.observability.production.yml`；生产启动时必须通过
+`WORKFLOW_ALERTMANAGER_WEBHOOK_URL_FILE` 挂载组织批准的 Webhook Secret，不能使用本地空 Receiver。
 
 ## 通用顺序
 
@@ -23,6 +30,15 @@
 - 确认 Recovery 调度仍运行，并观察过期租约数是否在两个恢复周期内归零。
 - 检查实例 GC、数据库连接池、网络抖动和续租调度延迟。
 - 旧 Worker 已由租约与 Attempt fencing 阻止写入；不要重复手工创建 Attempt。
+
+## HeartbeatSchedulingDelay / HeartbeatQueueBacklog / HeartbeatCapacityNearLimit
+
+- 同时观察续租调度延迟 P95、续租数据库耗时和队列深度，先区分调度器饱和与数据库变慢。
+- 调度器是实例级有界共享池，不为每个 Run 创建独立线程；调整
+  `WORKFLOW_AGENT_WORKER_HEARTBEAT_POOL_SIZE` 前先确认数据库连接池仍有余量。
+- 活动注册超过容量 90% 时先降低 Agent Run 接纳或扩实例；容量通过
+  `WORKFLOW_AGENT_WORKER_HEARTBEAT_MAXIMUM_TRACKED_RUNS` 设置，不能把调大上限当作数据库变慢的修复。
+- 若调度延迟逼近 `lease-seconds / 3`，先降低新 Run 接纳或扩实例，再调查 GC、CPU 和数据库锁等待。
 
 ## CompletionDeadLetters
 

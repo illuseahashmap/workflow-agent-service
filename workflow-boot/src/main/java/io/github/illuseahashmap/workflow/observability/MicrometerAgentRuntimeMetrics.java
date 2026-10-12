@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
 /** Micrometer adapter for low-cardinality Agent runtime health signals. */
@@ -21,6 +22,11 @@ public class MicrometerAgentRuntimeMetrics implements AgentRuntimeMetrics {
     private final Counter paused;
     private final Counter resumed;
     private final Counter cancelled;
+    private final Timer leaseRenewalDelay;
+    private final Timer leaseRenewalDuration;
+    private final AtomicInteger heartbeatQueueDepth = new AtomicInteger();
+    private final AtomicInteger heartbeatActiveRegistrations = new AtomicInteger();
+    private final AtomicInteger heartbeatRegistrationCapacity = new AtomicInteger();
 
     public MicrometerAgentRuntimeMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -32,6 +38,15 @@ public class MicrometerAgentRuntimeMetrics implements AgentRuntimeMetrics {
         this.paused = registry.counter("workflow.agent.runs.paused");
         this.resumed = registry.counter("workflow.agent.runs.resumed");
         this.cancelled = registry.counter("workflow.agent.runs.cancelled");
+        this.leaseRenewalDelay = Timer.builder("workflow.agent.lease.renewal.delay")
+                .description("Delay between the scheduled and actual lease renewal start")
+                .publishPercentileHistogram().register(registry);
+        this.leaseRenewalDuration = Timer.builder("workflow.agent.lease.renewal.duration")
+                .description("Database lease renewal duration")
+                .publishPercentileHistogram().register(registry);
+        registry.gauge("workflow.agent.heartbeat.queue.depth", heartbeatQueueDepth);
+        registry.gauge("workflow.agent.heartbeat.active.registrations", heartbeatActiveRegistrations);
+        registry.gauge("workflow.agent.heartbeat.registration.capacity", heartbeatRegistrationCapacity);
     }
 
     @Override
@@ -94,6 +109,31 @@ public class MicrometerAgentRuntimeMetrics implements AgentRuntimeMetrics {
                 .publishPercentileHistogram()
                 .register(registry)
                 .record(duration);
+    }
+
+    @Override
+    public void leaseRenewalDelay(Duration delay) {
+        leaseRenewalDelay.record(delay);
+    }
+
+    @Override
+    public void leaseRenewalDuration(Duration duration) {
+        leaseRenewalDuration.record(duration);
+    }
+
+    @Override
+    public void heartbeatQueueDepth(int depth) {
+        heartbeatQueueDepth.set(Math.max(0, depth));
+    }
+
+    @Override
+    public void heartbeatActiveRegistrations(int count) {
+        heartbeatActiveRegistrations.set(Math.max(0, count));
+    }
+
+    @Override
+    public void heartbeatRegistrationCapacity(int capacity) {
+        heartbeatRegistrationCapacity.set(Math.max(0, capacity));
     }
 
     private String normalize(String value) {
