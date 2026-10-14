@@ -18,6 +18,7 @@
 - 已完成 AgentDefinition/AgentVersion、Provider、AgentRun/Attempt/Step/Checkpoint 和模型调用审计；平台 Agent Worker 在每个逻辑步骤完成后持久化幂等 Step/Checkpoint，传统执行器保留完成后兼容写入。
 - Agent 定义已提供受权限保护的删除接口和前端入口；仅未发布、无运行历史且未被流程引用的草稿定义可物理删除，已发布定义保留以保证流程和审计可追溯。
 - 已完成正式 AgentRun 执行链路：Provider 调用、Schema 校验、基础结果策略、重试、租约心跳、Recovery、Outbox/Inbox 和 Flowable 恢复；平台 Agent 的逻辑步骤 Checkpoint 现在包含恢复游标和受限上下文，并在新 Attempt 读取。
+- Agent 完成 Outbox 已采用事务提交后本机唤醒、数据库租约领取、有界虚拟线程执行和定时扫描兜底；外部 XXL-Job 仅调用幂等恢复入口。重试时间带随机抖动，历史无消费者的 `AgentRunRequested.v1` 已停止生成并由 V53 保留审计后收口。
 - 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
 - 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；AgentVersion 已冻结工具代码集合，BPMN 节点只能继续收紧，当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
 - Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Provider Adapter 通过能力契约声明原生 Tool Calling 支持，Chat Completions 使用结构化工具调用，不支持原生工具的 Responses 兼容端点使用受控文本工具协议。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。
@@ -127,7 +128,7 @@
 
 以上证明本地配置与运行纵向链路可用，不替代专项容器故障注入、Worker 强杀、跨实例、出站安全和质量评测门禁。
 
-最近一次本机质量门禁（2026-10-12）：后端 9 个 Reactor 模块执行干净 `verify`，286 个测试中 268 个通过、18 个因 Docker Engine 不可用跳过，0 失败、0 错误；迁移版本唯一性、Checkstyle、SpotBugs 和 JaCoCo 门禁全部通过。最近一次完整 Docker 质量基线（2026-10-06）仍为 271 个测试、0 跳过，5 个必需基础设施集成套件通过。前端最近基线为格式、Lint、类型检查、43 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
+最近一次本机质量门禁（2026-10-14）：后端 9 个 Reactor 模块执行干净 `verify`，290 个测试中 272 个通过、18 个因 Docker Engine 不可用跳过，0 失败、0 错误；迁移版本唯一性、Checkstyle、SpotBugs 和 JaCoCo 门禁全部通过。最近一次完整 Docker 质量基线（2026-10-06）仍为 271 个测试、0 跳过，5 个必需基础设施集成套件通过。前端最近基线为格式、Lint、类型检查、43 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
 
 ### Agent Runtime 近期加固
 

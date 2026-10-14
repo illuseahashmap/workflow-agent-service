@@ -11,7 +11,7 @@
 | AC-06 自动处置审计 | PASS（单测） | SYSTEM 主体事件保留持久命令 Trace ID |
 | AC-07 Alertmanager | PASS（静态配置）/BLOCKED（运行回放） | 本地空 Receiver 与生产 Secret Webhook Overlay 已提供；Docker API 当前不可连接 |
 
-后端 9 个 Reactor 模块的干净 `verify` 已通过：286 个测试中 268 个通过、18 个因 Docker Engine
+后端 9 个 Reactor 模块的干净 `verify` 已通过：290 个测试中 272 个通过、18 个因 Docker Engine
 不可用跳过，0 失败、0 错误；迁移版本唯一性、Checkstyle、SpotBugs 和 JaCoCo 门禁通过。Docker
 不可用意味着本次不得宣称容器故障注入、真实 Alertmanager 通知和多实例压力已经完成。
 

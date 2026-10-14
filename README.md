@@ -179,7 +179,15 @@ WORKFLOW_AGENT_WORKER_HEARTBEAT_MAXIMUM_TRACKED_RUNS=1024
 WORKFLOW_AGENT_WORKER_LEASE_SECONDS=60
 WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_CONTEXT_CHARACTERS=40000
 WORKFLOW_AGENT_CHECKPOINT_MAXIMUM_INLINE_TOOL_RESULT_CHARACTERS=2048
+WORKFLOW_AGENT_COMPLETION_MAX_CONCURRENCY=8
+WORKFLOW_AGENT_COMPLETION_SWEEP_INTERVAL_MS=1000
 ```
+
+Agent completion Outbox records wake the local dispatcher immediately after commit and are executed by bounded virtual
+threads. The periodic sweep remains the correctness fallback for missed wake-ups, due retries, and expired claims. An
+external scheduler such as XXL-Job may additionally call
+`POST /internal/jobs/outbox/agent-completions/recover` with a scoped service token; it is a recovery trigger, not the
+source of truth for delivery state.
 
 For local Prometheus and Alertmanager validation, write a short-lived platform-admin Bearer token to a file outside Git,
 set `WORKFLOW_PROMETHEUS_TOKEN_FILE` to its absolute path, and run:

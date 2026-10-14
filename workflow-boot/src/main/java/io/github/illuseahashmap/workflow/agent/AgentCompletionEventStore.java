@@ -62,7 +62,8 @@ public class AgentCompletionEventStore {
                         THEN 'DEAD_LETTER' ELSE 'RETRY' END,
                     next_attempt_at = CASE WHEN :permanent OR attempt_count >= :maxAttempts THEN next_attempt_at
                         ELSE CURRENT_TIMESTAMP
-                            + (LEAST(300, POWER(2, LEAST(attempt_count, 8))) * INTERVAL '1 second') END,
+                            + (LEAST(300, POWER(2, LEAST(attempt_count, 8)))
+                                * (0.75 + RANDOM() * 0.5) * INTERVAL '1 second') END,
                     last_error = :lastError,
                     dead_lettered_at = CASE WHEN :permanent OR attempt_count >= :maxAttempts
                         THEN CURRENT_TIMESTAMP ELSE NULL END,

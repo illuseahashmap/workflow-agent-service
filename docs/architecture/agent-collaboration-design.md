@@ -929,12 +929,13 @@ SSE 仅作为实时传输，不作为状态存储。最终消息、运行状态�
 
 ### 11.1 Outbox/Inbox
 
-流程命令、运行请求和状态变更与各自业务数据在同一数据库事务中写入 Outbox。消费者使用 Inbox 去重，事件至少投递一次，业务处理保证幂等。
+跨限界上下文的完成事件与业务数据在同一数据库事务中写入 Outbox。事务提交后只发送本机唤醒信号，Dispatcher 仍必须从数据库原子领取事件；进程在提交与唤醒之间宕机时，由本地定时扫描或 XXL-Job 调用恢复入口重新发现。消费者使用 Inbox 去重，事件至少投递一次，业务处理保证幂等。
+
+当前模块化单体中，`agent_run` 表本身就是 Agent 执行的持久命令队列，Worker 直接按租约领取，因此不再重复写入没有消费者的 `AgentRunRequested.v1`。只有真正跨上下文恢复 Flowable 的完成事件进入 Outbox；未来拆分独立 Agent 服务时，可在保持应用端口不变的前提下重新引入请求事件或消息中间件。
 
 核心事件：
 
 ```text
-AgentRunRequested.v1
 AgentRunCancellationRequested.v1
 AgentRunCompleted.v1
 AgentRunFailed.v1
@@ -1640,7 +1641,7 @@ unique(tenant_code, provider_ref, provider_request_id) where provider_request_id
 ```json
 {
   "eventId": "uuid",
-  "eventType": "AgentRunRequested.v1",
+  "eventType": "AgentRunCompleted.v1",
   "occurredAt": "2026-08-05T10:00:00Z",
   "traceId": "trace-id",
   "tenantCode": "tenant-a",
@@ -1653,17 +1654,24 @@ MVP 只实现以下事件：
 
 | 事件 | 发布者 | 消费者 | 语义 |
 | --- | --- | --- | --- |
-| `AgentRunRequested.v1` | workflow-engine | agent-engine | 请求执行已经创建的 AgentRun |
 | `AgentRunCancellationRequested.v1` | workflow-engine | agent-engine | 请求取消未完成运行 |
 | `AgentRunCompleted.v1` | agent-engine | workflow-engine | Agent 输出已通过必需的 Schema、Guardrail、Grounding 和失败策略校验 |
 | `AgentRunFailed.v1` | agent-engine | workflow-engine | Agent 进入失败或超时终态 |
 
 Outbox 记录至少包含 `event_id`、`event_type`、`aggregate_id`、`tenant_code`、`payload`、`status`、`attempt_count`、`next_attempt_at` 和 `last_error`。Inbox 以 `event_id` 建立唯一约束，消费者必须先去重再执行业务动作。
 
-事件职责固定为：workflow-engine 在同一事务中创建 `AgentRun` 并写入
-`AgentRunRequested` Outbox；agent-engine 只负责领取和执行已有运行，不负责通过该
-事件隐式创建运行。完成、失败和取消事件必须携带 `agentRunId`、`attemptId`、
-`activityActivationId` 和结果摘要，消费方据此执行二次幂等校验。
+当前部署职责固定为：workflow-engine 在同一事务中创建 `AgentRun(QUEUED)`，该记录自身就是
+可靠执行命令；agent-engine 通过 `SKIP LOCKED` 与租约领取，不通过事件再次创建运行。完成、失败
+和取消事件必须携带 `agentRunId`、`attemptId`、`activityActivationId` 和结果摘要，消费方据此
+执行二次幂等校验。
+
+Outbox 触发采用“低延迟快路径 + 可靠恢复路径”：
+
+1. Outbox 与聚合在同一事务提交；`afterCommit` 只向本机 Dispatcher 发出合并唤醒。
+2. Dispatcher 按可用并发容量，以 `FOR UPDATE SKIP LOCKED`、领取租约和 owner 原子领取。
+3. 每条事件由有界虚拟线程执行，虚拟线程不绕过数据库连接池、并发许可证和租户边界。
+4. 失败持久化为 `RETRY + next_attempt_at`，指数退避带随机抖动；永久错误进入死信。
+5. 本地定时扫描始终启用，XXL-Job 只调用幂等恢复入口，不保存唯一任务状态，也不直接串行执行整批事件。
 
 #### 19.3.5 Flowable 交互时序
 
@@ -1672,17 +1680,19 @@ Flowable 进入 Agent Service Task
         ↓
 agentTaskDelegate 只校验 binding 和输入映射
         ↓
-事务内创建 AgentRun(QUEUED) + Outbox
+事务内创建 AgentRun(QUEUED)
         ↓
 事务提交，Triggerable Service Task 以 `async` 方式持久化流程等待态
-        ↓
-Outbox Dispatcher 发布 AgentRunRequested
         ↓
 Agent Worker 领取租约并进入 RUNNING
         ↓
 模型调用 / 检查点 / 工具执行
         ↓
 Agent 发布 Completed 或 Failed
+        ↓
+同事务写入完成 Outbox，提交后立即唤醒本机 Dispatcher
+        ↓
+本机扫描 / 定时扫描 / XXL 恢复触发器竞争领取同一数据库事实
         ↓
 workflow-engine 获取流程实例锁
         ↓

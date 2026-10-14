@@ -1054,6 +1054,16 @@ paths:
             schema: { $ref: '#/components/schemas/IgnoreAgentCompletionEventCommand' }
       responses:
         '200': { description: Event ignored, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+  /internal/jobs/outbox/agent-completions/recover:
+    post:
+      tags: [Operations]
+      operationId: recoverAgentCompletionOutbox
+      summary: Wake the Agent completion Outbox dispatcher from an external scheduler
+      description: Idempotent recovery trigger for a SERVICE principal; delivery state remains in PostgreSQL.
+      responses:
+        '200': { description: Recovery scan accepted, content: { application/json: { schema: { $ref: '#/components/schemas/VoidApiResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /knowledge/retrieval-profiles:
     get:
       tags: [Knowledge]

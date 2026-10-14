@@ -73,6 +73,12 @@ workflow:
       queue-capacity: ${WORKFLOW_AGENT_WORKER_QUEUE_CAPACITY:20}
       heartbeat-pool-size: ${WORKFLOW_AGENT_WORKER_HEARTBEAT_POOL_SIZE:4}
       heartbeat-maximum-tracked-runs: ${WORKFLOW_AGENT_WORKER_HEARTBEAT_MAXIMUM_TRACKED_RUNS:1024}
+    completion:
+      sweep-interval-ms: ${WORKFLOW_AGENT_COMPLETION_SWEEP_INTERVAL_MS:1000}
+      max-concurrency: ${WORKFLOW_AGENT_COMPLETION_MAX_CONCURRENCY:8}
+      max-attempts: ${WORKFLOW_AGENT_COMPLETION_MAX_ATTEMPTS:8}
+      batch-size: ${WORKFLOW_AGENT_COMPLETION_BATCH_SIZE:20}
+      claim-lease-seconds: ${WORKFLOW_AGENT_COMPLETION_CLAIM_LEASE_SECONDS:60}
   runtime:
     environment: ${WORKFLOW_ENV:production}
   lock:

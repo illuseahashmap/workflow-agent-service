@@ -101,7 +101,6 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
                 principalProvider.current().principalId(),
                 now.plusSeconds(version.timeoutSeconds()),
                 now));
-        eventPublisher.requested(run);
         return new AgentRunSubmissionView(run.id(), run.status());
     }
 
@@ -140,7 +139,6 @@ public class AgentRunSubmissionServiceImpl implements AgentRunSubmissionService 
                 command.processFailurePolicy() == null || command.processFailurePolicy().isBlank()
                         ? "HOLD_FOR_OPERATIONS" : command.processFailurePolicy(),
                 (int) command.timeoutSeconds()));
-        eventPublisher.requested(run);
         return new AgentRunSubmissionView(run.id(), run.status());
     }
 

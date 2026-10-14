@@ -42,6 +42,11 @@
 
 ## CompletionDeadLetters
 
+- 正常完成事件在事务提交后会立即唤醒本机 Dispatcher；`WORKFLOW_AGENT_COMPLETION_SWEEP_INTERVAL_MS`
+  定时扫描负责漏唤醒、到期重试和过期租约。XXL-Job 可使用 SERVICE Token 调用
+  `POST /internal/jobs/outbox/agent-completions/recover` 作为额外恢复触发器，但不能替代数据库状态机。
+- 事件由有界虚拟线程执行，并发上限由 `WORKFLOW_AGENT_COMPLETION_MAX_CONCURRENCY` 控制；同时观察
+  `workflow_agent_outbox_completion_active` 与 `workflow_agent_outbox_completion_capacity`，不得仅扩大虚拟线程数而忽略数据库连接池和 Flowable 容量。
 - 在平台运维死信接口查看最后错误与关联流程实例。
 - 可确认故障已消除时执行 replay；确认业务上无需推进时才执行 ignore，并填写原因。
 - 未处置前 Flowable 会保留在原 Agent 节点，这是保护性行为。
