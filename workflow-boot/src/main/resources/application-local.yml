@@ -13,6 +13,13 @@ workflow:
       enabled: true
     ingestion:
       enabled: true
+    vector:
+      provider: ${WORKFLOW_KNOWLEDGE_EMBEDDING_PROVIDER:VOLCENGINE_ARK}
+      base-url: ${WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+      api-key: ${WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY:${ARK_API_KEY:}}
+      model: ${WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL:doubao-embedding-vision-251215}
+      model-version: ${WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL_VERSION:doubao-embedding-vision-251215-1024-q1-c1}
+      dimension: ${WORKFLOW_KNOWLEDGE_EMBEDDING_DIMENSION:1024}
   runtime:
     environment: development
   agent:

@@ -3,6 +3,7 @@ package io.github.illuseahashmap.workflow.knowledge;
 import io.github.illuseahashmap.knowledge.catalog.domain.DocumentVersion;
 import io.github.illuseahashmap.knowledge.catalog.domain.IndexVersion;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexPort;
+import io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelPort;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexLifecyclePort;
 import io.github.illuseahashmap.knowledge.ingestion.domain.Chunk;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -25,6 +26,16 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
     @Override
     @Transactional
     public IndexVersion build(DocumentVersion documentVersion, List<Chunk> chunks) {
+        return build(documentVersion, chunks, null);
+    }
+
+    @Override
+    @Transactional
+    public IndexVersion build(DocumentVersion documentVersion, List<Chunk> chunks,
+                              EmbeddingModelPort.Batch embeddings) {
+        if (embeddings != null && embeddings.vectors().size() != chunks.size()) {
+            throw new IllegalArgumentException("Embedding count must match chunk count");
+        }
         MapSqlParameterSource sourceParameters = new MapSqlParameterSource()
                 .addValue("tenantCode", documentVersion.tenantCode())
                 .addValue("sourceCode", documentVersion.sourceCode());
@@ -42,7 +53,7 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
         int version = nextVersion == null ? 1 : nextVersion;
         MapSqlParameterSource indexParameters = sourceParameters
                 .addValue("version", version)
-                .addValue("embeddingModel", "none")
+                .addValue("embeddingModel", embeddings == null ? "none" : embeddings.modelVersion())
                 .addValue("status", "CANDIDATE");
         Long indexId = jdbcTemplate.queryForObject("""
                 INSERT INTO knowledge_index_version
@@ -53,7 +64,8 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
         if (indexId == null) {
             throw new IllegalStateException("Unable to create knowledge index version");
         }
-        for (Chunk chunk : chunks) {
+        for (int ordinal = 0; ordinal < chunks.size(); ordinal++) {
+            Chunk chunk = chunks.get(ordinal);
             jdbcTemplate.update("""
                     INSERT INTO knowledge_chunk
                         (tenant_code, source_code, document_version_id, index_version_id,
@@ -70,9 +82,25 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
                     .addValue("ordinal", chunk.ordinal())
                     .addValue("content", chunk.text())
                     .addValue("contentFingerprint", chunk.contentFingerprint()));
+            if (embeddings != null) {
+                jdbcTemplate.update("""
+                        INSERT INTO knowledge_chunk_embedding
+                            (tenant_code, source_code, index_version_id, chunk_id,
+                             model_version, dimension, embedding)
+                        VALUES (:tenantCode, :sourceCode, :indexVersionId, :chunkId,
+                                :modelVersion, :dimension, CAST(:embedding AS vector))
+                        """, new MapSqlParameterSource()
+                        .addValue("tenantCode", documentVersion.tenantCode())
+                        .addValue("sourceCode", documentVersion.sourceCode())
+                        .addValue("indexVersionId", indexId)
+                        .addValue("chunkId", chunk.chunkId())
+                        .addValue("modelVersion", embeddings.modelVersion())
+                        .addValue("dimension", embeddings.dimension())
+                        .addValue("embedding", vectorLiteral(embeddings.vectors().get(ordinal))));
+            }
         }
         return new IndexVersion(indexId, documentVersion.tenantCode(), documentVersion.sourceCode(), version,
-                "none", "CANDIDATE", Instant.now());
+                embeddings == null ? "none" : embeddings.modelVersion(), "CANDIDATE", Instant.now());
     }
 
     @Override
@@ -89,6 +117,20 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
         if (chunkCount == null || chunkCount < 1) {
             throw new IllegalStateException("Cannot activate an empty knowledge index");
         }
+        if (!"none".equals(indexVersion.embeddingModel())) {
+            Integer missingEmbeddings = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM knowledge_chunk c
+                JOIN knowledge_index_version i ON i.id = c.index_version_id
+                LEFT JOIN knowledge_chunk_embedding e
+                  ON e.tenant_code = c.tenant_code AND e.index_version_id = c.index_version_id
+                 AND e.chunk_id = c.chunk_id AND e.model_version = i.embedding_model
+                WHERE c.tenant_code = :tenantCode AND c.index_version_id = :indexId
+                  AND i.embedding_model <> 'none' AND e.chunk_id IS NULL
+                    """, parameters, Integer.class);
+            if (missingEmbeddings != null && missingEmbeddings > 0) {
+                throw new IllegalStateException("Cannot activate an incomplete vector index");
+            }
+        }
         jdbcTemplate.update("""
                 UPDATE knowledge_index_version
                 SET status = 'RETIRED'
@@ -103,5 +145,10 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
         if (activated != 1) {
             throw new IllegalStateException("Knowledge index candidate is not activatable");
         }
+    }
+
+    private String vectorLiteral(List<Float> vector) {
+        return "[" + vector.stream().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(",")) + "]";
     }
 }

@@ -17,13 +17,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /** LangChain4j transport with the platform's hard response-size boundary. */
-final class BoundedLangChain4jHttpClientBuilder implements HttpClientBuilder {
+public final class BoundedLangChain4jHttpClientBuilder implements HttpClientBuilder {
 
     private final int maximumResponseBytes;
     private Duration connectTimeout = Duration.ofSeconds(10);
     private Duration readTimeout;
 
-    BoundedLangChain4jHttpClientBuilder(int maximumResponseBytes) {
+    public BoundedLangChain4jHttpClientBuilder(int maximumResponseBytes) {
         this.maximumResponseBytes = maximumResponseBytes;
     }
 

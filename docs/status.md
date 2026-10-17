@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-10-12
+更新时间：2026-10-17
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -24,7 +24,7 @@
 - Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Provider Adapter 通过能力契约声明原生 Tool Calling 支持，Chat Completions 使用结构化工具调用，不支持原生工具的 Responses 兼容端点使用受控文本工具协议。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。
 - 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、稳定幂等键、带租约的数据库原子抢占和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
-- 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、`RetrievalProfileVersion` 模型、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；RAG-2 已新增文档快照、确定性 Chunk 切分、索引构建端口、`knowledge_chunk` 全文检索表、PostgreSQL 文档/索引/Trace 适配器和租约 Worker。当前已增加 AgentVersion 到 RetrievalProfile 的数据库绑定、提交人随 AgentRun 快照传递及主体知识范围授权表/适配器，并新增租户边界内的 Profile 草稿/发布、文档入库与摄取任务、主体范围授权管理 API；前端已提供主体范围授权入口，避免运行时因缺少主体授权而只能失败。V47 已为 Profile、文档、摄取查询和范围授权建立独立权限，前端已提供 ACTIVE 索引选择、Profile 草稿/发布和文本/Markdown 文档提交入口；workflow-boot 已接入按启用租户轮询的摄取调度器，任务会通过租约 Worker 有界领取并执行。V48 已在已有检索应用、Profile 绑定和主体范围授权边界内恢复 `knowledge_search` 只读工具，AgentVersion 可绑定已发布 Profile 后进入真实检索链路；本地浏览器已验证全文检索证据回注、流程路由和后续审批完成。pgvector/混合检索、Grounding 和离线评测仍未接入。
+- 已建立 `knowledge-engine` 的 Evidence 多态契约、授权范围求交、检索 Trace、`RetrievalProfileVersion` 模型、知识源/文档/索引/摄取任务生命周期模型和 `knowledge_search` 只读工具端口；RAG-2 已新增文档快照、确定性 Chunk 切分、索引构建端口、`knowledge_chunk` 全文检索表、PostgreSQL 文档/索引/Trace 适配器和租约 Worker。当前已增加 AgentVersion 到 RetrievalProfile 的数据库绑定、提交人随 AgentRun 快照传递及主体知识范围授权表/适配器，并新增租户边界内的 Profile 草稿/发布、文档入库与摄取任务、主体范围授权管理 API；前端已提供主体范围授权入口，避免运行时因缺少主体授权而只能失败。V47 已为 Profile、文档、摄取查询和范围授权建立独立权限，前端已提供 ACTIVE 索引选择、Profile 草稿/发布和文本/Markdown 文档提交入口；workflow-boot 已接入按启用租户轮询的摄取调度器，任务会通过租约 Worker 有界领取并执行。V48 已在已有检索应用、Profile 绑定和主体范围授权边界内恢复 `knowledge_search` 只读工具，AgentVersion 可绑定已发布 Profile 后进入真实检索链路；本地浏览器已验证全文检索证据回注、流程路由和后续审批完成。pgvector 向量摄取与 HYBRID 检索本地真实回归已通过；最终答案 Grounding 和发布级离线评测仍未完成。
 - 已开放 `PLATFORM_AGENT` 前端配置；流程运行时自动注入受控 `processInstanceId`，模型无需把流程 ID作为业务输入，手动测试仍支持显式传入。
 - 已完成 MCP-1/MCP-2 只读配置与运行闭环：Connector/Version、目录发现与审核发布、工具 Schema 快照、AgentVersion 绑定、HTTPS Streamable HTTP 的 initialize/tools/list/tools/call、MCP Adapter 与现有 Registry/租户授权/审计链路连接；前端已提供连接器、目录审核、草稿删除和 Agent 版本工具绑定入口；确定性 HTTPS 协议测试覆盖会话、initialized 通知、SSE 多事件、批量响应、目录发现和工具调用。本地浏览器已验证“模型选择工具 → MCP 调用 → 返回 `count` → AgentRun 成功 → Flowable 完成”。另已补齐 MCP 调用级 Redis 租户令牌桶、并发硬上限、连接器熔断、有界 TTL 会话复用、凭据指纹轮换和 Worker 接管后的 Checkpoint 恢复测试。当前仍未宣称生产级出站安全、确定性 MCP Server 容器故障注入和多实例压力验收完成。
 - 前端状态展示已收敛到公共 `StatusBadge`/`TableTagCell` 契约：状态、版本、分类和筛选标签分别使用稳定变体；标签不再在组件内部截断，原始状态码通过悬浮提示保留；流程定义、Agent、工具目录、成员角色、租户、派单规则、参与人和审计页面统一状态列对齐。
@@ -54,7 +54,7 @@
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
-| P1 | 受治理 RAG 最小闭环 | Evidence 多态契约、授权求交、生命周期模型、Trace、确定性 Chunk 契约、全文检索表、Profile 模型、PostgreSQL 适配器、专用权限、摄取调度和 Agent 绑定/只读检索链路已落地 | 完成 pgvector/混合检索、Grounding、评测、摄取恢复和多 Retriever 兼容验收；确定性地把零召回、低质量证据和引用不一致映射为拒答、失败或人工复核，不能依赖模型自报 `confidence` 决定流程走向 |
+| P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固 | 浏览器 UI 验收、最终答案 Citation 门禁、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
 | P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；确定性 MCP Server 容器测试、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成真实 MCP Server 容器故障注入、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
 

@@ -3,7 +3,12 @@ package io.github.illuseahashmap.workflow.agent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
+import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
+import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
+import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeRetrievalUseCase;
+import io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult;
 import java.util.List;
@@ -55,10 +60,32 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
         RetrievalRequest retrievalRequest = new RetrievalRequest(
                 query, scopes, List.of(), null, maxResults,
                 RetrievalRequest.StrategyHint.AUTO, 0, List.of());
-        RetrievalResult result = request.agentVersionId() == null
-                ? useCase.search(retrievalRequest)
-                : useCase.searchForAgent(retrievalRequest, request.tenantCode(),
-                        request.agentVersionId(), request.principalId());
+        RetrievalResult result;
+        try {
+            result = request.agentVersionId() == null
+                    ? useCase.search(retrievalRequest)
+                    : useCase.searchForAgent(retrievalRequest, request.tenantCode(),
+                            request.agentVersionId(), request.principalId());
+        } catch (EmbeddingModelException exception) {
+            throw new AgentExecutionException(new AgentFailure(exception.errorCode(),
+                    exception.retryable() ? AgentFailureCategory.PROVIDER_TRANSIENT
+                            : AgentFailureCategory.PROVIDER_PERMANENT,
+                    exception.retryable(), ResultStatus.FAILED,
+                    exception.retryable() ? "知识向量服务暂时不可用，系统将按策略重试"
+                            : "知识向量服务配置或响应不满足契约"), exception);
+        }
+        if (result.abstained() || result.status() != io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalStatus.SUCCESS) {
+            ResultStatus resultStatus = switch (result.status()) {
+                case EMPTY -> ResultStatus.EMPTY;
+                case PARTIAL -> ResultStatus.PARTIAL;
+                case REJECTED -> ResultStatus.REJECTED;
+                case FAILED -> ResultStatus.FAILED;
+                case SUCCESS -> ResultStatus.REJECTED;
+            };
+            throw new AgentExecutionException(new AgentFailure(
+                    "KNOWLEDGE_EVIDENCE_INSUFFICIENT", AgentFailureCategory.RESULT_POLICY,
+                    false, resultStatus, "Knowledge search did not provide sufficient authorized evidence"));
+        }
         try {
             return new Result(objectMapper.writeValueAsString(Map.of(
                     "status", result.status().name(),

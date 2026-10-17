@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.knowledge.ingestion.application;
 
 import io.github.illuseahashmap.knowledge.ingestion.application.port.IngestionJobRepository;
+import io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexLifecyclePort;
 import io.github.illuseahashmap.knowledge.ingestion.domain.IngestionJob;
 
@@ -48,10 +49,14 @@ public final class IngestionWorker {
             indexLifecycle.activate(result.indexVersion());
             jobRepository.save(job.succeeded());
         } catch (RuntimeException exception) {
-            if (job.attempt() >= maxAttempts) {
-                jobRepository.save(job.failed(FAILURE_CODE));
+            String code = exception instanceof EmbeddingModelException embedding
+                    ? embedding.errorCode() : FAILURE_CODE;
+            boolean retryable = !(exception instanceof EmbeddingModelException embedding)
+                    || embedding.retryable();
+            if (!retryable || job.attempt() >= maxAttempts) {
+                jobRepository.save(job.failed(code));
             } else {
-                jobRepository.save(job.retryAt(now.plus(retryDelay), FAILURE_CODE));
+                jobRepository.save(job.retryAt(now.plus(retryDelay), code));
             }
         }
         return true;

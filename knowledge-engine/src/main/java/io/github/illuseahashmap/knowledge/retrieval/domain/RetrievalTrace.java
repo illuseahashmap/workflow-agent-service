@@ -13,8 +13,19 @@ public record RetrievalTrace(
         RetrievalStatus status,
         String strategy,
         int evidenceCount,
-        Instant createdAt
+        Instant createdAt,
+        Long profileVersionId,
+        Long indexVersionId,
+        List<EvidenceReference> evidenceReferences,
+        long elapsedMillis
 ) {
+    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
+                          List<String> authorizedScopes, RetrievalStatus status, String strategy,
+                          int evidenceCount, Instant createdAt) {
+        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy,
+                evidenceCount, createdAt, null, null, List.of(), 0);
+    }
+
     public RetrievalTrace {
         traceId = requireText(traceId, "traceId");
         tenantCode = requireText(tenantCode, "tenantCode");
@@ -24,6 +35,10 @@ public record RetrievalTrace(
         strategy = requireText(strategy, "strategy");
         if (evidenceCount < 0) {
             throw new IllegalArgumentException("evidenceCount must not be negative");
+        }
+        evidenceReferences = List.copyOf(Objects.requireNonNullElse(evidenceReferences, List.of()));
+        if (elapsedMillis < 0) {
+            throw new IllegalArgumentException("elapsedMillis must not be negative");
         }
         createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
     }

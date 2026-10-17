@@ -1,7 +1,7 @@
 # RAG 短期实施方案与长期扩展边界
 
-更新时间：2026-10-06
-状态：RAG-0/RAG-1 已完成，RAG-2 与 RAG-3 首个本地关键词检索切片已通过，生产化闭环待完成
+更新时间：2026-10-17
+状态：关键词、真实向量摄取/混合检索与 AgentRun→Flowable 本地链路已验证；浏览器、生产化与强杀恢复仍待验收
 
 本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
 知识源和外部检索服务时，不需要重写 Agent Runtime、Flowable 集成和证据治理模型。
@@ -21,8 +21,53 @@ PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模�
 RetrievalProfile 的租户内绑定和可信运行时解析。当前已接通租户边界内的文档入库、摄取任务、
 Profile 管理/发布、主体范围授权 API，且本地 profile 可显式装配摄取 Worker 与关键词检索应用服务。
 知识管理已使用独立权限；本地浏览器已跑通全文检索、Evidence 回注、流程路由和后续审批。
-基础设施 Testcontainers 门禁已恢复并通过；仍未完成 pgvector 混合检索、Grounding、评测门禁和 RAG 专项故障恢复验证，因此本文件
+基础设施 Testcontainers 历史门禁已通过。本轮新增了可选 vector profile、pgvector 存储/精确检索、
+LangChain4j Embedding 适配、显式 VECTOR/HYBRID 策略、RRF 融合、检索结果引用完整性与分数门禁、
+版本/证据引用/耗时 Trace，以及基础离线指标计算。另有火山方舟 `/embeddings/multimodal`
+专用适配，避免把其非 OpenAI 响应格式误送给标准 LangChain4j Embedding 客户端。本机 PostgreSQL 18.1 已安装并启用 pgvector 0.8.7，基础距离查询通过；可选向量迁移已在本机执行，`local,vector` 与回退 `local` 均可启动。`employee-handbook.md` 第 1 版已在真实 Ark 模型下重新摄取并通过 HYBRID 检索；新 Profile 和 AgentVersion 绑定后的 AgentRun→Flowable 也已在本地通过；
+最终答案的逐字段 Citation 核验、评测数据集发布门禁和 RAG 专项故障恢复也尚未完成。因此本文件
 不能作为“RAG 生产闭环已完成”的依据。
+
+### 当前可选向量运行方式
+
+默认 `local` 与生产配置只执行关键词摄取。要启用向量路径，数据库需预装 pgvector 扩展，
+用 `local,vector`（或生产相应 profile）启动，Flyway 才会装载独立的 repeatable 向量迁移。
+生产环境必须配置 `WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL`、`WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL`、`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL_VERSION` 和
+`WORKFLOW_KNOWLEDGE_EMBEDDING_DIMENSION`。本地 profile 为这次验收预设方舟端点、模型和 1024 维，
+优先读取专用 `WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY`，未设置时复用本机已有的 `ARK_API_KEY` 环境凭证；
+这不读取数据库中的聊天 Provider 凭证，也不向模型或日志回显密钥。缺扩展或缺凭证时启动失败并给出明确诊断。
+Embedding 模型与聊天 Provider 独立配置；当前 DeepSeek 聊天密钥不能假定支持 Embedding API。
+当前本地聊天 Provider 的 Base URL 指向火山方舟 DeepSeek，但 DeepSeek 聊天模型本身不是向量模型。
+如果使用方舟 `doubao-embedding-vision-251215`，设置 `WORKFLOW_KNOWLEDGE_EMBEDDING_PROVIDER=VOLCENGINE_ARK`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL=doubao-embedding-vision-251215` 和维度 `1024`；
+完整请求地址由适配器追加 `/embeddings/multimodal`。这个 URL 是端点，不是请求体里的模型 ID；
+模型 ID 应与账号控制台的开通项一致。
+API Key 必须从环境/密钥管理提供，不复用数据库中加密的聊天凭证。`MODEL_VERSION` 应固定模型版本、
+维度和 Query/Corpus instructions 版本；任一变化要重建索引，不可在原版本上覆盖。
+方舟适配按官方协议分别使用 Query 与 Corpus instructions，不可直接使用标准 `/embeddings` 适配。
+模型是否有免费额度以该账号「开通管理」为准，不自动开通付费。
+2026-10-17 已在本机 PostgreSQL 18.1 Windows 实例按 pgvector 官方源码构建安装 0.8.7，
+`workflow_agent` 数据库已执行 `CREATE EXTENSION vector`，3 维向量距离查询返回预期值。
+可选 Flyway 向量迁移已随 `vector` profile 在本机数据库执行。非 vector profile 不会在新数据库安装该迁移；
+已安装过向量迁移的数据库可回到关键词模式，自定义 Flyway 只对这一个已知可选 repeatable 的缺席放行；
+Docker 引擎仍不可用，容器化隔离集成测试待完成。2026-10-17 的本地回归中，
+`default/company-handbook` 的 `employee-handbook.md` 第 1 版内容哈希保持不变，摄取任务成功，
+索引第 2 版已激活并写入 3 条 1024 维向量；HYBRID 检索命中采购审批规则，Citation 指向原文版本。
+验证由显式启用的 `LocalRagVectorAcceptanceTest` 完成，默认 CI 不会调用付费外部模型。
+旧索引第 1 版退休但仍可按冻结版本读取；已发布 Profile 没有被原地修改。
+现已创建 `purchase-policy` Profile 第 3 版（ID 4，绑定索引 2）和 `text_rag` Agent 第 4 版（ID 14），
+采购流程第 3 版绑定新 Agent 并启用。显式验收测试 `LocalRagAgentFlowAcceptanceTest` 使用真实模型启动
+1500 元办公采购流程：AgentRun 50 成功，`knowledge_search` 返回带 Citation 的 3 条 Evidence，
+RetrievalTrace 记录 Profile 4 / Index 2 / `HYBRID`，Flowable 进入“直属负责人审批”。
+该测试默认不运行；浏览器 UI 的逐页验收和流程强杀恢复尚未完成。
+Ark 暂时性失败已类型化并在同一调用总预算内最多重试一次；永久认证/协议错误不重试，
+Agent 与摄取 Worker 使用相同的稳定错误码和可重试性分类。
+向量和混合 Profile 只允许绑定已经生成向量的索引。已发布 Profile 绑定的索引版本会传递到
+关键词/向量查询，旧索引退休后仍可按版本读取，模型版本不匹配明确失败。
+历史已发布 `HYBRID` Profile 若绑定 `embedding_model=none` 的旧索引，运行时按其原有关键词语义执行；
+不改写已发布记录，检索 Trace 的实际策略为 `KEYWORD`。新建向量/混合 Profile 均必须绑定向量索引。
 
 ## 0. 交付范围与阶段零
 
@@ -381,7 +426,7 @@ EvaluationDataset
 
 - 已实现文本/Markdown 领域摄取、确定性 Chunk、索引版本和 PostgreSQL 全文检索基础设施；
 - 已实现摄取任务租约、重试、幂等、失败恢复和候选索引原子激活；
-- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 仍待实现；
+- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 可选代码路径已接入，真实扩展及 Provider 验收待完成；
 - 租户 RLS 已进入迁移，但配额和删除传播仍需结合真实任务入口验收。
 
 阶段完成标准：服务重启、重复摄取和重建索引不会产生丢失、重复激活或跨租户结果；
@@ -391,7 +436,7 @@ Grounding、评测和容器故障验收完成前不得将其标记为生产级 R
 ### RAG-3：Agent、证据与质量闭环
 
 - 已注册并授权只读 `knowledge_search`，并要求 AgentVersion 绑定已发布 RetrievalProfile；
-- 已接入 RetrievalTrace、EvidenceReference 和运行恢复上下文；独立 RETRIEVAL Step 与 Citation 展示仍需继续收口；
+- 已接入 RetrievalTrace、EvidenceReference 和运行恢复上下文；Trace 新增 Profile/Index 版本、证据引用和耗时；独立 RETRIEVAL Step 与 Citation 展示仍需继续收口；
 - 实现最小 GroundingPolicy、拒答和人工复核路由；
 - 实现版本化评测集、离线指标和发布回归测试。
 

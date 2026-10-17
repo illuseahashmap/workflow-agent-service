@@ -62,10 +62,15 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     public ProfileView createProfile(String tenant, CreateProfile c) {
         requireText(c.profileCode(), "profileCode");
         requireText(c.strategy(), "strategy");
+        var strategy = io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint
+                .valueOf(c.strategy());
+        if (strategy == io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.GRAPH) {
+            throw new IllegalArgumentException("Graph retrieval is not available");
+        }
         if (c.maxResults() < 1 || c.maxResults() > 50 || c.minimumScore() < 0) {
             throw new IllegalArgumentException("invalid retrieval limits");
         }
-        if (!indexExists(tenant, c.indexVersionId())) {
+        if (!indexExists(tenant, c.indexVersionId(), strategy)) {
             throw new IllegalArgumentException("index version is not available for this tenant");
         }
         Integer next = jdbc.queryForObject("""
@@ -232,11 +237,16 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                         """, params(tenant).addValue("id", id).addValue("scope", scope.trim())));
     }
 
-    private boolean indexExists(String tenant, long id) {
+    private boolean indexExists(String tenant, long id,
+            io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint strategy) {
         Integer count = jdbc.queryForObject("""
                 SELECT count(*) FROM knowledge_index_version
                 WHERE tenant_code = :tenant AND id = :id AND status IN ('READY', 'ACTIVE')
-                """, params(tenant).addValue("id", id), Integer.class);
+                  AND (:requiresVector = false OR embedding_model <> 'none')
+                """, params(tenant).addValue("id", id)
+                .addValue("requiresVector", strategy == io.github.illuseahashmap.knowledge.retrieval.domain
+                        .RetrievalRequest.StrategyHint.VECTOR || strategy == io.github.illuseahashmap
+                        .knowledge.retrieval.domain.RetrievalRequest.StrategyHint.HYBRID), Integer.class);
         return count != null && count > 0;
     }
 

@@ -28,22 +28,29 @@ public final class PostgresRetrievalTraceRepository implements RetrievalTraceRep
     public void save(RetrievalTrace trace) {
         try {
             String scopes = objectMapper.writeValueAsString(trace.authorizedScopes());
+            String references = objectMapper.writeValueAsString(trace.evidenceReferences());
             jdbcTemplate.update("""
                     INSERT INTO knowledge_retrieval_trace
                         (trace_id, tenant_code, query_fingerprint, authorized_scopes,
-                         status, strategy, evidence_count, created_at)
+                         status, strategy, evidence_count, created_at, profile_version_id,
+                         index_version_id, evidence_references, elapsed_millis)
                     VALUES (:traceId, :tenantCode, :queryFingerprint, CAST(:scopes AS jsonb),
-                            :status, :strategy, :evidenceCount, :createdAt)
+                            :status, :strategy, :evidenceCount, :createdAt, :profileVersionId,
+                            :indexVersionId, CAST(:references AS jsonb), :elapsedMillis)
                     ON CONFLICT (trace_id) DO NOTHING
                     """, new MapSqlParameterSource()
                     .addValue("traceId", trace.traceId())
                     .addValue("tenantCode", trace.tenantCode())
                     .addValue("queryFingerprint", trace.queryFingerprint())
                     .addValue("scopes", scopes)
+                    .addValue("references", references)
                     .addValue("status", trace.status().name())
                     .addValue("strategy", trace.strategy())
                     .addValue("evidenceCount", trace.evidenceCount())
-                    .addValue("createdAt", Timestamp.from(trace.createdAt())));
+                    .addValue("createdAt", Timestamp.from(trace.createdAt()))
+                    .addValue("profileVersionId", trace.profileVersionId())
+                    .addValue("indexVersionId", trace.indexVersionId())
+                    .addValue("elapsedMillis", trace.elapsedMillis()));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize retrieval trace scopes", exception);
         }

@@ -8,6 +8,7 @@ import io.github.illuseahashmap.knowledge.retrieval.application.port.AgentRetrie
 import io.github.illuseahashmap.knowledge.retrieval.application.port.NoopRetrievalTraceRepository;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.RetrievalTraceRepository;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalTrace;
+import io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceGroundingPolicy;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult;
 import io.github.illuseahashmap.workflow.shared.context.TenantContext;
@@ -28,6 +29,7 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
     private final RetrievalTraceRepository traceRepository;
     private final RetrievalProfileRepository profileRepository;
     private final AgentRetrievalProfileBinding profileBinding;
+    private final EvidenceGroundingPolicy groundingPolicy = new EvidenceGroundingPolicy();
 
     public KnowledgeRetrievalService(
             TenantProvider tenantProvider,
@@ -91,9 +93,12 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
                 .orElseThrow(() -> new IllegalStateException("Published retrieval profile is not bound to AgentVersion"));
         RetrievalRequest profiled = new RetrievalRequest(request.query(),
                 profile.knowledgeScopes(), request.filters(), request.asOfTime(),
-                Math.min(request.maxResults(), profile.maxResults()), profile.strategy(),
-                request.maxHops(), request.requiredEvidenceTypes());
-        return search(profiled, tenantCode, requestScopes(request, profile.knowledgeScopes()), principalId);
+                Math.min(request.maxResults(), profile.maxResults()),
+                profile.strategy() == RetrievalRequest.StrategyHint.AUTO
+                        ? RetrievalRequest.StrategyHint.KEYWORD : profile.strategy(),
+                request.maxHops(), request.requiredEvidenceTypes(), profile.indexVersionId());
+        return search(profiled, tenantCode, requestScopes(request, profile.knowledgeScopes()),
+                principalId, profile.minimumScore(), profile.id());
     }
 
     @Override
@@ -105,25 +110,35 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
             throw new IllegalStateException("Tenant code is required for knowledge retrieval");
         }
         var authorizedScopes = accessPolicy.authorize(tenant.tenantCode(), request.knowledgeScopes());
-        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes);
+        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes, 0, null);
     }
 
     private RetrievalResult search(RetrievalRequest request, String tenantCode,
-                                   java.util.List<String> requestedScopes, String principalId) {
+                                   java.util.List<String> requestedScopes, String principalId,
+                                   double minimumScore, Long profileVersionId) {
         var authorizedScopes = accessPolicy.authorize(tenantCode, principalId,
                 request.knowledgeScopes(), requestedScopes);
-        return retrieveAuthorized(request, tenantCode, authorizedScopes);
+        return retrieveAuthorized(request, tenantCode, authorizedScopes, minimumScore, profileVersionId);
     }
 
     private RetrievalResult retrieveAuthorized(RetrievalRequest request, String tenantCode,
-                                               java.util.List<String> authorizedScopes) {
+                                               java.util.List<String> authorizedScopes, double minimumScore,
+                                               Long profileVersionId) {
         if (authorizedScopes.isEmpty()) {
             throw new IllegalStateException("No authorized knowledge scope is available");
         }
-        RetrievalResult result = retriever.retrieve(tenantCode, request.withAuthorizedScopes(authorizedScopes));
+        if (!request.filters().isEmpty() || request.asOfTime() != null) {
+            throw new IllegalArgumentException("Metadata and historical retrieval filters are not implemented");
+        }
+        long started = System.nanoTime();
+        RetrievalResult raw = retriever.retrieve(tenantCode, request.withAuthorizedScopes(authorizedScopes));
+        RetrievalResult result = groundingPolicy.apply(raw, minimumScore);
         traceRepository.save(new RetrievalTrace(
                 result.retrievalTraceId(), tenantCode, fingerprint(request.query()), authorizedScopes,
-                result.status(), result.strategy(), result.evidence().size(), Instant.now()));
+                result.status(), result.strategy(), raw.evidence().size(), Instant.now(),
+                profileVersionId, request.indexVersionId() == 0 ? null : request.indexVersionId(),
+                raw.evidence().stream().map(evidence -> evidence.reference()).toList(),
+                java.time.Duration.ofNanos(System.nanoTime() - started).toMillis()));
         return result;
     }
 

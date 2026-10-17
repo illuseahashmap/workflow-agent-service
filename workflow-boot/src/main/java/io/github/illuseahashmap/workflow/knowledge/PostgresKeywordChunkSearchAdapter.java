@@ -38,7 +38,8 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                   AND c.index_version_id IN (
                       SELECT iv.id FROM knowledge_index_version iv
                       WHERE iv.tenant_code = :tenantCode
-                        AND iv.status = 'ACTIVE'
+                        AND ((:indexVersionId = 0 AND iv.status = 'ACTIVE')
+                          OR (iv.id = :indexVersionId AND iv.status IN ('ACTIVE', 'RETIRED')))
                   )
             ) c
             JOIN knowledge_document_version d ON d.id = c.document_version_id
@@ -64,6 +65,7 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                 .addValue("tenantCode", tenantCode)
                 .addValue("query", request.query())
                 .addValue("scopes", request.knowledgeScopes())
+                .addValue("indexVersionId", request.indexVersionId())
                 .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
         List<String> lexicalScores = new ArrayList<>();
         List<String> lexicalPredicates = new ArrayList<>();

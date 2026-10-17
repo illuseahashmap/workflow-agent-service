@@ -21,10 +21,14 @@ public final class PostgresRetrievalProfileRepository implements RetrievalProfil
     @Override
     public Optional<RetrievalProfileVersion> findPublished(String tenantCode, long profileVersionId) {
         return jdbcTemplate.query("""
-                SELECT p.id, p.tenant_code, p.profile_code, p.version, p.strategy,
+                SELECT p.id, p.tenant_code, p.profile_code, p.version,
+                       CASE WHEN p.strategy = 'HYBRID' AND i.embedding_model = 'none'
+                            THEN 'KEYWORD' ELSE p.strategy END AS effective_strategy,
                        p.max_results, p.minimum_score, p.index_version_id, p.status,
                        p.created_at, s.scope_code
                 FROM knowledge_retrieval_profile_version p
+                JOIN knowledge_index_version i
+                  ON i.id = p.index_version_id AND i.tenant_code = p.tenant_code
                 LEFT JOIN knowledge_retrieval_profile_scope s
                   ON s.profile_version_id = p.id AND s.tenant_code = p.tenant_code
                 WHERE p.tenant_code = :tenantCode AND p.id = :profileVersionId
@@ -33,7 +37,7 @@ public final class PostgresRetrievalProfileRepository implements RetrievalProfil
                 """, java.util.Map.of("tenantCode", tenantCode, "profileVersionId", profileVersionId),
                 (rs, rowNum) -> new ProfileRow(rs.getLong("id"), rs.getString("tenant_code"),
                         rs.getString("profile_code"), rs.getInt("version"),
-                        RetrievalRequest.StrategyHint.valueOf(rs.getString("strategy")),
+                        RetrievalRequest.StrategyHint.valueOf(rs.getString("effective_strategy")),
                         rs.getInt("max_results"), rs.getDouble("minimum_score"),
                         rs.getLong("index_version_id"), rs.getString("status"),
                         instant(rs.getTimestamp("created_at")),

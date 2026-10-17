@@ -13,8 +13,16 @@ public record RetrievalRequest(
         int maxResults,
         StrategyHint strategyHint,
         int maxHops,
-        List<EvidenceType> requiredEvidenceTypes
+        List<EvidenceType> requiredEvidenceTypes,
+        long indexVersionId
 ) {
+
+    public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
+                            Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
+                            List<EvidenceType> requiredEvidenceTypes) {
+        this(query, knowledgeScopes, filters, asOfTime, maxResults, strategyHint, maxHops,
+                requiredEvidenceTypes, 0);
+    }
 
     public RetrievalRequest {
         query = Objects.requireNonNull(query, "query must not be null").trim();
@@ -31,12 +39,15 @@ public record RetrievalRequest(
         if (maxHops < 0 || maxHops > 1) {
             throw new IllegalArgumentException("maxHops must be between 0 and 1 for the first slice");
         }
+        if (indexVersionId < 0) {
+            throw new IllegalArgumentException("indexVersionId must not be negative");
+        }
         strategyHint = Objects.requireNonNullElse(strategyHint, StrategyHint.AUTO);
     }
 
     public RetrievalRequest withAuthorizedScopes(List<String> authorizedScopes) {
         return new RetrievalRequest(query, authorizedScopes, filters, asOfTime, maxResults,
-                strategyHint, maxHops, requiredEvidenceTypes);
+                strategyHint, maxHops, requiredEvidenceTypes, indexVersionId);
     }
 
     public enum StrategyHint {

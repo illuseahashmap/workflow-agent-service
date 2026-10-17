@@ -9,4 +9,12 @@ import io.github.illuseahashmap.knowledge.catalog.domain.IndexVersion;
 /** Provider-neutral indexing port; pgvector belongs behind this boundary. */
 public interface KnowledgeIndexPort {
     IndexVersion build(DocumentVersion documentVersion, List<Chunk> chunks);
+
+    default IndexVersion build(DocumentVersion documentVersion, List<Chunk> chunks,
+                               EmbeddingModelPort.Batch embeddings) {
+        if (embeddings != null) {
+            throw new IllegalStateException("This index adapter does not support embeddings");
+        }
+        return build(documentVersion, chunks);
+    }
 }

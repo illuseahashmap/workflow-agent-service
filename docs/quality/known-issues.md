@@ -1,6 +1,6 @@
 # 待修复问题与下一步整改
 
-更新时间：2026-10-12
+更新时间：2026-10-17
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
@@ -43,7 +43,11 @@
 - 已补齐：租户边界内的 Profile 草稿/发布、文档入库与摄取任务创建、摄取任务分页查询、主体范围授权增删查 API；文档写入与摄取任务创建在同一事务内完成，重复提交按租户/来源/内容哈希幂等。
 - 已修复：管理适配器统一使用 JDBC `Timestamp` 转换 PostgreSQL `timestamptz`，并为可选分页筛选参数显式声明 SQL 类型；避免知识库列表和文档提交回读因驱动类型转换或空参数类型推断返回 500。
 - 已验证：本地浏览器已跑通全文检索、Evidence 回注、Agent 结果和 Flowable 后续审批，运行命中 `employee-handbook.md` 第 1 版且 `retrievalStatus=FULL`。
-- 未完成：Grounding 策略、离线评测集、pgvector/混合 Retriever 以及生产级 Trace 查询接口尚未接入；当前已具备按租户轮询的摄取调度、Profile/文档/主体范围管理入口和 PostgreSQL 文档/Chunk/全文检索基础设施，但仍不宣称生产级 RAG 闭环。
+- 新增：2026-10-17 接入可选 LangChain4j Embedding、pgvector 精确检索、RRF 混合召回、Profile 索引固定、引用完整性/最低分门禁及基础离线指标；默认关键词路径保持可用。本机 pgvector 0.8.7、可选 Flyway 迁移、`local,vector` 启动与普通 `local` 回退均已验证。
+- 火山方舟 `doubao-embedding-vision-251215` Embedding 接口已用现有 Ark 凭据实测成功；`employee-handbook.md` 第 1 版经真实摄取生成活跃索引第 2 版与 3 条 1024 维向量。新发布 Profile 4 / AgentVersion 14 / 采购流程第 3 版的真实 AgentRun 50 已成功：RetrievalTrace 为 HYBRID、证据 3 条、引用指向原文，Flowable 进入直属负责人审批。旧 Profile 和索引仍可按冻结版本读取。
+- 已修复：Ark 网络超时、限流和不可用按暂时性故障分类并在同一调用预算内有界重试；认证、请求和协议错误不重试，Agent 与摄取任务分别保留明确错误码。仍需真实故障注入验证 AgentRun 的跨 Attempt 接管，以及浏览器 UI、Worker 强杀恢复与 Docker 容器化集成测试。
+- 兼容：旧版已发布 `HYBRID` Profile 若绑定纯关键词索引，运行时维持关键词检索，Trace 记录实际策略；新建 Profile 不再允许此组合。
+- 未完成：最终回答逐字段 Citation 核验、评测集/发布门禁、向量模型历史版本并存、生产级 Trace 查询与专项恢复验收。仅有检索阶段的 Evidence/Citation 门禁，不等于最终答案已完成 Grounding。
 
 ### P1-3 Agent Runtime 生产故障恢复验收尚未完成
 

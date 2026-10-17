@@ -16,6 +16,7 @@ spring:
     url: ${WORKFLOW_MIGRATION_DB_URL:${spring.datasource.url}}
     username: ${WORKFLOW_MIGRATION_DB_USERNAME:${spring.datasource.username}}
     password: ${WORKFLOW_MIGRATION_DB_PASSWORD:${spring.datasource.password}}
+    locations: ${WORKFLOW_FLYWAY_LOCATIONS:classpath:db/migration/platform}
 
 server:
   port: 8080
@@ -31,6 +32,20 @@ flowable:
   check-process-definitions: false
 
 workflow:
+  knowledge:
+    vector:
+      enabled: ${WORKFLOW_KNOWLEDGE_VECTOR_ENABLED:false}
+      provider: ${WORKFLOW_KNOWLEDGE_EMBEDDING_PROVIDER:OPENAI_COMPATIBLE}
+      base-url: ${WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL:}
+      api-key: ${WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY:}
+      model: ${WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL:}
+      model-version: ${WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL_VERSION:}
+      dimension: ${WORKFLOW_KNOWLEDGE_EMBEDDING_DIMENSION:0}
+      batch-size: ${WORKFLOW_KNOWLEDGE_EMBEDDING_BATCH_SIZE:16}
+      timeout-seconds: ${WORKFLOW_KNOWLEDGE_EMBEDDING_TIMEOUT_SECONDS:20}
+      max-response-bytes: ${WORKFLOW_KNOWLEDGE_EMBEDDING_MAX_RESPONSE_BYTES:2097152}
+      query-instruction: ${WORKFLOW_KNOWLEDGE_EMBEDDING_QUERY_INSTRUCTION:}
+      corpus-instruction: ${WORKFLOW_KNOWLEDGE_EMBEDDING_CORPUS_INSTRUCTION:}
   agent:
     platform:
       max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}

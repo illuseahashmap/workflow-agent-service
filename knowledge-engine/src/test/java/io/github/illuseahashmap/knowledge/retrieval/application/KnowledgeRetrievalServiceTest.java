@@ -2,6 +2,7 @@ package io.github.illuseahashmap.knowledge.retrieval.application;
 
 import io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeRetriever;
 import io.github.illuseahashmap.knowledge.retrieval.domain.ChunkEvidence;
+import io.github.illuseahashmap.knowledge.retrieval.domain.Citation;
 import io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference;
 import io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceType;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
@@ -27,7 +28,8 @@ class KnowledgeRetrievalServiceTest {
             EvidenceReference reference = new EvidenceReference(
                     EvidenceType.CHUNK, "doc-1", "v1", "chunk-1");
             ChunkEvidence evidence = new ChunkEvidence(reference, "approved", 1.0, "Policy");
-            return new RetrievalResult(RetrievalStatus.SUCCESS, List.of(evidence), List.of(),
+            return new RetrievalResult(RetrievalStatus.SUCCESS, List.of(evidence),
+                    List.of(new Citation("citation-1", reference, "approved")),
                     "trace-1", "KEYWORD", List.of(), false);
         };
         KnowledgeRetrievalService service = new KnowledgeRetrievalService(

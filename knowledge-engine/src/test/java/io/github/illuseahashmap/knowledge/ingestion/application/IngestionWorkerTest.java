@@ -3,6 +3,7 @@ package io.github.illuseahashmap.knowledge.ingestion.application;
 import io.github.illuseahashmap.knowledge.catalog.domain.DocumentVersion;
 import io.github.illuseahashmap.knowledge.catalog.domain.IndexVersion;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.IngestionJobRepository;
+import io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeDocumentStore;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexPort;
 import io.github.illuseahashmap.knowledge.ingestion.domain.DocumentSnapshot;
@@ -49,6 +50,34 @@ class IngestionWorkerTest {
 
         assertThat(jobs.saved.status()).isEqualTo(IngestionStatus.FAILED);
         assertThat(jobs.saved.errorCode()).isEqualTo("INGESTION_FAILED");
+    }
+
+    @Test
+    void doesNotRetryPermanentEmbeddingFailure() {
+        RecordingJobs jobs = new RecordingJobs(job(2, 1));
+        DocumentIngestionService service = service((document, chunks) -> {
+            throw new EmbeddingModelException("ARK_EMBEDDING_AUTHENTICATION", false);
+        });
+        IngestionWorker worker = new IngestionWorker(jobs, service, ignored -> {}, 3, Duration.ofSeconds(5));
+
+        worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
+
+        assertThat(jobs.saved.status()).isEqualTo(IngestionStatus.FAILED);
+        assertThat(jobs.saved.errorCode()).isEqualTo("ARK_EMBEDDING_AUTHENTICATION");
+    }
+
+    @Test
+    void retriesTransientEmbeddingFailure() {
+        RecordingJobs jobs = new RecordingJobs(job(3, 1));
+        DocumentIngestionService service = service((document, chunks) -> {
+            throw new EmbeddingModelException("ARK_EMBEDDING_TIMEOUT", true);
+        });
+        IngestionWorker worker = new IngestionWorker(jobs, service, ignored -> {}, 3, Duration.ofSeconds(5));
+
+        worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
+
+        assertThat(jobs.saved.status()).isEqualTo(IngestionStatus.QUEUED);
+        assertThat(jobs.saved.errorCode()).isEqualTo("ARK_EMBEDDING_TIMEOUT");
     }
 
     private DocumentIngestionService service(KnowledgeIndexPort indexPort) {
