@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:workflow-agent:rag:evaluation-dataset:v1",
+  "title": "RAG EvaluationDatasetVersion manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["datasetId", "version", "schemaVersion", "status", "tenantRef", "caseFileSha256", "knowledgeSnapshotId", "knowledgeSnapshotSha256", "indexVersionId", "scoringRuleVersion", "annotationGuidelineVersion", "createdBy", "createdAt", "splitGroupRegistrySha256"],
+  "properties": {
+    "datasetId": {"type": "string", "minLength": 1},
+    "version": {"type": "integer", "minimum": 1},
+    "schemaVersion": {"const": 1},
+    "status": {"enum": ["DRAFT", "LOCKED"]},
+    "tenantRef": {"type": "string", "minLength": 1},
+    "caseFileSha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "knowledgeSnapshotId": {"type": "string", "minLength": 1},
+    "knowledgeSnapshotSha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "indexVersionId": {"type": "string", "minLength": 1},
+    "scoringRuleVersion": {"type": "string", "minLength": 1},
+    "annotationGuidelineVersion": {"type": "string", "minLength": 1},
+    "splitGroupRegistrySha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "createdBy": {"type": "string", "minLength": 1},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "lockedAt": {"type": "string", "format": "date-time"},
+    "reviewers": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "LOCKED"}}, "required": ["status"]}, "then": {"required": ["lockedAt", "reviewers"]}}
+  ]
+}

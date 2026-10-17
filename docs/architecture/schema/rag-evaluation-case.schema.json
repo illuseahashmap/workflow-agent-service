@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:workflow-agent:rag:evaluation-case:v1",
+  "title": "RAG EvaluationCase exchange format v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
+  "properties": {
+    "caseId": {"type": "string", "minLength": 1},
+    "schemaVersion": {"const": 1},
+    "supersedesCaseId": {"type": ["string", "null"]},
+    "scenarioGroupId": {"type": "string", "minLength": 1},
+    "domainCodes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "split": {"enum": ["DEV", "CALIBRATION", "LOCKED_TEST"]},
+    "query": {"type": "string", "minLength": 1},
+    "queryTime": {"type": "string", "format": "date-time"},
+    "businessAsOfTime": {"type": ["string", "null"], "format": "date-time"},
+    "temporalGapReason": {"type": "string", "minLength": 1},
+    "conversationContext": {"type": "array", "items": {"type": "string"}},
+    "tenantRef": {"type": "string", "minLength": 1},
+    "principalRef": {"type": "string", "minLength": 1},
+    "allowedKnowledgeScopes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "scenarioType": {"enum": ["ANSWERABLE", "INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]},
+    "riskLevel": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+    "difficultyTags": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "ruleTopics": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "applicabilityKeys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "authorityDependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "factsGiven": {"type": "array", "items": {"type": "string"}},
+    "factsMissing": {"type": "array", "items": {"type": "string"}},
+    "expectedDisposition": {
+      "type": "object", "additionalProperties": false, "required": ["action", "reasonCode"],
+      "properties": {"action": {"enum": ["ANSWER", "ABSTAIN", "HUMAN_REVIEW"]}, "reasonCode": {"type": "string", "minLength": 1}}
+    },
+    "relevanceJudgments": {"type": "array", "items": {"$ref": "#/$defs/judgment"}},
+    "forbiddenEvidence": {"type": "array", "items": {"$ref": "#/$defs/evidenceAnchor"}},
+    "requiredEvidenceGroups": {"type": "array", "items": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}},
+    "absenceOrConflictRationale": {"type": "string", "minLength": 1},
+    "expectedClaims": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["claim", "requiresGroup"], "properties": {"claim": {"type": "string", "minLength": 1}, "requiresGroup": {"type": "integer", "minimum": 0}}}},
+    "forbiddenClaims": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "citationExpectations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "expectedAnswer": {"type": "string"},
+    "routeLabel": {
+      "type": "object", "additionalProperties": false, "required": ["queryIntent", "eligibleStrategyIds", "expectedRouteIds", "forbiddenRouteIds", "routeReason"],
+      "properties": {
+        "queryIntent": {"type": "string", "minLength": 1},
+        "eligibleStrategyIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "expectedRouteIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "forbiddenRouteIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "routeReason": {"type": "string", "minLength": 1}
+      }
+    },
+    "annotation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "author", "labeler", "reviewer", "adjudication"],
+      "properties": {
+        "status": {"enum": ["DRAFT", "REVIEWED", "LOCKED"]},
+        "author": {"type": "string", "minLength": 1},
+        "labeler": {"type": ["string", "null"]},
+        "reviewer": {"type": ["string", "null"]},
+        "adjudication": {"type": ["string", "null"]},
+        "labeledAt": {"type": "string", "format": "date-time"},
+        "reviewedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"businessAsOfTime": {"type": "null"}}, "required": ["businessAsOfTime"]}, "then": {"required": ["temporalGapReason"]}},
+    {"if": {"properties": {"scenarioType": {"const": "ANSWERABLE"}}, "required": ["scenarioType"]}, "then": {"properties": {"requiredEvidenceGroups": {"minItems": 1}, "expectedClaims": {"minItems": 1}, "expectedDisposition": {"properties": {"action": {"const": "ANSWER"}}}}}},
+    {"if": {"properties": {"scenarioType": {"enum": ["INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]}}, "required": ["scenarioType"]}, "then": {"required": ["absenceOrConflictRationale"], "properties": {"expectedDisposition": {"properties": {"action": {"enum": ["ABSTAIN", "HUMAN_REVIEW"]}}}}}},
+    {"if": {"properties": {"annotation": {"properties": {"status": {"enum": ["REVIEWED", "LOCKED"]}}, "required": ["status"]}}, "required": ["annotation"]}, "then": {"properties": {"annotation": {"properties": {"labeler": {"type": "string", "minLength": 1}, "reviewer": {"type": "string", "minLength": 1}}, "required": ["labeledAt", "reviewedAt"]}}}}
+  ],
+  "$defs": {
+    "evidenceAnchor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["documentCode", "documentVersion", "sectionId", "contentHash"],
+      "properties": {
+        "documentCode": {"type": "string", "minLength": 1},
+        "documentVersion": {"type": "string", "minLength": 1},
+        "sectionId": {"type": "string", "minLength": 1},
+        "contentHash": {"type": "string", "minLength": 1}
+      }
+    },
+    "judgment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["documentCode", "documentVersion", "sectionId", "contentHash", "grade"],
+      "properties": {
+        "documentCode": {"type": "string", "minLength": 1},
+        "documentVersion": {"type": "string", "minLength": 1},
+        "sectionId": {"type": "string", "minLength": 1},
+        "contentHash": {"type": "string", "minLength": 1},
+        "grade": {"type": "integer", "minimum": 0, "maximum": 2}
+      }
+    }
+  }
+}

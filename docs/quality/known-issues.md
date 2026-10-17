@@ -83,7 +83,7 @@
 ### P1-10 knowledge_search 只读闭环验收
 
 - 当前：V48 已在已有检索应用、Profile 绑定、主体范围授权和摄取调度完成后恢复只读工具及租户授权；AgentVersion 必须绑定已发布 Profile，运行时仍由 Tool Registry、Profile 和主体授权共同约束。
-- 缺口：pgvector/混合检索、Grounding、Citation 质量门禁和生产级检索评测仍未完成；暂不开放写工具或任意知识范围。
+- 当前 pgvector/方舟 Embedding 与 RRF 混合检索已经本地真实回归；缺口是最终答案逐结论 Grounding/Citation、已审核评测集与发布门禁、历史时间查询、变更金标复核、容器故障与删除传播验收。十领域 40 篇文件仍为草稿，仅可作为沙盒评测语料；暂不开放写工具或任意知识范围。目标方案见[评测与路由实施设计](../architecture/rag-evaluation-and-routing-delivery-plan.md)。
 - 验收：已发布 AgentVersion 只能调用绑定 Profile 允许的范围；未授权主体、无 Profile、零证据和检索失败不能伪装为成功并推进流程。
 
 ### P1-12 MCP 只读闭环尚未达到生产验收

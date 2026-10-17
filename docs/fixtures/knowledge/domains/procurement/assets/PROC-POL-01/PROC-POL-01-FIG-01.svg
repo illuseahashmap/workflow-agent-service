@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title description">
+  <title id="title">普通办公采购审批路径示意图</title>
+  <desc id="description">先判断采购是否属于普通办公采购，再计算人民币含税总对价。不适用或资料不足的申请转人工核验。金额不超过二千元由直属负责人审批；超过二千元至二万元由直属和部门负责人审批；超过二万元另需财务复核，并按条件决定是否进入采购委员会。所有审批完成后仍需通过预算、供应商和合同门禁，才可下单。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1 L8 5 L1 9" fill="none" stroke="#47627d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1200" height="680" rx="24" fill="#f6f9fc"/>
+  <rect x="24" y="24" width="1152" height="632" rx="18" fill="#ffffff" stroke="#d5e0ea" stroke-width="2"/>
+  <text x="58" y="74" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="700" fill="#12304c">普通办公采购 · 审批判断路径</text>
+  <text x="58" y="106" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="15" fill="#567087">PROC-POL-01 · 图 1 · 草稿示意，规则以正文 §1—§4 为准</text>
+
+  <rect x="58" y="144" width="215" height="92" rx="14" fill="#e9f2fb" stroke="#8eb8dc" stroke-width="2"/>
+  <text x="82" y="182" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#12304c">采购申请</text>
+  <text x="82" y="211" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#47627d">用途、类别、报价与预算</text>
+
+  <path d="M273 190 H316" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="324" y="144" width="235" height="92" rx="14" fill="#ffffff" stroke="#86a9c7" stroke-width="2"/>
+  <text x="348" y="182" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#12304c">先判采购类别</text>
+  <text x="348" y="211" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#47627d">是否属于普通办公采购？</text>
+
+  <path d="M559 190 H612" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="574" y="176" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" font-weight="700" fill="#256b55">是</text>
+  <rect x="620" y="144" width="251" height="92" rx="14" fill="#e9f2fb" stroke="#8eb8dc" stroke-width="2"/>
+  <text x="644" y="182" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#12304c">计算审批金额 A</text>
+  <text x="644" y="211" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#47627d">人民币 · 含税总对价</text>
+
+  <path d="M442 144 V126 H1046 V136" fill="none" stroke="#b77a2d" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="909" y="119" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" font-weight="700" fill="#9b621f">否／无法分类</text>
+  <rect x="951" y="144" width="190" height="92" rx="14" fill="#fff5e6" stroke="#d8ab68" stroke-width="2"/>
+  <text x="974" y="181" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="700" fill="#7b4a16">暂停自动选路</text>
+  <text x="974" y="207" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#7b4a16">采购负责人核验类别</text>
+
+  <path d="M746 236 V290 H201 V325" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M746 290 H599 V325" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M746 290 H998 V325" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <rect x="59" y="333" width="284" height="152" rx="15" fill="#f4f9fd" stroke="#9bbad3" stroke-width="2"/>
+  <text x="82" y="370" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="700" fill="#174668">0 &lt; A ≤ 2,000 元</text>
+  <text x="82" y="408" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="700" fill="#12304c">直属负责人</text>
+  <text x="82" y="438" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#567087">恰好 2,000 元在本档</text>
+  <text x="82" y="462" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#567087">预算仍按独立规则核对</text>
+
+  <rect x="457" y="333" width="284" height="152" rx="15" fill="#eef7f5" stroke="#86b8a9" stroke-width="2"/>
+  <text x="480" y="370" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#1b6550">2,000 &lt; A ≤ 20,000 元</text>
+  <text x="480" y="408" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#12304c">直属 + 部门负责人</text>
+  <text x="480" y="438" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#567087">两种角色均需完成</text>
+  <text x="480" y="462" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#567087">恰好 20,000 元在本档</text>
+
+  <rect x="855" y="333" width="284" height="152" rx="15" fill="#eef2fc" stroke="#9caedf" stroke-width="2"/>
+  <text x="878" y="370" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="700" fill="#334e9b">A &gt; 20,000 元</text>
+  <text x="878" y="406" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#12304c">直属 + 部门 + 财务</text>
+  <text x="878" y="435" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#567087">委员会按 §3.2 条件判定</text>
+  <text x="878" y="461" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#567087">缺少触发事实时转人工</text>
+
+  <path d="M201 485 V521 H598" fill="none" stroke="#47627d" stroke-width="2.5"/>
+  <path d="M599 485 V521" fill="none" stroke="#47627d" stroke-width="2.5"/>
+  <path d="M997 485 V521 H600" fill="none" stroke="#47627d" stroke-width="2.5"/>
+  <path d="M599 521 V538" fill="none" stroke="#47627d" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="345" y="545" width="510" height="77" rx="15" fill="#163b5e"/>
+  <text x="373" y="576" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#ffffff">下单前仍需通过独立门禁</text>
+  <text x="373" y="602" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" fill="#d8e9f7">全部审批完成 · 预算 · 供应商 · 合同/订单授权</text>
+  <text x="58" y="645" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" fill="#567087">金额未知、类别不明或规则冲突时不进入任一金额档；图片不是系统自动执行规则。</text>
+</svg>

@@ -54,7 +54,7 @@
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
-| P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固 | 浏览器 UI 验收、最终答案 Citation 门禁、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
+| P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固。十领域 40 篇文档草稿、评测用例契约和专项实施设计已形成，但未审核入库或建立锁定评测集 | 浏览器 UI 验收、最终答案 Citation 门禁、知识快照/历史时间查询、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
 | P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；确定性 MCP Server 容器测试、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成真实 MCP Server 容器故障注入、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
 
@@ -63,7 +63,7 @@
 1. 在 Docker Engine 恢复后完成 P0 环境验收：启动 Prometheus/Alertmanager 模板，触发续租延迟、积压和死信告警，回放到前端处置与流程审计；补齐派单规则命中/兜底决策证据。
 2. 完成 Agent Runtime 真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；普通工具结果已通过审计账本引用恢复，下一步外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。
 3. 完成结构化意图路由的真实 Provider 与评测验收：覆盖五种模式、一次修复、越权工具、模式不一致和 ABSTAIN，增加主体权限及风险策略的显式路由投影。
-4. RAG 作为下一条主功能线：Profile/文档/摄取/主体授权和 `knowledge_search` 已闭环；优先通过稳定端口复用 LangChain4j 的 Embedding、向量存储与 Rerank，完成 pgvector/全文混合检索、Grounding、评测和摄取恢复。Grounding 必须在执行后基于检索状态、Evidence/Citation 完整性和确定性规则触发流程处置，不能把相似度或模型自报 `confidence` 直接作为网关依据。
+4. RAG 作为下一条主功能线：pgvector/全文混合检索已完成本地真实回归；按[评测与路由专项实施设计](architecture/rag-evaluation-and-routing-delivery-plan.md)先审核文档和权限测试身份、建立固定快照基线及可校验评测集，再完成历史时间查询、金标时效复核、Grounding/Citation 门禁和摄取恢复。加权 RRF/Rerank/查询级路由是后续有评测收益才启动的增强。Grounding 必须在执行后基于检索状态、Evidence/Citation 完整性和确定性规则触发流程处置，不能把相似度或模型自报 `confidence` 直接作为网关依据。
 5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；下一步完成确定性 MCP Server 容器故障注入、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 6. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。
 7. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
