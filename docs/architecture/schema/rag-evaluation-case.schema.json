@@ -4,7 +4,7 @@
   "title": "RAG EvaluationCase exchange format v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
+  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficulty", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
   "properties": {
     "caseId": {"type": "string", "minLength": 1},
     "schemaVersion": {"const": 1},
@@ -22,7 +22,19 @@
     "allowedKnowledgeScopes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "scenarioType": {"enum": ["ANSWERABLE", "INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]},
     "riskLevel": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
-    "difficultyTags": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "retrievalScope", "reasoningType", "queryForm", "temporalDemand"],
+      "properties": {
+        "level": {"enum": ["EASY", "MEDIUM", "HARD"]},
+        "retrievalScope": {"enum": ["SINGLE_SECTION", "MULTI_SECTION_SINGLE_DOCUMENT", "MULTI_DOCUMENT", "CROSS_DOMAIN"]},
+        "reasoningType": {"enum": ["DIRECT", "CONDITIONAL", "COMPARISON", "MULTI_HOP", "CONFLICT_RESOLUTION"]},
+        "queryForm": {"enum": ["EXACT", "PARAPHRASED", "NOISY", "AMBIGUOUS", "MULTI_TURN"]},
+        "temporalDemand": {"enum": ["CURRENT", "BOUNDARY", "HISTORICAL", "CROSS_PERIOD"]}
+      }
+    },
+    "difficultyTags": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}},
     "ruleTopics": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "applicabilityKeys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "authorityDependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},

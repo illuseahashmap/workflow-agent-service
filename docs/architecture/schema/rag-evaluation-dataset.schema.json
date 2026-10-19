@@ -4,7 +4,7 @@
   "title": "RAG EvaluationDatasetVersion manifest v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["datasetId", "version", "schemaVersion", "status", "tenantRef", "caseFileSha256", "knowledgeSnapshotId", "knowledgeSnapshotSha256", "indexVersionId", "scoringRuleVersion", "annotationGuidelineVersion", "createdBy", "createdAt", "splitGroupRegistrySha256"],
+  "required": ["datasetId", "version", "schemaVersion", "status", "tenantRef", "caseFileSha256", "knowledgeSnapshotId", "knowledgeSnapshotSha256", "indexVersionId", "scoringRuleVersion", "difficultyRubricVersion", "annotationGuidelineVersion", "createdBy", "createdAt", "splitGroupRegistrySha256"],
   "properties": {
     "datasetId": {"type": "string", "minLength": 1},
     "version": {"type": "integer", "minimum": 1},
@@ -16,6 +16,7 @@
     "knowledgeSnapshotSha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
     "indexVersionId": {"type": "string", "minLength": 1},
     "scoringRuleVersion": {"type": "string", "minLength": 1},
+    "difficultyRubricVersion": {"type": "string", "minLength": 1},
     "annotationGuidelineVersion": {"type": "string", "minLength": 1},
     "splitGroupRegistrySha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
     "createdBy": {"type": "string", "minLength": 1},

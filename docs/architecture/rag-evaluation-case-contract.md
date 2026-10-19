@@ -27,7 +27,8 @@
 | `supersedesCaseId`、`scenarioGroupId`、`domainCodes`、`split` | 修订用例显式关联前版；同一事实/模板/改写归同组；跨域只存一条主用例，可有多个领域；`split=DEV/CALIBRATION/LOCKED_TEST`，按**全局**组登记隔离。 |
 | `query`、`queryTime`、`businessAsOfTime` | 原始用户问题、发问时间和业务事实适用时间，均带时区；关键时间缺失时 `businessAsOfTime=null` 且填写 `temporalGapReason`，不得默认用入库时间。多轮问题另带脱敏 `conversationContext` 和轮次。当前服务尚不支持历史 `asOfTime` 查询，此类用例不得进入正式自动评分。 |
 | `tenantRef`、`principalRef`、`allowedKnowledgeScopes` | 测试身份与**期望可见范围**。运行时权限由系统重新计算，不能把样例里的 scope 当作授权指令。 |
-| `scenarioType`、`riskLevel`、`difficultyTags` | 类型为 `ANSWERABLE/INSUFFICIENT/CONFLICT/OUT_OF_SCOPE/FORBIDDEN`；风险级别及可多选的阈值、跨期、多跳、否定、近义、注入等标签。 |
+| `scenarioType`、`riskLevel` | 类型为 `ANSWERABLE/INSUFFICIENT/CONFLICT/OUT_OF_SCOPE/FORBIDDEN`；风险级别为 `LOW/MEDIUM/HIGH/CRITICAL`。风险与难度是独立维度，高风险不等于高难度。 |
+| `difficulty`、`difficultyTags` | `difficulty` 保存按版本化规则得到的结构化难度画像与派生等级；`difficultyTags` 仅补充精确边界、否定、诱饵、注入等横切特征，不能替代难度分层。 |
 | `factsGiven`、`factsMissing` | 题目明确给出的可信业务事实及决定性缺项；业务事实若实际需外部系统确认，不能由文档检索臆造。 |
 | `ruleTopics`、`applicabilityKeys`、`authorityDependencies` | 用于新增/替换权威文档时保守扫描潜在失效金标，不能仅扫描已经引用的证据哈希。 |
 | `expectedDisposition` | `ANSWER/ABSTAIN/HUMAN_REVIEW`；附 `reasonCode`。`FORBIDDEN` 必须拒绝泄露，不能输出受限文档标题或片段。 |
@@ -40,6 +41,25 @@
 | `routeLabel`（可选） | 仅查询级策略路由评测使用：意图、可选/正确/禁止策略 ID 和理由；固定 Profile 的检索用例无需填写。 |
 
 `relevanceJudgments` 允许记录**不可见的诱饵证据**，但须单独放在 `forbiddenEvidence`，不得与授权相关证据一起参与正常召回分母。`OUT_OF_SCOPE` 是文档不适用；`FORBIDDEN` 是可能存在文档但主体无权知道。两者在界面上可以同样拒答，在评测原因和安全断言上必须区分。
+
+### 3.1 难度分层
+
+难度不能由标注人凭整体感觉直接填写，也不能由模型根据题面自报。每条用例必须先记录以下相互独立的客观维度，再由数据集清单冻结的 `difficultyRubricVersion` 确定性派生 `level`：
+
+| 维度 | 枚举 | 判定依据 |
+| --- | --- | --- |
+| `retrievalScope` | `SINGLE_SECTION / MULTI_SECTION_SINGLE_DOCUMENT / MULTI_DOCUMENT / CROSS_DOMAIN` | 依据已审核的必要证据组涉及的章节、文档和领域数量计算；不是按实际召回结果填写。 |
+| `reasoningType` | `DIRECT / CONDITIONAL / COMPARISON / MULTI_HOP / CONFLICT_RESOLUTION` | 依据预期原子结论及其证据依赖关系标注；只需拒答的冲突题也要说明是否需要比较权威性或只需识别冲突。 |
+| `queryForm` | `EXACT / PARAPHRASED / NOISY / AMBIGUOUS / MULTI_TURN` | 依据题面相对业务资料的表达形式标注；同一场景的近义改写仍共享 `scenarioGroupId`。 |
+| `temporalDemand` | `CURRENT / BOUNDARY / HISTORICAL / CROSS_PERIOD` | 依据回答是否需要判断生效边界、历史时点或跨期规则标注；当前不支持的历史题仍可保留为设计样本，但不得进入正式自动评分。 |
+
+初始 `difficulty-rubric-v1` 只定义 `EASY / MEDIUM / HARD` 三档，避免在没有基线数据时创造主观的 `EXPERT` 档。基础值是 `SINGLE_SECTION + DIRECT + EXACT/PARAPHRASED + CURRENT`：
+
+- `EASY`：单章节、直接推断、当前时点，题面为精确表达或普通同义改写；
+- `HARD`：出现 `MULTI_DOCUMENT/CROSS_DOMAIN/MULTI_HOP/CONFLICT_RESOLUTION/HISTORICAL/CROSS_PERIOD` 中任一项，或者同时出现两个以上偏离基础值的其他维度；
+- `MEDIUM`：其余情况。
+
+`level` 是便于抽样和汇报的派生字段，权威评测仍必须分别报告四个维度，不能只比较总体 `HARD` 得分。冻结前的语义校验器必须从证据组、领域、时间和标注重新计算可派生维度，并验证 `level` 与指定规则版本一致；规则调整必须创建新的 `difficultyRubricVersion` 和数据集版本，不能静默重算历史报告。`scenarioType`、`riskLevel` 和 `difficulty` 分别描述预期行为、业务后果和求解复杂度，不得互相推导。
 
 `annotation.status` 表示用例版本的标注/锁定状态，不承担知识变更后的时效复核职责。
 已锁定用例及历史评测结果不可原地修改；时效复核记录应作为引用该 `caseId` 与
@@ -62,6 +82,13 @@
   "allowedKnowledgeScopes": ["knowledge/procurement"],
   "scenarioType": "ANSWERABLE",
   "riskLevel": "MEDIUM",
+  "difficulty": {
+    "level": "EASY",
+    "retrievalScope": "SINGLE_SECTION",
+    "reasoningType": "DIRECT",
+    "queryForm": "PARAPHRASED",
+    "temporalDemand": "CURRENT"
+  },
   "difficultyTags": ["EXACT_BOUNDARY", "ROLE_DISTINCTION"],
   "factsGiven": ["普通办公采购", "审批金额为人民币含税 2,000 元"],
   "factsMissing": [],
@@ -113,7 +140,7 @@
 | 回答 | 原子结论正确率、证据覆盖率、Citation 精确匹配率/有效率、无依据结论率、处置动作正确率 | 自动评委仅作辅助手段；高风险、拒答与模型/评委分歧样本人工复核。引用正确不等于结论正确。 |
 | 运行 | P50/P95 延迟、成本、超时/失败率、重试恢复率、索引/权限版本漂移数 | 与质量按同一数据集版本、同一环境基线比较；不可把超时样本从分母悄悄删去。 |
 
-每次报告保存**按领域/风险/难度/场景类型**的分层结果、原始计数、分母、未判定比例、失败用例 ID、评委版本与人工复核比例；小样本给出不确定性区间，不仅输出平均分。发布前和当前线上基线在同一锁定集上比较；具体百分比阈值待人工复核试点及真实基线形成后冻结，不能预设一个好看的数字。权限泄露、错误审批参与人、对高风险缺证题编造结论为硬阻断；其他阈值由风险负责人签发、变更需留痕。线上反馈和新增故障回灌下一版数据集，**不得修改已锁定版本或用测试集反复调参**。
+每次报告保存**按领域、风险、场景类型、派生难度等级以及四个难度维度**的分层结果、原始计数、分母、未判定比例、失败用例 ID、评委版本与人工复核比例；同时报告各层用例数量和占比，防止大量简单题掩盖复杂题失败。`scoringRuleVersion` 必须声明关键分层的最低有效样本数；关键层样本不足时只能输出诊断结果，不能以总体平均分通过发布门禁。小样本给出不确定性区间，不仅输出平均分。发布前和当前线上基线在同一锁定集上比较；具体百分比阈值待人工复核试点及真实基线形成后冻结，不能预设一个好看的数字。权限泄露、错误审批参与人、对高风险缺证题编造结论为硬阻断；其他阈值由风险负责人签发、变更需留痕。线上反馈和新增故障回灌下一版数据集，**不得修改已锁定版本或用测试集反复调参**。
 
 `NEEDS_REVIEW` 用例不得静默计为正确、错误或从分母中消失。报告必须列出待复核数量、
 风险分层与有效金标覆盖率；可另行输出“仅已复核用例”的诊断分数，但不得以此绕过

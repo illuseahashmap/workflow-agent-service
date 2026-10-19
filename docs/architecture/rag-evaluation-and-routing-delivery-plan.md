@@ -30,13 +30,13 @@
 
 ## 3. 用例和数据集生命周期
 
-设计期以 [case JSON Schema](schema/rag-evaluation-case.schema.json) 和 [dataset manifest JSON Schema](schema/rag-evaluation-dataset.schema.json) 约束可交换格式。Schema 负责类型、枚举和条件必填；冻结前的**语义校验**还必须验证证据锚点在快照中存在、哈希/时间/主体/权限一致、`requiredEvidenceGroups` 全部指向允许的 grade 2 或经审核的等价证据、claim 引用的组号有效、跨文档冲突已裁决、同一 `scenarioGroupId` 不跨 split、编题/标注/复核人分离、数据集哈希与文件一致。JSON Schema 不能代替这些数据库/业务校验。
+设计期以 [case JSON Schema](schema/rag-evaluation-case.schema.json) 和 [dataset manifest JSON Schema](schema/rag-evaluation-dataset.schema.json) 约束可交换格式。Schema 负责类型、枚举和条件必填；冻结前的**语义校验**还必须验证证据锚点在快照中存在、哈希/时间/主体/权限一致、`requiredEvidenceGroups` 全部指向允许的 grade 2 或经审核的等价证据、claim 引用的组号有效、跨文档冲突已裁决、同一 `scenarioGroupId` 不跨 split、编题/标注/复核人分离、难度画像可派生字段及等级符合 manifest 冻结的 `difficultyRubricVersion`、数据集哈希与文件一致。JSON Schema 不能代替这些数据库/业务校验。
 
 `DRAFT → REVIEWED → LOCKED` 是用例版本状态；变更产生新 `caseId` 与 `supersedesCaseId`，保留稳定 `scenarioGroupId`。`CaseReview` 是独立对象，不覆盖锁定用例：`NEEDS_REVIEW → STILL_VALID/REVISE/RETIRE`，对同一 `caseId + targetSnapshotId + triggerFingerprint` 唯一，以幂等处理重复文档事件。每次裁决保存触发事件、旧/新快照、影响理由、候选证据、复核人和时间。`STILL_VALID` 仅对明确的目标快照与时间区间有效；`REVISE` 进入下一数据集版本；`RETIRE` 必须给出原因和覆盖替代方案。旧集仍可按旧快照复跑，不能原地删题或改分。
 
 数据集 manifest 的 `DRAFT/LOCKED` 是文件创建时状态；已锁定版本退役只写独立登记事件，不将旧 manifest 改成 `RETIRED`。JSON Schema 实现必须开启 `format` 日期时间断言、Draft 2020-12 条件分支校验，并以样例验证 `LOCKED` 的双人复核和哈希，不能仅确认 JSON 可解析。
 
-拆分分配按全局 `scenarioGroupId` 稳定哈希/登记册执行，不只在单一数据集内检查。相同业务事实、模板、工单、FAQ 衍生题和近义改写都进同组。开发、校准与锁定测试集隔离；基线报告记录样本数、未标注候选数、标签覆盖、置信区间及人工复核比例。持续使用锁定集反复调参会使其失去独立性，必须定期新增经审核的真正盲测集。
+拆分分配按全局 `scenarioGroupId` 稳定哈希/登记册执行，不只在单一数据集内检查。相同业务事实、模板、工单、FAQ 衍生题和近义改写都进同组。开发、校准与锁定测试集隔离；基线报告记录样本数、未标注候选数、标签覆盖、置信区间及人工复核比例。用例按 `retrievalScope/reasoningType/queryForm/temporalDemand` 形成结构化难度画像，`EASY/MEDIUM/HARD` 只由版本化规则派生；抽样和报告同时展示各维度分布，不能用大量单章节直接题抬高总体指标。持续使用锁定集反复调参会使其失去独立性，必须定期新增经审核的真正盲测集。
 
 ## 4. 金标失效影响分析
 
@@ -76,7 +76,7 @@
 
 | 阶段 | 交付与验收 | 依赖 |
 | --- | --- | --- |
-| E0 契约与试点 | 机器 Schema、语义校验器、30 条/领域双人标注沙盒用例；字段、引用、分组去重和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
+| E0 契约与试点 | 机器 Schema、语义校验器、版本化难度规则、30 条/领域双人标注沙盒用例；字段、引用、分组去重、难度分层一致性和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
 | E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、CaseResult/Run 报告 | 容器化租户/RLS/索引回归 |
 | E2 时效与发布 | 历史时间查询或明确不可执行状态、变更影响扫描/CaseReview、门禁与人工批准、故障恢复 | E1 且关键场景有金标覆盖 |
 | E3 策略增强 | 加权 RRF、Rerank、固定策略集合与路由器分批验证；先 shadow 再灰度 | E2、严格能力等价回退、模态能力落地 |
