@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:workflow-agent:rag:evaluation-case:v1",
-  "title": "RAG EvaluationCase exchange format v1",
+  "$id": "urn:workflow-agent:rag:evaluation-case:v2",
+  "title": "RAG EvaluationCase exchange format v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficulty", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
+  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficulty", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "answerMode", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
   "properties": {
     "caseId": {"type": "string", "minLength": 1},
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"const": 2},
     "supersedesCaseId": {"type": ["string", "null"]},
     "scenarioGroupId": {"type": "string", "minLength": 1},
     "domainCodes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
@@ -44,12 +44,16 @@
       "type": "object", "additionalProperties": false, "required": ["action", "reasonCode"],
       "properties": {"action": {"enum": ["ANSWER", "ABSTAIN", "HUMAN_REVIEW"]}, "reasonCode": {"type": "string", "minLength": 1}}
     },
+    "answerMode": {"enum": ["STRUCTURED_DECISION", "CLAIM_SET", "FREE_TEXT"]},
+    "outputSchemaRef": {"type": "string", "minLength": 1},
+    "expectedStructuredOutput": {"type": "object"},
+    "answerEvaluationRubric": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "relevanceJudgments": {"type": "array", "items": {"$ref": "#/$defs/judgment"}},
     "forbiddenEvidence": {"type": "array", "items": {"$ref": "#/$defs/evidenceAnchor"}},
     "requiredEvidenceGroups": {"type": "array", "items": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}},
     "absenceOrConflictRationale": {"type": "string", "minLength": 1},
-    "expectedClaims": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["claim", "requiresGroup"], "properties": {"claim": {"type": "string", "minLength": 1}, "requiresGroup": {"type": "integer", "minimum": 0}}}},
-    "forbiddenClaims": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "expectedClaims": {"type": "array", "items": {"$ref": "#/$defs/expectedClaim"}},
+    "forbiddenClaims": {"type": "array", "items": {"$ref": "#/$defs/forbiddenClaim"}},
     "citationExpectations": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "expectedAnswer": {"type": "string"},
     "routeLabel": {
@@ -78,11 +82,48 @@
   },
   "allOf": [
     {"if": {"properties": {"businessAsOfTime": {"type": "null"}}, "required": ["businessAsOfTime"]}, "then": {"required": ["temporalGapReason"]}},
-    {"if": {"properties": {"scenarioType": {"const": "ANSWERABLE"}}, "required": ["scenarioType"]}, "then": {"properties": {"requiredEvidenceGroups": {"minItems": 1}, "expectedClaims": {"minItems": 1}, "expectedDisposition": {"properties": {"action": {"const": "ANSWER"}}}}}},
-    {"if": {"properties": {"scenarioType": {"enum": ["INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]}}, "required": ["scenarioType"]}, "then": {"required": ["absenceOrConflictRationale"], "properties": {"expectedDisposition": {"properties": {"action": {"enum": ["ABSTAIN", "HUMAN_REVIEW"]}}}}}},
-    {"if": {"properties": {"annotation": {"properties": {"status": {"enum": ["REVIEWED", "LOCKED"]}}, "required": ["status"]}}, "required": ["annotation"]}, "then": {"properties": {"annotation": {"properties": {"labeler": {"type": "string", "minLength": 1}, "reviewer": {"type": "string", "minLength": 1}}, "required": ["labeledAt", "reviewedAt"]}}}}
+    {"if": {"properties": {"scenarioType": {"const": "ANSWERABLE"}}, "required": ["scenarioType"]}, "then": {"properties": {"requiredEvidenceGroups": {"type": "array", "minItems": 1}, "expectedDisposition": {"type": "object", "properties": {"action": {"const": "ANSWER"}}}}}},
+    {"if": {"properties": {"answerMode": {"const": "STRUCTURED_DECISION"}}, "required": ["answerMode"]}, "then": {"required": ["outputSchemaRef", "expectedStructuredOutput"], "properties": {"expectedClaims": {"type": "array", "minItems": 1}}}},
+    {"if": {"properties": {"answerMode": {"const": "CLAIM_SET"}}, "required": ["answerMode"]}, "then": {"properties": {"expectedClaims": {"type": "array", "minItems": 1}}}},
+    {"if": {"properties": {"answerMode": {"const": "FREE_TEXT"}}, "required": ["answerMode"]}, "then": {"required": ["expectedAnswer", "answerEvaluationRubric"]}},
+    {"if": {"properties": {"scenarioType": {"enum": ["INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]}}, "required": ["scenarioType"]}, "then": {"required": ["absenceOrConflictRationale"], "properties": {"expectedDisposition": {"type": "object", "properties": {"action": {"enum": ["ABSTAIN", "HUMAN_REVIEW"]}}}}}},
+    {"if": {"properties": {"annotation": {"type": "object", "properties": {"status": {"enum": ["REVIEWED", "LOCKED"]}}, "required": ["status"]}}, "required": ["annotation"]}, "then": {"properties": {"annotation": {"type": "object", "properties": {"labeler": {"type": "string", "minLength": 1}, "reviewer": {"type": "string", "minLength": 1}}, "required": ["labeledAt", "reviewedAt"]}}}}
   ],
   "$defs": {
+    "claimAttributeScalar": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "number"},
+        {"type": "boolean"}
+      ]
+    },
+    "claimAttributeValue": {
+      "oneOf": [
+        {"$ref": "#/$defs/claimAttributeScalar"},
+        {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/claimAttributeScalar"}}
+      ]
+    },
+    "expectedClaim": {
+      "type": "object", "additionalProperties": false,
+      "required": ["claimCode", "displayText", "attributes", "requiresGroups"],
+      "properties": {
+        "claimCode": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$"},
+        "subject": {"type": "string", "minLength": 1},
+        "displayText": {"type": "string", "minLength": 1},
+        "attributes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/claimAttributeValue"}},
+        "requiresGroups": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "forbiddenClaim": {
+      "type": "object", "additionalProperties": false,
+      "required": ["claimCode", "displayText", "attributes"],
+      "properties": {
+        "claimCode": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$"},
+        "subject": {"type": "string", "minLength": 1},
+        "displayText": {"type": "string", "minLength": 1},
+        "attributes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/claimAttributeValue"}}
+      }
+    },
     "evidenceAnchor": {
       "type": "object", "additionalProperties": false,
       "required": ["documentCode", "documentVersion", "sectionId", "contentHash"],

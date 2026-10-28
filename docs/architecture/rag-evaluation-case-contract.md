@@ -1,6 +1,6 @@
 # RAG 评测用例与数据集契约
 
-状态：设计稿（2026-10-17）；定义标注与离线评测格式，不代表评测运行器或发布门禁已实现
+状态：设计稿（2026-10-28）；定义标注与离线评测格式，不代表评测运行器或发布门禁已实现
 适用：十领域虚构企业知识语料；不得将草稿政策当作真实业务依据
 
 ## 1. 设计依据与取舍
@@ -19,11 +19,11 @@
 
 ## 3. 单条 `EvaluationCase` 契约
 
-下表为逻辑字段；可先以 UTF-8 JSONL 保存，一行一例。[JSON Schema v1](schema/rag-evaluation-case.schema.json) 约束交换格式，[数据集清单 Schema](schema/rag-evaluation-dataset.schema.json) 约束版本元数据；字段间证据、时间、权限、人员分离和哈希一致性还需语义校验器，不能仅凭 Schema 通过就锁定。完整实施与当前能力缺口见[评测、历史快照与路由实施设计](rag-evaluation-and-routing-delivery-plan.md)。必填是指**用例冻结前**必填，不要求当前 40 篇草稿已经具备这些标注。
+下表为逻辑字段；可先以 UTF-8 JSONL 保存，一行一例。[JSON Schema v2](schema/rag-evaluation-case.schema.json) 约束交换格式，[数据集清单 Schema](schema/rag-evaluation-dataset.schema.json) 约束版本元数据；字段间证据、时间、权限、人员分离和哈希一致性还需语义校验器，不能仅凭 Schema 通过就锁定。完整实施与当前能力缺口见[评测、历史快照与路由实施设计](rag-evaluation-and-routing-delivery-plan.md)。必填是指**用例冻结前**必填，不要求当前 40 篇草稿已经具备这些标注。
 
 | 字段 | 约束与语义 |
 | --- | --- |
-| `caseId`、`schemaVersion` | 稳定、全局唯一；`schemaVersion` 首版为 `1`。语义修订派生新 case，不重用 ID。 |
+| `caseId`、`schemaVersion` | 稳定、全局唯一；当前 `schemaVersion=2`，在首个锁定数据集前将自然语言 Claim 升级为结构化 Claim。语义修订派生新 case，不重用 ID。 |
 | `supersedesCaseId`、`scenarioGroupId`、`domainCodes`、`split` | 修订用例显式关联前版；同一事实/模板/改写归同组；跨域只存一条主用例，可有多个领域；`split=DEV/CALIBRATION/LOCKED_TEST`，按**全局**组登记隔离。 |
 | `query`、`queryTime`、`businessAsOfTime` | 原始用户问题、发问时间和业务事实适用时间，均带时区；关键时间缺失时 `businessAsOfTime=null` 且填写 `temporalGapReason`，不得默认用入库时间。多轮问题另带脱敏 `conversationContext` 和轮次。当前服务尚不支持历史 `asOfTime` 查询，此类用例不得进入正式自动评分。 |
 | `tenantRef`、`principalRef`、`allowedKnowledgeScopes` | 测试身份与**期望可见范围**。运行时权限由系统重新计算，不能把样例里的 scope 当作授权指令。 |
@@ -35,14 +35,31 @@
 | `relevanceJudgments` | 每个允许检索的候选证据有等级 `0/1/2`（无关/辅助/决定性），指向文档代码、不可变版本、章节或定位符、内容哈希；支持多份互为替代的证据及多文档组合。未标注候选为 **unjudged**，不自动视为 0。 |
 | `forbiddenEvidence` | 记录测试身份不得看到的证据锚点，仅用于泄露断言；不得放入正常检索相关性分母。 |
 | `requiredEvidenceGroups` | 对可回答题，AND 组中每组至少命中一项可替代的有效证据；例如采购规则 **与** 财务预算规则。无答案题可为空，但需写 `absenceOrConflictRationale`。 |
-| `expectedClaims`、`forbiddenClaims` | 原子化可核对结论，每条含判定条件、允许表述、所需证据组；禁止作出的推断单列。`expectedAnswer` 只是供人工参考的可选范例，不作为唯一字符串金标。 |
+| `answerMode`、`outputSchemaRef` | `STRUCTURED_DECISION / CLAIM_SET / FREE_TEXT`。影响流程状态、网关或自动完成的输出必须为 `STRUCTURED_DECISION` 并引用版本化 JSON Schema；普通知识问答优先 `CLAIM_SET`；确实无法合理结构化的开放任务才使用 `FREE_TEXT`。 |
+| `expectedStructuredOutput` | 仅用于 `STRUCTURED_DECISION`，保存按 `outputSchemaRef` 校验后的机器决策金标。自然语言解释不得覆盖或替代该对象，也不得直接驱动 Flowable。 |
+| `expectedClaims`、`forbiddenClaims` | 统一使用 `claimCode + subject + attributes + displayText`；预期 Claim 另带 `requiresGroups`。机器比较 `claimCode/attributes`，`displayText` 仅供标注和复核阅读；禁止作出的推断单列。 |
+| `expectedAnswer`、`answerEvaluationRubric` | `expectedAnswer` 是人类可读范例，不作为唯一字符串金标。`FREE_TEXT` 必须同时提供版本化评分规则；自动评委只作辅助，高风险或低置信度结果进入人工复核。 |
 | `citationExpectations` | 哪些结论必须有 Citation，引用需匹配同一租户、适用版本、章节与原文支持范围；不能只比对文档标题或模型生成的 URL。 |
 | `annotation` | 题目编写人、独立标注人、复核人、分歧与裁决、标注时间、依据版本、状态 `DRAFT/REVIEWED/LOCKED`；同一人不能自写自审后锁定。 |
 | `routeLabel`（可选） | 仅查询级策略路由评测使用：意图、可选/正确/禁止策略 ID 和理由；固定 Profile 的检索用例无需填写。 |
 
 `relevanceJudgments` 允许记录**不可见的诱饵证据**，但须单独放在 `forbiddenEvidence`，不得与授权相关证据一起参与正常召回分母。`OUT_OF_SCOPE` 是文档不适用；`FORBIDDEN` 是可能存在文档但主体无权知道。两者在界面上可以同样拒答，在评测原因和安全断言上必须区分。
 
-### 3.1 难度分层
+### 3.1 答案输出与评分模式
+
+评测和运行统一采用“结构化优先、Claim 作为中间层、自然语言用于展示”的方向，但不能为所有开放任务强造同一个业务 Schema：
+
+| 模式 | 适用场景 | 主要评分方式 |
+| --- | --- | --- |
+| `STRUCTURED_DECISION` | 审批建议、流程路由、风险处置、任务是否自动完成 | 先按版本化 JSON Schema 校验，再确定性比较字段、枚举、集合和业务约束；同时检查 Claim 与 Citation。 |
+| `CLAIM_SET` | 制度问答、事实解释、允许多种自然语言表述的答案 | 将实际回答抽取为结构化 Claim，与 `expectedClaims/forbiddenClaims` 比较完整性、矛盾和额外结论。 |
+| `FREE_TEXT` | 总结、润色、开放分析等无法稳定枚举的任务 | 按显式 Rubric 使用规则与自动评委，记录评委模型/提示词版本并抽样人工复核。不得用于直接改变流程状态。 |
+
+推荐运行输出分为 `result + claims + answer`：`result` 是机器消费的结构化决策，`claims` 用于评测、Grounding 与审计，`answer` 仅用于人类展示。允许自然语言措辞和顺序不同，但不允许关键字段、约束条件、强制程度、额外 Claim 或流程动作不同。对于结构化模式，Schema/业务规则失败、缺少必要 Claim、出现禁止 Claim 或 Claim 无有效证据，均不得以正常答案推进流程。
+
+`ClaimExtractor` 或 LLM Judge 不是事实权威。其输出必须通过 Schema 校验并冻结模型、提示词和评分规则版本；校准集用于衡量其与人工标注的一致性。高风险、拒答、评委分歧及低置信度样本转人工。关键用例可重复运行以报告稳定通过率，但多数通过不能掩盖某次生产执行未通过门禁。
+
+### 3.2 难度分层
 
 难度不能由标注人凭整体感觉直接填写，也不能由模型根据题面自报。每条用例必须先记录以下相互独立的客观维度，再由数据集清单冻结的 `difficultyRubricVersion` 确定性派生 `level`：
 
@@ -70,7 +87,7 @@
 ```json
 {
   "caseId": "PROC-BOUNDARY-0001",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scenarioGroupId": "PROC-BOUNDARY-2000",
   "domainCodes": ["PROC"],
   "split": "DEV",
@@ -93,10 +110,22 @@
   "factsGiven": ["普通办公采购", "审批金额为人民币含税 2,000 元"],
   "factsMissing": [],
   "expectedDisposition": {"action": "ANSWER", "reasonCode": "EVIDENCE_SUFFICIENT"},
+  "answerMode": "CLAIM_SET",
   "relevanceJudgments": [{"documentCode": "PROC-POL-01", "documentVersion": "0.2-draft", "sectionId": "§3.1", "contentHash": "<freeze-time-sha256>", "grade": 2}],
   "requiredEvidenceGroups": [["PROC-POL-01@0.2-draft#§3.1"]],
-  "expectedClaims": [{"claim": "仅按采购金额档位，直属负责人审批必需；部门负责人不因该档位必需", "requiresGroup": 0}],
-  "forbiddenClaims": ["采购审批通过即代表预算、合同或付款已经批准"],
+  "expectedClaims": [{
+    "claimCode": "APPROVAL_SCOPE_BY_AMOUNT",
+    "subject": "PURCHASE_APPLICATION",
+    "displayText": "仅按采购金额档位，直属负责人审批必需；部门负责人不因该档位必需",
+    "attributes": {"requiredApprovers": ["DIRECT_MANAGER"], "notRequiredApprovers": ["DEPARTMENT_MANAGER"]},
+    "requiresGroups": [0]
+  }],
+  "forbiddenClaims": [{
+    "claimCode": "PURCHASE_APPROVAL_IMPLIES_DOWNSTREAM_APPROVAL",
+    "subject": "PURCHASE_APPLICATION",
+    "displayText": "采购审批通过即代表预算、合同或付款已经批准",
+    "attributes": {"impliedApprovals": ["BUDGET", "CONTRACT", "PAYMENT"]}
+  }],
   "citationExpectations": ["金额档位结论须引用 PROC-POL-01 §3.1 的有效授权版本"],
   "annotation": {"status": "DRAFT", "author": "<synthetic-or-reviewer-id>", "labeler": null, "reviewer": null, "adjudication": null}
 }
@@ -137,7 +166,7 @@
 | --- | --- | --- |
 | 检索 | `HitRate@K`、`Recall@K`、`MRR@K`、`nDCG@K`；仅在有授权正相关证据且判断充分的题上计算 | 保留 graded qrels；多文档题另报“全部必需证据组覆盖率”。未判定候选占比一并报告，不把它们直接算负例。 |
 | 无答案/权限 | 正确拒答率、误答率、越权证据返回数、越权信息泄露数 | 缺证、冲突、越权分别报；跨租户或受限证据泄露是零容忍硬门禁。 |
-| 回答 | 原子结论正确率、证据覆盖率、Citation 精确匹配率/有效率、无依据结论率、处置动作正确率 | 自动评委仅作辅助手段；高风险、拒答与模型/评委分歧样本人工复核。引用正确不等于结论正确。 |
+| 回答 | Schema 合法率、结构化字段正确率、原子 Claim 完整率/精确率、禁止或额外 Claim 数、证据覆盖率、Citation 精确匹配率/有效率、处置动作正确率、重复运行稳定通过率 | `STRUCTURED_DECISION` 优先确定性比较；自动评委只处理语义抽取和自由文本，高风险、拒答与模型/评委分歧样本人工复核。引用正确不等于结论正确。 |
 | 运行 | P50/P95 延迟、成本、超时/失败率、重试恢复率、索引/权限版本漂移数 | 与质量按同一数据集版本、同一环境基线比较；不可把超时样本从分母悄悄删去。 |
 
 每次报告保存**按领域、风险、场景类型、派生难度等级以及四个难度维度**的分层结果、原始计数、分母、未判定比例、失败用例 ID、评委版本与人工复核比例；同时报告各层用例数量和占比，防止大量简单题掩盖复杂题失败。`scoringRuleVersion` 必须声明关键分层的最低有效样本数；关键层样本不足时只能输出诊断结果，不能以总体平均分通过发布门禁。小样本给出不确定性区间，不仅输出平均分。发布前和当前线上基线在同一锁定集上比较；具体百分比阈值待人工复核试点及真实基线形成后冻结，不能预设一个好看的数字。权限泄露、错误审批参与人、对高风险缺证题编造结论为硬阻断；其他阈值由风险负责人签发、变更需留痕。线上反馈和新增故障回灌下一版数据集，**不得修改已锁定版本或用测试集反复调参**。
@@ -151,4 +180,4 @@
 
 现有 `EvidenceReference(sourceType, sourceId, sourceVersion, locator)` 可承载运行结果引用；用例金标需增加业务 `documentCode`、版本、章节和内容哈希，再由索引/Trace 将运行时 `sourceId`/Chunk 映射回固定正文。`RetrievalTrace` 保存本次实际授权、Profile/索引版本及候选结果，`EvaluationRun` 从 Trace 评分；不要为评测把租户或索引版本交给 Agent 自选。`GroundingPolicy` 当前仅有基础证据门禁，本契约不声称已支持逐结论 Citation 核验。
 
-实现顺序：先冻结文档及权限测试身份 → 双人标注 30 条/领域 → 用固定检索快照复跑并补齐 qrels → 评委与人工一致性抽检 → 锁定测试集与基线 → 才接入自动发布门禁。流程 AgentRun/Flowable 另做端到端回归；RAG 答题分数不能替代确定性审批和组织关系正确性。
+实现顺序：先冻结文档及权限测试身份 → 定义首批版本化输出 Schema 与 Claim Catalog → 双人标注 30 条/领域 → 用固定检索快照复跑并补齐 qrels → 实现确定性字段/Claim 评分 → 校准自动评委与人工一致性 → 锁定测试集与基线 → 才接入自动发布门禁。流程 AgentRun/Flowable 另做端到端回归；RAG 答题分数不能替代确定性审批和组织关系正确性。

@@ -383,7 +383,9 @@ EvaluationDataset
 └── EvaluationCase
     ├── query
     ├── expectedEvidenceReferences
-    ├── expectedAnswer（可选）
+    ├── answerMode（STRUCTURED_DECISION / CLAIM_SET / FREE_TEXT）
+    ├── expectedStructuredOutput / expectedClaims
+    ├── expectedAnswer（仅为人类可读范例）
     ├── knowledgeScopes
     └── tags / riskLevel
 ```
@@ -396,7 +398,7 @@ EvaluationDataset
 - 权限过滤正确率；
 - 后续多跳场景的实体链接准确率和路径准确率。
 
-回答质量另行评估引用准确率、证据覆盖率、无证据回答率、结构化输出正确率和人工接受率。
+回答遵循“结构化决策优先、结构化 Claim 作为统一评测中间层、自然语言用于展示”的契约。回答质量另行评估 Schema 合法率、结构化字段正确率、Claim 完整率/精确率、禁止或额外 Claim、引用准确率、证据覆盖率、无证据回答率、重复运行稳定通过率和人工接受率；仅无法合理结构化的开放任务使用经校准的 LLM Judge。
 索引或 RetrievalProfile 发布前必须与当前基线比较，不能只看线上单次相似度分数。
 目前 `asOfTime` 在应用服务层明确拒绝；历史时间题只可先保存为待执行标注，不能
 混入现有自动评测分母。40 份领域文件仍是未审核草稿，仅可用于沙盒用例试点。
@@ -448,7 +450,8 @@ Grounding、评测和容器故障验收完成前不得将其标记为生产级 R
 - 已注册并授权只读 `knowledge_search`，并要求 AgentVersion 绑定已发布 RetrievalProfile；
 - 已接入 RetrievalTrace、EvidenceReference 和运行恢复上下文；Trace 新增 Profile/Index 版本、证据引用和耗时；独立 RETRIEVAL Step 与 Citation 展示仍需继续收口；
 - 实现最小 GroundingPolicy、拒答和人工复核路由；
-- 实现版本化评测集、离线指标和发布回归测试。
+- 实现版本化输出 Schema、Claim Catalog、评测集、确定性字段/Claim 评分、经校准的自由文本评委、离线指标和发布回归测试；
+- Flowable 只消费通过 Schema 与业务门禁的结构化 `result`，不得从自然语言 `answer` 推断网关条件或自动完成任务。
 
 完成标准：Agent 能使用引用回答问题；证据不足不会正常推进流程；运行详情可以还原检索版本、
 命中证据和最终处置。

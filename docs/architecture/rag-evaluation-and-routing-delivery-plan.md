@@ -1,6 +1,6 @@
 # RAG 评测、历史快照与查询级策略路由实施设计
 
-状态：目标方案，非已实现能力；2026-10-17 评审基线。当前可运行边界以[项目状态](../status.md)为准。
+状态：目标方案，非已实现能力；2026-10-28 评审基线。当前可运行边界以[项目状态](../status.md)为准。
 主契约：[评测用例](rag-evaluation-case-contract.md)；语料：[十领域设计](rag-ten-domain-corpus-design.md)；运行边界：[RAG 短期计划](rag-short-term-implementation-plan.md)。
 
 ## 1. 决策和非目标
@@ -31,6 +31,8 @@
 ## 3. 用例和数据集生命周期
 
 设计期以 [case JSON Schema](schema/rag-evaluation-case.schema.json) 和 [dataset manifest JSON Schema](schema/rag-evaluation-dataset.schema.json) 约束可交换格式。Schema 负责类型、枚举和条件必填；冻结前的**语义校验**还必须验证证据锚点在快照中存在、哈希/时间/主体/权限一致、`requiredEvidenceGroups` 全部指向允许的 grade 2 或经审核的等价证据、claim 引用的组号有效、跨文档冲突已裁决、同一 `scenarioGroupId` 不跨 split、编题/标注/复核人分离、难度画像可派生字段及等级符合 manifest 冻结的 `difficultyRubricVersion`、数据集哈希与文件一致。JSON Schema 不能代替这些数据库/业务校验。
+
+答案评分按 `answerMode` 分流：`STRUCTURED_DECISION` 先用 AgentVersion 绑定的版本化输出 Schema 校验 `result`，再确定性比较字段和 Claim；`CLAIM_SET` 将自然语言抽取为 `claimCode + attributes` 后与金标比较；`FREE_TEXT` 才允许使用冻结版本的 Rubric 和自动评委。运行输出统一保留 `result + claims + answer`，其中只有通过 Schema、业务规则、Claim 与 Grounding 门禁的 `result` 可以交给 Flowable；自然语言 `answer` 不得被解析为网关条件或自动完成指令。评测运行需保存输出 Schema、Claim Catalog、ClaimExtractor/评委模型及提示词版本，确保结果可重放。
 
 `DRAFT → REVIEWED → LOCKED` 是用例版本状态；变更产生新 `caseId` 与 `supersedesCaseId`，保留稳定 `scenarioGroupId`。`CaseReview` 是独立对象，不覆盖锁定用例：`NEEDS_REVIEW → STILL_VALID/REVISE/RETIRE`，对同一 `caseId + targetSnapshotId + triggerFingerprint` 唯一，以幂等处理重复文档事件。每次裁决保存触发事件、旧/新快照、影响理由、候选证据、复核人和时间。`STILL_VALID` 仅对明确的目标快照与时间区间有效；`REVISE` 进入下一数据集版本；`RETIRE` 必须给出原因和覆盖替代方案。旧集仍可按旧快照复跑，不能原地删题或改分。
 
@@ -66,9 +68,9 @@
 
 ## 7. 存储、接口与运维（目标能力）
 
-候选持久对象：`knowledge_snapshot`、`evaluation_dataset_version`、`evaluation_case_version`、`evaluation_case_review`、`evaluation_run`、`evaluation_case_result`、`quality_gate_decision`、`retrieval_strategy_set_version`。所有租户数据表带可信 `tenant_code`、RLS、唯一版本/指纹、创建/批准时间；锁定记录不可更新，只允许追加。大原文与模型输出保存在受控对象存储，数据库存哈希、大小、租户和稳定引用；删除传播、保留期、脱敏与访问审计覆盖评测和 Trace。不要让可编辑文档仓库成为生产运行的唯一权威库。
+候选持久对象：`knowledge_snapshot`、`output_schema_version`、`claim_catalog_version`、`evaluation_dataset_version`、`evaluation_case_version`、`evaluation_case_review`、`evaluation_run`、`evaluation_case_result`、`quality_gate_decision`、`retrieval_strategy_set_version`。所有租户数据表带可信 `tenant_code`、RLS、唯一版本/指纹、创建/批准时间；锁定记录不可更新，只允许追加。大原文与模型输出保存在受控对象存储，数据库存哈希、大小、租户和稳定引用；删除传播、保留期、脱敏与访问审计覆盖评测和 Trace。不要让可编辑文档仓库成为生产运行的唯一权威库。
 
-应用端口按限界上下文分离：`KnowledgeSnapshotPort`、`CaseReviewPort`、`EvaluationRunnerPort`、`QualityGatePort`、`RetrievalStrategyCatalogPort`。第一版可采用受权限保护的管理命令/API 导入、锁定、回放和审查，不必先建完整 GUI。评测 Worker 通过持久队列/租约领取任务；幂等键由 run、case、候选配置与知识快照确定；超时和取消有终态，失败不得当低分或成功。跨租户容量、公平配额、外部评委/Embedding 成本上限、重试和恢复纳入监控。文档变更事件是唤醒信号，周期性全量对账修复丢事件；频繁上传可合并候选事件，但不能跳过已发布版本的影响扫描。
+应用端口按限界上下文分离：`KnowledgeSnapshotPort`、`OutputSchemaCatalogPort`、`ClaimCatalogPort`、`CaseReviewPort`、`EvaluationRunnerPort`、`AnswerEvaluatorPort`、`QualityGatePort`、`RetrievalStrategyCatalogPort`。第一版可采用受权限保护的管理命令/API 导入、锁定、回放和审查，不必先建完整 GUI。评测 Worker 通过持久队列/租约领取任务；幂等键由 run、case、候选配置与知识快照确定；超时和取消有终态，失败不得当低分或成功。跨租户容量、公平配额、外部评委/Embedding 成本上限、重试和恢复纳入监控。文档变更事件是唤醒信号，周期性全量对账修复丢事件；频繁上传可合并候选事件，但不能跳过已发布版本的影响扫描。
 
 `QualityGateDecision` 保存候选和基线运行 ID、数据集/快照版本、门禁规则版本、原始分子分母、置信区间、硬阻断项、待复核覆盖、成本/延迟与裁决人。决策分 `PASS/BLOCKED/REQUIRES_HUMAN_REVIEW/INVALID_RUN`；任何可重放性、权限泄露、关键用例时效或快照一致性问题阻断自动批准。正式阈值由领域/风险负责人依据试点数据签署版本，不在设计文档拍脑袋设值。
 
@@ -76,8 +78,8 @@
 
 | 阶段 | 交付与验收 | 依赖 |
 | --- | --- | --- |
-| E0 契约与试点 | 机器 Schema、语义校验器、版本化难度规则、30 条/领域双人标注沙盒用例；字段、引用、分组去重、难度分层一致性和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
-| E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、CaseResult/Run 报告 | 容器化租户/RLS/索引回归 |
+| E0 契约与试点 | 用例 Schema v2、首批输出 Schema 与 Claim Catalog、语义校验器、版本化难度规则、30 条/领域双人标注沙盒用例；字段、引用、分组去重、难度分层一致性和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
+| E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、结构化字段/Claim 评分、CaseResult/Run 报告 | 容器化租户/RLS/索引回归 |
 | E2 时效与发布 | 历史时间查询或明确不可执行状态、变更影响扫描/CaseReview、门禁与人工批准、故障恢复 | E1 且关键场景有金标覆盖 |
 | E3 策略增强 | 加权 RRF、Rerank、固定策略集合与路由器分批验证；先 shadow 再灰度 | E2、严格能力等价回退、模态能力落地 |
 
