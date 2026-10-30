@@ -44,6 +44,8 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
                 WHERE tenant_code = :tenantCode AND source_code = :sourceCode
                 FOR UPDATE
                 """, sourceParameters, (row, rowNumber) -> row.getLong("id"));
+        assertCurrentSnapshot(sourceParameters, chunks.stream().map(chunk -> chunk.documentVersion().id())
+                .collect(java.util.stream.Collectors.toSet()));
 
         Integer nextVersion = jdbcTemplate.queryForObject("""
                 SELECT COALESCE(MAX(version), 0) + 1
@@ -76,7 +78,7 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
                     """, new MapSqlParameterSource()
                     .addValue("tenantCode", documentVersion.tenantCode())
                     .addValue("sourceCode", documentVersion.sourceCode())
-                    .addValue("documentVersionId", documentVersion.id())
+                    .addValue("documentVersionId", chunk.documentVersion().id())
                     .addValue("indexVersionId", indexId)
                     .addValue("chunkId", chunk.chunkId())
                     .addValue("ordinal", chunk.ordinal())
@@ -110,6 +112,15 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
                 .addValue("tenantCode", indexVersion.tenantCode())
                 .addValue("sourceCode", indexVersion.sourceCode())
                 .addValue("indexId", indexVersion.id());
+        jdbcTemplate.queryForObject("""
+                SELECT id FROM knowledge_source WHERE tenant_code=:tenantCode AND source_code=:sourceCode
+                FOR UPDATE
+                """, parameters, Long.class);
+        var manifest = jdbcTemplate.queryForList("""
+                SELECT DISTINCT document_version_id FROM knowledge_chunk
+                WHERE tenant_code=:tenantCode AND index_version_id=:indexId
+                """, parameters, Long.class);
+        assertCurrentSnapshot(parameters, new java.util.HashSet<>(manifest));
         Integer chunkCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM knowledge_chunk
                 WHERE tenant_code = :tenantCode AND index_version_id = :indexId
@@ -150,5 +161,19 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
     private String vectorLiteral(List<Float> vector) {
         return "[" + vector.stream().map(String::valueOf)
                 .collect(java.util.stream.Collectors.joining(",")) + "]";
+    }
+
+    private void assertCurrentSnapshot(MapSqlParameterSource parameters, java.util.Set<Long> actual) {
+        var expected = jdbcTemplate.queryForList("""
+                SELECT DISTINCT ON (d.external_document_id) d.id FROM knowledge_document_version d
+                WHERE d.tenant_code=:tenantCode AND d.source_code=:sourceCode AND d.status IN ('READY','ACTIVE')
+                  AND NOT EXISTS (SELECT 1 FROM knowledge_document_version newer
+                      WHERE newer.tenant_code=d.tenant_code AND newer.source_code=d.source_code
+                        AND newer.external_document_id=d.external_document_id AND newer.version>d.version)
+                ORDER BY d.external_document_id,d.version DESC
+                """, parameters, Long.class);
+        if (!actual.equals(new java.util.HashSet<>(expected))) {
+            throw new IllegalStateException("Source snapshot changed or is incomplete; rebuild candidate index");
+        }
     }
 }

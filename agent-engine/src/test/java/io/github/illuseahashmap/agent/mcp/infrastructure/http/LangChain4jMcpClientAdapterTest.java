@@ -109,7 +109,8 @@ class LangChain4jMcpClientAdapterTest {
 
     private LangChain4jMcpClientAdapter client(SSLContext sslContext, int maximumBytes) {
         return new LangChain4jMcpClientAdapter(new ObjectMapper(),
-                (tenant, reference) -> "Bearer test", maximumBytes, 200, 16, 300, sslContext);
+                (tenant, reference) -> "Bearer test", maximumBytes, 200, 16, 300, sslContext,
+                new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(true, false));
     }
 
     private McpConnectorVersion connector(String endpoint) {

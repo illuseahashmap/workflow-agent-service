@@ -27,7 +27,7 @@ public record Chunk(
 
     public static Chunk of(DocumentVersion documentVersion, int ordinal, String text) {
         String fingerprint = sha256(text);
-        String chunkId = documentVersion.contentHash() + ":" + ordinal + ":" + fingerprint.substring(0, 16);
+        String chunkId = documentVersion.id() + ":" + documentVersion.contentHash() + ":" + ordinal + ":" + fingerprint.substring(0, 16);
         return new Chunk(chunkId, documentVersion, ordinal, text, fingerprint);
     }
 

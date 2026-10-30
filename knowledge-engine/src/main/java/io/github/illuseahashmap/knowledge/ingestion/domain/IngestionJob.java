@@ -6,7 +6,7 @@ import java.util.Objects;
 /** Leaseable, retryable ingestion state. A job is not considered complete until its index is committed. */
 public record IngestionJob(long id, String tenantCode, String sourceCode, String documentHash,
                            IngestionStatus status, int attempt, Instant availableAt,
-                           Instant leaseExpiresAt, String errorCode) {
+                           Instant leaseExpiresAt, String errorCode, long documentVersionId, String claimOwner) {
     public IngestionJob {
         tenantCode = text(tenantCode, "tenantCode");
         sourceCode = text(sourceCode, "sourceCode");
@@ -23,18 +23,18 @@ public record IngestionJob(long id, String tenantCode, String sourceCode, String
 
     public IngestionJob succeeded() {
         return new IngestionJob(id, tenantCode, sourceCode, documentHash, IngestionStatus.SUCCEEDED,
-                attempt, availableAt, null, null);
+                attempt, availableAt, null, null, documentVersionId, claimOwner);
     }
 
     public IngestionJob retryAt(Instant nextAvailableAt, String failureCode) {
         return new IngestionJob(id, tenantCode, sourceCode, documentHash, IngestionStatus.QUEUED,
                 attempt, Objects.requireNonNull(nextAvailableAt, "nextAvailableAt must not be null"),
-                null, boundedErrorCode(failureCode));
+                null, boundedErrorCode(failureCode), documentVersionId, claimOwner);
     }
 
     public IngestionJob failed(String failureCode) {
         return new IngestionJob(id, tenantCode, sourceCode, documentHash, IngestionStatus.FAILED,
-                attempt, availableAt, null, boundedErrorCode(failureCode));
+                attempt, availableAt, null, boundedErrorCode(failureCode), documentVersionId, claimOwner);
     }
 
     private static String boundedErrorCode(String value) {

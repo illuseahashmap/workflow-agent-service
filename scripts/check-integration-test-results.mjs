@@ -7,11 +7,13 @@ const expectedSuites = [
   'AuthenticationHttpIntegrationTest',
   'PlatformMigrationIntegrationTest',
   'RedisProcessInstanceLockIntegrationTest',
+  'KnowledgeDocumentImmutabilityIntegrationTest',
 ];
 
 function walk(directory, reports = []) {
   if (!existsSync(directory)) return reports;
   for (const entry of readdirSync(directory)) {
+    if (['node_modules', '.git', 'output'].includes(entry)) continue;
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) walk(path, reports);
     else if (entry.startsWith('TEST-') && entry.endsWith('.xml')) reports.push(path);
@@ -33,7 +35,9 @@ for (const suite of expectedSuites) {
   const header = xml.match(/<testsuite\b[^>]*>/)?.[0] ?? '';
   const tests = Number(header.match(/\btests="(\d+)"/)?.[1] ?? 0);
   const skipped = Number(header.match(/\bskipped="(\d+)"/)?.[1] ?? 0);
-  if (tests === 0 || skipped > 0 || /<skipped\b/.test(xml)) {
+  const failed = Number(header.match(/\bfailures="(\d+)"/)?.[1] ?? 0)
+    + Number(header.match(/\berrors="(\d+)"/)?.[1] ?? 0);
+  if (tests === 0 || skipped > 0 || failed > 0 || /<skipped\b/.test(xml)) {
     failures.push(`${suite}: tests=${tests}, skipped=${skipped}`);
   }
 }

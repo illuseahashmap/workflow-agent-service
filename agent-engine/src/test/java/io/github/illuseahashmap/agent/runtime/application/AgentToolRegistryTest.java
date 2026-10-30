@@ -18,6 +18,46 @@ import org.junit.jupiter.api.Test;
 class AgentToolRegistryTest {
 
     @Test
+    void frozenMetadataSurvivesCatalogChangesButRevocationStillHidesTool() {
+        AgentTool tool = new AgentTool() {
+            public String name() { return "lookup"; }
+            public Result execute(Request request) { return new Result("{}", request.idempotencyKey()); }
+        };
+        var original = new io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition(
+                "lookup", "Original description", "{\"type\":\"object\"}", true);
+        var current = new java.util.concurrent.atomic.AtomicReference<>(original);
+        AgentToolPolicyRepository policy = (tenant, code) -> Optional.ofNullable(current.get());
+        var snapshots = org.mockito.Mockito.mock(
+                io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository.class);
+        org.mockito.Mockito.when(snapshots.find("tenant-a", 1L)).thenReturn(List.of(original));
+        var mapper = new ObjectMapper();
+        var registry = new AgentToolRegistry(List.of(tool), policy, AgentToolExecutionAuditRepository.NOOP,
+                new AgentOutputSchemaValidator(mapper), mapper, List.of(), snapshots);
+        current.set(new io.github.illuseahashmap.agent.runtime.application.port.AgentToolDefinition(
+                "lookup", "Changed description", "{\"type\":\"object\",\"required\":[\"newField\"]}", true));
+        assertThat(registry.availableToolDefinitions("tenant-a", 1L, "[\"lookup\"]", null))
+                .extracting(ModelProviderRequest.ToolDefinition::description).containsExactly("Original description");
+        current.set(null);
+        assertThat(registry.availableToolDefinitions("tenant-a", 1L, "[\"lookup\"]", null)).isEmpty();
+    }
+
+    @Test
+    void refusesMissingSnapshotForAuthorizedRegisteredTool() {
+        AgentTool tool = new AgentTool() {
+            public String name() { return "lookup"; }
+            public Result execute(Request request) { throw new AssertionError("must not execute"); }
+        };
+        var snapshots = org.mockito.Mockito.mock(
+                io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository.class);
+        org.mockito.Mockito.when(snapshots.find("tenant-a", 1L)).thenReturn(List.of());
+        var mapper = new ObjectMapper();
+        var registry = new AgentToolRegistry(List.of(tool), AgentToolPolicyRepository.ALLOW_ALL,
+                AgentToolExecutionAuditRepository.NOOP, new AgentOutputSchemaValidator(mapper), mapper, List.of(), snapshots);
+        assertThatThrownBy(() -> registry.availableToolDefinitions("tenant-a", 1L, "[\"lookup\"]", null))
+                .isInstanceOf(AgentExecutionException.class).hasMessageContaining("incomplete");
+    }
+
+    @Test
     void reusesAuditedResultForTheSameIdempotencyKey() {
         var audits = new InMemoryAuditRepository();
         var calls = new int[] {0};

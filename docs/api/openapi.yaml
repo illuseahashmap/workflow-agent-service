@@ -1076,6 +1076,7 @@ paths:
         - { name: status, in: query, schema: { type: string } }
       responses:
         '200': { description: Retrieval profiles, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeProfilePageApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Knowledge]
@@ -1098,6 +1099,7 @@ paths:
       parameters: [{ $ref: '#/components/parameters/NumericId' }]
       responses:
         '200': { description: Retrieval profile published, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeProfileApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1137,6 +1139,7 @@ paths:
         - { name: status, in: query, schema: { type: string } }
       responses:
         '200': { description: Ingestion jobs, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeIngestionJobPageApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /knowledge/scope-grants:
     get:
@@ -1147,6 +1150,7 @@ paths:
         - { name: principalId, in: query, required: true, schema: { type: string, minLength: 1 } }
       responses:
         '200': { description: Scope grants, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeScopeGrantListApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Knowledge]
@@ -1549,21 +1553,21 @@ components:
       required: [profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes]
       properties:
         profileCode: { type: string, minLength: 1, maxLength: 128 }
-        strategy: { type: string, minLength: 1, maxLength: 64 }
-        maxResults: { type: integer, minimum: 1, maximum: 100 }
+        strategy: { type: string, enum: [KEYWORD, VECTOR, HYBRID] }
+        maxResults: { type: integer, minimum: 1, maximum: 50 }
         minimumScore: { type: number, format: double, minimum: 0, maximum: 1 }
-        indexVersionId: { type: integer, format: int64 }
-        knowledgeScopes: { type: array, items: { type: string, minLength: 1 } }
+        indexVersionId: { type: integer, format: int64, minimum: 1 }
+        knowledgeScopes: { type: array, minItems: 1, maxItems: 100, items: { type: string, minLength: 1, maxLength: 128 } }
     CreateKnowledgeDocumentRequest:
       type: object
-      required: [sourceCode, sourceName, externalDocumentId, version, contentHash, content]
+      required: [sourceCode, externalDocumentId, version, contentHash, content]
       properties:
         sourceCode: { type: string, minLength: 1, maxLength: 128 }
         sourceName: { type: string, minLength: 1, maxLength: 255 }
-        externalDocumentId: { type: string, minLength: 1, maxLength: 255 }
+        externalDocumentId: { type: string, minLength: 1, maxLength: 512 }
         version: { type: integer, minimum: 1 }
-        contentHash: { type: string, minLength: 1, maxLength: 128 }
-        content: { type: string, minLength: 1 }
+        contentHash: { type: string, pattern: '^[a-fA-F0-9]{64}$', description: SHA-256 of UTF-8 text after removing a leading BOM and normalizing CRLF/CR to LF }
+        content: { type: string, minLength: 1, maxLength: 2000000 }
     KnowledgeScopeGrantRequest:
       type: object
       required: [principalId, scopeCode]

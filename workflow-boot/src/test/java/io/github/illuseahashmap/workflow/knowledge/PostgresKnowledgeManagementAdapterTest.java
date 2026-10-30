@@ -20,6 +20,17 @@ import static org.mockito.Mockito.when;
 class PostgresKnowledgeManagementAdapterTest {
 
     @Test
+    void rejectsForgedHashBeforeAnyDatabaseAccess() {
+        NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+        var adapter = new PostgresKnowledgeManagementAdapter(jdbc);
+        assertThatThrownBy(() -> adapter.createDocument("tenant-a",
+                new KnowledgeManagementPort.CreateDocument("policies", "Policies", "doc", 1,
+                        "forged", "actual content")))
+                .isInstanceOf(io.github.illuseahashmap.workflow.shared.exception.BusinessException.class);
+        org.mockito.Mockito.verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void returnsTenantScopedEmptyPagesAndCatalogs() {
         NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
@@ -47,12 +58,12 @@ class PostgresKnowledgeManagementAdapterTest {
         assertThatThrownBy(() -> adapter.createProfile("tenant-a",
                 new KnowledgeManagementPort.CreateProfile(
                         "profile", "KEYWORD", 0, 0.2, 1L, List.of("policies"))))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(io.github.illuseahashmap.workflow.shared.exception.BusinessException.class)
                 .hasMessage("invalid retrieval limits");
         assertThatThrownBy(() -> adapter.createDocument("tenant-a",
                 new KnowledgeManagementPort.CreateDocument(
                         "", "Policies", "document-1", 1, "hash", "content")))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(io.github.illuseahashmap.workflow.shared.exception.BusinessException.class)
                 .hasMessage("sourceCode must not be blank");
     }
 

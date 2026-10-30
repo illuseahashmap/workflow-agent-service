@@ -33,6 +33,8 @@ final class BoundedStreamableHttpMcpTransport implements McpTransport {
     private final Map<String, String> headers;
     private final int maximumResponseBytes;
     private final HttpClient httpClient;
+    private final Duration timeout;
+    private final io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator;
     private final Executor executor;
     private final AtomicReference<String> sessionId = new AtomicReference<>();
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -43,7 +45,10 @@ final class BoundedStreamableHttpMcpTransport implements McpTransport {
 
     BoundedStreamableHttpMcpTransport(String endpoint, Map<String, String> headers,
                                       Duration timeout, int maximumResponseBytes,
-                                      javax.net.ssl.SSLContext sslContext) {
+                                      javax.net.ssl.SSLContext sslContext,
+                                      io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator) {
+        this.endpointValidator = endpointValidator;
+        this.timeout = timeout;
         this.endpoint = URI.create(endpoint);
         this.headers = Map.copyOf(headers);
         this.maximumResponseBytes = maximumResponseBytes;
@@ -107,7 +112,7 @@ final class BoundedStreamableHttpMcpTransport implements McpTransport {
 
     private void exchange(McpCallContext context, Long id, CompletableFuture<String> result) {
         String payload = McpJson.serialize(context.message());
-        HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint)
+        HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint).timeout(timeout)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json,text/event-stream")
                 .POST(HttpRequest.BodyPublishers.ofString(payload));
@@ -127,8 +132,8 @@ final class BoundedStreamableHttpMcpTransport implements McpTransport {
             context.mcpParamHeaders().forEach((name, value) -> builder.header("Mcp-Param-" + name, value));
         }
         try {
-            HttpResponse<InputStream> response = httpClient.send(
-                    builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<InputStream> response = io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport
+                    .send(builder.build(), payload.getBytes(StandardCharsets.UTF_8), httpClient, endpointValidator, maximumResponseBytes);
             byte[] bytes;
             try (InputStream body = response.body()) {
                 bytes = body.readNBytes(maximumResponseBytes + 1);
@@ -158,6 +163,8 @@ final class BoundedStreamableHttpMcpTransport implements McpTransport {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("MCP request was interrupted", exception);
+        } catch (io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport.ResponseTooLargeException exception) {
+            throw new McpClientExceptionBridge("MCP response exceeded the configured size limit");
         } catch (IOException exception) {
             throw new IllegalStateException("MCP endpoint is unavailable", exception);
         }

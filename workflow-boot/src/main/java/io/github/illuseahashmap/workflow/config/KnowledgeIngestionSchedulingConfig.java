@@ -18,7 +18,11 @@ import java.time.Instant;
 @Configuration
 @EnableScheduling
 @ConditionalOnProperty(name = "workflow.knowledge.ingestion.enabled", havingValue = "true")
-public class KnowledgeIngestionSchedulingConfig {
+public class KnowledgeIngestionSchedulingConfig implements AutoCloseable {
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+    private final java.util.concurrent.Semaphore capacity = new java.util.concurrent.Semaphore(4);
+    private final java.util.Set<String> activeTenants = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicInteger cursor = new java.util.concurrent.atomic.AtomicInteger();
     private final IngestionWorker ingestionWorker;
     private final WorkflowTenantRepository tenantRepository;
     private final int batchSize;
@@ -51,14 +55,44 @@ public class KnowledgeIngestionSchedulingConfig {
             scheduler = "knowledgeIngestionTaskScheduler")
     public void consumeAvailableJobs() {
         TrustedDataAccessContext.runAsSystemWorker(() -> {
-            Instant now = Instant.now();
-            for (var tenant : tenantRepository.findEnabled()) {
-                for (int index = 0; index < batchSize; index++) {
-                    if (!ingestionWorker.runOnce(tenant.tenantCode(), now, now.plus(leaseDuration))) {
-                        break;
-                    }
+            var tenants = tenantRepository.findEnabled();
+            for (int offset = 0; offset < tenants.size(); offset++) {
+                var tenant = tenants.get(Math.floorMod(cursor.get() + offset, tenants.size()));
+                if (!activeTenants.add(tenant.tenantCode())) {
+                    continue;
+                }
+                if (!capacity.tryAcquire()) {
+                    activeTenants.remove(tenant.tenantCode());
+                    break;
+                }
+                try {
+                    executor.submit(() -> {
+                        try {
+                            TrustedDataAccessContext.runAsSystemWorker(() -> {
+                                for (int index = 0; index < batchSize; index++) {
+                                    Instant now = Instant.now();
+                                    if (!ingestionWorker.runOnce(tenant.tenantCode(), now, now.plus(leaseDuration))) {
+                                        break;
+                                    }
+                                }
+                            });
+                        } finally {
+                            capacity.release();
+                            activeTenants.remove(tenant.tenantCode());
+                        }
+                    });
+                } catch (java.util.concurrent.RejectedExecutionException exception) {
+                    capacity.release();
+                    activeTenants.remove(tenant.tenantCode());
+                    throw exception;
                 }
             }
+            cursor.incrementAndGet();
         });
+    }
+
+    @Override
+    public void close() {
+        executor.close();
     }
 }

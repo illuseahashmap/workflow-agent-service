@@ -26,12 +26,15 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install locked quality tools
+        run: npm ci --ignore-scripts
+
       - name: Lint OpenAPI contract
-        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+        run: npm run api:lint
 
       - name: Check OpenAPI endpoint coverage
         run: |
-          npx --yes @redocly/cli@latest bundle docs/api/openapi.yaml \
+          npx --no-install redocly bundle docs/api/openapi.yaml \
             --output "$RUNNER_TEMP/openapi-current.json" --ext json
           node scripts/check-openapi-coverage.mjs "$RUNNER_TEMP/openapi-current.json" .
           node scripts/check-openapi-response-models.mjs "$RUNNER_TEMP/openapi-current.json"
@@ -45,9 +48,9 @@ jobs:
             exit 0
           fi
           git show "origin/main:docs/api/openapi.yaml" > "$RUNNER_TEMP/openapi-base.yaml"
-          npx --yes @redocly/cli@latest bundle "$RUNNER_TEMP/openapi-base.yaml" \
+          npx --no-install redocly bundle "$RUNNER_TEMP/openapi-base.yaml" \
             --output "$RUNNER_TEMP/openapi-base.json" --ext json
-          npx --yes @redocly/cli@latest bundle docs/api/openapi.yaml \
+          npx --no-install redocly bundle docs/api/openapi.yaml \
             --output "$RUNNER_TEMP/openapi-current.json" --ext json
           node scripts/check-openapi-compatibility.mjs \
             "$RUNNER_TEMP/openapi-base.json" "$RUNNER_TEMP/openapi-current.json"
@@ -82,7 +85,7 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          mvn --batch-mode --no-transfer-progress --errors verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
+          bash ./mvnw --batch-mode --no-transfer-progress --errors verify 2>&1 | tee "$RUNNER_TEMP/maven-verify.log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then

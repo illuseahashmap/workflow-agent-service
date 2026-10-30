@@ -1,6 +1,9 @@
 package io.github.illuseahashmap.workflow.knowledge;
 
 import io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeManagementPort;
+import io.github.illuseahashmap.knowledge.catalog.domain.DocumentContent;
+import io.github.illuseahashmap.workflow.shared.exception.BusinessException;
+import io.github.illuseahashmap.workflow.shared.exception.ErrorCode;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -13,6 +16,7 @@ import java.util.List;
 /** PostgreSQL adapter; all statements are tenant-scoped and profile publication is atomic. */
 @Component
 public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPort {
+    private record ExistingDocument(long id, String content, String hash) {}
     private final NamedParameterJdbcTemplate jdbc;
 
     public PostgresKnowledgeManagementAdapter(NamedParameterJdbcTemplate jdbc) {
@@ -37,10 +41,22 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 WHERE tenant_code=:tenant AND (CAST(:keyword AS VARCHAR) IS NULL OR profile_code ILIKE :keyword)
                   AND (CAST(:status AS VARCHAR) IS NULL OR status=:status)
                 ORDER BY profile_code, version DESC LIMIT :size OFFSET :offset
-                """, p, (r, n) -> profile(r.getLong("id"), tenant, r.getString("profile_code"),
+                """, p, (r, n) -> new ProfileView(r.getLong("id"), r.getString("profile_code"),
                 r.getInt("version"), r.getString("strategy"), r.getInt("max_results"),
                 r.getDouble("minimum_score"), r.getLong("index_version_id"), r.getString("status"),
-                instant(r.getTimestamp("created_at"))));
+                List.of(), instant(r.getTimestamp("created_at"))));
+        if (!rows.isEmpty()) {
+            java.util.Map<Long, List<String>> scopes = new java.util.HashMap<>();
+            jdbc.queryForList("""
+                    SELECT profile_version_id, scope_code FROM knowledge_retrieval_profile_scope
+                    WHERE tenant_code=:tenant AND profile_version_id IN (:ids) ORDER BY scope_code
+                    """, params(tenant).addValue("ids", rows.stream().map(ProfileView::id).toList()))
+                    .forEach(row -> scopes.computeIfAbsent(((Number) row.get("profile_version_id")).longValue(),
+                            ignored -> new java.util.ArrayList<>()).add((String) row.get("scope_code")));
+            rows = rows.stream().map(row -> new ProfileView(row.id(), row.profileCode(), row.version(),
+                    row.strategy(), row.maxResults(), row.minimumScore(), row.indexVersionId(), row.status(),
+                    scopes.getOrDefault(row.id(), List.of()), row.createdAt())).toList();
+        }
         return new Page<>(total, page, size, rows);
     }
 
@@ -62,21 +78,27 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     public ProfileView createProfile(String tenant, CreateProfile c) {
         requireText(c.profileCode(), "profileCode");
         requireText(c.strategy(), "strategy");
-        var strategy = io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint
-                .valueOf(c.strategy());
-        if (strategy == io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.GRAPH) {
-            throw new IllegalArgumentException("Graph retrieval is not available");
+        io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint strategy;
+        try {
+            strategy = io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.valueOf(c.strategy());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Unknown retrieval strategy");
         }
-        if (c.maxResults() < 1 || c.maxResults() > 50 || c.minimumScore() < 0) {
-            throw new IllegalArgumentException("invalid retrieval limits");
+        if (strategy == io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.GRAPH) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Graph retrieval is not available");
+        }
+        if (c.maxResults() < 1 || c.maxResults() > 50 || !Double.isFinite(c.minimumScore())
+                || c.minimumScore() < 0 || c.minimumScore() > 1) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "invalid retrieval limits");
         }
         if (!indexExists(tenant, c.indexVersionId(), strategy)) {
-            throw new IllegalArgumentException("index version is not available for this tenant");
+            throw new BusinessException(ErrorCode.CONFLICT, "index version is not available for this tenant");
         }
         Integer next = jdbc.queryForObject("""
-                SELECT COALESCE(MAX(version), 0) + 1
-                FROM knowledge_retrieval_profile_version
-                WHERE tenant_code = :tenant AND profile_code = :code
+                INSERT INTO knowledge_profile_identity(tenant_code,profile_code,last_version)
+                VALUES(:tenant,:code,1)
+                ON CONFLICT(tenant_code,profile_code) DO UPDATE
+                SET last_version=knowledge_profile_identity.last_version+1 RETURNING last_version
                 """, params(tenant).addValue("code", c.profileCode()), Integer.class);
         long id = jdbc.queryForObject("""
                 INSERT INTO knowledge_retrieval_profile_version
@@ -97,7 +119,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 WHERE id = :id AND tenant_code = :tenant AND status = 'DRAFT'
                 """, params(tenant).addValue("id", id));
         if (updated != 1) {
-            throw new IllegalArgumentException("only a tenant draft profile can be published");
+            throw new BusinessException(ErrorCode.CONFLICT, "only a tenant draft profile can be published");
         }
         return findProfile(tenant, id);
     }
@@ -109,37 +131,57 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
         requireText(c.externalDocumentId(), "externalDocumentId");
         requireText(c.contentHash(), "contentHash");
         requireText(c.content(), "content");
-        Long sourceId = jdbc.query("""
+        DocumentContent content = DocumentContent.from(c.content());
+        if (c.version() < 1 || !content.sha256().equalsIgnoreCase(c.contentHash())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid document version or content SHA-256");
+        }
+        jdbc.update("""
+                INSERT INTO knowledge_source(tenant_code, source_code, name)
+                VALUES(:tenant, :source, :name) ON CONFLICT (tenant_code, source_code) DO NOTHING
+                """, params(tenant).addValue("source", c.sourceCode())
+                .addValue("name", c.sourceName() == null ? c.sourceCode() : c.sourceName()));
+        jdbc.queryForObject("""
                 SELECT id FROM knowledge_source
                 WHERE tenant_code = :tenant AND source_code = :source
+                FOR UPDATE
                 """, params(tenant).addValue("source", c.sourceCode()),
-                resultSet -> resultSet.next() ? resultSet.getLong(1) : null);
-        if (sourceId == null) {
-            jdbc.update("""
-                    INSERT INTO knowledge_source(tenant_code, source_code, name)
-                    VALUES(:tenant, :source, :name)
-                    """, params(tenant).addValue("source", c.sourceCode())
-                    .addValue("name", c.sourceName() == null ? c.sourceCode() : c.sourceName()));
+                Long.class);
+        var identity = params(tenant).addValue("source", c.sourceCode())
+                .addValue("externalId", c.externalDocumentId()).addValue("version", c.version());
+        var existing = jdbc.query("""
+                SELECT d.id, c.content, d.content_hash FROM knowledge_document_version d
+                JOIN knowledge_document_content c ON c.document_version_id=d.id
+                WHERE d.tenant_code=:tenant AND d.source_code=:source
+                  AND d.external_document_id=:externalId AND d.version=:version
+                """, identity, (r, n) -> new ExistingDocument(r.getLong("id"), r.getString("content"), r.getString("content_hash")));
+        if (!existing.isEmpty() && !content.text().equals(existing.getFirst().content())) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Document version is immutable; create a new version");
         }
-        long documentId = jdbc.queryForObject("""
+        if (!existing.isEmpty() && !content.sha256().equals(existing.getFirst().hash())) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Stored document fingerprint requires integrity review");
+        }
+        long documentId = existing.isEmpty() ? jdbc.queryForObject("""
                 INSERT INTO knowledge_document_version(tenant_code,source_code,external_document_id,version,content_hash,status)
                 VALUES(:tenant,:source,:externalId,:version,:hash,'READY')
                 ON CONFLICT (tenant_code,source_code,external_document_id,version)
-                DO UPDATE SET content_hash=EXCLUDED.content_hash, status='READY'
+                DO NOTHING
                 RETURNING id
-                """, params(tenant).addValue("source", c.sourceCode()).addValue("externalId", c.externalDocumentId())
-                .addValue("version", c.version()).addValue("hash", c.contentHash()), Long.class);
+                """, identity.addValue("hash", content.sha256()), Long.class) : existing.getFirst().id();
         jdbc.update("""
                 INSERT INTO knowledge_document_content(document_version_id,tenant_code,source_code,content)
                 VALUES(:id,:tenant,:source,:content) ON CONFLICT (document_version_id)
-                DO UPDATE SET content=EXCLUDED.content
-                """, params(tenant).addValue("id", documentId).addValue("source", c.sourceCode()).addValue("content", c.content()));
+                DO NOTHING
+                """, params(tenant).addValue("id", documentId).addValue("source", c.sourceCode()).addValue("content", content.text()));
+        jdbc.update("""
+                INSERT INTO knowledge_ingestion_job(tenant_code,source_code,document_hash,document_version_id,status)
+                VALUES(:tenant,:source,:hash,:documentId,'QUEUED') ON CONFLICT (tenant_code,document_version_id)
+                DO NOTHING
+                """, params(tenant).addValue("source", c.sourceCode()).addValue("hash", content.sha256())
+                .addValue("documentId", documentId));
         long job = jdbc.queryForObject("""
-                INSERT INTO knowledge_ingestion_job(tenant_code,source_code,document_hash,status)
-                VALUES(:tenant,:source,:hash,'QUEUED') ON CONFLICT (tenant_code,source_code,document_hash)
-                DO UPDATE SET status='QUEUED', available_at=CURRENT_TIMESTAMP, error_code=NULL, updated_at=CURRENT_TIMESTAMP
-                RETURNING id
-                """, params(tenant).addValue("source", c.sourceCode()).addValue("hash", c.contentHash()), Long.class);
+                SELECT id FROM knowledge_ingestion_job
+                WHERE tenant_code=:tenant AND document_version_id=:documentId
+                """, params(tenant).addValue("documentId", documentId), Long.class);
         return jdbc.queryForObject("""
                 SELECT id, source_code, external_document_id, version, content_hash, status, created_at
                 FROM knowledge_document_version WHERE id = :id AND tenant_code = :tenant
@@ -260,7 +302,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
 
     private void requireText(String value, String name) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, name + " must not be blank");
         }
     }
 }

@@ -37,10 +37,13 @@ public final class VolcengineArkEmbeddingModelAdapter implements EmbeddingModelP
     private final int maxResponseBytes;
     private final String queryInstruction;
     private final String corpusInstruction;
+    private final io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator;
 
     public VolcengineArkEmbeddingModelAdapter(HttpClient client, ObjectMapper mapper,
             URI baseUri, String apiKey, String model, String modelVersion, int dimension,
-            Duration timeout, int maxResponseBytes, String queryInstruction, String corpusInstruction) {
+            Duration timeout, int maxResponseBytes, String queryInstruction, String corpusInstruction,
+            io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator) {
+        this.endpointValidator = Objects.requireNonNull(endpointValidator, "endpointValidator");
         this.client = Objects.requireNonNull(client, "client");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         String base = Objects.requireNonNull(baseUri, "baseUri").toString().replaceAll("/+$", "");
@@ -124,8 +127,8 @@ public final class VolcengineArkEmbeddingModelAdapter implements EmbeddingModelP
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody)).build();
-            HttpResponse<java.io.InputStream> response = client.send(request,
-                    HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<java.io.InputStream> response = io.github.illuseahashmap.agent.provider.infrastructure.openai
+                    .GovernedHttpTransport.send(request, requestBody, client, endpointValidator, maxResponseBytes);
             try (var body = response.body()) {
                 if (response.statusCode() != 200) {
                     int status = response.statusCode();
@@ -161,6 +164,10 @@ public final class VolcengineArkEmbeddingModelAdapter implements EmbeddingModelP
             throw new EmbeddingModelException("ARK_EMBEDDING_TIMEOUT", true, exception);
         } catch (JsonProcessingException exception) {
             throw new EmbeddingModelException("ARK_EMBEDDING_PROTOCOL_ERROR", false, exception);
+        } catch (io.github.illuseahashmap.agent.provider.application.port.ModelProviderException exception) {
+            throw new EmbeddingModelException("ARK_EMBEDDING_ENDPOINT_REJECTED", false, exception);
+        } catch (io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport.ResponseTooLargeException exception) {
+            throw new EmbeddingModelException("ARK_EMBEDDING_RESPONSE_TOO_LARGE", false, exception);
         } catch (IOException exception) {
             throw new EmbeddingModelException("ARK_EMBEDDING_UNAVAILABLE", true, exception);
         }

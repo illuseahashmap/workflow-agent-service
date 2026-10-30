@@ -44,23 +44,56 @@ public final class ProviderEndpointValidator {
             throw rejected("PROVIDER_ENDPOINT_PORT_REJECTED", "Provider endpoint port is not allowed");
         }
         try {
-            for (InetAddress address : InetAddress.getAllByName(endpoint.getHost())) {
-                if (!allowPrivateNetworks && isPrivateOrLocal(address)) {
-                    throw rejected("PROVIDER_PRIVATE_ENDPOINT_REJECTED",
-                            "Provider endpoint resolves to a private or local network");
-                }
-            }
+            resolve(endpoint.getHost());
         } catch (UnknownHostException exception) {
             throw rejected("PROVIDER_HOST_UNRESOLVED", "Provider endpoint host cannot be resolved");
         }
     }
 
+    public InetAddress[] resolve(String hostname) throws UnknownHostException {
+        return validateAddresses(InetAddress.getAllByName(hostname));
+    }
+
+    InetAddress[] validateAddresses(InetAddress[] addresses) {
+        if (addresses.length == 0) {
+            throw rejected("PROVIDER_HOST_UNRESOLVED", "Provider endpoint has no resolved addresses");
+        }
+        for (InetAddress address : addresses) {
+            if (!allowPrivateNetworks && isPrivateOrLocal(address)) {
+                throw rejected("PROVIDER_PRIVATE_ENDPOINT_REJECTED", "Provider address is not globally routable");
+            }
+        }
+        return addresses.clone();
+    }
+
     private boolean isPrivateOrLocal(InetAddress address) {
-        return address.isAnyLocalAddress()
+        if (address.isAnyLocalAddress()
                 || address.isLoopbackAddress()
                 || address.isLinkLocalAddress()
                 || address.isSiteLocalAddress()
-                || address.isMulticastAddress();
+                || address.isMulticastAddress()) {
+            return true;
+        }
+        byte[] bytes = address.getAddress();
+        int first = Byte.toUnsignedInt(bytes[0]);
+        int second = Byte.toUnsignedInt(bytes[1]);
+        if (bytes.length == 16) {
+            // Only global unicast; exclude transition, protocol-assignment and documentation ranges.
+            return (first & 0xe0) != 0x20
+                    || (first == 0x20 && second == 0x01 && (Byte.toUnsignedInt(bytes[2]) & 0xfe) == 0)
+                    || (first == 0x20 && second == 0x01 && bytes[2] == 0x0d && Byte.toUnsignedInt(bytes[3]) == 0xb8)
+                    || (first == 0x20 && second == 0x02)
+                    || (first == 0x3f && second == 0xff && (bytes[2] & 0xf0) == 0);
+        }
+        int third = Byte.toUnsignedInt(bytes[2]);
+        return first == 0 || first >= 224
+                || (first == 100 && second >= 64 && second <= 127)
+                || (first == 192 && second == 0 && (third == 0 || third == 2))
+                || (first == 192 && second == 88 && third == 99)
+                || (first == 198 && (second == 18 || second == 19))
+                || (first == 198 && second == 51 && third == 100)
+                || (first == 203 && second == 0 && third == 113)
+                || address.getHostAddress().equals("168.63.129.16");
     }
 
     private ModelProviderException rejected(String code, String message) {

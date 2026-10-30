@@ -137,7 +137,7 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
                 .modelName(request.model())
                 .timeout(request.timeout())
                 .maxRetries(0)
-                .httpClientBuilder(new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes))
+                .httpClientBuilder(new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes, endpointValidator))
                 .build();
         return model.chat(chatRequest(request, true, strictSchema));
     }
@@ -145,7 +145,7 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
     private ChatResponse invokeResponses(ModelProviderRequest request, URI endpoint,
                                          boolean strictSchema) {
         BoundedLangChain4jHttpClientBuilder httpClient =
-                new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes);
+                new BoundedLangChain4jHttpClientBuilder(maximumResponseBytes, endpointValidator);
         httpClient.readTimeout(request.timeout());
         OpenAiResponsesChatModel model = OpenAiResponsesChatModel.builder()
                 .baseUrl(apiRoot(endpoint, "/responses"))

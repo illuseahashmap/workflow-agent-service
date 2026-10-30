@@ -3,7 +3,6 @@ package io.github.illuseahashmap.workflow.knowledge;
 import io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService;
 import io.github.illuseahashmap.knowledge.ingestion.application.IngestionWorker;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeDocumentStore;
-import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexLifecyclePort;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.KnowledgeIndexPort;
 import io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelPort;
 import io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker;
@@ -73,14 +72,14 @@ public class KnowledgeIngestionConfiguration {
                     .connectTimeout(Duration.ofSeconds(Math.min(timeoutSeconds, 10)))
                     .followRedirects(HttpClient.Redirect.NEVER).build(), mapper, URI.create(baseUrl),
                     apiKey, modelName, modelVersion, dimension, Duration.ofSeconds(timeoutSeconds),
-                    maxResponseBytes, queryInstruction, corpusInstruction);
+                    maxResponseBytes, queryInstruction, corpusInstruction, endpointValidator);
         }
         if (!"OPENAI_COMPATIBLE".equals(provider)) {
             throw new IllegalArgumentException("Unsupported embedding provider type");
         }
         var model = OpenAiEmbeddingModel.builder().baseUrl(baseUrl).apiKey(apiKey)
                 .modelName(modelName).dimensions(dimension).timeout(Duration.ofSeconds(timeoutSeconds))
-                .maxRetries(0).httpClientBuilder(new BoundedLangChain4jHttpClientBuilder(maxResponseBytes)).build();
+                .maxRetries(0).httpClientBuilder(new BoundedLangChain4jHttpClientBuilder(maxResponseBytes, endpointValidator)).build();
         return new LangChain4jEmbeddingModelAdapter(model, modelVersion, dimension, batchSize);
     }
 
@@ -132,9 +131,20 @@ public class KnowledgeIngestionConfiguration {
     public IngestionWorker ingestionWorker(
             PostgresIngestionJobRepository jobRepository,
             DocumentIngestionService ingestionService,
-            KnowledgeIndexLifecyclePort indexLifecycle
+            @org.springframework.beans.factory.annotation.Qualifier("knowledgeIngestionHeartbeat")
+            java.util.concurrent.ScheduledExecutorService heartbeat
     ) {
-        return new IngestionWorker(jobRepository, ingestionService, indexLifecycle,
-                5, Duration.ofSeconds(30));
+        return new IngestionWorker(jobRepository, ingestionService,
+                5, Duration.ofSeconds(30), heartbeat);
+    }
+
+    @Bean(name = "knowledgeIngestionHeartbeat", destroyMethod = "shutdown")
+    public java.util.concurrent.ScheduledExecutorService knowledgeIngestionHeartbeat() {
+        return java.util.concurrent.Executors.newScheduledThreadPool(2, runnable -> {
+            Thread thread = new Thread(() -> io.github.illuseahashmap.workflow.shared.context.TrustedDataAccessContext
+                    .runAsSystemWorker(runnable), "knowledge-heartbeat");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 }

@@ -6,4 +6,5 @@ import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 public interface AgentToolCatalogPort {
 
     void validatePublication(String tenantCode, AgentExecutionMode executionMode, String toolSetJson);
+    void freezePublication(String tenantCode, long versionId, String toolSetJson);
 }

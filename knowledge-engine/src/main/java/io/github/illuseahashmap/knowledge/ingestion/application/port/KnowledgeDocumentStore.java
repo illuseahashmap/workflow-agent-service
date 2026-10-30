@@ -4,5 +4,5 @@ import io.github.illuseahashmap.knowledge.ingestion.domain.DocumentSnapshot;
 
 /** Reads normalized document snapshots without leaking storage-specific content models. */
 public interface KnowledgeDocumentStore {
-    DocumentSnapshot loadSnapshot(String tenantCode, String sourceCode, String documentHash);
+    java.util.List<DocumentSnapshot> loadSnapshots(String tenantCode, String sourceCode, long documentVersionId);
 }

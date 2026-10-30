@@ -22,16 +22,27 @@ class IngestionWorkerTest {
     private static final Instant NOW = Instant.parse("2026-09-05T01:00:00Z");
 
     @Test
+    void supersededDocumentTerminatesWithoutEmbeddingOrIndexRetry() {
+        var jobs = new RecordingJobs(job(5, 1));
+        var newer = new DocumentVersion(2, "tenant-a", "policies", "leave.md", 2, "new", "READY", NOW);
+        KnowledgeDocumentStore store = (tenant, source, id) -> java.util.List.of(new DocumentSnapshot(newer, "new policy"));
+        var service = new DocumentIngestionService(store, (document, chunks) -> {
+            throw new AssertionError("Superseded job must not build an index");
+        }, new TextChunker(128, 16));
+        var worker = new IngestionWorker(jobs, service, 3, Duration.ofSeconds(5), heartbeat());
+        worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
+        assertThat(jobs.saved.status()).isEqualTo(IngestionStatus.FAILED);
+        assertThat(jobs.saved.errorCode()).isEqualTo("DOCUMENT_VERSION_SUPERSEDED");
+    }
+
+    @Test
     void activatesCandidateBeforeMarkingJobSucceeded() {
         IngestionJob job = job(1, 1);
         RecordingJobs jobs = new RecordingJobs(job);
-        boolean[] activated = {false};
         DocumentIngestionService service = service((document, chunks) -> indexVersion());
-        IngestionWorker worker = new IngestionWorker(jobs, service, version -> activated[0] = true,
-                3, Duration.ofSeconds(5));
+        IngestionWorker worker = new IngestionWorker(jobs, service, 3, Duration.ofSeconds(5), heartbeat());
 
         assertThat(worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60))).isTrue();
-        assertThat(activated[0]).isTrue();
         assertThat(jobs.saved.status()).isEqualTo(IngestionStatus.SUCCEEDED);
     }
 
@@ -42,9 +53,7 @@ class IngestionWorkerTest {
         DocumentIngestionService service = service((document, chunks) -> {
             throw new IllegalStateException("remote parser returned an unexpectedly large response");
         });
-        IngestionWorker worker = new IngestionWorker(jobs, service, ignored -> {
-            throw new AssertionError("activation must not run");
-        }, 2, Duration.ofSeconds(5));
+        IngestionWorker worker = new IngestionWorker(jobs, service, 2, Duration.ofSeconds(5), heartbeat());
 
         worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
 
@@ -58,7 +67,7 @@ class IngestionWorkerTest {
         DocumentIngestionService service = service((document, chunks) -> {
             throw new EmbeddingModelException("ARK_EMBEDDING_AUTHENTICATION", false);
         });
-        IngestionWorker worker = new IngestionWorker(jobs, service, ignored -> {}, 3, Duration.ofSeconds(5));
+        IngestionWorker worker = new IngestionWorker(jobs, service, 3, Duration.ofSeconds(5), heartbeat());
 
         worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
 
@@ -72,7 +81,7 @@ class IngestionWorkerTest {
         DocumentIngestionService service = service((document, chunks) -> {
             throw new EmbeddingModelException("ARK_EMBEDDING_TIMEOUT", true);
         });
-        IngestionWorker worker = new IngestionWorker(jobs, service, ignored -> {}, 3, Duration.ofSeconds(5));
+        IngestionWorker worker = new IngestionWorker(jobs, service, 3, Duration.ofSeconds(5), heartbeat());
 
         worker.runOnce("tenant-a", NOW, NOW.plusSeconds(60));
 
@@ -84,7 +93,7 @@ class IngestionWorkerTest {
         DocumentVersion version = new DocumentVersion(1, "tenant-a", "policies", "leave.md", 1,
                 "hash", "READY", NOW);
         KnowledgeDocumentStore documents = (tenant, source, hash) ->
-                new DocumentSnapshot(version, "annual leave policy");
+                java.util.List.of(new DocumentSnapshot(version, "annual leave policy"));
         return new DocumentIngestionService(documents, indexPort, new TextChunker(128, 16));
     }
 
@@ -94,7 +103,7 @@ class IngestionWorkerTest {
 
     private IngestionJob job(long id, int attempt) {
         return new IngestionJob(id, "tenant-a", "policies", "hash", IngestionStatus.RUNNING,
-                attempt, NOW, NOW.plusSeconds(60), null);
+                attempt, NOW, NOW.plusSeconds(60), null, 1L, "worker-test");
     }
 
     private static final class RecordingJobs implements IngestionJobRepository {
@@ -111,8 +120,29 @@ class IngestionWorkerTest {
         }
 
         @Override
-        public void save(IngestionJob job) {
+        public boolean save(IngestionJob job) {
             saved = job;
+            return true;
         }
+
+        @Override
+        public boolean complete(IngestionJob job, IndexVersion index) {
+            saved = job.succeeded();
+            return true;
+        }
+
+        @Override
+        public boolean renew(IngestionJob job, Instant until) {
+            return true;
+        }
+    }
+
+    private java.util.concurrent.ScheduledExecutorService heartbeat() {
+        var scheduler = org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
+        org.mockito.Mockito.doReturn(org.mockito.Mockito.mock(java.util.concurrent.ScheduledFuture.class))
+                .when(scheduler).scheduleAtFixedRate(org.mockito.ArgumentMatchers.any(Runnable.class),
+                        org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.any());
+        return scheduler;
     }
 }

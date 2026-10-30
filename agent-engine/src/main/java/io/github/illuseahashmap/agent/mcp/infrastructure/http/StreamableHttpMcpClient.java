@@ -39,30 +39,37 @@ public class StreamableHttpMcpClient implements McpClientPort {
     private final McpCredentialResolver credentialResolver;
     private final McpSessionCache sessionCache;
     private final AtomicLong requestIds = new AtomicLong();
+    private final io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator;
 
     public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver) {
         this(objectMapper, credentialResolver,
-                new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300));
+                new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300),
+                new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(false, false));
     }
 
     @Autowired
     public StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
-                                   McpSessionCache sessionCache) {
+                                   McpSessionCache sessionCache,
+                                   io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator) {
         this(objectMapper, credentialResolver,
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), sessionCache);
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), sessionCache, endpointValidator);
     }
 
     StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
-                            HttpClient httpClient) {
-        this(objectMapper, credentialResolver, httpClient, new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300));
+                            HttpClient httpClient,
+                            io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator) {
+        this(objectMapper, credentialResolver, httpClient,
+                new io.github.illuseahashmap.agent.mcp.infrastructure.session.InMemoryMcpSessionCache(256, 300), endpointValidator);
     }
 
     StreamableHttpMcpClient(ObjectMapper objectMapper, McpCredentialResolver credentialResolver,
-                            HttpClient httpClient, McpSessionCache sessionCache) {
+                            HttpClient httpClient, McpSessionCache sessionCache,
+                            io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator) {
         this.objectMapper = objectMapper;
         this.credentialResolver = credentialResolver;
         this.httpClient = httpClient;
         this.sessionCache = sessionCache;
+        this.endpointValidator = endpointValidator;
     }
 
     @Override
@@ -102,7 +109,10 @@ public class StreamableHttpMcpClient implements McpClientPort {
             try {
                 result = request(session.connector(), session.sessionId(), "tools/list", arguments,
                         remaining(deadline));
-            } catch (McpClientException exception) {
+            } catch (io.github.illuseahashmap.agent.provider.application.port.ModelProviderException exception) {
+            throw new McpClientException("MCP_ENDPOINT_REJECTED", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP destination violates outbound policy", exception);
+        } catch (McpClientException exception) {
                 invalidateOnSessionFailure(session, exception);
                 throw exception;
             }
@@ -135,6 +145,9 @@ public class StreamableHttpMcpClient implements McpClientPort {
             result = request(session.connector(), session.sessionId(), "tools/call",
                     Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments),
                     remaining(deadline));
+        } catch (io.github.illuseahashmap.agent.provider.application.port.ModelProviderException exception) {
+            throw new McpClientException("MCP_ENDPOINT_REJECTED", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP destination violates outbound policy", exception);
         } catch (McpClientException exception) {
             invalidateOnSessionFailure(session, exception);
             throw exception;
@@ -196,8 +209,8 @@ public class StreamableHttpMcpClient implements McpClientPort {
             if (sessionId != null && !sessionId.isBlank()) {
                 builder.header("Mcp-Session-Id", sessionId);
             }
-            HttpResponse<InputStream> response = httpClient.send(builder.build(),
-                    HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<InputStream> response = io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport
+                    .send(builder.build(), objectMapper.writeValueAsBytes(payload), httpClient, endpointValidator, MAX_RESPONSE_BYTES);
             try (InputStream bodyStream = response.body()) {
                 if (response.statusCode() / 100 != 2) {
                     throw statusFailure(response.statusCode());
@@ -217,6 +230,9 @@ public class StreamableHttpMcpClient implements McpClientPort {
                 }
                 return result;
             }
+        } catch (io.github.illuseahashmap.agent.provider.application.port.ModelProviderException exception) {
+            throw new McpClientException("MCP_ENDPOINT_REJECTED", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP destination violates outbound policy", exception);
         } catch (McpClientException exception) {
             throw exception;
         } catch (JsonProcessingException exception) {
@@ -225,6 +241,9 @@ public class StreamableHttpMcpClient implements McpClientPort {
         } catch (java.net.http.HttpTimeoutException exception) {
             throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
                     "MCP request timed out", exception);
+        } catch (io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport.ResponseTooLargeException exception) {
+            throw new McpClientException("MCP_RESPONSE_TOO_LARGE", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP response exceeded the configured size limit", exception);
         } catch (IOException exception) {
             throw new McpClientException("MCP_UNAVAILABLE", McpFailureKind.UNAVAILABLE, true,
                     "MCP service is unavailable", exception);
@@ -363,15 +382,23 @@ public class StreamableHttpMcpClient implements McpClientPort {
             if (session.sessionId() != null && !session.sessionId().isBlank()) {
                 builder.header("Mcp-Session-Id", session.sessionId());
             }
-            HttpResponse<Void> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<InputStream> response = io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport
+                    .send(builder.build(), objectMapper.writeValueAsBytes(payload), httpClient, endpointValidator, MAX_RESPONSE_BYTES);
+            response.body().close();
             if (response.statusCode() / 100 != 2 && response.statusCode() != 202) {
                 throw statusFailure(response.statusCode());
             }
+        } catch (io.github.illuseahashmap.agent.provider.application.port.ModelProviderException exception) {
+            throw new McpClientException("MCP_ENDPOINT_REJECTED", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP destination violates outbound policy", exception);
         } catch (McpClientException exception) {
             throw exception;
         } catch (java.net.http.HttpTimeoutException exception) {
             throw new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT, true,
                     "MCP initialized notification timed out", exception);
+        } catch (io.github.illuseahashmap.agent.provider.infrastructure.openai.GovernedHttpTransport.ResponseTooLargeException exception) {
+            throw new McpClientException("MCP_RESPONSE_TOO_LARGE", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP response exceeded the configured size limit", exception);
         } catch (IOException exception) {
             throw new McpClientException("MCP_UNAVAILABLE", McpFailureKind.UNAVAILABLE, true,
                     "MCP initialized notification failed", exception);

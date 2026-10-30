@@ -39,6 +39,7 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
     private final AgentOutputSchemaValidator schemaValidator;
     private final ObjectMapper objectMapper;
     private final List<AgentToolResolver> resolvers;
+    private final io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository snapshots;
 
     @Autowired
     public AgentToolRegistry(
@@ -47,7 +48,8 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
             AgentToolExecutionAuditRepository auditRepository,
             AgentOutputSchemaValidator schemaValidator,
             ObjectMapper objectMapper,
-            List<AgentToolResolver> resolvers
+            List<AgentToolResolver> resolvers,
+            io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository snapshots
     ) {
         this.tools = index(tools);
         this.policyRepository = policyRepository;
@@ -55,20 +57,80 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         this.schemaValidator = schemaValidator;
         this.objectMapper = objectMapper;
         this.resolvers = List.copyOf(resolvers);
+        this.snapshots = snapshots;
     }
 
-    /** Compatibility constructor for isolated executor tests. */
+    /** Isolated registry with fixed in-memory metadata for executor tests. */
     public AgentToolRegistry(List<AgentTool> tools) {
         this(tools, AgentToolPolicyRepository.ALLOW_ALL,
                 AgentToolExecutionAuditRepository.NOOP,
-                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper(), List.of());
+                new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper(), List.of(), isolatedSnapshots(tools));
     }
 
-    /** Compatibility constructor for policy and audit unit tests. */
+    /** Isolated registry for policy and audit unit tests. */
     public AgentToolRegistry(List<AgentTool> tools, AgentToolPolicyRepository policyRepository,
                              AgentToolExecutionAuditRepository auditRepository,
                              AgentOutputSchemaValidator schemaValidator, ObjectMapper objectMapper) {
-        this(tools, policyRepository, auditRepository, schemaValidator, objectMapper, List.of());
+        this(tools, policyRepository, auditRepository, schemaValidator, objectMapper, List.of(), isolatedSnapshots(tools));
+    }
+
+    private static io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository isolatedSnapshots(
+            List<AgentTool> tools) {
+        var definitions = tools.stream().map(tool -> new AgentToolDefinition(
+                tool.name(), tool.name(), tool.inputSchema(), tool.readOnly())).toList();
+        return new io.github.illuseahashmap.agent.runtime.application.port.AgentToolSnapshotRepository() {
+            private final Map<String, List<AgentToolDefinition>> versions = new java.util.HashMap<>();
+            public void freeze(String tenant, long version, List<AgentToolDefinition> values) {
+                var previous = versions.putIfAbsent(tenant + ":" + version, List.copyOf(values));
+                if (previous != null && !previous.equals(values)) {
+                    throw new IllegalStateException("Tool snapshot is immutable");
+                }
+            }
+            public List<AgentToolDefinition> find(String tenant, long version) {
+                return versions.getOrDefault(tenant + ":" + version, definitions);
+            }
+        };
+    }
+
+    @Override
+    public void freezePublication(String tenantCode, long versionId, String toolSetJson) {
+        var codes = parseToolSet(toolSetJson, "AgentVersion tool set");
+        var definitions = codes.stream().map(code -> policyRepository.findAuthorized(tenantCode, code)
+                .orElseThrow(() -> new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                        io.github.illuseahashmap.workflow.shared.exception.ErrorCode.CONFLICT,
+                        "Tool authorization changed before publication")))
+                .toList();
+        for (var definition : definitions) {
+            if (!definition.readOnly() || definition.sideEffect()) {
+                throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                        io.github.illuseahashmap.workflow.shared.exception.ErrorCode.CONFLICT,
+                        "Only read-only tools may be published");
+            }
+            try {
+                schemaValidator.validateDefinition(definition.inputSchema());
+            } catch (AgentExecutionException exception) {
+                throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                        io.github.illuseahashmap.workflow.shared.exception.ErrorCode.CONFLICT,
+                        "Tool Schema changed before publication", exception);
+            }
+        }
+        snapshots.freeze(tenantCode, versionId, definitions);
+    }
+
+    public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(
+            String tenantCode, long versionId, String versionToolSetJson, String nodeToolSetJson) {
+        var effective = availableToolCodes(versionToolSetJson, nodeToolSetJson).stream()
+                .filter(this::isRegistered).filter(code -> policyRepository.findAuthorized(tenantCode, code).isPresent())
+                .collect(Collectors.toUnmodifiableSet());
+        var frozen = snapshots.find(tenantCode, versionId).stream()
+                .filter(tool -> effective.contains(tool.toolCode())).toList();
+        if (frozen.size() != effective.size()) {
+            throw toolProtocol("AGENT_TOOL_SNAPSHOT_MISSING", "Published tool metadata is incomplete");
+        }
+        return frozen.stream().filter(tool -> policyRepository.findAuthorized(tenantCode, tool.toolCode()).isPresent())
+                .filter(tool -> isRegistered(tool.toolCode()))
+                .map(tool -> new ModelProviderRequest.ToolDefinition(tool.toolCode(), tool.toolName(), tool.inputSchema(),
+                        tool.capabilityType())).toList();
     }
 
     public AgentTool require(String name) {
@@ -201,6 +263,15 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         AgentToolDefinition definition = policyRepository.findAuthorized(tenantCode, toolCode)
                 .orElseThrow(() -> toolProtocol("AGENT_TOOL_NOT_AUTHORIZED",
                         "Agent tool is not authorized for the current tenant: " + toolCode));
+        if (request.agentVersionId() != null) {
+            var current = definition;
+            definition = snapshots.find(tenantCode, request.agentVersionId()).stream()
+                    .filter(toolDefinition -> toolDefinition.toolCode().equals(toolCode)).findFirst()
+                    .orElseThrow(() -> toolProtocol("AGENT_TOOL_SNAPSHOT_MISSING", "Published tool metadata is missing"));
+            if (!current.readOnly() || current.sideEffect() || !definition.readOnly() || definition.sideEffect()) {
+                throw toolProtocol("AGENT_TOOL_POLICY_INVALID", "Current or frozen tool policy prohibits execution");
+            }
+        }
         if (!definition.readOnly() || !tool.readOnly() || !StringUtils.hasText(definition.inputSchema())) {
             throw toolProtocol("AGENT_TOOL_POLICY_INVALID", "Agent tool policy is invalid: " + toolCode);
         }

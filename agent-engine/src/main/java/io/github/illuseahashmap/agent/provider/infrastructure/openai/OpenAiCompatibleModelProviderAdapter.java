@@ -84,8 +84,9 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody(request, responsesApi)))
                     .build();
-            HttpResponse<InputStream> response = httpClient.send(
-                    httpRequest, HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<InputStream> response = GovernedHttpTransport.send(httpRequest,
+                    requestBody(request, responsesApi).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    httpClient, endpointValidator, maximumResponseBytes);
             String responseBody;
             try (InputStream body = response.body()) {
                 byte[] bytes = body.readNBytes(maximumResponseBytes + 1);
@@ -101,6 +102,9 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
                 throw httpFailure(response.statusCode(), responseBody);
             }
             return parseResponse(responseBody, latencyMillis, responsesApi);
+        } catch (GovernedHttpTransport.ResponseTooLargeException exception) {
+            throw new ModelProviderException("PROVIDER_RESPONSE_TOO_LARGE", ModelProviderFailureKind.PERMANENT,
+                    "Model Provider response exceeded the configured size limit", exception);
         } catch (java.net.http.HttpTimeoutException exception) {
             throw new ModelProviderException(
                     "PROVIDER_TIMEOUT", ModelProviderFailureKind.TIMEOUT,

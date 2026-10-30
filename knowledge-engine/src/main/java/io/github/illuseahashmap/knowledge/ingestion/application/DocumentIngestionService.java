@@ -34,9 +34,11 @@ public final class DocumentIngestionService {
         this.embeddingModel = embeddingModel;
     }
 
-    public IngestionResult ingest(String tenantCode, String sourceCode, String documentHash) {
-        DocumentSnapshot snapshot = documentStore.loadSnapshot(tenantCode, sourceCode, documentHash);
-        List<Chunk> chunks = chunker.chunk(snapshot);
+    public IngestionResult ingest(String tenantCode, String sourceCode, long documentVersionId) {
+        var snapshots = documentStore.loadSnapshots(tenantCode, sourceCode, documentVersionId);
+        DocumentSnapshot snapshot = snapshots.stream().filter(item -> item.documentVersion().id() == documentVersionId)
+                .findFirst().orElseThrow(io.github.illuseahashmap.knowledge.ingestion.domain.DocumentSupersededException::new);
+        List<Chunk> chunks = snapshots.stream().flatMap(item -> chunker.chunk(item).stream()).toList();
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException("Document contains no indexable text");
         }

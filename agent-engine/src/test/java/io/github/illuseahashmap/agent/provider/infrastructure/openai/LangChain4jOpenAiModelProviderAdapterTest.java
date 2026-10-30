@@ -24,6 +24,48 @@ class LangChain4jOpenAiModelProviderAdapterTest {
 
     private HttpServer server;
 
+    @Test
+    void totalTimeoutStopsATricklingResponseBody() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            try {
+                for (int index = 0; index < 100; index++) {
+                    exchange.getResponseBody().write(' ');
+                    exchange.getResponseBody().flush();
+                    Thread.sleep(40);
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        var request = new ModelProviderRequest("http://127.0.0.1:" + server.getAddress().getPort() + "/v1",
+                "secret", "test-model", "system", "input", Duration.ofMillis(150), "timeout-test", List.of(), null);
+        long started = System.nanoTime();
+        assertThatThrownBy(() -> adapter(1024).invoke(request))
+                .isInstanceOfSatisfying(ModelProviderException.class,
+                        failure -> assertThat(failure.errorCode()).isEqualTo("PROVIDER_TIMEOUT"));
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void rejectsPrivateResolutionAtConnectionTimeEvenAfterPreflightAcceptedHost() throws Exception {
+        var body = new AtomicReference<String>();
+        startServer(200, completion("must not receive"), body);
+        var validator = org.mockito.Mockito.spy(new ProviderEndpointValidator(false, false));
+        // Simulates a public answer at preflight followed by a private answer during connection.
+        org.mockito.Mockito.doNothing().when(validator).validate(org.mockito.ArgumentMatchers.any());
+        var adapter = new LangChain4jOpenAiModelProviderAdapter(new ObjectMapper(), validator, 1024);
+        var request = new ModelProviderRequest("http://localhost:" + server.getAddress().getPort() + "/v1",
+                "secret", "test-model", "system", "input", Duration.ofSeconds(2), "dns-test", List.of(), null);
+        assertThatThrownBy(() -> adapter.invoke(request)).isInstanceOf(ModelProviderException.class);
+        org.mockito.Mockito.verify(validator, org.mockito.Mockito.atLeastOnce()).resolve("localhost");
+        assertThat(body.get()).isNull();
+    }
+
     @AfterEach
     void stopServer() {
         if (server != null) {

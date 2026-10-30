@@ -22,6 +22,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.github.illuseahashmap</groupId>
             <artifactId>shared-kernel</artifactId>
             <version>${project.version}</version>

@@ -1,0 +1,7 @@
+{
+  "name": "workflow-agent-backend-quality-tools",
+  "private": true,
+  "version": "0.0.0",
+  "devDependencies": { "@redocly/cli": "1.34.5" },
+  "scripts": { "api:lint": "redocly lint docs/api/openapi.yaml" }
+}

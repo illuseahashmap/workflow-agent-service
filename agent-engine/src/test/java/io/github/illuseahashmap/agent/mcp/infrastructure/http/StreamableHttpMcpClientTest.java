@@ -89,7 +89,8 @@ class StreamableHttpMcpClientTest {
         McpSessionCache cache = Mockito.mock(McpSessionCache.class);
         StreamableHttpMcpClient client = new StreamableHttpMcpClient(new ObjectMapper(),
                 (McpCredentialResolver) (tenant, reference) -> authorization[0],
-                HttpClient.newHttpClient(), cache);
+                HttpClient.newHttpClient(), cache,
+                new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(false, false));
         McpConnectorVersion connector = new McpConnectorVersion(1L, "tenant-a", 1L, 1,
                 "https://mcp.example.test/mcp", "2025-03-26", "credential", 10, "PUBLISHED");
         McpClientPort.Session oldSession = new McpClientPort.Session(connector, "session-1", "2025-03-26",
@@ -148,7 +149,8 @@ class StreamableHttpMcpClientTest {
         javax.net.ssl.SSLContext sslContext = trustOnly(certificate);
         StreamableHttpMcpClient client = new StreamableHttpMcpClient(new ObjectMapper(),
                 (McpCredentialResolver) (tenant, reference) -> "Bearer test",
-                HttpClient.newBuilder().sslContext(sslContext).proxy(new NoProxySelector()).build());
+                HttpClient.newBuilder().sslContext(sslContext).proxy(new NoProxySelector()).build(),
+                new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(true, false));
         McpConnectorVersion connector = new McpConnectorVersion(1L, "tenant-a", 1L, 1,
                 server.url("/mcp").toString(), "2025-03-26", "credential", 10, "PUBLISHED");
 

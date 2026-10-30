@@ -19,7 +19,7 @@ class DocumentIngestionServiceTest {
         DocumentVersion version = new DocumentVersion(
                 1L, "tenant-a", "policies", "leave.md", 1, "hash", "READY", Instant.EPOCH);
         KnowledgeDocumentStore documents = (tenant, source, hash) ->
-                new DocumentSnapshot(version, "annual leave policy");
+                java.util.List.of(new DocumentSnapshot(version, "annual leave policy"));
         KnowledgeIndexPort index = (document, chunks) -> {
             assertThat(document).isEqualTo(version);
             assertThat(chunks).hasSize(1);
@@ -27,7 +27,7 @@ class DocumentIngestionServiceTest {
         };
 
         IngestionResult result = new DocumentIngestionService(
-                documents, index, new TextChunker(128, 16)).ingest("tenant-a", "policies", "hash");
+                documents, index, new TextChunker(128, 16)).ingest("tenant-a", "policies", 1L);
 
         assertThat(result.indexVersion().status()).isEqualTo("CANDIDATE");
         assertThat(result.chunks()).extracting(chunk -> chunk.text()).containsExactly("annual leave policy");
@@ -38,13 +38,13 @@ class DocumentIngestionServiceTest {
         DocumentVersion version = new DocumentVersion(
                 1L, "tenant-a", "policies", "leave.md", 1, "hash", "READY", Instant.EPOCH);
         KnowledgeDocumentStore documents = (tenant, source, hash) ->
-                new DocumentSnapshot(version, "annual leave policy");
+                java.util.List.of(new DocumentSnapshot(version, "annual leave policy"));
         EmbeddingModelPort incomplete = texts -> new EmbeddingModelPort.Batch("model:v1", 2, java.util.List.of());
         KnowledgeIndexPort index = (document, chunks) -> {
             throw new AssertionError("Incomplete embeddings must never create an index");
         };
         var service = new DocumentIngestionService(documents, index, new TextChunker(128, 16), incomplete);
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.ingest("tenant-a", "policies", "hash"))
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.ingest("tenant-a", "policies", 1L))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("count");
     }
 }

@@ -115,6 +115,7 @@ class VolcengineArkEmbeddingModelAdapterTest {
     private VolcengineArkEmbeddingModelAdapter adapter(int port, int dimension, int maxResponseBytes) {
         return new VolcengineArkEmbeddingModelAdapter(HttpClient.newHttpClient(), mapper,
                 URI.create("http://127.0.0.1:" + port + "/api/v3"), "test-key", "test-model",
-                "ark:v1", dimension, Duration.ofSeconds(5), maxResponseBytes, null, null);
+                "ark:v1", dimension, Duration.ofSeconds(5), maxResponseBytes, null, null,
+                new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(true, true));
     }
 }

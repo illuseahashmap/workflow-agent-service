@@ -5,7 +5,7 @@ Backend for Workflow Agent, an open-source, Java-first enterprise Human-Agent Wo
 ## Baseline
 
 - JDK 25
-- Maven 3.9.x
+- Maven Wrapper (Maven 3.9.12; use `mvnw.cmd` on Windows, `bash ./mvnw` on Linux)
 - Spring Boot 4.x
 - Flowable 8.0.0
 - PostgreSQL
@@ -143,7 +143,7 @@ Start the local profile with PostgreSQL on `localhost:5432/workflow_agent`:
 ```powershell
 $env:SPRING_PROFILES_ACTIVE='local'
 $env:WORKFLOW_AUTH_TOKEN_SECRET='<at least 32 random characters>'
-mvn -pl workflow-boot -am spring-boot:run
+bash ./mvnw -pl workflow-boot -am spring-boot:run
 ```
 
 Required secrets:
@@ -208,8 +208,8 @@ Never commit the metrics token or webhook URL.
 ## Build
 
 ```shell
-mvn test
-mvn verify
+bash ./mvnw test
+bash ./mvnw verify
 ```
 
 `verify` enforces the JDK/Maven baseline, Java conventions, SpotBugs high-priority findings, and a minimum tested-code

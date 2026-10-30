@@ -19,6 +19,7 @@ import java.util.List;
 
 /** Tenant-scoped RAG control plane. Retrieval remains disabled until its runtime gate is enabled. */
 @RestController
+@org.springframework.validation.annotation.Validated
 @RequestMapping("/knowledge")
 public class KnowledgeManagementController {
     private final KnowledgeManagementPort management;
@@ -41,13 +42,14 @@ public class KnowledgeManagementController {
     @PostMapping("/retrieval-profiles")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:profile:manage')")
     public ApiResponse<KnowledgeManagementPort.ProfileView> createProfile(
-            @Valid @RequestBody KnowledgeManagementPort.CreateProfile command) {
-        return ApiResponse.ok(management.createProfile(tenant(), command));
+            @Valid @RequestBody KnowledgeRequests.Profile command) {
+        return ApiResponse.ok(management.createProfile(tenant(), command.command()));
     }
 
     @PostMapping("/retrieval-profiles/{id}/publish")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:profile:manage')")
-    public ApiResponse<KnowledgeManagementPort.ProfileView> publishProfile(@PathVariable long id) {
+    public ApiResponse<KnowledgeManagementPort.ProfileView> publishProfile(
+            @jakarta.validation.constraints.Positive @PathVariable long id) {
         return ApiResponse.ok(management.publishProfile(tenant(), id));
     }
 
@@ -61,8 +63,8 @@ public class KnowledgeManagementController {
     @PostMapping("/documents")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:document:manage')")
     public ApiResponse<KnowledgeManagementPort.DocumentView> createDocument(
-            @Valid @RequestBody KnowledgeManagementPort.CreateDocument command) {
-        return ApiResponse.ok(management.createDocument(tenant(), command));
+            @Valid @RequestBody KnowledgeRequests.Document command) {
+        return ApiResponse.ok(management.createDocument(tenant(), command.command()));
     }
 
     @GetMapping("/ingestion-jobs")
@@ -76,20 +78,26 @@ public class KnowledgeManagementController {
 
     @GetMapping("/scope-grants")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:scope:manage')")
-    public ApiResponse<List<KnowledgeManagementPort.ScopeGrantView>> grants(@RequestParam String principalId) {
+    public ApiResponse<List<KnowledgeManagementPort.ScopeGrantView>> grants(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 128)
+            @RequestParam String principalId) {
         return ApiResponse.ok(management.grants(tenant(), principalId));
     }
 
     @PostMapping("/scope-grants")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:scope:manage')")
-    public ApiResponse<Void> grant(@Valid @RequestBody KnowledgeManagementPort.GrantScope command) {
-        management.grant(tenant(), command);
+    public ApiResponse<Void> grant(@Valid @RequestBody KnowledgeRequests.Grant command) {
+        management.grant(tenant(), command.command());
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/scope-grants")
     @PreAuthorize("hasRole('PLATFORM_ADMIN') or hasAuthority('knowledge:scope:manage')")
-    public ApiResponse<Void> revoke(@RequestParam String principalId, @RequestParam String scopeCode) {
+    public ApiResponse<Void> revoke(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 128)
+            @RequestParam String principalId,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 128)
+            @RequestParam String scopeCode) {
         management.revoke(tenant(), new KnowledgeManagementPort.GrantScope(principalId, scopeCode));
         return ApiResponse.ok();
     }
@@ -99,10 +107,18 @@ public class KnowledgeManagementController {
     }
 
     private int boundedPage(int value) {
-        return Math.max(1, value);
+        if (value < 1 || value > 1_000_000) {
+            throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                    io.github.illuseahashmap.workflow.shared.exception.ErrorCode.BAD_REQUEST, "Invalid page number");
+        }
+        return value;
     }
 
     private int boundedSize(int value) {
-        return Math.min(100, Math.max(1, value));
+        if (value < 1 || value > 100) {
+            throw new io.github.illuseahashmap.workflow.shared.exception.BusinessException(
+                    io.github.illuseahashmap.workflow.shared.exception.ErrorCode.BAD_REQUEST, "Invalid page size");
+        }
+        return value;
     }
 }

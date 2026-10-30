@@ -264,6 +264,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         validateOutputSchema(version.outputSchema());
         validateInputSchema(version.inputSchema());
         validateToolSet(version.toolSetJson(), version.executionMode());
+        toolCatalog.freezePublication(tenantCode, versionId, version.toolSetJson());
         versionRepository.publish(tenantCode, definitionId, versionId, principalProvider.current().principalId());
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));
     }

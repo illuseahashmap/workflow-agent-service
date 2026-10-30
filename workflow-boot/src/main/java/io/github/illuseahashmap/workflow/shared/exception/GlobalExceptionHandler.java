@@ -48,6 +48,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), message));
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(
+            org.springframework.http.converter.HttpMessageNotReadableException exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), "Malformed request body"));
+    }
+
+    @ExceptionHandler({org.springframework.web.bind.ServletRequestBindingException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRequestParameter(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), "Invalid request parameter"));
+    }
+
     @ExceptionHandler(FlowableException.class)
     public ResponseEntity<ApiResponse<Void>> handleFlowableException(FlowableException exception) {
         LOGGER.warn("Flowable operation failed", exception);

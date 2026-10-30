@@ -156,7 +156,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
         var capabilities = adapter.capabilities(provider.baseUrl());
         List<ModelProviderRequest.ToolDefinition> effectiveTools =
                 toolRegistry.availableToolDefinitions(
-                        command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson());
+                        command.tenantCode(), version.id(), version.toolSetJson(), command.nodeToolSetJson());
         List<ModelProviderRequest.ToolDefinition> nativeTools =
                 capabilities != null && capabilities.nativeToolCalling() ? effectiveTools : List.of();
         var steps = new ArrayList<AgentExecutor.StepResult>();

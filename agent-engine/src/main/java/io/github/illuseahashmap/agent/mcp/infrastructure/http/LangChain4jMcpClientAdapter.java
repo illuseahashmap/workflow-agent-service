@@ -52,6 +52,7 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
     private final int maximumSessions;
     private final Duration sessionTtl;
     private final SSLContext sslContext;
+    private final io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator;
     private final ExecutorService operationExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final Map<String, ClientHolder> clients = new LinkedHashMap<>(16, 0.75f, true);
 
@@ -62,10 +63,11 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
             @Value("${workflow.agent.mcp.maximum-response-bytes:1000000}") int maximumResponseBytes,
             @Value("${workflow.agent.mcp.maximum-tools:200}") int maximumTools,
             @Value("${workflow.agent.mcp.session-cache.max-entries:256}") int maximumSessions,
-            @Value("${workflow.agent.mcp.session-cache.ttl-seconds:300}") long sessionTtlSeconds
+            @Value("${workflow.agent.mcp.session-cache.ttl-seconds:300}") long sessionTtlSeconds,
+            io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator
     ) {
         this(objectMapper, credentialResolver, maximumResponseBytes, maximumTools,
-                maximumSessions, sessionTtlSeconds, null);
+                maximumSessions, sessionTtlSeconds, null, endpointValidator);
     }
 
     LangChain4jMcpClientAdapter(
@@ -75,7 +77,8 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
             int maximumTools,
             int maximumSessions,
             long sessionTtlSeconds,
-            SSLContext sslContext
+            SSLContext sslContext,
+            io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator endpointValidator
     ) {
         this.objectMapper = objectMapper;
         this.credentialResolver = credentialResolver;
@@ -84,6 +87,7 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
         this.maximumSessions = Math.max(1, Math.min(maximumSessions, 10_000));
         this.sessionTtl = Duration.ofSeconds(Math.max(1, Math.min(sessionTtlSeconds, 86_400)));
         this.sslContext = sslContext;
+        this.endpointValidator = endpointValidator;
     }
 
     @Override
@@ -106,7 +110,7 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
             BoundedStreamableHttpMcpTransport transport = new BoundedStreamableHttpMcpTransport(
                     connector.endpointUrl(), StringUtils.hasText(authorization)
                     ? Map.of("Authorization", authorization) : Map.of(),
-                    timeout, maximumResponseBytes, sslContext);
+                    timeout, maximumResponseBytes, sslContext, endpointValidator);
             DefaultMcpClient.Builder builder = DefaultMcpClient.builder()
                     .key(connectorKey)
                     .transport(transport)
@@ -219,6 +223,10 @@ public class LangChain4jMcpClientAdapter implements McpClientPort {
 
     private McpClientException translate(Throwable failure, String message) {
         Throwable cause = rootCause(failure);
+        if (cause instanceof io.github.illuseahashmap.agent.provider.application.port.ModelProviderException) {
+            return new McpClientException("MCP_ENDPOINT_REJECTED", McpFailureKind.PROTOCOL_ERROR,
+                    false, "MCP destination violates outbound policy", failure);
+        }
         if (cause instanceof TimeoutException || cause instanceof java.util.concurrent.TimeoutException
                 || cause instanceof java.net.http.HttpTimeoutException) {
             return new McpClientException("MCP_TIMEOUT", McpFailureKind.TIMEOUT,
