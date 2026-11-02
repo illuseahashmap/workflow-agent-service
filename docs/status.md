@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-更新时间：2026-10-17
+文档更新时间：2026-11-02；核对代码基线：`7a92bb5`。本次仅核对权威文档，未重跑运行验收或重新确认 Docker/生产环境状态；各项验证日期单独注明。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -10,6 +10,7 @@
 
 - 已完成模块化单体拆分：`auth-engine`、`workflow-engine`、`rules-engine`、`agent-engine`、`knowledge-engine`、`platform-migrations`、`workflow-boot`。
 - 已具备注册登录、HttpOnly Cookie、CSRF、租户/角色/权限、流程版本、派单规则版本和基础审计。
+- Cookie 用户携带任意服务令牌头不会豁免 CSRF，只有已认证的 SERVICE principal 可豁免；Redis 流程锁具备多续租线程、失效标记及事务内提交前所有权校验；驳回必须显式指定目标，不猜测第一个 UserTask。
 - 已具备流程启动、审批、驳回、转办、终止、实例查询、参与人解析和流程图展示。
 - 已建立 PostgreSQL RLS、租户上下文、Redis 锁和可靠兜底命令。
 
@@ -21,6 +22,7 @@
 - Agent 完成 Outbox 已采用事务提交后本机唤醒、数据库租约领取、有界虚拟线程执行和定时扫描兜底；外部 XXL-Job 仅调用幂等恢复入口。重试时间带随机抖动，历史无消费者的 `AgentRunRequested.v1` 已停止生成并由 V53 保留审计后收口。
 - 已增加 `PLATFORM_AGENT` 执行模式的首个切片：计划阶段与执行阶段形成受控循环，仍复用同一 AgentRun 和流程恢复链路；当前仅允许后端显式注册的工具。
 - 已增加显式 `AgentTool`/`AgentToolRegistry` 应用端口，结构化 `TOOL_CALL` 只能调用后端注册工具，未注册工具会拒绝；AgentVersion 已冻结工具代码集合，BPMN 节点只能继续收紧，当前尚未开放通用 HTTP、脚本或租户自定义代码工具。
+- Agent Definition 通过 `AgentToolCatalogPort` 校验发布工具，不直接依赖 Runtime Registry 实现；V57 在发布事务内冻结工具名称、Schema、只读属性、能力、风险和副作用元数据。运行仍复核当前授权和启用状态；历史版本的 `UPGRADE_BASELINE` 不冒充原始 `PUBLICATION` 快照，缺快照明确失败。升级边界见[工具快照手册](operations/agent-tool-snapshot-upgrade.md)。
 - Provider 请求现在携带当前租户已授权工具的名称、描述和输入 Schema；Provider Adapter 通过能力契约声明原生 Tool Calling 支持，Chat Completions 使用结构化工具调用，不支持原生工具的 Responses 兼容端点使用受控文本工具协议。模型不能凭 Provider 凭证获得工具权限，工具仍由 Runtime 注册表和租户授权共同决定。
 - 已落地首个只读业务工具 `agent_run_status`，工具定义、租户授权、输入 Schema、稳定幂等键、带租约的数据库原子抢占和执行审计由 PostgreSQL 管理；工具输出不直接修改流程或 AgentRun。
 - 已落地真实业务只读工具 `workflow_process_context`：Agent 可按租户读取流程实例元数据、当前人工任务和脱敏业务变量，继续复用 AgentRun/Step/审计链路；工具不能推进或修改流程。知识检索另有独立 `knowledge_search` 端口和授权边界。
@@ -39,16 +41,20 @@
 ### 工程质量基线
 
 - 已接入 Maven Enforcer、Checkstyle、SpotBugs、JaCoCo、ArchUnit、OpenAPI lint、路由覆盖和兼容性检查。
+- 已固定 Maven Wrapper（生成器 3.3.4、Maven 3.9.12）及 Redocly CLI 1.34.5/依赖锁；CI 使用 Wrapper、`npm ci` 和本地 CLI。固定版本的实现及本地验证已完成（原 P1-13），全新环境复现与当前提交的远端 CI 状态仍需独立验证。
+- 知识 HTTP 请求已拆出 DTO，校验必填、长度、枚举、数值与 Scope；畸形 JSON、缺失/非法参数和越界分页返回 400，业务冲突返回 409，内部异常仍返回 500；Bean Validation、MockMvc 与 OpenAPI 已同步（原 P1-2d）。跨接口契约生成仍属开放工作。
 - 前端已接入格式、Lint、类型检查、单元测试、构建和 Playwright E2E。
+
+现有运行边界：旧版已发布 `HYBRID` Profile 若绑定纯关键词索引，运行时维持关键词检索，Trace 记录实际策略；新建 Profile 不允许此组合。该历史兼容行为不是完整向量能力，不得据此声称旧索引已具备向量。
 
 ## 二、当前阶段与验收
 
 | 优先级 | 工作项 | 当前状态 | 下一步验收 |
 | --- | --- | --- | --- |
-| 已完成 | 容器化集成测试基线 | 历史基线曾在 Docker Engine 29 下以 docker-java API 1.44 完成 271 个测试、0 失败、0 错误、0 跳过，5 个 PostgreSQL/Redis/Flowable/Flyway/RLS/HTTP 安全基础设施套件通过强制门禁；2026-10-12 本机 Docker Desktop 引擎不可连接，本轮 `verify` 的容器套件被跳过，不覆盖该历史基线 | 恢复 Docker 后重新执行零跳过强制门禁并归档 Surefire、JaCoCo、SpotBugs 报告；真实强杀和多实例压力仍按专项验收 |
+| 待重新验收 | 容器化集成测试基线 | 曾完成 Docker 下 271 项、零跳过的历史基线；最近一次后端验证含 21 个环境/显式开关跳过用例，知识数据库套件已在隔离 PostgreSQL 真实执行，不能替代容器门禁 | 执行前重新检查 Docker，再跑当前提交的必需基础设施套件零跳过门禁并归档报告；真实强杀和多实例压力仍按专项验收 |
 | P0 | 生产可观测性 | 已有租户隔离的 Runtime 健康摘要、低基数运行/积压/暂停/恢复/死信/租约指标、Prometheus 告警、Runbook 和前端状态化处置入口；已增加本地 Alertmanager 模板、生产 Secret Webhook Overlay、续租调度延迟/耗时/队列/活动注册容量指标与告警；异步 Agent 节点处置审计保留持久命令 Trace ID | Docker Engine 恢复后执行真实告警触发、通知和处置回放，并在多实例环境校验指标准确性与外部 Receiver 可达性 |
 | P0 | 流程操作审计 | 租户隔离查询 API 支持事件、实例、Trace、时间范围和分页；人工流程操作及 Agent 节点成功、人工复核、空结果继续、运维保持决策均进入同一审计账本 | 通过容器化环境验证全链路可追溯，继续补齐派单规则命中/兜底决策证据 |
-| P1 | 租户纵深隔离 | 平台业务表已启用强制 RLS | 完成 Flowable 内部表评估和跨租户负面测试 |
+| P1 | 租户纵深隔离 | 平台业务表及迁移时已存在且带租户字段的 Flowable 表已有强制 RLS；最小权限部署模板未完成 | 先补独立迁移/运行账号模板，在非超级用户下完成真实 Flowable 表评估、系统 Worker 授权和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
 | P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；Checkpoint v3 保存 Schema、摘要、冻结路由工具集和工具账本引用，恢复时回填已提交结果且不会重复调用外部工具 | Docker 恢复后完成真实强杀、租约过期、运行中外部调用边界暂停和跨实例压力；将 RAG Evidence/超大对象外置并加入恢复等价评测，再推进集中式批量续租、公平调度、Guardrail 和高风险写工具确认 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
@@ -56,19 +62,19 @@
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
 | P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固。十领域 40 篇文档草稿、评测用例契约和专项实施设计已形成，但未审核入库或建立锁定评测集 | 浏览器 UI 验收、最终答案 Citation 门禁、知识快照/历史时间查询、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
-| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器纵向闭环和确定性 HTTPS 协议测试已完成，绑定原子性、类型化错误、有界响应、租户限流/并发配额、连接器熔断、会话复用、凭据轮换和 Checkpoint 接管测试已收口；确定性 MCP Server 容器测试、SSRF/DNS 重绑定和多实例压力验收未完成 | 完成真实 MCP Server 容器故障注入、出站安全和多实例租户治理验收后，再称为生产可用只读 MCP 闭环 |
+| P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器链路和确定性 HTTPS 协议测试已完成；租户限流/并发配额、熔断、会话复用、凭据指纹轮换及 Checkpoint 接管已有测试；SDK/原生 MCP 共用连接时 DNS 地址校验与有界传输，基础重绑定拒绝已有回归 | 补真实 Secret Provider、确定性 MCP Server 容器故障注入、生产代理/网关边界、多实例租户治理及 Worker 强杀验收；完成前不得称为生产可用只读 MCP 闭环 |
 
 ## 三、下一阶段顺序
 
-本次四项逻辑缺陷已整改：知识源索引按完整文档快照构建并验证、所有模型/Embedding/MCP 出站传输统一连接地址校验、Profile 版本通过 V58 原子分配、非法/缺失请求参数返回 400。源快照、pgvector 数据、8 请求版本竞争已完成隔离 PostgreSQL 回归；已有已发布 Profile 继续固定原索引，新知识快照需显式发布新 Profile 版本。
+2026-10-30 的四项逻辑缺陷已整改：知识源索引按完整文档快照构建并验证、所有模型/Embedding/MCP 出站传输统一连接地址校验、Profile 版本通过 V58 原子分配、非法/缺失请求参数返回 400。源快照、pgvector 数据、8 请求版本竞争已完成隔离 PostgreSQL 回归；已有已发布 Profile 继续固定原索引，新知识快照需显式发布新 Profile 版本。
 
-2026-10-30 整改进展：已增加文档内容规范化/服务端指纹、不可变数据库约束、摄取文档版本绑定与 owner/Attempt fencing、原子激活回写、有界异步调度和心跳；知识 HTTP DTO/400/409 与 OpenAPI 已同步，构建工具链固定版本。工具元数据现在在 AgentVersion 发布时冻结，新增 V57 与当前授权复核；默认 LangChain4j 模型/标准 Embedding 连接增加 DNS 地址策略。独立临时 PostgreSQL 18.1 已执行新建及 V54 升级、歧义拒绝、迟到写入和激活回滚测试。跨实例配额、非超级用户 RLS、生产告警、Grounding/评测门禁和容器故障验收仍需继续，不能据此将整个平台标记为生产闭环。
+问题清单现按“待实现 / 已修复待验收 / 部署风险”分类。原 P1-10 合并到 P1-2a；P1-2d/P1-13 的代码与本地回归已完成，不再列为同名开放缺陷。跨实例配额、非超级用户 RLS、生产告警、Grounding/评测门禁和容器故障验收仍需继续，不能据此将整个平台标记为生产闭环。
 
-1. 在 Docker Engine 恢复后完成 P0 环境验收：启动 Prometheus/Alertmanager 模板，触发续租延迟、积压和死信告警，回放到前端处置与流程审计；补齐派单规则命中/兜底决策证据。
-2. 完成 Agent Runtime 真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；普通工具结果已通过审计账本引用恢复，下一步外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。
+1. 先重新检查 Docker/通知接线，完成 P0 运维闭环：补齐派单规则命中/兜底决策证据，启动 Prometheus/Alertmanager，真实触发续租延迟、积压和死信告警并回放通知、前端处置和流程审计。同时完成独立迁移/运行账号的最小权限模板与非超级用户 RLS 验证，作为后续生产验收前提。
+2. 完成 Agent Runtime 和知识摄取的真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；普通工具结果已通过审计账本引用恢复，下一步外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。升级遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。
 3. 完成结构化意图路由的真实 Provider 与评测验收：覆盖五种模式、一次修复、越权工具、模式不一致和 ABSTAIN，增加主体权限及风险策略的显式路由投影。
 4. RAG 作为下一条主功能线：pgvector/全文混合检索已完成本地真实回归；按[评测与路由专项实施设计](architecture/rag-evaluation-and-routing-delivery-plan.md)先审核文档和权限测试身份、建立固定快照基线及可校验评测集，再完成历史时间查询、金标时效复核、Grounding/Citation 门禁和摄取恢复。加权 RRF/Rerank/查询级路由是后续有评测收益才启动的增强。Grounding 必须在执行后基于检索状态、Evidence/Citation 完整性和确定性规则触发流程处置，不能把相似度或模型自报 `confidence` 直接作为网关依据。
-5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；下一步完成确定性 MCP Server 容器故障注入、HTTPS 出站安全和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
+5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；HTTPS 连接地址防护已有实现，下一步完成生产代理/网关边界、真实 Secret Provider、确定性 MCP Server 容器故障注入和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 6. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。
 7. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
 8. 最后扩展任务中心、表单、通知、委托、SLA、完整工具治理和证据驱动自治。
@@ -122,7 +128,7 @@
 
 首个纵向闭环不等于 Agent MVP 完成。只有执行、恢复、幂等、权限、审计、取消、人工交互和 Flowable 集成全部通过容器化集成测试，才可将 Agent MVP 标记为完成。
 
-最近一次 LLM/MCP/RAG 纵向验证（2026-10-12）：
+LLM/MCP/RAG 联合浏览器纵向验证记录（2026-10-12；RAG 后续向量回归见下文）：
 
 | 场景 | 流程实例 | 结果 |
 | --- | --- | --- |
@@ -132,7 +138,24 @@
 
 以上证明本地配置与运行纵向链路可用，不替代专项容器故障注入、Worker 强杀、跨实例、出站安全和质量评测门禁。
 
-最近一次本机质量门禁（2026-10-14）：后端 9 个 Reactor 模块执行干净 `verify`，290 个测试中 272 个通过、18 个因 Docker Engine 不可用跳过，0 失败、0 错误；迁移版本唯一性、Checkstyle、SpotBugs 和 JaCoCo 门禁全部通过。最近一次完整 Docker 质量基线（2026-10-06）仍为 271 个测试、0 跳过，5 个必需基础设施集成套件通过。前端最近基线为格式、Lint、类型检查、43 个单元测试、生产构建、包体预算和 14 个 Playwright 场景通过。
+RAG 向量纵向验证记录（2026-10-17）：方舟 `doubao-embedding-vision-251215` 成功生成 `employee-handbook.md` 第 1 版的活跃索引第 2 版和 3 条 1024 维向量；Profile 4、AgentVersion 14、采购流程第 3 版及 AgentRun 50 的 HYBRID Trace/Citation 和直属负责人审批任务已本地验证。该记录不等于十领域语料审核、最终答案 Grounding 或发布级评测完成。
+
+最近一次后端质量门禁（2026-10-30，整改代码已纳入 `7a92bb5`）：通过 Maven Wrapper 执行全量 `verify`，331 项中 310 通过、21 个环境/显式开关用例跳过，0 失败、0 错误；Checkstyle、SpotBugs、JaCoCo 和架构/迁移门禁通过。知识/pgvector 数据库套件 6 项使用专用临时 PostgreSQL 18.1 真实执行通过，不在跳过数中；覆盖新建及 V54→V58 升级、歧义升级拒绝、幂等/不可变性、旧 owner/Attempt 写入拒绝、原子激活回滚、完整来源与向量集合、候选过期拒绝和 8 请求 Profile 版本竞争/事务回滚。该隔离实例结果不代替非超级用户 RLS、容器或多实例压力验收。
+
+同批 Redocly lint 通过并保留 59 条已有警告，OpenAPI 路由覆盖和成功响应模型检查通过，`npm ci --ignore-scripts` 成功。知识数据库套件已加入 CI 必跑门禁，跳过不能算门禁通过；本次文档核对未查询 `7a92bb5` 的远端 CI 结果。
+
+历史对照：2026-10-14 后端 `verify` 为 290 项、272 通过、18 跳过；2026-10-06 完整 Docker 基线为 271 项、零跳过、5 个必需基础设施套件通过。不能用历史 Docker 结果为当前提交背书。前端保留的最近基线为格式、Lint、类型检查、43 个单元测试、构建、包体预算和 14 个 Playwright 场景通过，本次没有重新验证前端。
+
+### 2026-10-30 已完成整改
+
+- 文档身份与正文：服务端规范化 BOM/换行并计算 SHA-256，重复提交保留原正文和任务状态，同版本不同内容/伪造指纹返回冲突；V55 禁止历史身份、指纹及正文改写。历史数据完整性审查见 P1-2b，不自动重写历史 Citation。
+- 摄取与快照：V56 将任务确定绑定文档版本，owner/Attempt fencing 约束续租与终态；索引激活/任务完成同事务提交，配套有界虚拟线程与心跳。来源重建保留完整最新有效文档集合，构建/激活拒绝过期候选，Chunk 标识包含文档版本 ID，旧 Profile/索引不原地改变。剩余强杀/多实例验收见 P1-2c。
+- 出站连接：模型、原生 Provider、标准/Ark Embedding、SDK/原生 MCP 共用 GovernedHttpTransport，连接 DNS 校验覆盖混合解析、IPv4/IPv6 私网与保留地址，保留 TLS 主机名验证、禁止重定向/隐式重试、有界读取和可取消总超时；基础重绑定拒绝及 HTTPS 协议回归通过。私有服务审批与生产网关仍见 P1-5。
+- Profile 版本：V58 按租户/Profile 原子分配版本，初始化存量最大版本，事务回滚不保留分配；8 个并发请求分配 1–8，无唯一键 500，存量升级与回滚已有真实 PostgreSQL 回归。
+- 工具发布：V57 冻结不可变元数据快照并保留来源标识，撤权仍生效；快照不可变和跨租户引用约束已有数据库回归，并发发布/生产验收见 P1-9。
+- 请求契约及工具链：原 P1-2d/P1-13 的实现与本地回归已完成。请求绑定和类型转换返回稳定 400，业务冲突 409；Wrapper/Redocly 版本和锁文件固定。全局契约生成、新环境复现与容器门禁不随之自动关闭。
+
+部署手册：[摄取与 V55/V56](operations/knowledge-ingestion-upgrade.md)、[工具快照 V57](operations/agent-tool-snapshot-upgrade.md)、[来源快照与 V58](operations/knowledge-source-snapshot-upgrade.md)。生产告警、最小权限 RLS、强杀、多实例、最终答案 Grounding 和评测门禁仍为开放工作。
 
 ### Agent Runtime 近期加固
 
