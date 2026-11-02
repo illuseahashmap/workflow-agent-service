@@ -1,7 +1,7 @@
 # RAG 短期实施方案与长期扩展边界
 
-更新时间：2026-10-17
-状态：关键词、真实向量摄取/混合检索与 AgentRun→Flowable 本地链路已验证；浏览器、生产化与强杀恢复仍待验收
+更新时间：2026-11-02
+状态：关键词、真实向量摄取/混合检索与 AgentRun→Flowable 本地链路已验证；LangChain4j + MinerU 结构化 PDF 选型已确认但尚未接入；浏览器、生产化与强杀恢复仍待验收
 
 本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
 知识源和外部检索服务时，不需要重写 Agent Runtime、Flowable 集成和证据治理模型。
@@ -15,6 +15,8 @@
 `RetrievalProfile`、授权求交、Evidence/Citation/Trace、Grounding 和评测仍由平台定义；
 LangChain4j 只作为可替换基础设施实现，不得把其 `Document`、`Content`、`TextSegment` 或
 检索分数直接泄漏到领域契约。
+
+2026-11-02 决策：结构化 PDF 采用 **LangChain4j + MinerU**，不引入 RAGFlow、不自研 OCR/版面和表格识别模型。MinerU 通过独立解析服务接入，平台负责结构归一化、结构感知切分、原件/资产/版本与任务治理；LangChain4j 优先复用模型、Embedding、通用切分、聚合和重排基础设施。具体职责、跨页图表边界、D0–D3 顺序和验收见[结构化文档摄取设计](rag-structured-document-ingestion-design.md)。本轮仅更新方案，不表示 PDF 能力已实现，也不替代 Grounding、评测及现有生产门禁。
 
 当前实现边界：已具备文档快照、确定性 Chunk、摄取任务租约与重试、索引版本生命周期、
 PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模型以及 AgentVersion 到已发布
@@ -52,7 +54,7 @@ API Key 必须从环境/密钥管理提供，不复用数据库中加密的聊�
 `workflow_agent` 数据库已执行 `CREATE EXTENSION vector`，3 维向量距离查询返回预期值。
 可选 Flyway 向量迁移已随 `vector` profile 在本机数据库执行。非 vector profile 不会在新数据库安装该迁移；
 已安装过向量迁移的数据库可回到关键词模式，自定义 Flyway 只对这一个已知可选 repeatable 的缺席放行；
-Docker 引擎仍不可用，容器化隔离集成测试待完成。2026-10-17 的本地回归中，
+2026-10-17 验收时 Docker 引擎不可用；此为历史环境记录，本次未复核，当前容器门禁以状态页为准。2026-10-17 的本地回归中，
 `default/company-handbook` 的 `employee-handbook.md` 第 1 版内容哈希保持不变，摄取任务成功，
 索引第 2 版已激活并写入 3 条 1024 维向量；HYBRID 检索命中采购审批规则，Citation 指向原文版本。
 验证由显式启用的 `LocalRagVectorAcceptanceTest` 完成，默认 CI 不会调用付费外部模型。
@@ -252,6 +254,7 @@ GraphIndexVersion
 
 ```text
 documentVersion
+parseRecipeVersion / parseArtifactManifest（结构化文档时必填，待实现）
 indexVersion
 retrievalProfileVersion
 chunkingStrategyVersion
@@ -261,7 +264,7 @@ queryRewriteVersion（可空）
 entityResolutionVersion（后续可空）
 ```
 
-重新切分、重建索引和切换 Embedding 必须创建新版本，不能原地覆盖历史证据。
+重新解析、切分、重建索引和切换 Embedding 必须创建新版本，不能原地覆盖历史证据。解析 recipe 冻结包/容器、模型权重、页范围、OCR/后处理配置与归一化版本；PDF 原件、解析产物与派生文本分别记录哈希，不替换现有文本规范化指纹。
 
 ## 6. 摄取与索引可靠性
 
@@ -287,8 +290,7 @@ DocumentVersion 创建
 - Parser、Chunker、Embedding Provider 和 Index Writer 都通过端口扩展；
 - 文档大小、类型、页数、解析时间和 Chunk 数量必须有租户配额。
 
-首版文件范围收敛为 UTF-8 文本和 Markdown。PDF、OCR、表格和图片在解析端口稳定后逐步接入，
-不得因为文件类型扩展改变检索结果契约。
+当前可运行文件范围仍为 UTF-8 文本和 Markdown。下一摄取里程碑 RAG-2P 明确纳入 MinerU 结构化 PDF、OCR、表格/跨页续表和图题/资产来源关联；先固定解析契约与困难样本，再接上传/解析和结构索引，不得因为文件类型扩展改变检索结果或 AgentRun/Flowable 契约。全页覆盖、表头/单位/脚注、跨页区域与原件引用是发布检查项；只返回 Markdown 或只解析部分页不能视为完成。
 文档作者现在即按[知识文档编写与多模态扩展规范](rag-document-authoring-standard.md)
 保存简单表格、图示文字等价内容和版本化资产元数据；这属于语料设计，不代表当前摄取链路
 已经支持图像像素理解或结构化表格引用。后续扩展须验证资产打包、同租户授权、表格行列/图像
@@ -438,12 +440,21 @@ EvaluationDataset
 
 - 已实现文本/Markdown 领域摄取、确定性 Chunk、索引版本和 PostgreSQL 全文检索基础设施；
 - 已实现摄取任务租约、重试、幂等、失败恢复和候选索引原子激活；
-- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 可选代码路径已接入，真实扩展及 Provider 验收待完成；
+- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 可选路径及本地真实 Ark/HYBRID 回归已通过，生产容量、容器故障及多版本治理仍待验收；
 - 租户 RLS 已进入迁移，但配额和删除传播仍需结合真实任务入口验收。
 
 阶段完成标准：服务重启、重复摄取和重建索引不会产生丢失、重复激活或跨租户结果；
 `knowledge_search` 已在真实 Retriever、权限求交、Trace、Profile 绑定和失败边界具备后，以只读方式启用；
 Grounding、评测和容器故障验收完成前不得将其标记为生产级 RAG。
+
+### RAG-2P：LangChain4j + MinerU 结构化 PDF 摄取（待实现）
+
+- 按[结构化文档摄取设计](rag-structured-document-ingestion-design.md)完成 D0 版本/模型/许可、API 产物、资源试点与困难样本；现阶段只确认选型，未安装或部署；
+- D1 完成二进制原件存储/上传、解析服务适配、结构/资产归一化、租约恢复、有界调用及旧 Attempt 拒绝；
+- D2 完成正文/表格/图题结构感知切分、页/区域/单元格引用、完整来源快照索引、预览及删除传播；
+- D3 与 RAG-3 联合验证最终答案、拒答/人工处置、Flowable 和恢复等价；PDF 正式评测须先通过结构质量门禁，文本 E0 可并行。
+
+完成标准：固定样本的全页覆盖、跨页续表/负例、表头单位、图题来源和资产权限可验证；解析模型变化不影响旧 Profile；不确定结构不静默合并或伪装完整成功。不承诺任意跨页大图拼接、图表精确数值推断或多模态检索。
 
 ### RAG-3：Agent、证据与质量闭环
 
@@ -484,7 +495,7 @@ Grounding、评测和容器故障验收完成前不得将其标记为生产级 R
 - 通用知识图谱、本体编辑器和图数据库集群；
 - 自动从所有文档抽取任意实体与关系；
 - 完整知识库产品、网页爬虫和连接器市场；
-- 多模态 OCR、音视频索引和复杂表格理解；
+- 音视频索引、任意跨页大图自动重建、无约束图表数值推理与像素级多模态问答；结构化 PDF/OCR/表格已纳入 RAG-2P，不再作为整体排除项；
 - 无评测依据的自动查询改写、Rerank 或多 Agent 检索；
 - 让模型直接选择数据库、索引、租户范围或绕过 RetrievalProfile。
 
@@ -503,7 +514,8 @@ RAG 短期能力完成时必须同时满足：
 6. RetrievalTrace 能够还原查询、过滤、命中、排序、耗时和所有相关版本；
 7. 离线评测能够比较索引和 RetrievalProfile 版本，防止质量静默回退；
 8. 增加 GraphRetriever、StructuredRetriever 或外部 Retriever 时，不修改 AgentRun、Flowable
-   恢复协议和公开检索契约。
+   恢复协议和公开检索契约；
+9. 对声明支持的 PDF 固定样本，原件、解析 recipe、完整页覆盖、图表资产与结构引用可追溯，跨页错合并/关键单位丢失硬阻断；不确定或未解析部分按冻结策略拒答/复核，不能用文本命中掩盖缺失。
 
 ### 14.1 `knowledge_search` 发布门禁
 

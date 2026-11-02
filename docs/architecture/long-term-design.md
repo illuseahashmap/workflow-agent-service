@@ -1,6 +1,6 @@
 # 长期设计总览
 
-更新时间：2026-10-17
+更新时间：2026-11-02
 
 本文是长期设计的索引，不重复实现细节。它回答“系统为什么这样划分、哪些边界不能破坏、未来如何扩展”。
 
@@ -28,11 +28,13 @@
 - 设计时生成：先生成受约束草稿，再经过 Schema、BPMN、权限和人工发布门禁，禁止直接写入生产流程。
 - 配置生命周期：草稿配置允许在无业务使用时清理；一旦发布或产生运行记录，进入保留、停用和审计优先的生命周期，不提供绕过引用检查的强制删除。
 - 技术复用：模型协议、MCP Client、文档解析、Embedding、向量存储和 Rerank 优先评估成熟库；领域契约、租户边界、版本冻结、可靠执行和人工治理由平台持有，替换基础设施实现不得改变这些语义。
+- RAG 解析选型（2026-11-02）：采用 LangChain4j + MinerU，前者承接 Java AI 通用基础设施，后者作为隔离的专业文档解析服务；平台保留原件、结构/资产归一化、结构感知切分、来源定位和发布治理。不引入第二套 RAGFlow 知识生命周期，不自研 OCR/表格识别模型。解析 recipe/模型变更产生新派生产物与索引，不修改已发布 Profile；图表识别结果须标记派生来源且经过质量门禁。此为目标方案，不表示 PDF 已可用。
 
 ## 四、详细设计索引
 
 - [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
 - [RAG 短期实施方案](rag-short-term-implementation-plan.md)：知识限界上下文、中立 Evidence 契约、可靠摄取和多 Retriever 扩展验收。
+- [结构化文档摄取设计](rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、原件/结构/资产契约、跨页图表边界、可靠任务及质量验收。
 - [RAG 评测用例契约](rag-evaluation-case-contract.md)与[专项实施设计](rag-evaluation-and-routing-delivery-plan.md)：版本化金标、历史快照、变更影响复核、发布门禁及查询级路由安全边界；均为目标方案。
 - [MCP 短期实施方案](mcp-short-term-implementation-plan.md)：MCP 作为受治理工具适配器的连接、目录版本、AgentVersion 绑定、调用和故障边界。
 - [Agent 协作架构设计](agent-collaboration-design.md)：Agent 与 Flowable 的长期协作边界、领域模型和治理原则。

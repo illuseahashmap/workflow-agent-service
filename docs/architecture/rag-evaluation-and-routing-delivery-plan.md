@@ -1,13 +1,14 @@
 # RAG 评测、历史快照与查询级策略路由实施设计
 
 状态：目标方案，非已实现能力；2026-10-28 评审基线。当前可运行边界以[项目状态](../status.md)为准。
+选型修订：2026-11-02，结构化 PDF 摄取采用 [LangChain4j + MinerU](rag-structured-document-ingestion-design.md)，本文件同步解析质量与评测依赖，不表示已接入。
 主契约：[评测用例](rag-evaluation-case-contract.md)；语料：[十领域设计](rag-ten-domain-corpus-design.md)；运行边界：[RAG 短期计划](rag-short-term-implementation-plan.md)。
 
 ## 1. 决策和非目标
 
 优先建立固定检索 Profile 的**可信评测基线**，然后做历史时间检索和自动发布门禁；加权 RRF、Reranker 与查询级路由只有基线表明收益且前置安全条件满足后才实施。动态路由只从 AgentVersion 明确绑定的不可变策略快照选择，绝不产生临时权重、模型、租户、知识范围或索引版本。Agent 只得到已授权检索结果；文档不能决定真实审批参与人。
 
-本方案不在本轮实现多模态解析、通用策略市场、任意历史数据库“时间旅行”、在线自动重标或无审核发布。现有 `RetrievalRequest.asOfTime` 会被应用服务拒绝；现有 `RetrievalProfileVersion` 只绑定单个策略/索引，`RetrievalTrace` 还不足以做逐结论 Citation 评分。以下状态机与存储是**目标设计**，不可作为现状宣传。
+结构化 PDF/OCR/图表解析由独立的摄取专项 D0–D3 实施，本评测方案不重复实现解析器；完整像素级多模态检索、通用策略市场、任意历史数据库“时间旅行”、在线自动重标或无审核发布仍不在本轮范围。现有 `RetrievalRequest.asOfTime` 会被应用服务拒绝；现有 `RetrievalProfileVersion` 只绑定单个策略/索引，`RetrievalTrace` 还不足以做逐结论 Citation 评分。以下状态机与存储是**目标设计**，不可作为现状宣传。
 
 ## 2. 模型与权威边界
 
@@ -76,10 +77,14 @@
 
 ## 8. 阶段、验收与失败回滚
 
+解析与检索分层验收：PDF 先校验全页覆盖、阅读顺序、表头/单位/脚注、跨页续表及错合并负例、图题关联、资产哈希和来源页区域，再评检索与最终答案。报告固定原件、parser/model/config recipe、产物清单、Chunker、Embedding、索引及权限身份；不能同时改变解析、模型和排序后把全部变化归因于 Rerank。业务金标引用原件版本/稳定章节或结构定位，不绑定易变 Chunk ID；不同解析 recipe 的映射需要单独审核。
+
+既有文本 E0 契约和试点可与摄取 D0/D1 并行；PDF 正式 E1 基线须先通过 D1/D2 的结构与索引验收。样本必须保留难点原件，不能只将表格人工转成简单 Markdown 后声称 PDF 解析通过。解析质量合格不代替 Grounding，文本评测通过也不代表图片证据可用。
+
 | 阶段 | 交付与验收 | 依赖 |
 | --- | --- | --- |
 | E0 契约与试点 | 用例 Schema v2、首批输出 Schema 与 Claim Catalog、语义校验器、版本化难度规则、30 条/领域双人标注沙盒用例；字段、引用、分组去重、难度分层一致性和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
-| E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、结构化字段/Claim 评分、CaseResult/Run 报告 | 容器化租户/RLS/索引回归 |
+| E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、结构化字段/Claim 评分、CaseResult/Run 报告 | 容器化租户/RLS/索引回归；PDF 子集另需摄取 D1/D2 和结构质量门禁，不阻塞已有文本试点 |
 | E2 时效与发布 | 历史时间查询或明确不可执行状态、变更影响扫描/CaseReview、门禁与人工批准、故障恢复 | E1 且关键场景有金标覆盖 |
 | E3 策略增强 | 加权 RRF、Rerank、固定策略集合与路由器分批验证；先 shadow 再灰度 | E2、严格能力等价回退、模态能力落地 |
 

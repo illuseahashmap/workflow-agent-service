@@ -2,6 +2,7 @@
 
 状态：文档编写规范草案；多模态摄取能力尚未实现
 编制日期：2026-10-17
+选型同步：2026-11-02；结构化 PDF 采用 LangChain4j + MinerU，尚未接入，见[摄取专项设计](rag-structured-document-ingestion-design.md)。
 适用：十领域测试语料及后续经审核的租户知识源
 
 ## 1. 为什么现在定义
@@ -41,8 +42,10 @@
 ```text
 DocumentVersion (不可变正文 + 资产清单)
   ├─ TextSection {sectionId, headingPath, offsets, text}
-  ├─ Table {tableId, caption, headers, rowIds, cells, contextSectionId}
-  └─ Figure {figureId, mime, assetHash, alt, longDescription, contextSectionId}
+  ├─ Table {tableId, caption, headers, rowIds, cells, rowSpan/colSpan, units,
+  │          footnotes, pageRegions, continuationLinks, contextSectionId}
+  └─ Figure {figureId, mime, assetHash, alt, longDescription, pageRegions,
+             derivedDescriptionProvenance, contextSectionId}
         → 统一 EvidenceReference {documentVersion, locator, fingerprint}
 ```
 
@@ -51,6 +54,12 @@ DocumentVersion (不可变正文 + 资产清单)
 摄取应先做内容类型、文件大小、页数/像素、压缩包、恶意内容和租户配额检查；正文、附件、派生文本及向量遵循相同租户/RLS 和知识范围。解析任务与索引版本绑定，可重试、可撤销；发布时需要验证文字与图表的引用解析成功。检索 Trace 记录原始资产/表 ID、解析器与模型版本、授权过滤、命中证据和最终引用，不能只存图片摘要。产品 API/前端要能显示“此结果含尚未解析的图片/表格”，不能误报为完整知识覆盖。
 
 上述对象是**扩展目标，不是当前已实现接口或数据表**。引入之前先用含合并表头、跨页表、失真 OCR、截图旧版本、图中隐藏指令、越权图片和资产删除的固定评测集验证收益及安全。
+
+### 导入 PDF 与困难样本
+
+本规范的简单表格与文字等价内容规则适用于新编测试 Markdown/企业自有可访问性内容，不要求真实外部 PDF 必须先被人工重写成简单表格才可接入。导入专项必须保存含合并表头、跨页断行/续表、单位脚注和图题关联的原件，制作经审核的结构/页区域金标，不能删除难点来虚增解析通过率。
+
+原件二进制哈希、解析产物/资产摘要和派生文本摘要分别保存；MinerU/模型/页范围与后处理 recipe 冻结，不用新输出覆盖历史正文指纹。原始结构 JSON 与资产清单不可只用 Markdown 导出替代。跨页续表支持不等于任意跨页图片重建；错误合并、遗漏决定性单位/表头或未覆盖完整页范围应阻断自动发布，含糊图像描述不能成为确定业务结论。具体实施与验收统一见摄取专项，不在编写规范重复维护进度。
 
 ## 5. 编写和发布检查单
 
