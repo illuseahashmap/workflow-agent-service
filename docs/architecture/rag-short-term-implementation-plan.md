@@ -1,6 +1,6 @@
 # RAG 短期实施方案与长期扩展边界
 
-更新时间：2026-11-02
+更新时间：2026-11-04
 状态：关键词、真实向量摄取/混合检索与 AgentRun→Flowable 本地链路已验证；LangChain4j + MinerU 结构化 PDF 选型已确认但尚未接入；浏览器、生产化与强杀恢复仍待验收
 
 本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
@@ -10,6 +10,10 @@
 [开发方向与防偏离门禁](development-direction-guardrails.md)和
 [Agent 协作架构设计](agent-collaboration-design.md)。
 
+2026-11-04 前置整改：恢复/缓存结果不再继承历史授权；结构定位 v1、case v3/dataset v2 与源定位评分已有代码；Profile 通过 V59 冻结多个 source→index 及 ScorePolicy，Trace 保存实际索引成员，分数/校准不匹配拒绝、组筛选不拆支持来源。当前仍未安装 MinerU、接通真实结构扩展或最终 Claim/Grounding；详见[实施设计第 13 节](rag-structured-document-implementation-design.md#13-四项交叉评审整改2026-11-04)。
+
+同日二次整改：授权/JDBC 与模型共享单调时钟预算，调用前重算剩余时间；定位解析拒绝缺失/null/隐式类型转换；关键词/向量在 LIMIT 前按固定来源/索引/Chunk 身份形成稳定排序。实施、回归和取消边界见[第 14 节](rag-structured-document-implementation-design.md#14-二次交叉评审整改2026-11-04)。不将这三项修复当作 MinerU、完整评测或生产故障验收。
+
 模型 Provider 与 MCP 的 LangChain4j 第一阶段适配已经完成。后续扩展 Embedding、向量存储、
 文档解析、多 Retriever 聚合和 Rerank 时，继续优先通过现有端口验证 LangChain4j 实现。
 `RetrievalProfile`、授权求交、Evidence/Citation/Trace、Grounding 和评测仍由平台定义；
@@ -17,6 +21,8 @@ LangChain4j 只作为可替换基础设施实现，不得把其 `Document`、`Co
 检索分数直接泄漏到领域契约。
 
 2026-11-02 决策：结构化 PDF 采用 **LangChain4j + MinerU**，不引入 RAGFlow、不自研 OCR/版面和表格识别模型。MinerU 通过独立解析服务接入，平台负责结构归一化、结构感知切分、原件/资产/版本与任务治理；LangChain4j 优先复用模型、Embedding、通用切分、聚合和重排基础设施。具体职责、跨页图表边界、D0–D3 顺序和验收见[结构化文档摄取设计](rag-structured-document-ingestion-design.md)。本轮仅更新方案，不表示 PDF 能力已实现，也不替代 Grounding、评测及现有生产门禁。
+
+2026-11-03 补充[实施设计与开源实践评审](rag-structured-document-implementation-design.md)：参考 MinerU、Docling、Unstructured、Haystack、RAGFlow 和 LangChain4j 的官方机制，细化原件/派生/检索三层内容、任务幂等与异步恢复、完整来源 Manifest、结构切分、管理 API、权限和 20 个场景条目的测试矩阵。仅完成设计；MinerU 版本锁定、真实样本/资源试跑和 D1–D3 代码尚未完成。
 
 当前实现边界：已具备文档快照、确定性 Chunk、摄取任务租约与重试、索引版本生命周期、
 PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模型以及 AgentVersion 到已发布

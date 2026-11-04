@@ -1,6 +1,6 @@
 # 长期设计总览
 
-更新时间：2026-11-02
+更新时间：2026-11-04
 
 本文是长期设计的索引，不重复实现细节。它回答“系统为什么这样划分、哪些边界不能破坏、未来如何扩展”。
 
@@ -19,6 +19,8 @@
 7. 高风险工具、流程终止、权限变更和外部写操作必须保留人工确认或确定性授权边界。
 8. 已发布 Agent 定义、版本和流程引用必须可追溯且不可破坏；Agent 定义只有在未发布、无运行历史且无流程引用时才允许物理删除，否则只能停用并保留历史。
 9. LangChain4j 等第三方 AI SDK 只允许作为基础设施适配器接入稳定端口；不得成为 AgentRun、权限、工具治理、知识授权、Checkpoint 或 Flowable 恢复语义的权威来源。
+10. 持久化结果/Checkpoint 不是历史授权凭证；复用和每次后续模型请求必须重新校验当前访问边界。知识快照按来源显式固定索引，分数门禁绑定算法/校准版本；原文、结构定位、来源覆盖与精确 Citation 的身份不能由 Chunk ID 或一个无类型浮点数代替。
+11. 执行入口建立单调时钟预算，授权/恢复、数据库读取、工具与模型共享截止时间，发出外部调用前重新扣减剩余预算。定位交换契约禁止隐式补值/类型转换；固定知识快照的召回在 TopK 截断前必须具备稳定全序，不能依赖数据库物理顺序。
 
 ## 三、领域演进方向
 
@@ -35,7 +37,8 @@
 - [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
 - [RAG 短期实施方案](rag-short-term-implementation-plan.md)：知识限界上下文、中立 Evidence 契约、可靠摄取和多 Retriever 扩展验收。
 - [结构化文档摄取设计](rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、原件/结构/资产契约、跨页图表边界、可靠任务及质量验收。
-- [RAG 评测用例契约](rag-evaluation-case-contract.md)与[专项实施设计](rag-evaluation-and-routing-delivery-plan.md)：版本化金标、历史快照、变更影响复核、发布门禁及查询级路由安全边界；均为目标方案。
+- [结构化 PDF 实施设计](rag-structured-document-implementation-design.md)：开源实践取舍、派生身份/任务恢复/完整来源 Manifest、API/权限、结构切分与分层测试；恢复授权、多来源冻结与有类型评分已实现，MinerU/结构化摄取仍待实施。
+- [RAG 评测用例契约](rag-evaluation-case-contract.md)与[专项实施设计](rag-evaluation-and-routing-delivery-plan.md)：结构定位 v1、case v3/dataset v2 交换契约已有代码及回归；完整评测、历史时效/变更复核、发布门禁及查询级路由仍为目标方案。
 - [MCP 短期实施方案](mcp-short-term-implementation-plan.md)：MCP 作为受治理工具适配器的连接、目录版本、AgentVersion 绑定、调用和故障边界。
 - [Agent 协作架构设计](agent-collaboration-design.md)：Agent 与 Flowable 的长期协作边界、领域模型和治理原则。
 - [Agent 资源治理](agent-resource-governance.md)：虚拟线程、租户公平调度、租约续期和分布式配额。

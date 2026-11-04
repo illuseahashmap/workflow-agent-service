@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-02；核对代码基线：`7a92bb5`。本次同步 LangChain4j + MinerU 选型与文档路线，未修改业务代码、安装解析服务、重跑运行验收或重新确认 Docker/生产环境状态；各项验证日期单独注明。
+文档更新时间：2026-11-04；本轮整改基于 `main 1a470a1`，代码、回归与文档随同提交。四项治理及二次评审的共享预算、严格定位解析、稳定 TopK 已落实代码并运行回归；未部署 MinerU、未调用付费模型。测试环境与边界分项记录，不将历史生产/容器状态当作当前结论。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -49,7 +49,11 @@
 
 ## 二、当前阶段与验收
 
+2026-11-04 四项交叉评审整改已落实代码：工具结果恢复/幂等复用/后续模型请求均重校验权限；结构定位 v1、用例 v3 与数据集 v2；V59 的多来源固定索引与发布不可变；ScorePolicy 与完整证据组筛选。Profile API/OpenAPI、Trace 与回归同步。细节见[实施设计第 13 节](architecture/rag-structured-document-implementation-design.md#13-四项交叉评审整改2026-11-04)和[V59 升级说明](operations/rag-governance-upgrade.md)。这不是 MinerU 接入、真实父块扩展或最终答案 Grounding 完成。
+
 2026-11-02 已确认结构化文档采用 **LangChain4j + MinerU**：选型及[专项方案](architecture/rag-structured-document-ingestion-design.md)已记录，版本/模型/许可/API 产物与资源试点尚未完成，解析服务未接入。当前仍仅承诺文本/Markdown 摄取；PDF、OCR、结构化表格和图片来源关联不能作为现有能力展示。
+
+2026-11-03 已补[结构化 PDF 实施设计](architecture/rag-structured-document-implementation-design.md)：参考开源项目官方机制，细化三层内容/派生身份、中立结构和端口、任务阶段/远端代次、完整来源 Manifest、API/权限/预览、迁移与 20 个测试场景条目。该进展属于设计，未锁定/安装 MinerU 或运行解析样本，D0 尚未全部完成。
 
 | 优先级 | 工作项 | 当前状态 | 下一步验收 |
 | --- | --- | --- | --- |
@@ -73,9 +77,9 @@
 
 问题清单现按“待实现 / 已修复待验收 / 部署风险”分类。原 P1-10 合并到 P1-2a；P1-2d/P1-13 的代码与本地回归已完成，不再列为同名开放缺陷。跨实例配额、非超级用户 RLS、生产告警、Grounding/评测门禁和容器故障验收仍需继续，不能据此将整个平台标记为生产闭环。
 
-2026-11-02 用户选型后，本轮研发主线调整为 RAG 结构化摄取设计与后续实现，当前请求只交付文档。以下是开发顺序，不是生产风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放，不能因先做 RAG 而豁免上线验收。
+2026-11-02 用户选型后，研发主线调整为 RAG 结构化摄取设计与后续实现；当时只交付设计，2026-11-04 已进一步落实四项前置治理代码及回归，但 MinerU 仍未接入。以下是开发顺序，不是生产风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放，不能因先做 RAG 而豁免上线验收。
 
-1. 按[LangChain4j + MinerU 摄取设计](architecture/rag-structured-document-ingestion-design.md)推进 D0：固定解析版本/模型/许可、结构契约与产物样本、困难 PDF 和资源预算；确认后才开发 D1 原件/解析任务与 D2 结构感知索引/引用。不引入 RAGFlow、不自研 OCR/表格模型，不将跨页续表等同于任意跨页图像重建。
+1. 按[LangChain4j + MinerU 摄取设计](architecture/rag-structured-document-ingestion-design.md)及[实施设计](architecture/rag-structured-document-implementation-design.md)推进 D0：方案已细化，下一步固定解析版本/模型/许可、真实产物样本、困难 PDF 和资源试点；通过后依次开发 D1-a 原件/任务身份、D1-b 异步解析恢复、D2-a 结构/ChunkSet 与 D2-b 完整索引/引用。不引入 RAGFlow、不自研 OCR/表格模型，不将跨页续表等同于任意跨页图像重建。
 2. 既有文本的评测 E0 契约/试点可并行；按[评测与路由专项实施设计](architecture/rag-evaluation-and-routing-delivery-plan.md)审核文档和权限身份、建立固定快照基线及可校验评测集（PDF 的 E1 先通过 D1/D2）。再收口 D3、Grounding/Citation、历史时效/金标复核和发布门禁。加权 RRF/Rerank/查询级路由仅在基线证明收益后启动。Grounding 基于检索状态、Evidence/Citation 和确定性规则触发处置，不以相似度或模型自报 `confidence` 决定网关。
 3. 在生产发布前完成 P0 运维闭环：重新检查 Docker/通知接线，补齐派单规则命中/兜底审计，真实触发 Prometheus/Alertmanager 告警并回放通知、前端处置和流程审计；完成独立迁移/运行账号模板与非超级用户 RLS 验证。
 4. 完成 Agent Runtime 和知识摄取真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。同阶段完成结构化意图路由五种模式、一次修复、越权、降级、失败策略和 ABSTAIN 的真实 Provider 及评测验收，补主体权限/风险显式投影。
@@ -132,7 +136,29 @@
 
 ## 五、完成判定
 
+### 2026-11-04 二次三项整改与收尾交叉审查
+
+- 执行 `mvnw.cmd -q -pl workflow-boot,agent-engine,knowledge-engine -am verify`：364 项中 343 通过、21 项环境/显式开关跳过，0 失败、0 错误；Checkstyle、SpotBugs、JaCoCo 与架构门禁通过。相对此前 346 项新增 18 项回归，未降低覆盖门槛；共享预算组件新增测试依赖，不引入业务运行时框架。
+- 单调预算从入口覆盖凭据读取、恢复授权及模型；使用可控时钟验证初次请求、恢复、三类修复、授权扣减、迟到响应、作用域退出和嵌套预算。收尾交叉审查发现工具抢占后也有同类旧 timeout 窗口，已一并收紧并覆盖“扣减后执行/耗尽不执行”两种情况。
+- 隔离 PostgreSQL 18.1/pgvector 套件现为 10 项、全部通过：新增真实 `pg_sleep` 取消/原 Statement 超时恢复/连接复用，以及多来源同分、不同扫描偏好、K=1/2/4 的关键词/向量/HYBRID 稳定 TopK。连接获取期间过期时不发 RLS SQL并关闭连接，也有单测。未修改业务库，未改历史迁移。
+- Codec 和 Schema 负例覆盖缺失/null 坐标、非整数版本/页号、数字字符串、非文本标识、重复键和未知字段，保留正常文本/跨页单元格往返。`npm run test:rag-contract` 4 项通过；40 篇/10 领域语料、链接/SVG 哈希检查通过。
+- 收尾按实现/测试/契约/运维文档交叉核对：未发现本次三项范围内遗留的 P0/P1；不将静态复查视为全部生产风险消失。方案与问题记录已同步，详细机制及连接池/取消传输限制见[实施设计第 14 节](architecture/rag-structured-document-implementation-design.md#14-二次交叉评审整改2026-11-04)。
+- OpenAPI lint 通过，仍有 59 条既有警告；本轮没有改动公开 API 路由/Schema。10 份改动 Markdown 的本地链接及问题分类、差异空白均检查。没有启动业务服务、调用付费模型、执行浏览器/MinerU/真实强杀或远端 CI；21 项跳过仍不计为通过。修复、回归与文档随本轮提交，远端 CI 结果须另行确认。
+
+### 2026-11-04 首批四项治理整改验证（以下为二次整改前记录）
+
+- 基线为 `main 1a470a1` 后的本地未提交代码。执行 `mvnw.cmd -q -pl workflow-boot,agent-engine,knowledge-engine -am verify`：346 项中 325 通过、21 项环境/显式开关跳过，0 失败、0 错误；Checkstyle、SpotBugs、JaCoCo 和架构门禁通过。
+- 数据库套件 8 项在专用临时 PostgreSQL 18.1 + pgvector 0.8.7（本机独立端口 55439）真实执行；包含 V58 已发布 Profile→V59 升级、旧字段保持不变、多来源召回/授权子集、知识源/文档停用、冻结旧索引、拒绝不完整来源与无向量配方、发布后不可变、非超级用户跨租户 RLS 负例。验收后已停止该临时实例，未修改本机业务库；该负面测试不代替全部运行账号/Flowable RLS 验收。
+- 恢复/幂等撤权、历史工具上下文不得发往模型、工具已不可用且缺账本时拒绝恢复、Trace 伪造/可见性、定位 Codec/来源覆盖与精确引用、分数尺度与完整组选择均有 Java 回归。模型端使用确定性测试替身，无付费模型调用。
+- `npm run test:rag-contract` 4 项通过，已接 CI；覆盖文本/跨页单元格/图像定位和拒绝格式错误、多来源数据集清单。该脚本不是完整数据集锁定/权限/标注语义校验器。语料检查 40 篇草稿、10 个领域、链接/SVG 哈希通过。
+- Redocly lint、OpenAPI 路由覆盖和成功响应模型检查通过，保留 59 条既有 lint 警告。本机 Node 24.14 的 CLI 退出异常使用已安装 Node 24.22.1 复核，依赖仍按锁文件；本次未变更运行时版本。10 份改动 Markdown 的 93 个本地文件链接及 18 个开放问题分类已检查。
+- 当前 Docker 不可用，21 项跳过不计为通过；未执行真实 MinerU、浏览器、Worker 强杀或跨实例压力，也未查询远端 CI。部署先按 [V59 手册](operations/rag-governance-upgrade.md)停旧 Worker/写入口，不修改历史迁移，不盲目 repair。PDF 摄取、最终答案 Grounding、评测发布与生产门禁仍未完成。
+
+### 历史验证记录
+
 文档选型同步检查（2026-11-02）：LangChain4j + MinerU 方案与长期/短期/问题入口已同步；8 份本次文档的 68 个本地链接/锚点及 18 个开放问题的唯一分类校验通过；语料脚本检查 40 篇草稿、10 个领域、链接和 SVG 哈希通过。本次不包含业务代码、依赖安装或运行验收，以下业务测试日期保持不变。
+
+实施设计检查（2026-11-03）：7 份本次文档的 70 个本地链接/锚点与 18 个开放问题唯一分类校验通过；40 篇草稿、10 个领域、链接/SVG 哈希校验及差异空白检查通过。新增 20 个场景条目的设计矩阵，不表示 fixture/金标已生成或测试已运行；没有启动 MinerU、下载模型、修改代码或执行后端/浏览器业务回归。
 
 首个纵向闭环不等于 Agent MVP 完成。只有执行、恢复、幂等、权限、审计、取消、人工交互和 Flowable 集成全部通过容器化集成测试，才可将 Agent MVP 标记为完成。
 
@@ -148,7 +174,7 @@ LLM/MCP/RAG 联合浏览器纵向验证记录（2026-10-12；RAG 后续向量回
 
 RAG 向量纵向验证记录（2026-10-17）：方舟 `doubao-embedding-vision-251215` 成功生成 `employee-handbook.md` 第 1 版的活跃索引第 2 版和 3 条 1024 维向量；Profile 4、AgentVersion 14、采购流程第 3 版及 AgentRun 50 的 HYBRID Trace/Citation 和直属负责人审批任务已本地验证。该记录不等于十领域语料审核、最终答案 Grounding 或发布级评测完成。
 
-最近一次后端质量门禁（2026-10-30，整改代码已纳入 `7a92bb5`）：通过 Maven Wrapper 执行全量 `verify`，331 项中 310 通过、21 个环境/显式开关用例跳过，0 失败、0 错误；Checkstyle、SpotBugs、JaCoCo 和架构/迁移门禁通过。知识/pgvector 数据库套件 6 项使用专用临时 PostgreSQL 18.1 真实执行通过，不在跳过数中；覆盖新建及 V54→V58 升级、歧义升级拒绝、幂等/不可变性、旧 owner/Attempt 写入拒绝、原子激活回滚、完整来源与向量集合、候选过期拒绝和 8 请求 Profile 版本竞争/事务回滚。该隔离实例结果不代替非超级用户 RLS、容器或多实例压力验收。
+历史后端质量门禁（2026-10-30，整改代码已纳入 `7a92bb5`）：通过 Maven Wrapper 执行全量 `verify`，331 项中 310 通过、21 个环境/显式开关用例跳过，0 失败、0 错误；Checkstyle、SpotBugs、JaCoCo 和架构/迁移门禁通过。知识/pgvector 数据库套件 6 项使用专用临时 PostgreSQL 18.1 真实执行通过，不在跳过数中；覆盖新建及 V54→V58 升级、歧义升级拒绝、幂等/不可变性、旧 owner/Attempt 写入拒绝、原子激活回滚、完整来源与向量集合、候选过期拒绝和 8 请求 Profile 版本竞争/事务回滚。该隔离实例结果不代替非超级用户 RLS、容器或多实例压力验收。
 
 同批 Redocly lint 通过并保留 59 条已有警告，OpenAPI 路由覆盖和成功响应模型检查通过，`npm ci --ignore-scripts` 成功。知识数据库套件已加入 CI 必跑门禁，跳过不能算门禁通过；本次文档核对未查询 `7a92bb5` 的远端 CI 结果。
 

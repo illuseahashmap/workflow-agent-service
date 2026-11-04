@@ -17,8 +17,16 @@ public record RetrievalTrace(
         Long profileVersionId,
         Long indexVersionId,
         List<EvidenceReference> evidenceReferences,
-        long elapsedMillis
+        long elapsedMillis,
+        List<SourceIndexBinding> indexBindings
 ) {
+    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
+            List<String> authorizedScopes, RetrievalStatus status, String strategy, int evidenceCount,
+            Instant createdAt, Long profileVersionId, Long indexVersionId,
+            List<EvidenceReference> evidenceReferences, long elapsedMillis) {
+        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy, evidenceCount,
+                createdAt, profileVersionId, indexVersionId, evidenceReferences, elapsedMillis, List.of());
+    }
     public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
                           List<String> authorizedScopes, RetrievalStatus status, String strategy,
                           int evidenceCount, Instant createdAt) {
@@ -37,6 +45,7 @@ public record RetrievalTrace(
             throw new IllegalArgumentException("evidenceCount must not be negative");
         }
         evidenceReferences = List.copyOf(Objects.requireNonNullElse(evidenceReferences, List.of()));
+        indexBindings = List.copyOf(Objects.requireNonNullElse(indexBindings, List.of()));
         if (elapsedMillis < 0) {
             throw new IllegalArgumentException("elapsedMillis must not be negative");
         }

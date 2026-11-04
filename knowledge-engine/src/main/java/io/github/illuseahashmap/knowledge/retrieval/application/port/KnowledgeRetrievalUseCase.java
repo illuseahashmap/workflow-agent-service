@@ -8,6 +8,12 @@ public interface KnowledgeRetrievalUseCase {
 
     RetrievalResult search(RetrievalRequest request);
 
+    default void validateResultAccess(String tenantCode, long agentVersionId, String principalId,
+                                      String traceId,
+                                      java.util.List<io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference> references) {
+        throw new IllegalStateException("Knowledge result access validation is not configured");
+    }
+
     /** Runtime supplies the trusted published AgentVersion context; the model cannot choose it. */
     default RetrievalResult search(RetrievalRequest request, long agentVersionId) {
         return search(request);

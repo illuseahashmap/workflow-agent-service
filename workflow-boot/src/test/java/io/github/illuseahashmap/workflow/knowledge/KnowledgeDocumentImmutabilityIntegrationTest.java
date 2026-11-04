@@ -316,8 +316,224 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
                 .isEqualTo(other.id());
     }
 
+    @Test
+    void freezesMultipleSourcesAndRechecksRevokedEvidenceOnReplay() {
+        Flyway.configure().dataSource(databaseUrl, databaseUser, databasePassword)
+                .locations("classpath:db/migration/platform", "classpath:db/migration/vector").load().migrate();
+        var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
+        var jdbc = new JdbcTemplate(source);
+        var template = new NamedParameterJdbcTemplate(source);
+        var transaction = new TransactionTemplate(new DataSourceTransactionManager(source));
+        var management = new PostgresKnowledgeManagementAdapter(template);
+        var indexes = new PostgresKnowledgeIndexAdapter(template);
+        var ingestion = new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                new PostgresKnowledgeDocumentStore(template), indexes,
+                new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(128, 16));
+        String tenant = "multi-" + suffix;
+        String procurement = "procurement-" + suffix;
+        String finance = "finance-" + suffix;
+        var indexIds = new java.util.ArrayList<Long>();
+        for (String scope : java.util.List.of(procurement, finance)) {
+            var text = "approval original policy " + scope;
+            var doc = transaction.execute(status -> management.createDocument(tenant,
+                    new KnowledgeManagementPort.CreateDocument(scope, scope, "policy", 1,
+                            DocumentContent.from(text).sha256(), text)));
+            var index = transaction.execute(status -> ingestion.ingest(tenant, scope, doc.id()).indexVersion());
+            transaction.executeWithoutResult(status -> indexes.activate(index));
+            indexIds.add(index.id());
+            management.grant(tenant, new KnowledgeManagementPort.GrantScope("reader", scope));
+        }
+        var bindings = java.util.List.of(
+                new io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding(procurement, indexIds.get(0)),
+                new io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding(finance, indexIds.get(1)));
+        assertThatThrownBy(() -> transaction.execute(status -> management.createProfile(tenant,
+                new KnowledgeManagementPort.CreateProfile("incomplete", "KEYWORD", 10, 0, indexIds.getFirst(),
+                        java.util.List.of(procurement, finance)))))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("exactly one frozen source index");
+        assertThatThrownBy(() -> transaction.execute(status -> management.createProfile(tenant,
+                new KnowledgeManagementPort.CreateProfile("not-vector", "VECTOR", 10, 0, indexIds.getFirst(),
+                        java.util.List.of(procurement, finance), bindings))))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("compatible embedding recipe");
+        var profile = transaction.execute(status -> management.createProfile(tenant,
+                new KnowledgeManagementPort.CreateProfile("multi", "KEYWORD", 10, 0, indexIds.getFirst(),
+                        java.util.List.of(procurement, finance), bindings)));
+        transaction.executeWithoutResult(status -> management.publishProfile(tenant, profile.id()));
+        var published = management.profiles(tenant, 1, 20, "multi", "PUBLISHED").records().getFirst();
+        assertThat(published.indexBindings()).containsExactlyInAnyOrderElementsOf(bindings);
+        assertThat(published.scorePolicy().version()).isEqualTo("postgres-simple-lexical-v1");
+        assertThatThrownBy(() -> jdbc.update("DELETE FROM knowledge_profile_index_binding WHERE profile_version_id=?", profile.id()))
+                .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE knowledge_retrieval_profile_version SET minimum_score=0.5 WHERE id=?", profile.id()))
+                .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE knowledge_retrieval_profile_version SET status='DRAFT' WHERE id=?", profile.id()))
+                .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        String role = "rag_binding_reader_" + suffix;
+        jdbc.execute("CREATE ROLE " + role + " NOLOGIN");
+        jdbc.execute("GRANT SELECT ON knowledge_profile_index_binding TO " + role);
+        Long invisible = transaction.execute(status -> {
+            jdbc.execute("SET LOCAL ROLE " + role);
+            jdbc.execute("SET LOCAL app.tenant_code='not-this-tenant'");
+            return jdbc.queryForObject("SELECT count(*) FROM knowledge_profile_index_binding", Long.class);
+        });
+        assertThat(invisible).isZero();
+        var traces = new PostgresRetrievalTraceRepository(template, new com.fasterxml.jackson.databind.ObjectMapper());
+        var retrieval = new io.github.illuseahashmap.knowledge.retrieval.application.KnowledgeRetrievalService(
+                () -> { throw new AssertionError("No web context"); },
+                new io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever(new PostgresKeywordChunkSearchAdapter(template)),
+                new PostgresKnowledgeAccessPolicy(template), traces, new PostgresRetrievalProfileRepository(template),
+                (t, agent) -> java.util.Optional.of(profile.id()), new PostgresEvidenceVisibilityAdapter(template));
+        var request = new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest("approval", java.util.List.of(),
+                java.util.List.of(), null, 10, io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.AUTO,
+                0, java.util.List.of());
+        var result = retrieval.searchForAgent(request, tenant, 1, "reader");
+        assertThat(result.evidence()).hasSize(2);
+        assertThat(traces.find(tenant, result.retrievalTraceId()).orElseThrow().indexBindings()).containsExactlyElementsOf(
+                bindings.stream().sorted(java.util.Comparator.comparing(
+                        io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding::sourceCode)).toList());
+        var refs = result.evidence().stream().map(e -> e.reference()).toList();
+        retrieval.validateResultAccess(tenant, 1, "reader", result.retrievalTraceId(), refs);
+        management.revoke(tenant, new KnowledgeManagementPort.GrantScope("reader", finance));
+        assertThatThrownBy(() -> retrieval.validateResultAccess(tenant, 1, "reader", result.retrievalTraceId(), refs))
+                .hasMessageContaining("no longer authorized");
+        assertThat(retrieval.searchForAgent(request, tenant, 1, "reader").evidence()).hasSize(1);
+        management.grant(tenant, new KnowledgeManagementPort.GrantScope("reader", finance));
+        jdbc.update("UPDATE knowledge_source SET enabled=FALSE WHERE tenant_code=? AND source_code=?", tenant, finance);
+        assertThatThrownBy(() -> retrieval.validateResultAccess(tenant, 1, "reader", result.retrievalTraceId(), refs))
+                .hasMessageContaining("no longer authorized");
+        assertThat(retrieval.searchForAgent(request, tenant, 1, "reader").evidence()).hasSize(1);
+        jdbc.update("UPDATE knowledge_source SET enabled=TRUE WHERE tenant_code=? AND source_code=?", tenant, finance);
+        var newText = "approval replacement policy";
+        var newer = transaction.execute(status -> management.createDocument(tenant,
+                new KnowledgeManagementPort.CreateDocument(procurement, procurement, "policy", 2,
+                        DocumentContent.from(newText).sha256(), newText)));
+        var newIndex = transaction.execute(status -> ingestion.ingest(tenant, procurement, newer.id()).indexVersion());
+        transaction.executeWithoutResult(status -> indexes.activate(newIndex));
+        assertThat(retrieval.searchForAgent(request, tenant, 1, "reader").evidence())
+                .allSatisfy(e -> assertThat(((io.github.illuseahashmap.knowledge.retrieval.domain.ChunkEvidence) e).text())
+                        .contains("original"));
+        jdbc.update("UPDATE knowledge_document_version SET status='DISABLED' WHERE tenant_code=? AND source_code=? AND version=1",
+                tenant, procurement);
+        assertThatThrownBy(() -> retrieval.validateResultAccess(tenant, 1, "reader", result.retrievalTraceId(), refs))
+                .hasMessageContaining("no longer authorized");
+        assertThatThrownBy(() -> transaction.execute(status -> management.createProfile("other-tenant",
+                new KnowledgeManagementPort.CreateProfile("forged", "KEYWORD", 10, 0, indexIds.getFirst(),
+                        java.util.List.of(procurement, finance), bindings))))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void upgradesPublishedV58ProfilesWithoutChangingTheirHistoricalIndexOrPayload() {
+        String name = "rag_v58_" + java.util.UUID.randomUUID().toString().replace("-", "");
+        var admin = new JdbcTemplate(new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword));
+        admin.execute("CREATE DATABASE " + name);
+        String authority = java.net.URI.create(databaseUrl.substring(5)).getRawAuthority();
+        String url = "jdbc:postgresql://" + authority + "/" + name;
+        Flyway.configure().dataSource(url, databaseUser, databasePassword)
+                .locations("classpath:db/migration/platform").target("58").load().migrate();
+        var jdbc = new JdbcTemplate(new DriverManagerDataSource(url, databaseUser, databasePassword));
+        jdbc.update("INSERT INTO knowledge_source(tenant_code,source_code,name) VALUES('default','legacy','Legacy')");
+        long index = jdbc.queryForObject("""
+                INSERT INTO knowledge_index_version(tenant_code,source_code,version,embedding_model,status)
+                VALUES('default','legacy',1,'none','ACTIVE') RETURNING id
+                """, Long.class);
+        long profile = jdbc.queryForObject("""
+                INSERT INTO knowledge_retrieval_profile_version(tenant_code,profile_code,version,strategy,max_results,
+                    minimum_score,index_version_id,status) VALUES('default','legacy',1,'KEYWORD',10,0.2,?,'PUBLISHED') RETURNING id
+                """, Long.class, index);
+        jdbc.update("INSERT INTO knowledge_retrieval_profile_scope(profile_version_id,tenant_code,scope_code) VALUES(?,'default','legacy')",
+                profile);
+        String original = jdbc.queryForObject("SELECT to_jsonb(p)::text FROM knowledge_retrieval_profile_version p WHERE id=?",
+                String.class, profile);
+        Flyway.configure().dataSource(url, databaseUser, databasePassword).locations("classpath:db/migration/platform").load().migrate();
+        assertThat(jdbc.queryForObject("SELECT (to_jsonb(p)-'score_kind'-'score_version')::text FROM knowledge_retrieval_profile_version p WHERE id=?",
+                String.class, profile)).isEqualTo(original);
+        assertThat(jdbc.queryForObject("SELECT index_version_id FROM knowledge_profile_index_binding WHERE profile_version_id=?",
+                Long.class, profile)).isEqualTo(index);
+        assertThat(jdbc.queryForObject("SELECT score_version FROM knowledge_retrieval_profile_version WHERE id=?",
+                String.class, profile)).isEqualTo("postgres-simple-lexical-v1");
+    }
+
     private KnowledgeManagementPort.CreateDocument command(String text) {
         return new KnowledgeManagementPort.CreateDocument("immutability-test-" + suffix, "Policies", "doc-1", 1,
                 DocumentContent.from(text).sha256(), text);
+    }
+
+    @Test
+    void tiedMultiSourceKeywordVectorAndHybridTopKUseTheSameStableIdentityOrder() {
+        Flyway.configure().dataSource(databaseUrl, databaseUser, databasePassword)
+                .locations("classpath:db/migration/platform", "classpath:db/migration/vector").load().migrate();
+        var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
+        var jdbc = new JdbcTemplate(source);
+        var template = new NamedParameterJdbcTemplate(source);
+        var transaction = new TransactionTemplate(new DataSourceTransactionManager(source));
+        var management = new PostgresKnowledgeManagementAdapter(template);
+        var indexes = new PostgresKnowledgeIndexAdapter(template);
+        io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelPort embedding = texts ->
+                new io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelPort.Batch("sort:v1", 2,
+                        texts.stream().map(text -> java.util.List.of(1.0f, 0.0f)).toList());
+        var ingestion = new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                new PostgresKnowledgeDocumentStore(template), indexes,
+                new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(128, 16), embedding);
+        String tenant = "sort-" + suffix;
+        var scopes = java.util.List.of("zeta-" + suffix, "alpha-" + suffix);
+        var bindings = new java.util.ArrayList<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding>();
+        for (String scope : scopes) {
+            KnowledgeManagementPort.DocumentView doc = null;
+            for (String name : java.util.List.of("second", "first")) {
+                doc = transaction.execute(status -> management.createDocument(tenant,
+                        new KnowledgeManagementPort.CreateDocument(scope, scope, name, 1,
+                                DocumentContent.from("approval policy").sha256(), "approval policy")));
+            }
+            long docId = doc.id();
+            var index = transaction.execute(status -> ingestion.ingest(tenant, scope, docId).indexVersion());
+            transaction.executeWithoutResult(status -> indexes.activate(index));
+            bindings.add(new io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding(scope, index.id()));
+        }
+        var expected = jdbc.query("SELECT source_code,chunk_id FROM knowledge_chunk WHERE tenant_code=?",
+                (row, n) -> java.util.Map.entry(row.getString(1), row.getString(2)), tenant).stream()
+                .sorted(java.util.Map.Entry.<String, String>comparingByKey().thenComparing(java.util.Map.Entry.comparingByValue()))
+                .map(java.util.Map.Entry::getValue).toList();
+        assertThat(expected).hasSize(4);
+        var keyword = new PostgresKeywordChunkSearchAdapter(template);
+        var vector = new PostgresVectorSearchAdapter(template);
+        var hybrid = new io.github.illuseahashmap.knowledge.retrieval.application.StrategyRetriever(
+                new io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever(keyword),
+                new io.github.illuseahashmap.knowledge.retrieval.application.VectorRetriever(embedding, vector));
+        for (boolean sequential : java.util.List.of(true, false)) {
+            transaction.executeWithoutResult(status -> {
+                jdbc.execute("SET LOCAL enable_seqscan=" + (sequential ? "on" : "off"));
+                for (int k : java.util.List.of(1, 2, 4)) {
+                    var request = new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest("approval", scopes,
+                            java.util.List.of(), null, k,
+                            io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.HYBRID,
+                            0, java.util.List.of(), bindings.getFirst().indexVersionId(), bindings);
+                    assertThat(keyword.search(tenant, request, k)).extracting(hit -> hit.chunk().chunkId())
+                            .containsExactlyElementsOf(expected.subList(0, k));
+                    assertThat(vector.search(tenant, request, java.util.List.of(1.0f, 0.0f), "sort:v1", k))
+                            .extracting(hit -> hit.chunk().chunkId()).containsExactlyElementsOf(expected.subList(0, k));
+                    assertThat(hybrid.retrieve(tenant, request).evidence()).extracting(evidence -> evidence.reference().locator())
+                            .containsExactlyElementsOf(expected.subList(0, k));
+                }
+            });
+        }
+    }
+
+    @Test
+    void cancelsSlowJdbcReadsWithinTheExecutionBudgetWithoutLeakingTimeoutToReuse() throws Exception {
+        var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
+        var guarded = (javax.sql.DataSource) new io.github.illuseahashmap.workflow.config.TenantRlsDataSourcePostProcessor()
+                .postProcessAfterInitialization(source, "dataSource");
+        try (var connection = guarded.getConnection(); var statement = connection.prepareStatement("SELECT pg_sleep(2)")) {
+            statement.setQueryTimeout(10);
+            try (var budget = io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline
+                    .open(java.time.Duration.ofMillis(200), System::nanoTime)) {
+                assertThatThrownBy(statement::execute).isInstanceOfSatisfying(java.sql.SQLException.class,
+                        failure -> assertThat(failure.getSQLState()).isEqualTo("57014"));
+            }
+            assertThat(statement.getQueryTimeout()).isEqualTo(10);
+            try (var check = connection.prepareStatement("SELECT 1")) {
+                assertThat(check.executeQuery().next()).isTrue();
+            }
+        }
     }
 }

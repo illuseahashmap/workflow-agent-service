@@ -16,8 +16,22 @@ public record RetrievalProfileVersion(
         long indexVersionId,
         String status,
         List<String> knowledgeScopes,
-        Instant createdAt
+        Instant createdAt,
+        List<SourceIndexBinding> indexBindings,
+        ScorePolicy scorePolicy
 ) {
+    public RetrievalProfileVersion(long id, String tenantCode, String profileCode, int version,
+            RetrievalRequest.StrategyHint strategy, int maxResults, double minimumScore, long indexVersionId,
+            String status, List<String> knowledgeScopes, Instant createdAt, List<SourceIndexBinding> indexBindings) {
+        this(id, tenantCode, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status,
+                knowledgeScopes, createdAt, indexBindings, ScorePolicy.forStrategy(strategy.name(), minimumScore));
+    }
+    public RetrievalProfileVersion(long id, String tenantCode, String profileCode, int version,
+            RetrievalRequest.StrategyHint strategy, int maxResults, double minimumScore, long indexVersionId,
+            String status, List<String> knowledgeScopes, Instant createdAt) {
+        this(id, tenantCode, profileCode, version, strategy, maxResults, minimumScore, indexVersionId,
+                status, knowledgeScopes, createdAt, List.of());
+    }
     public RetrievalProfileVersion(long id, String tenantCode, String profileCode, int version,
                                    RetrievalRequest.StrategyHint strategy, int maxResults,
                                    double minimumScore, long indexVersionId, String status,
@@ -44,7 +58,17 @@ public record RetrievalProfileVersion(
         }
         status = text(status, "status");
         knowledgeScopes = List.copyOf(Objects.requireNonNullElse(knowledgeScopes, List.of()));
+        indexBindings = List.copyOf(Objects.requireNonNullElse(indexBindings, List.of()));
+        var scopes = knowledgeScopes;
+        if (indexBindings.stream().map(SourceIndexBinding::sourceCode).distinct().count() != indexBindings.size()
+                || indexBindings.stream().anyMatch(binding -> !scopes.contains(binding.sourceCode()))) {
+            throw new IllegalArgumentException("Snapshot sources must be unique and within profile scopes");
+        }
         createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
+        scorePolicy = Objects.requireNonNull(scorePolicy, "scorePolicy");
+        if (Double.compare(scorePolicy.minimum(), minimumScore) != 0) {
+            throw new IllegalArgumentException("Profile threshold and typed score policy must agree");
+        }
     }
 
     private static String text(String value, String name) {

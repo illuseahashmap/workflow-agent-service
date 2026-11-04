@@ -43,6 +43,25 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
     public String inputSchema() { return INPUT_SCHEMA; }
 
     @Override
+    public void validateResultAccess(ResultAccessContext context, String output) {
+        try {
+            if (context.agentVersionId() == null) { throw new IllegalStateException("Published AgentVersion is required"); }
+            var result = objectMapper.readTree(output);
+            var references = new java.util.ArrayList<io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference>();
+            for (var evidence : result.path("evidence")) {
+                references.add(objectMapper.treeToValue(evidence.path("reference"),
+                        io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference.class));
+            }
+            java.util.Objects.requireNonNull(useCaseProvider.getIfAvailable()).validateResultAccess(context.tenantCode(),
+                    context.agentVersionId(), context.principalId(), result.path("traceId").asText(), references);
+        } catch (RuntimeException | JsonProcessingException failure) {
+            throw new AgentExecutionException(new AgentFailure("KNOWLEDGE_RESULT_ACCESS_REVOKED",
+                    AgentFailureCategory.RESULT_POLICY, false, ResultStatus.REJECTED,
+                    "历史知识证据已失效或无权访问，请重新发起经过授权的运行"), failure);
+        }
+    }
+
+    @Override
     public Result execute(Request request) {
         KnowledgeRetrievalUseCase useCase = useCaseProvider.getIfAvailable();
         if (useCase == null) {

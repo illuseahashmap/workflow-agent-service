@@ -60,6 +60,19 @@ public class JdbcAgentToolGovernanceRepository
     }
 
     @Override
+    public java.util.List<Audit> findSucceededByRun(String tenantCode, long runId) {
+        return jdbcTemplate.query("""
+                SELECT tenant_code, tool_code, idempotency_key, arguments_hash,
+                       status, output_snapshot, error_code, trace_id, created_at
+                FROM agent_tool_execution_audit
+                WHERE tenant_code = :tenantCode AND status = 'SUCCEEDED'
+                  AND idempotency_key LIKE :runPrefix
+                ORDER BY id LIMIT 1001
+                """, Map.of("tenantCode", tenantCode, "runPrefix", runId + ":%"),
+                (resultSet, rowNum) -> mapAudit(resultSet));
+    }
+
+    @Override
     public Claim tryClaim(Audit reservation) {
         var claimed = jdbcTemplate.query("""
                         INSERT INTO agent_tool_execution_audit (

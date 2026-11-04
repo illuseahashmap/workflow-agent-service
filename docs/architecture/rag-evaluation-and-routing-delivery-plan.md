@@ -2,6 +2,7 @@
 
 状态：目标方案，非已实现能力；2026-10-28 评审基线。当前可运行边界以[项目状态](../status.md)为准。
 选型修订：2026-11-02，结构化 PDF 摄取采用 [LangChain4j + MinerU](rag-structured-document-ingestion-design.md)，本文件同步解析质量与评测依赖，不表示已接入。
+契约加固：2026-11-04，已落地恢复结果重新授权、用例 Schema v3/定位 v1、数据集清单 v2、Profile 多来源固定索引与有类型评分门禁；完整发布门禁/解析服务仍待实现，不能将局部整改等同全部 E0–E3 完成。
 主契约：[评测用例](rag-evaluation-case-contract.md)；语料：[十领域设计](rag-ten-domain-corpus-design.md)；运行边界：[RAG 短期计划](rag-short-term-implementation-plan.md)。
 
 ## 1. 决策和非目标
@@ -27,7 +28,9 @@
 
 `KnowledgeSnapshot` 至少含租户、文档版本与哈希、状态、适用对象、生效起止、替代/优先级、授权策略版本、索引版本和嵌入模型版本。比较两种检索策略时**同一**快照、权限、问题、预算和 TopK；需要测试新索引时将“新旧索引差异”作为实验变量，并另行报告数据差异，不把不同知识内容伪装成纯算法对比。历史锁定集按原快照复现；当前集按新快照重标。若历史版本已因合规删除不可读取，应标记 `NOT_REPLAYABLE` 并解释，不得从当前文档臆造旧证据。
 
-在索引构建时建立 `EvidenceLocator` 映射：`documentCode/version/sectionId/sectionHash` ↔ `sourceId/sourceVersion/locator/chunkId`。映射随索引版本冻结；评测时校验同租户、同快照、同有效期。Chunk ID 不是业务金标。禁止把 `EvaluationCase.allowedKnowledgeScopes` 当成运行授权，评测请求必须由可信测试身份经现有 `KnowledgeAccessPolicy` 重新求交。
+在索引构建时建立定位映射：`documentCode/version/contentHash/typed locator` ↔ `sourceId/sourceVersion/locator/chunkId`，文本定位包含 sectionId，PDF/表/图定位使用结构定位 v1。映射随索引版本冻结；评测时校验同租户、同快照、同有效期。Chunk ID 不是业务金标。`KnowledgeSnapshot` 的索引成员采用 sourceCode→indexVersionId 清单；不能用多个 knowledgeScopes 加一个索引 ID 假装跨知识源冻结。当前 Profile 已通过 V59 保存该清单；数据集 manifest v2 同步此模型。
+
+禁止把 `EvaluationCase.allowedKnowledgeScopes` 当成运行授权，评测请求必须由可信测试身份经现有 `KnowledgeAccessPolicy` 重新求交。缓存命中和 Checkpoint 恢复也不继承历史授权：平台在模型请求前校验整个 Run 的已提交工具结果；知识工具核对冻结 Profile、Trace、证据引用和当前主体/文档可见性，不执行第二次检索伪装同一结果。缺少可验证历史来源时失败关闭。
 
 ## 3. 用例和数据集生命周期
 
@@ -83,7 +86,7 @@
 
 | 阶段 | 交付与验收 | 依赖 |
 | --- | --- | --- |
-| E0 契约与试点 | 用例 Schema v2、首批输出 Schema 与 Claim Catalog、语义校验器、版本化难度规则、30 条/领域双人标注沙盒用例；字段、引用、分组去重、难度分层一致性和禁止泄漏测试通过 | 40 篇草稿仅作沙盒，不能称生产基线 |
+| E0 契约与试点 | 用例 Schema v3/定位 v1/清单 v2 已具备；仍需首批输出 Schema 与 Claim Catalog、完整语义校验器、难度规则、30 条/领域双人标注沙盒用例和锁定流程 | 40 篇草稿仅作沙盒，不能称生产基线 |
 | E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、结构化字段/Claim 评分、CaseResult/Run 报告 | 容器化租户/RLS/索引回归；PDF 子集另需摄取 D1/D2 和结构质量门禁，不阻塞已有文本试点 |
 | E2 时效与发布 | 历史时间查询或明确不可执行状态、变更影响扫描/CaseReview、门禁与人工批准、故障恢复 | E1 且关键场景有金标覆盖 |
 | E3 策略增强 | 加权 RRF、Rerank、固定策略集合与路由器分批验证；先 shadow 再灰度 | E2、严格能力等价回退、模态能力落地 |
@@ -92,6 +95,6 @@
 
 ## 9. 设计复核记录与未决决策
 
-本方案已按以下边界自查：固定 Profile 先于动态路由；业务金标不依赖 Chunk ID；跨期问题不被当前检索实现假装支持；新增高权威文档也触发失效扫描；审查事件不改锁定数据；不等价的路由回退不会伪装正常结果；评测发布不绕过租户权限。对应的代码与容器化验收**均尚未完成**。
+本方案已按以下边界自查：固定 Profile 先于动态路由；业务金标不依赖 Chunk ID；跨期问题不被当前检索实现假装支持；新增高权威文档也触发失效扫描；审查事件不改锁定数据；不等价的路由回退不会伪装正常结果；评测发布不绕过租户权限。2026-11-04 已落实恢复授权、多来源索引冻结、结构定位交换契约和类型化评分门禁及回归；完整 E0–E3 评测系统、历史时效/失效扫描、查询级路由和容器化验收仍未完成，不能把四项治理整改当作完整评测闭环。
 
 实施前需要由领域与运行负责人明确三项配置，而不是由评测设计者猜测：①哪些关键场景及租户必须达到多少有效金标覆盖；②各风险层的质量、P95 延迟和成本阈值，以及人工审批人；③历史资料的保留/删除策略和不可重放时的合规处置。阈值须在试点与基线数据出来后版本化批准。若没有这些决定，`QualityGateDecision` 只能是 `REQUIRES_HUMAN_REVIEW` 或 `BLOCKED`，不能自动通过。

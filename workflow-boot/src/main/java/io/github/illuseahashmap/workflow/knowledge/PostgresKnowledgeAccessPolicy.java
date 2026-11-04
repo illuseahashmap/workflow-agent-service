@@ -33,12 +33,13 @@ public final class PostgresKnowledgeAccessPolicy implements KnowledgeAccessPolic
             return List.of();
         }
         return jdbcTemplate.query("""
-                SELECT scope_code
-                FROM knowledge_principal_scope_grant
-                WHERE tenant_code = :tenantCode
-                  AND principal_id = :principalId
-                  AND scope_code IN (:scopes)
-                ORDER BY scope_code
+                SELECT g.scope_code
+                FROM knowledge_principal_scope_grant g
+                JOIN knowledge_source s ON s.tenant_code=g.tenant_code AND s.source_code=g.scope_code AND s.enabled=TRUE
+                WHERE g.tenant_code = :tenantCode
+                  AND g.principal_id = :principalId
+                  AND g.scope_code IN (:scopes)
+                ORDER BY g.scope_code
                 """, Map.of("tenantCode", tenantCode, "principalId", principalId, "scopes", candidates),
                 (rs, rowNum) -> rs.getString("scope_code"));
     }

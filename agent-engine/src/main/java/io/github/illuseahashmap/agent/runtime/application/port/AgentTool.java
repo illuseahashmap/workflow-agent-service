@@ -18,6 +18,14 @@ public interface AgentTool {
 
     Result execute(Request request);
 
+    /** Revalidate durable results against current data permissions, without executing the tool again. */
+    default void validateResultAccess(ResultAccessContext context, String output) {
+    }
+
+    record ResultAccessContext(String tenantCode, Long agentVersionId, String principalId,
+                               String versionToolSetJson, String nodeToolSetJson) {
+    }
+
     record Request(String tenantCode, Map<String, Object> arguments, Duration timeout,
                    String traceId, String idempotencyKey, String processInstanceId,
                    long runId, String logicalStepId, Long agentVersionId, String principalId) {
@@ -31,6 +39,11 @@ public interface AgentTool {
 
         public Request withIdempotencyKey(String stableIdempotencyKey) {
             return new Request(tenantCode, arguments, timeout, traceId, stableIdempotencyKey,
+                    processInstanceId, runId, logicalStepId, agentVersionId, principalId);
+        }
+
+        public Request withTimeout(Duration remaining) {
+            return new Request(tenantCode, arguments, remaining, traceId, idempotencyKey,
                     processInstanceId, runId, logicalStepId, agentVersionId, principalId);
         }
         public Request(String tenantCode, Map<String, Object> arguments, Duration timeout,

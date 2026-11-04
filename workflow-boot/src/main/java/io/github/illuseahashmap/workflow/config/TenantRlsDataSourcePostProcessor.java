@@ -9,6 +9,7 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.Ordered;
@@ -41,11 +42,13 @@ public final class TenantRlsDataSourcePostProcessor implements BeanPostProcessor
 
         @Override
         public Connection getConnection() throws SQLException {
+            io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull();
             return configure(super.getConnection());
         }
 
         @Override
         public Connection getConnection(String username, String password) throws SQLException {
+            io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull();
             return configure(super.getConnection(username, password));
         }
 
@@ -76,7 +79,14 @@ public final class TenantRlsDataSourcePostProcessor implements BeanPostProcessor
                 statement.setString(3, Boolean.toString(platformAdmin));
                 statement.setString(4, Boolean.toString(systemWorker));
                 statement.setString(5, Boolean.toString(authentication));
-                statement.execute();
+                try (var limit = DeadlineAwareStatements.limit(statement)) { statement.execute(); }
+            } catch (SQLException | RuntimeException failure) {
+                try {
+                    connection.close();
+                } catch (SQLException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                throw failure;
             }
             return proxy(connection);
         }
@@ -105,7 +115,8 @@ public final class TenantRlsDataSourcePostProcessor implements BeanPostProcessor
                     return null;
                 }
                 try {
-                    return method.invoke(delegate, args);
+                    Object result = method.invoke(delegate, args);
+                    return result instanceof Statement statement ? DeadlineAwareStatements.wrap(statement) : result;
                 } catch (InvocationTargetException exception) {
                     throw exception.getCause();
                 }

@@ -29,6 +29,7 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
     private final RetrievalTraceRepository traceRepository;
     private final RetrievalProfileRepository profileRepository;
     private final AgentRetrievalProfileBinding profileBinding;
+    private final io.github.illuseahashmap.knowledge.retrieval.application.port.EvidenceVisibilityPort evidenceVisibility;
     private final EvidenceGroundingPolicy groundingPolicy = new EvidenceGroundingPolicy();
 
     public KnowledgeRetrievalService(
@@ -51,6 +52,7 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
         this.traceRepository = Objects.requireNonNull(traceRepository, "traceRepository must not be null");
         this.profileRepository = null;
         this.profileBinding = null;
+        this.evidenceVisibility = null;
     }
 
     public KnowledgeRetrievalService(
@@ -58,17 +60,47 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
             KnowledgeAccessPolicy accessPolicy, RetrievalTraceRepository traceRepository,
             RetrievalProfileRepository profileRepository,
             AgentRetrievalProfileBinding profileBinding) {
+        this(tenantProvider, retriever, accessPolicy, traceRepository, profileRepository, profileBinding, null);
+    }
+
+    public KnowledgeRetrievalService(TenantProvider tenantProvider, KnowledgeRetriever retriever,
+            KnowledgeAccessPolicy accessPolicy, RetrievalTraceRepository traceRepository,
+            RetrievalProfileRepository profileRepository, AgentRetrievalProfileBinding profileBinding,
+            io.github.illuseahashmap.knowledge.retrieval.application.port.EvidenceVisibilityPort evidenceVisibility) {
         this.tenantProvider = Objects.requireNonNull(tenantProvider, "tenantProvider must not be null");
         this.retriever = Objects.requireNonNull(retriever, "retriever must not be null");
         this.accessPolicy = Objects.requireNonNull(accessPolicy, "accessPolicy must not be null");
         this.traceRepository = Objects.requireNonNull(traceRepository, "traceRepository must not be null");
         this.profileRepository = Objects.requireNonNull(profileRepository, "profileRepository must not be null");
         this.profileBinding = Objects.requireNonNull(profileBinding, "profileBinding must not be null");
+        this.evidenceVisibility = evidenceVisibility;
     }
 
     @Override
     public RetrievalResult search(RetrievalRequest request, long agentVersionId) {
         return search(request, agentVersionId, null);
+    }
+
+    @Override
+    public void validateResultAccess(String tenantCode, long agentVersionId, String principalId,
+            String traceId, java.util.List<io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference> references) {
+        if (profileRepository == null || evidenceVisibility == null || principalId == null || principalId.isBlank()) {
+            throw new IllegalStateException("Knowledge result access validation requires a trusted principal");
+        }
+        var profileId = profileBinding.findProfileVersionId(tenantCode, agentVersionId).orElseThrow();
+        var profile = profileRepository.findPublished(tenantCode, profileId).orElseThrow();
+        var trace = traceRepository.find(tenantCode, traceId).orElseThrow();
+        var authorized = accessPolicy.authorize(tenantCode, principalId, profile.knowledgeScopes(), trace.authorizedScopes());
+        if (trace.status() != io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalStatus.SUCCESS
+                || !Objects.equals(trace.profileVersionId(), profileId)
+                || references.isEmpty() || references.size() != trace.evidenceReferences().size()
+                || !new java.util.HashSet<>(references).equals(new java.util.HashSet<>(trace.evidenceReferences()))
+                || !authorized.containsAll(trace.authorizedScopes())
+                || !evidenceVisibility.visible(tenantCode, authorized, references, profile.indexBindings().isEmpty()
+                        ? java.util.List.of(profile.indexVersionId())
+                        : profile.indexBindings().stream().map(binding -> binding.indexVersionId()).toList())) {
+            throw new IllegalStateException("Knowledge evidence is no longer authorized or visible");
+        }
     }
 
     @Override
@@ -96,9 +128,9 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
                 Math.min(request.maxResults(), profile.maxResults()),
                 profile.strategy() == RetrievalRequest.StrategyHint.AUTO
                         ? RetrievalRequest.StrategyHint.KEYWORD : profile.strategy(),
-                request.maxHops(), request.requiredEvidenceTypes(), profile.indexVersionId());
+                request.maxHops(), request.requiredEvidenceTypes(), profile.indexVersionId(), profile.indexBindings());
         return search(profiled, tenantCode, requestScopes(request, profile.knowledgeScopes()),
-                principalId, profile.minimumScore(), profile.id());
+                principalId, profile.scorePolicy(), profile.id());
     }
 
     @Override
@@ -110,19 +142,20 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
             throw new IllegalStateException("Tenant code is required for knowledge retrieval");
         }
         var authorizedScopes = accessPolicy.authorize(tenant.tenantCode(), request.knowledgeScopes());
-        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes, 0, null);
+        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes, null, null);
     }
 
     private RetrievalResult search(RetrievalRequest request, String tenantCode,
                                    java.util.List<String> requestedScopes, String principalId,
-                                   double minimumScore, Long profileVersionId) {
+                                   io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy, Long profileVersionId) {
         var authorizedScopes = accessPolicy.authorize(tenantCode, principalId,
                 request.knowledgeScopes(), requestedScopes);
-        return retrieveAuthorized(request, tenantCode, authorizedScopes, minimumScore, profileVersionId);
+        return retrieveAuthorized(request, tenantCode, authorizedScopes, scorePolicy, profileVersionId);
     }
 
     private RetrievalResult retrieveAuthorized(RetrievalRequest request, String tenantCode,
-                                               java.util.List<String> authorizedScopes, double minimumScore,
+                                               java.util.List<String> authorizedScopes,
+                                               io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy,
                                                Long profileVersionId) {
         if (authorizedScopes.isEmpty()) {
             throw new IllegalStateException("No authorized knowledge scope is available");
@@ -131,14 +164,18 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
             throw new IllegalArgumentException("Metadata and historical retrieval filters are not implemented");
         }
         long started = System.nanoTime();
-        RetrievalResult raw = retriever.retrieve(tenantCode, request.withAuthorizedScopes(authorizedScopes));
-        RetrievalResult result = groundingPolicy.apply(raw, minimumScore);
+        RetrievalRequest authorizedRequest = request.withAuthorizedScopes(authorizedScopes);
+        RetrievalResult raw = retriever.retrieve(tenantCode, authorizedRequest);
+        var effectiveScorePolicy = scorePolicy == null
+                ? io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy.forStrategy(raw.strategy(), 0) : scorePolicy;
+        RetrievalResult result = groundingPolicy.apply(raw, effectiveScorePolicy);
         traceRepository.save(new RetrievalTrace(
                 result.retrievalTraceId(), tenantCode, fingerprint(request.query()), authorizedScopes,
                 result.status(), result.strategy(), raw.evidence().size(), Instant.now(),
-                profileVersionId, request.indexVersionId() == 0 ? null : request.indexVersionId(),
-                raw.evidence().stream().map(evidence -> evidence.reference()).toList(),
-                java.time.Duration.ofNanos(System.nanoTime() - started).toMillis()));
+                profileVersionId, authorizedRequest.frozenIndexIds().size() == 1
+                        ? authorizedRequest.frozenIndexIds().getFirst() : null,
+                result.evidence().stream().map(evidence -> evidence.reference()).toList(),
+                java.time.Duration.ofNanos(System.nanoTime() - started).toMillis(), authorizedRequest.indexBindings()));
         return result;
     }
 

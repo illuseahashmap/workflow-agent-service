@@ -25,7 +25,7 @@ public final class PostgresRetrievalProfileRepository implements RetrievalProfil
                        CASE WHEN p.strategy = 'HYBRID' AND i.embedding_model = 'none'
                             THEN 'KEYWORD' ELSE p.strategy END AS effective_strategy,
                        p.max_results, p.minimum_score, p.index_version_id, p.status,
-                       p.created_at, s.scope_code
+                       p.created_at, s.scope_code, p.score_kind, p.score_version
                 FROM knowledge_retrieval_profile_version p
                 JOIN knowledge_index_version i
                   ON i.id = p.index_version_id AND i.tenant_code = p.tenant_code
@@ -41,7 +41,7 @@ public final class PostgresRetrievalProfileRepository implements RetrievalProfil
                         rs.getInt("max_results"), rs.getDouble("minimum_score"),
                         rs.getLong("index_version_id"), rs.getString("status"),
                         instant(rs.getTimestamp("created_at")),
-                        rs.getString("scope_code"))).stream().findFirst()
+                        rs.getString("scope_code"), rs.getString("score_kind"), rs.getString("score_version"))).stream().findFirst()
                 .map(first -> new RetrievalProfileVersion(first.id, first.tenantCode, first.profileCode,
                         first.version, first.strategy, first.maxResults, first.minimumScore,
                         first.indexVersionId, first.status,
@@ -50,13 +50,17 @@ public final class PostgresRetrievalProfileRepository implements RetrievalProfil
                                 WHERE tenant_code = :tenantCode AND profile_version_id = :profileVersionId
                                 ORDER BY scope_code
                                 """, java.util.Map.of("tenantCode", tenantCode, "profileVersionId", profileVersionId),
-                                (rs, rowNum) -> rs.getString("scope_code")), first.createdAt));
+                                (rs, rowNum) -> rs.getString("scope_code")), first.createdAt,
+                        FrozenProfileIndexes.read(jdbcTemplate, tenantCode, profileVersionId),
+                        new io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy(
+                                io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceScore.Kind.valueOf(first.scoreKind),
+                                first.scoreVersion, first.minimumScore)));
     }
 
     private record ProfileRow(long id, String tenantCode, String profileCode, int version,
                               RetrievalRequest.StrategyHint strategy, int maxResults,
                               double minimumScore, long indexVersionId, String status,
-                              Instant createdAt, String scopeCode) {}
+                              Instant createdAt, String scopeCode, String scoreKind, String scoreVersion) {}
 
     private static Instant instant(Timestamp value) {
         return value == null ? Instant.EPOCH : value.toInstant();

@@ -37,4 +37,18 @@ public final class RetrievalEvaluation {
     }
 
     public record Score(double recallAtK, boolean hitAtK, double reciprocalRankAtK, double ndcgAtK) {}
+
+    /** Source coverage and precise citation are separate metrics, not chunk-ID equality or group-inflated nDCG. */
+    public SourceCoverage evaluateSourceCoverage(
+            List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceEvidenceAnchor> expected,
+            List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceEvidenceAnchor> returned, int k) {
+        if (expected.isEmpty() || k < 1) { throw new IllegalArgumentException("Expected source anchors and K are required"); }
+        var truth = Set.copyOf(expected);
+        var candidates = returned.stream().limit(k).toList();
+        long covered = truth.stream().filter(gold -> candidates.stream().anyMatch(actual -> actual.supports(gold, false))).count();
+        long precise = truth.stream().filter(gold -> candidates.stream().anyMatch(actual -> actual.supports(gold, true))).count();
+        return new SourceCoverage((double) covered / truth.size(), (double) precise / truth.size(), covered == truth.size());
+    }
+
+    public record SourceCoverage(double sourceCoverageAtK, double preciseCitationCoverageAtK, boolean allCovered) {}
 }

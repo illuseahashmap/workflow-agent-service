@@ -109,10 +109,11 @@ public class KnowledgeIngestionConfiguration {
             KnowledgeAccessPolicy accessPolicy,
             RetrievalTraceRepository traceRepository,
             RetrievalProfileRepository profileRepository,
-            AgentRetrievalProfileBinding profileBinding
+            AgentRetrievalProfileBinding profileBinding,
+            io.github.illuseahashmap.knowledge.retrieval.application.port.EvidenceVisibilityPort visibility
     ) {
         return new KnowledgeRetrievalService(tenantProvider, retriever, accessPolicy,
-                traceRepository, profileRepository, profileBinding);
+                traceRepository, profileRepository, profileBinding, visibility);
     }
 
     @Bean

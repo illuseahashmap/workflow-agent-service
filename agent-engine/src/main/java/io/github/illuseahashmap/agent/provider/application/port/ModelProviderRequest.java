@@ -15,6 +15,10 @@ public record ModelProviderRequest(
         ToolResult toolResult,
         StructuredOutput structuredOutput
 ) {
+    public ModelProviderRequest withTimeout(Duration remaining) {
+        return new ModelProviderRequest(baseUrl, credential, model, systemPrompt, userInput, remaining,
+                traceId, tools, toolResult, structuredOutput);
+    }
     public ModelProviderRequest(
             String baseUrl, String credential, String model, String systemPrompt,
             String userInput, Duration timeout, String traceId

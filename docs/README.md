@@ -1,6 +1,6 @@
 # 项目文档导航
 
-最近权威入口文档核对：2026-11-02（代码基线 `7a92bb5`；本次未重跑运行验收）。
+最近权威入口文档核对：2026-11-04（本次为 `main 1a470a1` 后的代码整改，代码、回归与文档随本轮提交发布；回归环境与边界见状态页，尚未部署 MinerU）。
 
 项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
 
@@ -18,6 +18,8 @@
 - [开发方向与防偏离门禁](architecture/development-direction-guardrails.md)：参考项目边界、技术主线、功能准入门禁和代表性验收闭环。
 - [RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)：知识模块、中立检索契约、可靠摄取、Evidence/Citation、评测和图谱扩展边界。
 - [RAG 结构化文档摄取设计](architecture/rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、PDF/OCR/跨页表、原件/资产来源追溯、版本与可靠性门禁；尚未实现。
+- [RAG 结构化 PDF 实施设计](architecture/rag-structured-document-implementation-design.md)：前置恢复授权、引用/快照/评分契约已加固；MinerU 解析、结构扩展和完整业务闭环仍待实施。
+- [RAG 治理 V59 升级](operations/rag-governance-upgrade.md)：恢复授权、多来源索引冻结、ScorePolicy 与交换格式升级边界；不是 MinerU 部署说明。
 - [MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)：连接器、工具目录快照、AgentVersion 绑定、协议调用、安全和可靠性闭环。
 - [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
 - [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。

@@ -1,7 +1,9 @@
 # RAG 评测用例与数据集契约
 
-状态：设计稿（2026-10-28）；定义标注与离线评测格式，不代表评测运行器或发布门禁已实现
+状态：设计稿；2026-11-04 更新为用例 Schema v3、结构定位 v1、数据集清单 v2；定位/覆盖评分已有代码及回归，不代表完整评测运行器或发布门禁已实现
 适用：十领域虚构企业知识语料；不得将草稿政策当作真实业务依据
+
+同日二次整改：定位 Codec 按种类严格检查必填与 JSON 类型，拒绝补零、小数截断、数字字符串、null 和重复键；数学意义整数仍与 Schema 对齐。固定快照的关键词/向量召回在 LIMIT 前以来源/索引/Chunk 身份形成稳定全序，再进入 RRF，避免同分候选因扫描顺序变化。详细实现和回归见[实施设计第 14 节](rag-structured-document-implementation-design.md#14-二次交叉评审整改2026-11-04)。这不代替完整标注语义、锁定集或发布门禁。
 
 ## 1. 设计依据与取舍
 
@@ -15,15 +17,17 @@
 
 运行记录 `EvaluationRun` 另行冻结被测的代码提交、`RetrievalProfileVersion`、Chunker/Embedding/Reranker/索引版本、模型与提示词版本、TopK、时间、随机参数、权限策略版本、租户/主体的**测试身份引用**、环境及失败摘要。用例不存真实凭据、生产 PII 或未经授权的原文；Trace 与评委输出按租户隔离并设保留期。数据集修改生成新版本，不原地改写历史分数。
 
-固定的 `documentCode + documentVersion + sectionId + contentHash` 是标注锚点；`chunkId` 可记录为运行时映射，但不能作唯一金标，因为重切分会改变 Chunk。图片或表格目前仅能按其**正文中的文字等价说明**标注；图像像素、跨行表格语义不算现有能力。
+固定的 `documentCode + documentVersion + contentHash + locator` 是标注锚点；每个锚点有独立 `evidenceId`，证据组按此 ID 引用，不按可变 Chunk ID 或拼接章节字符串关联。`locator` 使用[结构定位 Schema v1](schema/rag-evidence-locator.schema.json)：`TEXT_SECTION/PDF_REGION/TABLE_CELLS/FIGURE_REGION` 为互斥类型；PDF 坐标采用原件零基页码、校正后左上原点的归一化区域，表格固定行列 ID，图像固定资产摘要。解析 artifactHash 与原件 contentHash 分开保存；跨解析版本映射须审核。
+
+`EvidenceLocator`、`SourceEvidenceAnchor` 与 `RetrievalEvaluation.evaluateSourceCoverage` 已实现有类型的定位、来源覆盖与精确引用区分：覆盖较大区域不等于精确定位到金标区域，另一原件/版本不能匹配，重复来源不重复计数。Java 构造器与边界 Codec 校验坐标正面积/类型/版本及额外字段，JSON Schema 负责结构，不能单凭 Schema 验证替代语义与授权校验。PDF 标注格式可先建立，但 MinerU/PDF 摄取尚未接入，不能把此契约进展宣传为已具备图片理解或正式 PDF 质量基线。
 
 ## 3. 单条 `EvaluationCase` 契约
 
-下表为逻辑字段；可先以 UTF-8 JSONL 保存，一行一例。[JSON Schema v2](schema/rag-evaluation-case.schema.json) 约束交换格式，[数据集清单 Schema](schema/rag-evaluation-dataset.schema.json) 约束版本元数据；字段间证据、时间、权限、人员分离和哈希一致性还需语义校验器，不能仅凭 Schema 通过就锁定。完整实施与当前能力缺口见[评测、历史快照与路由实施设计](rag-evaluation-and-routing-delivery-plan.md)。必填是指**用例冻结前**必填，不要求当前 40 篇草稿已经具备这些标注。
+下表为逻辑字段；可先以 UTF-8 JSONL 保存，一行一例。[JSON Schema v3](schema/rag-evaluation-case.schema.json) 约束交换格式，[数据集清单 Schema v2](schema/rag-evaluation-dataset.schema.json) 用 `indexBindings[]` 冻结每个 sourceCode 的索引版本；字段间证据、时间、权限、人员分离和哈希一致性还需语义校验器，不能仅凭 Schema 通过就锁定。完整实施与当前能力缺口见[评测、历史快照与路由实施设计](rag-evaluation-and-routing-delivery-plan.md)。当前没有锁定 v2 用例或 v1 数据集，直接升级交换格式，不增加隐式兼容解析；必填是指用例冻结前必填。
 
 | 字段 | 约束与语义 |
 | --- | --- |
-| `caseId`、`schemaVersion` | 稳定、全局唯一；当前 `schemaVersion=2`，在首个锁定数据集前将自然语言 Claim 升级为结构化 Claim。语义修订派生新 case，不重用 ID。 |
+| `caseId`、`schemaVersion` | 稳定、全局唯一；当前 `schemaVersion=3`，结构化 Claim 与有类型 locator 同时必填。语义修订派生新 case，不重用 ID。 |
 | `supersedesCaseId`、`scenarioGroupId`、`domainCodes`、`split` | 修订用例显式关联前版；同一事实/模板/改写归同组；跨域只存一条主用例，可有多个领域；`split=DEV/CALIBRATION/LOCKED_TEST`，按**全局**组登记隔离。 |
 | `query`、`queryTime`、`businessAsOfTime` | 原始用户问题、发问时间和业务事实适用时间，均带时区；关键时间缺失时 `businessAsOfTime=null` 且填写 `temporalGapReason`，不得默认用入库时间。多轮问题另带脱敏 `conversationContext` 和轮次。当前服务尚不支持历史 `asOfTime` 查询，此类用例不得进入正式自动评分。 |
 | `tenantRef`、`principalRef`、`allowedKnowledgeScopes` | 测试身份与**期望可见范围**。运行时权限由系统重新计算，不能把样例里的 scope 当作授权指令。 |
@@ -34,7 +38,7 @@
 | `expectedDisposition` | `ANSWER/ABSTAIN/HUMAN_REVIEW`；附 `reasonCode`。`FORBIDDEN` 必须拒绝泄露，不能输出受限文档标题或片段。 |
 | `relevanceJudgments` | 每个允许检索的候选证据有等级 `0/1/2`（无关/辅助/决定性），指向文档代码、不可变版本、章节或定位符、内容哈希；支持多份互为替代的证据及多文档组合。未标注候选为 **unjudged**，不自动视为 0。 |
 | `forbiddenEvidence` | 记录测试身份不得看到的证据锚点，仅用于泄露断言；不得放入正常检索相关性分母。 |
-| `requiredEvidenceGroups` | 对可回答题，AND 组中每组至少命中一项可替代的有效证据；例如采购规则 **与** 财务预算规则。无答案题可为空，但需写 `absenceOrConflictRationale`。 |
+| `requiredEvidenceGroups` | 对可回答题，AND 组中每组至少命中一项可替代的有效 `evidenceId`；冻结前检查 ID 唯一、每个引用存在且授权。不要与运行时组装/重排的 EvidenceGroup 混为同一对象。无答案题可为空，但需写 `absenceOrConflictRationale`。 |
 | `answerMode`、`outputSchemaRef` | `STRUCTURED_DECISION / CLAIM_SET / FREE_TEXT`。影响流程状态、网关或自动完成的输出必须为 `STRUCTURED_DECISION` 并引用版本化 JSON Schema；普通知识问答优先 `CLAIM_SET`；确实无法合理结构化的开放任务才使用 `FREE_TEXT`。 |
 | `expectedStructuredOutput` | 仅用于 `STRUCTURED_DECISION`，保存按 `outputSchemaRef` 校验后的机器决策金标。自然语言解释不得覆盖或替代该对象，也不得直接驱动 Flowable。 |
 | `expectedClaims`、`forbiddenClaims` | 统一使用 `claimCode + subject + attributes + displayText`；预期 Claim 另带 `requiresGroups`。机器比较 `claimCode/attributes`，`displayText` 仅供标注和复核阅读；禁止作出的推断单列。 |
@@ -87,7 +91,7 @@
 ```json
 {
   "caseId": "PROC-BOUNDARY-0001",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "scenarioGroupId": "PROC-BOUNDARY-2000",
   "domainCodes": ["PROC"],
   "split": "DEV",
@@ -111,8 +115,8 @@
   "factsMissing": [],
   "expectedDisposition": {"action": "ANSWER", "reasonCode": "EVIDENCE_SUFFICIENT"},
   "answerMode": "CLAIM_SET",
-  "relevanceJudgments": [{"documentCode": "PROC-POL-01", "documentVersion": "0.2-draft", "sectionId": "§3.1", "contentHash": "<freeze-time-sha256>", "grade": 2}],
-  "requiredEvidenceGroups": [["PROC-POL-01@0.2-draft#§3.1"]],
+  "relevanceJudgments": [{"evidenceId": "proc-amount-rule", "documentCode": "PROC-POL-01", "documentVersion": "0.2-draft", "locator": {"schemaVersion": 1, "kind": "TEXT_SECTION", "sectionId": "§3.1"}, "contentHash": "<freeze-time-sha256>", "grade": 2}],
+  "requiredEvidenceGroups": [["proc-amount-rule"]],
   "expectedClaims": [{
     "claimCode": "APPROVAL_SCOPE_BY_AMOUNT",
     "subject": "PURCHASE_APPLICATION",
@@ -144,7 +148,7 @@
 ### 5.1 知识变更后的金标时效复核（目标能力）
 
 文档发布、替换、停用或有效期变更时，基于用例的
-`documentCode + documentVersion + sectionId + contentHash`、知识快照清单及
+`documentCode + documentVersion + locator + contentHash`、知识快照清单及
 `businessAsOfTime` 定位可能受影响的用例；**新增更高权威或跨域政策即使不改变旧锚点，也必须根据 ruleTopics、applicabilityKeys、authorityDependencies、时间和主体反查候选**；权限范围变更还须检查测试身份与预期可见范围。
 依赖扫描只能产生“可能过时”的候选，不得据此自动改写标准答案或把旧证据一律判错。
 同一事实允许关联多个可替代证据；仅当某个锚点变化时，应先判断其余证据是否仍支持结论。

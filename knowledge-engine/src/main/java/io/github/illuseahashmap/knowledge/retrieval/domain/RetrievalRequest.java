@@ -14,8 +14,15 @@ public record RetrievalRequest(
         StrategyHint strategyHint,
         int maxHops,
         List<EvidenceType> requiredEvidenceTypes,
-        long indexVersionId
+        long indexVersionId,
+        List<SourceIndexBinding> indexBindings
 ) {
+    public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
+            Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
+            List<EvidenceType> requiredEvidenceTypes, long indexVersionId) {
+        this(query, knowledgeScopes, filters, asOfTime, maxResults, strategyHint, maxHops,
+                requiredEvidenceTypes, indexVersionId, List.of());
+    }
 
     public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
                             Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
@@ -43,11 +50,22 @@ public record RetrievalRequest(
             throw new IllegalArgumentException("indexVersionId must not be negative");
         }
         strategyHint = Objects.requireNonNullElse(strategyHint, StrategyHint.AUTO);
+        indexBindings = List.copyOf(Objects.requireNonNullElse(indexBindings, List.of()));
+        if (indexBindings.size() > 100
+                || indexBindings.stream().map(SourceIndexBinding::sourceCode).distinct().count() != indexBindings.size()) {
+            throw new IllegalArgumentException("Invalid frozen index bindings");
+        }
     }
 
     public RetrievalRequest withAuthorizedScopes(List<String> authorizedScopes) {
         return new RetrievalRequest(query, authorizedScopes, filters, asOfTime, maxResults,
-                strategyHint, maxHops, requiredEvidenceTypes, indexVersionId);
+                strategyHint, maxHops, requiredEvidenceTypes, indexVersionId,
+                indexBindings.stream().filter(binding -> authorizedScopes.contains(binding.sourceCode())).toList());
+    }
+
+    public List<Long> frozenIndexIds() {
+        return indexBindings.isEmpty() ? (indexVersionId > 0 ? List.of(indexVersionId) : List.of())
+                : indexBindings.stream().map(SourceIndexBinding::indexVersionId).toList();
     }
 
     public enum StrategyHint {

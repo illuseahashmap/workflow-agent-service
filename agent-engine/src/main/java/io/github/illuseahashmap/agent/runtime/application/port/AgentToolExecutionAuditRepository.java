@@ -7,6 +7,11 @@ public interface AgentToolExecutionAuditRepository {
 
     Optional<Audit> findByIdempotencyKey(String tenantCode, String toolCode, String idempotencyKey);
 
+    /** Includes every committed result in the run, not only the most recent checkpoint result. */
+    default java.util.List<Audit> findSucceededByRun(String tenantCode, long runId) {
+        return java.util.List.of();
+    }
+
     default Claim tryClaim(Audit reservation) {
         Optional<Audit> existing = findByIdempotencyKey(
                 reservation.tenantCode(), reservation.toolCode(), reservation.idempotencyKey());

@@ -16,6 +16,40 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AgentToolRegistryTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(longs = {200, 2000})
+    void claimLatencyReducesToolBudgetAndExpiredClaimsNeverStartTheExternalTool(long claimMillis) {
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var invoked = new java.util.concurrent.atomic.AtomicReference<Duration>();
+        AgentTool tool = new AgentTool() {
+            public String name() { return "lookup"; }
+            public Result execute(Request request) {
+                invoked.set(request.timeout());
+                return new Result("{}", request.idempotencyKey());
+            }
+        };
+        var audits = org.mockito.Mockito.mock(AgentToolExecutionAuditRepository.class);
+        org.mockito.Mockito.when(audits.tryClaim(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
+            clock.set(Duration.ofMillis(claimMillis).toNanos());
+            return new AgentToolExecutionAuditRepository.Claim(true, invocation.getArgument(0));
+        });
+        var mapper = new ObjectMapper();
+        var registry = new AgentToolRegistry(List.of(tool), AgentToolPolicyRepository.ALLOW_ALL, audits,
+                new AgentOutputSchemaValidator(mapper), mapper);
+        try (var budget = io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.open(Duration.ofSeconds(1), clock::get)) {
+            var request = new AgentTool.Request("tenant-a", Map.of(), Duration.ofSeconds(1), "trace", "key");
+            if (claimMillis > 1000) {
+                assertThatThrownBy(() -> registry.execute("tenant-a", "lookup", request))
+                        .isInstanceOf(io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.Exceeded.class);
+                assertThat(invoked.get()).isNull();
+            } else {
+                registry.execute("tenant-a", "lookup", request);
+                assertThat(invoked.get()).isEqualTo(Duration.ofMillis(800));
+            }
+        }
+    }
+
 
     @Test
     void frozenMetadataSurvivesCatalogChangesButRevocationStillHidesTool() {
@@ -130,10 +164,38 @@ class AgentToolRegistryTest {
         AgentTool.Result result = registry.execute("tenant-a", "lookup", new AgentTool.Request(
                 "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1", "key-1"));
 
-        assertThat(registry.restoreSucceededOutput("tenant-a", "lookup", result.idempotencyKey()))
+        assertThat(registry.restoreSucceededOutput(new AgentTool.ResultAccessContext("tenant-a", null, null, null, null),
+                "lookup", result.idempotencyKey()))
                 .contains("{\"value\":1}");
-        assertThat(registry.restoreSucceededOutput("tenant-b", "lookup", result.idempotencyKey()))
+        assertThat(registry.restoreSucceededOutput(new AgentTool.ResultAccessContext("tenant-b", null, null, null, null),
+                "lookup", result.idempotencyKey()))
                 .isEmpty();
+    }
+
+    @Test
+    void rechecksDataPermissionsForIdempotencyAndCheckpointReplay() {
+        var allowed = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        AgentTool tool = new AgentTool() {
+            public String name() { return "knowledge"; }
+            public Result execute(Request request) {
+                calls.incrementAndGet();
+                return new Result("secret", request.idempotencyKey());
+            }
+            public void validateResultAccess(ResultAccessContext context, String output) {
+                if (!allowed.get()) { throw new IllegalStateException("revoked"); }
+            }
+        };
+        var registry = new AgentToolRegistry(List.of(tool), AgentToolPolicyRepository.ALLOW_ALL,
+                new InMemoryAuditRepository(), new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+        var request = new AgentTool.Request("tenant-a", Map.of(), Duration.ofSeconds(1), "trace", "key");
+        registry.execute("tenant-a", "knowledge", request);
+        allowed.set(false);
+        assertThatThrownBy(() -> registry.execute("tenant-a", "knowledge", request)).hasMessageContaining("revoked");
+        assertThatThrownBy(() -> registry.restoreSucceededOutput(
+                new AgentTool.ResultAccessContext("tenant-a", 1L, "user", null, null), "knowledge", "key"))
+                .hasMessageContaining("revoked");
+        assertThat(calls.get()).isEqualTo(1);
     }
 
     @Test
@@ -225,6 +287,12 @@ class AgentToolRegistryTest {
 
     private static final class InMemoryAuditRepository implements AgentToolExecutionAuditRepository {
         private final Map<String, Audit> entries = new HashMap<>();
+
+        @Override
+        public List<Audit> findSucceededByRun(String tenantCode, long runId) {
+            return entries.values().stream().filter(audit -> audit.tenantCode().equals(tenantCode)
+                    && audit.idempotencyKey().startsWith(runId + ":") && audit.status().equals("SUCCEEDED")).toList();
+        }
 
         @Override
         public Optional<Audit> findByIdempotencyKey(String tenantCode, String toolCode, String idempotencyKey) {

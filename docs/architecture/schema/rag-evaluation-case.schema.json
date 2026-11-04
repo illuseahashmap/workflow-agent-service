@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:workflow-agent:rag:evaluation-case:v2",
-  "title": "RAG EvaluationCase exchange format v2",
+  "$id": "urn:workflow-agent:rag:evaluation-case:v3",
+  "title": "RAG EvaluationCase exchange format v3",
   "type": "object",
   "additionalProperties": false,
   "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficulty", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "answerMode", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
   "properties": {
     "caseId": {"type": "string", "minLength": 1},
-    "schemaVersion": {"const": 2},
+    "schemaVersion": {"const": 3},
     "supersedesCaseId": {"type": ["string", "null"]},
     "scenarioGroupId": {"type": "string", "minLength": 1},
     "domainCodes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
@@ -126,22 +126,24 @@
     },
     "evidenceAnchor": {
       "type": "object", "additionalProperties": false,
-      "required": ["documentCode", "documentVersion", "sectionId", "contentHash"],
+      "required": ["evidenceId", "documentCode", "documentVersion", "locator", "contentHash"],
       "properties": {
+        "evidenceId": {"type": "string", "minLength": 1},
         "documentCode": {"type": "string", "minLength": 1},
         "documentVersion": {"type": "string", "minLength": 1},
-        "sectionId": {"type": "string", "minLength": 1},
-        "contentHash": {"type": "string", "minLength": 1}
+        "locator": {"$ref": "urn:workflow-agent:rag:evidence-locator:v1"},
+        "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },
     "judgment": {
       "type": "object", "additionalProperties": false,
-      "required": ["documentCode", "documentVersion", "sectionId", "contentHash", "grade"],
+      "required": ["evidenceId", "documentCode", "documentVersion", "locator", "contentHash", "grade"],
       "properties": {
+        "evidenceId": {"type": "string", "minLength": 1},
         "documentCode": {"type": "string", "minLength": 1},
         "documentVersion": {"type": "string", "minLength": 1},
-        "sectionId": {"type": "string", "minLength": 1},
-        "contentHash": {"type": "string", "minLength": 1},
+        "locator": {"$ref": "urn:workflow-agent:rag:evidence-locator:v1"},
+        "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "grade": {"type": "integer", "minimum": 0, "maximum": 2}
       }
     }

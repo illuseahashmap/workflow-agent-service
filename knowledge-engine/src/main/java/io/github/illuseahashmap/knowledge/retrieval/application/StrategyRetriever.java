@@ -69,8 +69,8 @@ public final class StrategyRetriever implements KnowledgeRetriever {
             var chunk = item.evidence();
             // Normalize the two-list RRF maximum to [0,1], so a published
             // minimumScore has meaningful semantics after fusion.
-            evidence.add(new ChunkEvidence(chunk.reference(), chunk.text(),
-                    Math.min(1.0, item.score() * (RRF_K + 1) / 2), chunk.title()));
+            evidence.add(ChunkEvidence.scored(chunk.reference(), chunk.text(),
+                    Math.min(1.0, item.score() * (RRF_K + 1) / 2), chunk.title(), "HYBRID"));
             citations.add(item.citation());
         }
         return new RetrievalResult(RetrievalStatus.SUCCESS, evidence, citations,

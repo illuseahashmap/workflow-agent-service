@@ -7,15 +7,25 @@ public record ChunkEvidence(
         EvidenceReference reference,
         String text,
         double score,
-        String title
+        String title,
+        EvidenceScore.Kind scoreKind,
+        String scoreVersion
 ) implements Evidence {
+    public ChunkEvidence(EvidenceReference reference, String text, double score, String title) {
+        this(reference, text, score, title, EvidenceScore.Kind.UNSPECIFIED, "unclassified");
+    }
+
+    public static ChunkEvidence scored(EvidenceReference reference, String text, double score, String title, String strategy) {
+        var scale = ScorePolicy.forStrategy(strategy, 0);
+        return new ChunkEvidence(reference, text, score, title, scale.kind(), scale.version());
+    }
+
+    public EvidenceScore scoring() { return new EvidenceScore(scoreKind, scoreVersion, score); }
     public ChunkEvidence {
         reference = Objects.requireNonNull(reference, "reference must not be null");
         text = Objects.requireNonNull(text, "text must not be null");
         title = Objects.requireNonNullElse(title, "");
-        if (!Double.isFinite(score) || score < 0) {
-            throw new IllegalArgumentException("score must be finite and non-negative");
-        }
+        new EvidenceScore(scoreKind, scoreVersion, score);
     }
 
     @Override

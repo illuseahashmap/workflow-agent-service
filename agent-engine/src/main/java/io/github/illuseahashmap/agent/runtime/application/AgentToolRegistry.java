@@ -235,16 +235,43 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
 
     /** Rehydrates a previously committed tool result without invoking the external tool again. */
     public Optional<String> restoreSucceededOutput(
-            String tenantCode, String toolCode, String idempotencyKey
+            AgentTool.ResultAccessContext context, String toolCode, String idempotencyKey
     ) {
+        String tenantCode = context.tenantCode();
         if (!StringUtils.hasText(tenantCode) || !StringUtils.hasText(toolCode)
                 || !StringUtils.hasText(idempotencyKey)) {
             return Optional.empty();
         }
         return auditRepository.findByIdempotencyKey(tenantCode, toolCode, idempotencyKey)
                 .filter(audit -> "SUCCEEDED".equals(audit.status()))
-                .map(AgentToolExecutionAuditRepository.Audit::output)
+                .map(audit -> {
+                    validateResultAccess(context, toolCode, audit.output());
+                    return audit.output();
+                })
                 .filter(StringUtils::hasText);
+    }
+
+    public int validateRunResultAccess(AgentTool.ResultAccessContext context, long runId) {
+        if (runId < 1) {
+            return 0;
+        }
+        var results = auditRepository.findSucceededByRun(context.tenantCode(), runId);
+        if (results.size() > 1000) {
+            throw toolProtocol("AGENT_RESULT_HISTORY_LIMIT", "Tool result history exceeds the safe recovery limit");
+        }
+        results.forEach(audit -> validateResultAccess(context, audit.toolCode(), audit.output()));
+        return results.size();
+    }
+
+    public void validateResultAccess(AgentTool.ResultAccessContext context, String toolCode, String output) {
+        AgentTool tool = require(toolCode);
+        if (context.versionToolSetJson() != null
+                && !availableToolCodes(context.versionToolSetJson(), context.nodeToolSetJson()).contains(toolCode)) {
+            throw toolProtocol("AGENT_TOOL_NOT_BOUND_TO_VERSION", "Recovered tool is not bound to the current node");
+        }
+        policyRepository.findAuthorized(context.tenantCode(), toolCode)
+                .orElseThrow(() -> toolProtocol("AGENT_TOOL_NOT_AUTHORIZED", "Recovered tool is no longer authorized"));
+        tool.validateResultAccess(context, output);
     }
 
     public AgentTool.Result execute(
@@ -294,6 +321,8 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
                         "Agent tool idempotency key was reused with different arguments");
             }
             if ("SUCCEEDED".equals(audit.status())) {
+                validateResultAccess(new AgentTool.ResultAccessContext(tenantCode, request.agentVersionId(),
+                        request.principalId(), versionToolSetJson, nodeToolSetJson), toolCode, audit.output());
                 return new AgentTool.Result(audit.output(), idempotencyKey);
             }
             if ("UNKNOWN".equals(audit.status())) {
@@ -305,7 +334,13 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         }
 
         try {
-            AgentTool.Result result = tool.execute(request.withIdempotencyKey(idempotencyKey));
+            var executionRequest = request.withIdempotencyKey(idempotencyKey);
+            var remaining = io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull();
+            if (remaining != null) {
+                executionRequest = executionRequest.withTimeout(
+                        io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.minimum(request.timeout(), remaining));
+            }
+            AgentTool.Result result = tool.execute(executionRequest);
             if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
                 throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
             }

@@ -38,14 +38,17 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                   AND c.index_version_id IN (
                       SELECT iv.id FROM knowledge_index_version iv
                       WHERE iv.tenant_code = :tenantCode
-                        AND ((:indexVersionId = 0 AND iv.status = 'ACTIVE')
-                          OR (iv.id = :indexVersionId AND iv.status IN ('ACTIVE', 'RETIRED')))
+                        AND iv.source_code = c.source_code
+                        AND ((:frozen = false AND iv.status = 'ACTIVE')
+                          OR (iv.id IN (:indexVersionIds) AND iv.status IN ('ACTIVE', 'RETIRED')))
                   )
             ) c
             JOIN knowledge_document_version d ON d.id = c.document_version_id
+            JOIN knowledge_source s ON s.tenant_code=c.tenant_code AND s.source_code=c.source_code AND s.enabled=TRUE
             WHERE d.tenant_code = :tenantCode
               AND d.status IN ('READY', 'ACTIVE')
-            ORDER BY GREATEST(c.fts_rank, c.lexical_rank) DESC, c.ordinal ASC
+            ORDER BY GREATEST(c.fts_rank, c.lexical_rank) DESC, c.ordinal ASC,
+                     c.source_code COLLATE "C" ASC, c.index_version_id ASC, c.chunk_id COLLATE "C" ASC
             LIMIT :limit
             """;
 
@@ -66,6 +69,8 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                 .addValue("query", request.query())
                 .addValue("scopes", request.knowledgeScopes())
                 .addValue("indexVersionId", request.indexVersionId())
+                .addValue("frozen", !request.frozenIndexIds().isEmpty())
+                .addValue("indexVersionIds", request.frozenIndexIds().isEmpty() ? List.of(-1L) : request.frozenIndexIds())
                 .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
         List<String> lexicalScores = new ArrayList<>();
         List<String> lexicalPredicates = new ArrayList<>();

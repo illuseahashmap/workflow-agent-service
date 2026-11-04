@@ -16,14 +16,33 @@ public interface KnowledgeManagementPort {
     void revoke(String tenantCode, GrantScope command);
 
     record CreateProfile(String profileCode, String strategy, int maxResults, double minimumScore,
-                         long indexVersionId, List<String> knowledgeScopes) {}
+                         long indexVersionId, List<String> knowledgeScopes,
+                         List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings) {
+        public CreateProfile(String profileCode, String strategy, int maxResults, double minimumScore,
+                long indexVersionId, List<String> knowledgeScopes) {
+            this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, List.of());
+        }
+    }
     record CreateDocument(String sourceCode, String sourceName, String externalDocumentId,
                           int version, String contentHash, String content) {}
     record GrantScope(String principalId, String scopeCode) {}
     record Page<T>(long total, int pageNum, int pageSize, List<T> records) {}
     record ProfileView(long id, String profileCode, int version, String strategy, int maxResults,
                        double minimumScore, long indexVersionId, String status,
-                       List<String> knowledgeScopes, Instant createdAt) {}
+                       List<String> knowledgeScopes, Instant createdAt,
+                       List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings,
+                       io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy) {
+        public ProfileView(long id, String profileCode, int version, String strategy, int maxResults,
+                double minimumScore, long indexVersionId, String status, List<String> knowledgeScopes, Instant createdAt,
+                List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings) {
+            this(id, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status, knowledgeScopes,
+                    createdAt, indexBindings, io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy.forStrategy(strategy, minimumScore));
+        }
+        public ProfileView(long id, String profileCode, int version, String strategy, int maxResults,
+                double minimumScore, long indexVersionId, String status, List<String> knowledgeScopes, Instant createdAt) {
+            this(id, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status, knowledgeScopes, createdAt, List.of());
+        }
+    }
     record IndexView(long id, String sourceCode, int version, String embeddingModel,
                      String status, Instant createdAt) {}
     record DocumentView(long id, String sourceCode, String externalDocumentId, int version,

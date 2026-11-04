@@ -27,7 +27,7 @@ class KnowledgeRetrievalServiceTest {
             assertThat(request.knowledgeScopes()).containsExactly("allowed");
             EvidenceReference reference = new EvidenceReference(
                     EvidenceType.CHUNK, "doc-1", "v1", "chunk-1");
-            ChunkEvidence evidence = new ChunkEvidence(reference, "approved", 1.0, "Policy");
+            ChunkEvidence evidence = ChunkEvidence.scored(reference, "approved", 1.0, "Policy", "KEYWORD");
             return new RetrievalResult(RetrievalStatus.SUCCESS, List.of(evidence),
                     List.of(new Citation("citation-1", reference, "approved")),
                     "trace-1", "KEYWORD", List.of(), false);

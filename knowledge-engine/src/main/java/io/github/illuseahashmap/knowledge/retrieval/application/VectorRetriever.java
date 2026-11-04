@@ -49,8 +49,8 @@ public final class VectorRetriever implements KnowledgeRetriever {
             var reference = new EvidenceReference(EvidenceType.CHUNK,
                     chunk.documentVersion().externalDocumentId(),
                     Integer.toString(chunk.documentVersion().version()), chunk.chunkId());
-            evidence.add(new ChunkEvidence(reference, chunk.text(), hit.score(),
-                    chunk.documentVersion().externalDocumentId()));
+            evidence.add(ChunkEvidence.scored(reference, chunk.text(), hit.score(),
+                    chunk.documentVersion().externalDocumentId(), "VECTOR"));
             citations.add(new Citation("citation-" + chunk.chunkId(), reference, chunk.text()));
         }
         return new RetrievalResult(RetrievalStatus.SUCCESS, List.copyOf(evidence), List.copyOf(citations),

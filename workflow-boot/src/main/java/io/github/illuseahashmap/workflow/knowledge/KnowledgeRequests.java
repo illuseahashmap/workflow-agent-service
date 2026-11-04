@@ -20,12 +20,21 @@ public final class KnowledgeRequests {
                           @Min(1) @Max(50) int maxResults,
                           @DecimalMin("0.0") @jakarta.validation.constraints.DecimalMax("1.0") double minimumScore,
                           @Positive long indexVersionId,
-                          @NotEmpty @Size(max = 100) List<@NotBlank @Size(max = 128) String> knowledgeScopes) {
+                          @NotEmpty @Size(max = 100) List<@NotBlank @Size(max = 128) String> knowledgeScopes,
+                          @Size(max = 100) List<@jakarta.validation.Valid IndexBinding> indexBindings) {
+        public Profile(String profileCode, String strategy, int maxResults, double minimumScore,
+                long indexVersionId, List<String> knowledgeScopes) {
+            this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, List.of());
+        }
         public KnowledgeManagementPort.CreateProfile command() {
             return new KnowledgeManagementPort.CreateProfile(profileCode, strategy, maxResults, minimumScore,
-                    indexVersionId, knowledgeScopes);
+                    indexVersionId, knowledgeScopes, indexBindings == null ? List.of()
+                            : indexBindings.stream().map(binding -> new io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding(
+                                    binding.sourceCode(), binding.indexVersionId())).toList());
         }
     }
+
+    public record IndexBinding(@NotBlank @Size(max = 128) String sourceCode, @Positive long indexVersionId) {}
 
     public record Document(@NotBlank @Size(max = 128) String sourceCode, @Size(max = 255) String sourceName,
                            @NotBlank @Size(max = 512) String externalDocumentId, @Positive int version,

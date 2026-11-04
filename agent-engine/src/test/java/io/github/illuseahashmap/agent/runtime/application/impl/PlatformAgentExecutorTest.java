@@ -27,6 +27,8 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class PlatformAgentExecutorTest {
@@ -204,7 +206,7 @@ class PlatformAgentExecutorTest {
         AgentExecutor.Result result = executor.execute(new AgentExecutor.Command(
                 "tenant-a", version(), provider(), "hello", Duration.ofSeconds(10), "trace-2", 42L,
                 null, null,
-                "{\"logicalStepId\":\"tool:1\",\"nextStep\":2,\"context\":\"已完成工具\",\"previousToolResultJson\":null}",
+                "{\"logicalStepId\":\"route:v1\",\"nextStep\":1,\"context\":\"已完成路由\",\"previousToolResultJson\":null}",
                 null));
 
         assertThat(result.modelResponse().content()).isEqualTo("{\"answer\":\"resumed\"}");
@@ -253,12 +255,154 @@ class PlatformAgentExecutorTest {
         verify(adapter).invoke(any());
     }
 
+    @Test
+    void refusesRevokedEarlierToolEvidenceBeforeAnyRecoveredModelRequest() {
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        AgentTool tool = new AgentTool() {
+            public String name() { return "lookup"; }
+            public Result execute(Request request) { throw new AssertionError("No repeat external call"); }
+            public void validateResultAccess(ResultAccessContext context, String output) {
+                throw new IllegalStateException("earlier knowledge access revoked");
+            }
+        };
+        var audits = mock(io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository.class);
+        when(audits.findSucceededByRun("tenant-a", 42)).thenReturn(List.of(
+                new io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository.Audit(
+                        "tenant-a", "lookup", "42:tool:1:lookup", "hash", "SUCCEEDED", "secret", null,
+                        "old-trace", java.time.Instant.EPOCH)));
+        var registry = new AgentToolRegistry(List.of(tool),
+                io.github.illuseahashmap.agent.runtime.application.port.AgentToolPolicyRepository.ALLOW_ALL,
+                audits, new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
+        var executor = new PlatformAgentExecutor(mock(AgentCredentialResolver.class),
+                new ModelProviderRegistry(List.of(adapter)), new AgentOutputSchemaValidator(new ObjectMapper()),
+                registry, new ObjectMapper(), 4);
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command("tenant-a", version(), provider(), "hello",
+                Duration.ofSeconds(10), "trace", 42, null, null,
+                "{\"schemaVersion\":\"3\",\"logicalStepId\":\"tool:2\",\"nextStep\":3,\"context\":\"older secret\",\"routeTools\":[\"lookup\"]}",
+                null, "reader"))).hasMessageContaining("revoked");
+        verify(adapter, org.mockito.Mockito.never()).invoke(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "3"})
+    void refusesUnverifiableToolContextEvenWhenNoToolsRemainAvailable(String schemaVersion) {
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        var executor = new PlatformAgentExecutor(mock(AgentCredentialResolver.class),
+                new ModelProviderRegistry(List.of(adapter)), new AgentOutputSchemaValidator(new ObjectMapper()));
+        String checkpoint = "{\"schemaVersion\":\"" + schemaVersion
+                + "\",\"logicalStepId\":\"tool:1\",\"nextStep\":2,\"context\":\"unverified secret\",\"routeTools\":[]}";
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command("tenant-a", version(), provider(), "hello",
+                Duration.ofSeconds(10), "trace", 42, null, null, checkpoint, null, "reader")))
+                .hasMessageContaining("no verifiable result ledger");
+        verify(adapter, org.mockito.Mockito.never()).invoke(any());
+    }
+
     private AgentDefinitionVersion version() {
         return new AgentDefinitionVersion(1L, "tenant-a", 1L, 1, AgentVersionStatus.PUBLISHED,
                 AgentExecutionMode.PLATFORM_AGENT, 1L, "model", "system", 60,
                 AgentFailurePolicy.FAIL_PROCESS, null, "{\"type\":\"object\"}",
                 "user", "user", OffsetDateTime.now(), OffsetDateTime.now(), OffsetDateTime.now(),
                 "[\"lookup\",\"context\"]");
+    }
+
+    @Test
+    void deductsAuthorizationTimeBeforeEachModelRequest() {
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var registry = mock(AgentToolRegistry.class);
+        when(registry.validateRunResultAccess(any(), org.mockito.ArgumentMatchers.anyLong())).thenAnswer(invocation -> {
+            clock.addAndGet(Duration.ofMillis(200).toNanos());
+            return 0;
+        });
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(response(route()), response("{\"answer\":\"done\"}"));
+        budgetExecutor(adapter, registry, clock).execute(new AgentExecutor.Command("tenant-a", version(), provider(), "hello",
+                Duration.ofSeconds(1), "trace", 42, null, null, null, null, "reader"));
+        var requests = ArgumentCaptor.forClass(io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest.class);
+        verify(adapter, org.mockito.Mockito.times(2)).invoke(requests.capture());
+        assertThat(requests.getAllValues()).extracting(request -> request.timeout())
+                .containsExactly(Duration.ofMillis(800), Duration.ofMillis(600));
+        assertThat(io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"fresh", "route-repair", "tool-repair", "output-repair", "checkpoint"})
+    void refusesExpiredAuthorizationBeforeInitialRepairedOrRecoveredModelRequest(String phase) {
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        int expiresOn = switch (phase) {
+            case "fresh" -> 1;
+            case "route-repair", "checkpoint" -> 2;
+            default -> 3;
+        };
+        var registry = mock(AgentToolRegistry.class);
+        when(registry.validateRunResultAccess(any(), org.mockito.ArgumentMatchers.anyLong())).thenAnswer(invocation -> {
+            if (calls.incrementAndGet() == expiresOn) { clock.set(Duration.ofSeconds(2).toNanos()); }
+            return 0;
+        });
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(response("route-repair".equals(phase) ? "invalid" : route()),
+                response("tool-repair".equals(phase) ? "{\"action\":\"TOOL_CALL\"}" : "not-json"));
+        String checkpoint = "checkpoint".equals(phase)
+                ? "{\"schemaVersion\":\"3\",\"logicalStepId\":\"route:v1\",\"nextStep\":1,\"context\":\"route\",\"routeTools\":[]}" : null;
+        assertThatThrownBy(() -> budgetExecutor(adapter, registry, clock).execute(new AgentExecutor.Command("tenant-a",
+                version(), provider(), "hello", Duration.ofSeconds(1), "trace", 42, null, null, checkpoint, null, "reader")))
+                .isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
+                        failure -> assertThat(failure.failure().errorCode()).isEqualTo("AGENT_DEADLINE_EXCEEDED"));
+        verify(adapter, org.mockito.Mockito.times("checkpoint".equals(phase) ? 0 : expiresOn - 1)).invoke(any());
+        assertThat(io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull()).isNull();
+    }
+
+    @Test
+    void rejectsModelResponseArrivingAfterTheSharedDeadline() {
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenAnswer(invocation -> {
+            clock.set(Duration.ofSeconds(2).toNanos());
+            return response(route());
+        });
+        assertThatThrownBy(() -> budgetExecutor(adapter, mock(AgentToolRegistry.class), clock).execute(
+                new AgentExecutor.Command("tenant-a", version(), provider(), "hello", Duration.ofSeconds(1), "trace")))
+                .isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
+                        failure -> assertThat(failure.failure().errorCode()).isEqualTo("AGENT_DEADLINE_EXCEEDED"));
+        verify(adapter).invoke(any());
+    }
+
+    private PlatformAgentExecutor budgetExecutor(ModelProviderPort adapter, AgentToolRegistry registry,
+            java.util.concurrent.atomic.AtomicLong clock) {
+        var mapper = new ObjectMapper();
+        return new PlatformAgentExecutor(mock(AgentCredentialResolver.class), new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(mapper), registry, mapper,
+                new io.github.illuseahashmap.agent.runtime.application.routing.AgentRouteDecisionParser(mapper),
+                new io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy(40_000), 4, clock::get);
+    }
+
+    @Test
+    void credentialLoadingConsumesTheSameBudgetRatherThanStartingANewModelWindow() {
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var credentials = mock(AgentCredentialResolver.class);
+        when(credentials.resolve("tenant-a", 1L)).thenAnswer(invocation -> {
+            clock.set(Duration.ofSeconds(2).toNanos());
+            return "test-only";
+        });
+        var adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.OPENAI_COMPATIBLE);
+        var mapper = new ObjectMapper();
+        var executor = new PlatformAgentExecutor(credentials, new ModelProviderRegistry(List.of(adapter)),
+                new AgentOutputSchemaValidator(mapper), mock(AgentToolRegistry.class), mapper,
+                new io.github.illuseahashmap.agent.runtime.application.routing.AgentRouteDecisionParser(mapper),
+                new io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy(40_000), 4, clock::get);
+        var provider = new AgentProvider(1L, "tenant-a", "test", "Test", AgentProviderType.OPENAI_COMPATIBLE,
+                "https://example.test", "model", true, true, null, OffsetDateTime.now(), OffsetDateTime.now());
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command("tenant-a", version(), provider, "hello",
+                Duration.ofSeconds(1), "trace")))
+                .isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
+                        failure -> assertThat(failure.failure().errorCode()).isEqualTo("AGENT_DEADLINE_EXCEEDED"));
+        verify(adapter, org.mockito.Mockito.never()).invoke(any());
     }
 
     private AgentProvider provider() {

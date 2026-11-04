@@ -36,7 +36,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 """, p, Long.class);
         List<ProfileView> rows = jdbc.query("""
                 SELECT id, profile_code, version, strategy, max_results, minimum_score,
-                       index_version_id, status, created_at
+                       index_version_id, status, created_at, score_kind, score_version
                 FROM knowledge_retrieval_profile_version
                 WHERE tenant_code=:tenant AND (CAST(:keyword AS VARCHAR) IS NULL OR profile_code ILIKE :keyword)
                   AND (CAST(:status AS VARCHAR) IS NULL OR status=:status)
@@ -44,7 +44,10 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 """, p, (r, n) -> new ProfileView(r.getLong("id"), r.getString("profile_code"),
                 r.getInt("version"), r.getString("strategy"), r.getInt("max_results"),
                 r.getDouble("minimum_score"), r.getLong("index_version_id"), r.getString("status"),
-                List.of(), instant(r.getTimestamp("created_at"))));
+                List.of(), instant(r.getTimestamp("created_at")), List.of(),
+                new io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy(
+                        io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceScore.Kind.valueOf(r.getString("score_kind")),
+                        r.getString("score_version"), r.getDouble("minimum_score"))));
         if (!rows.isEmpty()) {
             java.util.Map<Long, List<String>> scopes = new java.util.HashMap<>();
             jdbc.queryForList("""
@@ -55,7 +58,8 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                             ignored -> new java.util.ArrayList<>()).add((String) row.get("scope_code")));
             rows = rows.stream().map(row -> new ProfileView(row.id(), row.profileCode(), row.version(),
                     row.strategy(), row.maxResults(), row.minimumScore(), row.indexVersionId(), row.status(),
-                    scopes.getOrDefault(row.id(), List.of()), row.createdAt())).toList();
+                    scopes.getOrDefault(row.id(), List.of()), row.createdAt(),
+                    FrozenProfileIndexes.read(jdbc, tenant, row.id()), row.scorePolicy())).toList();
         }
         return new Page<>(total, page, size, rows);
     }
@@ -91,9 +95,8 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 || c.minimumScore() < 0 || c.minimumScore() > 1) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "invalid retrieval limits");
         }
-        if (!indexExists(tenant, c.indexVersionId(), strategy)) {
-            throw new BusinessException(ErrorCode.CONFLICT, "index version is not available for this tenant");
-        }
+        var bindings = FrozenProfileIndexes.validate(jdbc, tenant, c);
+        var scorePolicy = io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy.forStrategy(c.strategy(), c.minimumScore());
         Integer next = jdbc.queryForObject("""
                 INSERT INTO knowledge_profile_identity(tenant_code,profile_code,last_version)
                 VALUES(:tenant,:code,1)
@@ -102,18 +105,37 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 """, params(tenant).addValue("code", c.profileCode()), Integer.class);
         long id = jdbc.queryForObject("""
                 INSERT INTO knowledge_retrieval_profile_version
-                  (tenant_code, profile_code, version, strategy, max_results, minimum_score, index_version_id, status)
-                VALUES (:tenant,:code,:version,:strategy,:maxResults,:minimumScore,:indexVersion,'DRAFT') RETURNING id
+                  (tenant_code, profile_code, version, strategy, max_results, minimum_score, index_version_id, status,
+                   score_kind, score_version)
+                VALUES (:tenant,:code,:version,:strategy,:maxResults,:minimumScore,:indexVersion,'DRAFT',
+                        :scoreKind,:scoreVersion) RETURNING id
                 """, params(tenant).addValue("code", c.profileCode()).addValue("version", next)
                 .addValue("strategy", c.strategy()).addValue("maxResults", c.maxResults())
-                .addValue("minimumScore", c.minimumScore()).addValue("indexVersion", c.indexVersionId()), Long.class);
+                .addValue("minimumScore", c.minimumScore()).addValue("indexVersion", c.indexVersionId())
+                .addValue("scoreKind", scorePolicy.kind().name()).addValue("scoreVersion", scorePolicy.version()), Long.class);
         insertScopes(tenant, id, c.knowledgeScopes());
+        for (var binding : bindings) {
+            jdbc.update("""
+                    INSERT INTO knowledge_profile_index_binding(tenant_code,profile_version_id,source_code,index_version_id)
+                    VALUES(:tenant,:id,:source,:index)
+                    """, params(tenant).addValue("id", id).addValue("source", binding.sourceCode())
+                    .addValue("index", binding.indexVersionId()));
+        }
         return findProfile(tenant, id);
     }
 
     @Override
     @Transactional
     public ProfileView publishProfile(String tenant, long id) {
+        jdbc.queryForObject("SELECT id FROM knowledge_retrieval_profile_version WHERE tenant_code=:tenant AND id=:id FOR UPDATE",
+                params(tenant).addValue("id", id), Long.class);
+        var draft = findProfile(tenant, id);
+        if (!draft.scorePolicy().equals(io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy
+                .forStrategy(draft.strategy(), draft.minimumScore()))) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Score calibration is not supported by this retrieval strategy");
+        }
+        FrozenProfileIndexes.validate(jdbc, tenant, new CreateProfile(draft.profileCode(), draft.strategy(),
+                draft.maxResults(), draft.minimumScore(), draft.indexVersionId(), draft.knowledgeScopes(), draft.indexBindings()));
         int updated = jdbc.update("""
                 UPDATE knowledge_retrieval_profile_version SET status = 'PUBLISHED'
                 WHERE id = :id AND tenant_code = :tenant AND status = 'DRAFT'
@@ -247,24 +269,28 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     private ProfileView findProfile(String tenant, long id) {
         return jdbc.queryForObject("""
                 SELECT id, profile_code, version, strategy, max_results, minimum_score,
-                       index_version_id, status, created_at
+                       index_version_id, status, created_at, score_kind, score_version
                 FROM knowledge_retrieval_profile_version
                 WHERE id = :id AND tenant_code = :tenant
                 """, params(tenant).addValue("id", id),
                 (r, n) -> profile(r.getLong(1), tenant, r.getString(2), r.getInt(3),
                         r.getString(4), r.getInt(5), r.getDouble(6), r.getLong(7),
-                        r.getString(8), instant(r.getTimestamp(9))));
+                        r.getString(8), instant(r.getTimestamp(9)),
+                        new io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy(
+                                io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceScore.Kind.valueOf(r.getString(10)),
+                                r.getString(11), r.getDouble(6))));
     }
 
     private ProfileView profile(long id, String tenant, String code, int version,
                                 String strategy, int max, double minimumScore,
-                                long index, String status, Instant createdAt) {
+                                long index, String status, Instant createdAt,
+                                io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy) {
         List<String> scopes = jdbc.query("""
                 SELECT scope_code FROM knowledge_retrieval_profile_scope
                 WHERE tenant_code = :tenant AND profile_version_id = :id ORDER BY scope_code
                 """, params(tenant).addValue("id", id), (r, n) -> r.getString(1));
         return new ProfileView(id, code, version, strategy, max, minimumScore,
-                index, status, scopes, createdAt);
+                index, status, scopes, createdAt, FrozenProfileIndexes.read(jdbc, tenant, id), scorePolicy);
     }
 
     private void insertScopes(String tenant, long id, List<String> scopes) {
@@ -277,19 +303,6 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                             profile_version_id, tenant_code, scope_code)
                         VALUES(:id, :tenant, :scope)
                         """, params(tenant).addValue("id", id).addValue("scope", scope.trim())));
-    }
-
-    private boolean indexExists(String tenant, long id,
-            io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint strategy) {
-        Integer count = jdbc.queryForObject("""
-                SELECT count(*) FROM knowledge_index_version
-                WHERE tenant_code = :tenant AND id = :id AND status IN ('READY', 'ACTIVE')
-                  AND (:requiresVector = false OR embedding_model <> 'none')
-                """, params(tenant).addValue("id", id)
-                .addValue("requiresVector", strategy == io.github.illuseahashmap.knowledge.retrieval.domain
-                        .RetrievalRequest.StrategyHint.VECTOR || strategy == io.github.illuseahashmap
-                        .knowledge.retrieval.domain.RetrievalRequest.StrategyHint.HYBRID), Integer.class);
-        return count != null && count > 0;
     }
 
     private Instant instant(Timestamp value) {

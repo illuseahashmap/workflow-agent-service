@@ -7,6 +7,7 @@ import io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode;
 import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry;
 import io.github.illuseahashmap.agent.provider.application.port.AgentCredentialResolver;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
+import io.github.illuseahashmap.agent.provider.application.port.ModelProviderPort;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
@@ -19,6 +20,8 @@ import io.github.illuseahashmap.agent.runtime.application.routing.AgentRouteDeci
 import io.github.illuseahashmap.agent.runtime.application.routing.AgentRouteDecisionParser;
 import io.github.illuseahashmap.agent.runtime.application.routing.AgentRouteMode;
 import java.time.Duration;
+import java.util.function.LongSupplier;
+import io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.List;
@@ -92,6 +95,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
     private final AgentRouteDecisionParser routeParser;
     private final CheckpointContextPolicy checkpointContextPolicy;
     private final int maxSteps;
+    private final LongSupplier ticker;
 
     @Autowired
     public PlatformAgentExecutor(
@@ -104,6 +108,14 @@ public class PlatformAgentExecutor implements AgentExecutor {
             CheckpointContextPolicy checkpointContextPolicy,
             @Value("${workflow.agent.platform.max-steps:4}") int maxSteps
     ) {
+        this(credentialResolver, providerRegistry, schemaValidator, toolRegistry, objectMapper,
+                routeParser, checkpointContextPolicy, maxSteps, System::nanoTime);
+    }
+
+    PlatformAgentExecutor(AgentCredentialResolver credentialResolver, ModelProviderRegistry providerRegistry,
+            AgentOutputSchemaValidator schemaValidator, AgentToolRegistry toolRegistry, ObjectMapper objectMapper,
+            AgentRouteDecisionParser routeParser, CheckpointContextPolicy checkpointContextPolicy, int maxSteps,
+            LongSupplier ticker) {
         this.credentialResolver = credentialResolver;
         this.providerRegistry = providerRegistry;
         this.schemaValidator = schemaValidator;
@@ -112,6 +124,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
         this.routeParser = routeParser;
         this.checkpointContextPolicy = checkpointContextPolicy;
         this.maxSteps = Math.max(1, Math.min(maxSteps, 20));
+        this.ticker = ticker;
     }
 
     public PlatformAgentExecutor(
@@ -143,16 +156,53 @@ public class PlatformAgentExecutor implements AgentExecutor {
 
     @Override
     public Result execute(Command command) {
+        try (var budget = ExecutionDeadline.open(command.timeout(), ticker)) {
+            try {
+                Result result = executeWithinBudget(command);
+                budget.remaining();
+                return result;
+            } catch (RuntimeException failure) {
+                if (failure instanceof io.github.illuseahashmap.agent.runtime.application.AgentLeaseLostException
+                        || failure instanceof io.github.illuseahashmap.agent.runtime.application.AgentRunPausedException) {
+                    throw failure;
+                }
+                if (failure instanceof ExecutionDeadline.Exceeded || ExecutionDeadline.expired()) {
+                    throw deadlineFailure(failure);
+                }
+                throw failure;
+            }
+        } catch (ExecutionDeadline.Exceeded failure) {
+            throw deadlineFailure(failure);
+        }
+    }
+
+    private Result executeWithinBudget(Command command) {
         var version = command.version();
         var provider = command.provider();
         String model = StringUtils.hasText(version.modelName())
                 ? version.modelName() : provider.defaultModel();
         String credential = provider.type() == AgentProviderType.OPENAI_COMPATIBLE
                 ? credentialResolver.resolve(command.tenantCode(), provider.id()) : "";
-        long deadlineNanos = System.nanoTime() + command.timeout().toNanos();
 
         schemaValidator.validateInput(version.inputSchema(), command.input());
-        var adapter = providerRegistry.require(provider.type());
+        var delegate = providerRegistry.require(provider.type());
+        var accessContext = new AgentTool.ResultAccessContext(command.tenantCode(), version.id(),
+                command.requestedBy(), version.toolSetJson(), command.nodeToolSetJson());
+        var observedResults = new ArrayList<ModelProviderRequest.ToolResult>();
+        ModelProviderPort adapter = new ModelProviderPort() {
+            public AgentProviderType providerType() { return delegate.providerType(); }
+            public io.github.illuseahashmap.agent.provider.application.port.ModelProviderCapabilities capabilities(String url) {
+                return delegate.capabilities(url);
+            }
+            public ModelProviderResponse invoke(ModelProviderRequest request) {
+                remainingTimeout();
+                toolRegistry.validateRunResultAccess(accessContext, command.runId());
+                observedResults.forEach(result -> toolRegistry.validateResultAccess(accessContext, result.toolName(), result.output()));
+                var response = delegate.invoke(request.withTimeout(ExecutionDeadline.minimum(request.timeout(), remainingTimeout())));
+                remainingTimeout();
+                return response;
+            }
+        };
         var capabilities = adapter.capabilities(provider.baseUrl());
         List<ModelProviderRequest.ToolDefinition> effectiveTools =
                 toolRegistry.availableToolDefinitions(
@@ -175,12 +225,12 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ROUTER_INSTRUCTION.formatted(
                             availableToolCapabilities, AgentRouteDecisionParser.JSON_SCHEMA),
-                    command.input(), remainingTimeout(deadlineNanos), command.traceId(),
+                    command.input(), remainingTimeout(), command.traceId(),
                     List.of(), null,
                     new ModelProviderRequest.StructuredOutput(
                             "agent_route_decision_v1", AgentRouteDecisionParser.JSON_SCHEMA)));
             AgentRouteDecision route = parseOrRepairRoute(adapter, provider.baseUrl(), version.systemPrompt(),
-                    credential, model, command, deadlineNanos, availableToolCapabilities, routeResponse);
+                    credential, model, command, availableToolCapabilities, routeResponse);
             if (route.mode() == AgentRouteMode.ABSTAIN) {
                 throw routeRejected(route.reason());
             }
@@ -194,8 +244,13 @@ public class PlatformAgentExecutor implements AgentExecutor {
             addStep(command, steps, "route:v1", "ROUTE", "SUCCEEDED", null,
                     checkpoint("route:v1", firstToolStep, context, null, null, routedToolNames));
         } else {
+            int validated = toolRegistry.validateRunResultAccess(accessContext, command.runId());
+            if (checkpoint.nextStep() > 1
+                    && (!"3".equals(checkpoint.schemaVersion()) || validated < checkpoint.nextStep() - 1)) {
+                throw checkpointFailure("Tool checkpoint has no verifiable result ledger", null);
+            }
             context = checkpointContextPolicy.compact(checkpoint.context());
-            previousToolResult = restoreToolResult(command.tenantCode(), checkpoint);
+            previousToolResult = restoreToolResult(accessContext, checkpoint);
             previousToolResultReference = checkpoint.previousToolResultReference();
             routedToolNames = "1".equals(checkpoint.schemaVersion())
                     ? effectiveTools.stream().map(ModelProviderRequest.ToolDefinition::name)
@@ -211,7 +266,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     provider.baseUrl(), credential, model,
                     version.systemPrompt() + "\n\n" + ANSWER_INSTRUCTION
                             + "\n\n可用工具契约：\n" + toolInstructions(effectiveTools),
-                    context, remainingTimeout(deadlineNanos), command.traceId(), nativeTools, previousToolResult));
+                    context, remainingTimeout(), command.traceId(), nativeTools, previousToolResult));
             ToolCall toolCall;
             try {
                 toolCall = answer.toolCall() == null
@@ -222,13 +277,13 @@ public class PlatformAgentExecutor implements AgentExecutor {
                         version.systemPrompt() + "\n\n" + TOOL_CALL_REPAIR_INSTRUCTION
                                 + "\n可用工具契约：\n" + toolInstructions(effectiveTools),
                     context + "\n\nPrevious invalid response:\n" + safeContent(answer),
-                        remainingTimeout(deadlineNanos), command.traceId(), nativeTools, previousToolResult));
+                        remainingTimeout(), command.traceId(), nativeTools, previousToolResult));
                 toolCall = parseToolCall(answer.content());
             }
             if (toolCall == null) {
                 OutputRepairResult repairResult = repairOutputIfRequired(adapter, provider.baseUrl(), version, model,
                         credential, answer,
-                        context, remainingTimeout(deadlineNanos), command.traceId());
+                        context, remainingTimeout(), command.traceId());
                 answer = repairResult.response();
                 if (repairResult.repaired()) {
                     addStep(command, steps, "output-repair", "OUTPUT_REPAIR", "SUCCEEDED", null,
@@ -246,7 +301,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
             AgentTool.Result toolResult = toolRegistry.execute(
                     command.tenantCode(), version.toolSetJson(), command.nodeToolSetJson(), toolCall.name(),
                     new AgentTool.Request(command.tenantCode(), toolCall.arguments(),
-                            remainingTimeout(deadlineNanos), command.traceId(),
+                            remainingTimeout(), command.traceId(),
                             command.runId() > 0 ? null : command.traceId() + ":tool:" + step + ":" + toolCall.name(),
                             command.processInstanceId(), command.runId(), "tool:" + step, version.id(),
                             command.requestedBy()));
@@ -257,6 +312,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     ? toolCall.callId() : "tool-step-" + step;
             previousToolResult = new ModelProviderRequest.ToolResult(
                     callId, toolCall.name(), toolArgumentsJson(toolCall.arguments()), toolResult.output());
+            observedResults.add(previousToolResult);
             addStep(command, steps, "tool:" + step, "TOOL_CALL", "SUCCEEDED", null,
                     checkpoint("tool:" + step, step + 1, context,
                             serializeToolResultMetadata(previousToolResult), previousToolResultReference,
@@ -272,7 +328,6 @@ public class PlatformAgentExecutor implements AgentExecutor {
             String credential,
             String model,
             Command command,
-            long deadlineNanos,
             Map<String, String> availableTools,
             ModelProviderResponse firstResponse
     ) {
@@ -284,7 +339,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                     systemPrompt + "\n\n" + ROUTE_REPAIR_INSTRUCTION.formatted(
                             availableTools, AgentRouteDecisionParser.JSON_SCHEMA),
                     command.input() + "\n\nPrevious invalid route:\n" + safeContent(firstResponse),
-                    remainingTimeout(deadlineNanos), command.traceId(), List.of(), null,
+                    remainingTimeout(), command.traceId(), List.of(), null,
                     new ModelProviderRequest.StructuredOutput(
                             "agent_route_decision_v1", AgentRouteDecisionParser.JSON_SCHEMA)));
             return routeParser.parse(repaired.content(), availableTools);
@@ -315,9 +370,15 @@ public class PlatformAgentExecutor implements AgentExecutor {
                 StringUtils.hasText(reason) ? reason : "Agent route is not executable"));
     }
 
-    private Duration remainingTimeout(long deadlineNanos) {
-        long remainingNanos = deadlineNanos - System.nanoTime();
-        return Duration.ofNanos(Math.max(1L, remainingNanos));
+    private Duration remainingTimeout() {
+        return java.util.Objects.requireNonNull(ExecutionDeadline.remainingOrNull(), "Execution budget is required");
+    }
+
+    private AgentExecutionException deadlineFailure(RuntimeException cause) {
+        return new AgentExecutionException(new io.github.illuseahashmap.agent.runtime.domain.AgentFailure(
+                "AGENT_DEADLINE_EXCEEDED", io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.DEADLINE,
+                false, io.github.illuseahashmap.agent.runtime.domain.ResultStatus.FAILED,
+                "Agent 执行预算已耗尽，未继续发起调用"), cause);
     }
 
     private void addStep(Command command, List<AgentExecutor.StepResult> steps,
@@ -363,7 +424,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
     }
 
     private ModelProviderRequest.ToolResult restoreToolResult(
-            String tenantCode, AgentExecutor.CheckpointState checkpoint
+            AgentTool.ResultAccessContext accessContext, AgentExecutor.CheckpointState checkpoint
     ) {
         ModelProviderRequest.ToolResult metadata = readToolResult(checkpoint.previousToolResultJson());
         if (metadata == null || !"3".equals(checkpoint.schemaVersion())
@@ -371,7 +432,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
             return metadata;
         }
         String output = toolRegistry.restoreSucceededOutput(
-                        tenantCode, metadata.toolName(), checkpoint.previousToolResultReference())
+                        accessContext, metadata.toolName(), checkpoint.previousToolResultReference())
                 .orElseThrow(() -> checkpointFailure(
                         "Agent checkpoint tool result reference could not be restored", null));
         return new ModelProviderRequest.ToolResult(

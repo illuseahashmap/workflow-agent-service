@@ -32,6 +32,9 @@ jobs:
       - name: Lint OpenAPI contract
         run: npm run api:lint
 
+      - name: Validate structured RAG evidence contracts
+        run: npm run test:rag-contract
+
       - name: Check OpenAPI endpoint coverage
         run: |
           npx --no-install redocly bundle docs/api/openapi.yaml \
