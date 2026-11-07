@@ -162,14 +162,16 @@ class AgentToolRegistryTest {
                 List.of(tool), AgentToolPolicyRepository.ALLOW_ALL, audits,
                 new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
         AgentTool.Result result = registry.execute("tenant-a", "lookup", new AgentTool.Request(
-                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1", "key-1"));
-
-        assertThat(registry.restoreSucceededOutput(new AgentTool.ResultAccessContext("tenant-a", null, null, null, null),
-                "lookup", result.idempotencyKey()))
-                .contains("{\"value\":1}");
-        assertThat(registry.restoreSucceededOutput(new AgentTool.ResultAccessContext("tenant-b", null, null, null, null),
-                "lookup", result.idempotencyKey()))
-                .isEmpty();
+                "tenant-a", Map.of("id", 1), Duration.ofSeconds(1), "trace-1", null, null, 42, "tool:1"));
+        var access = new AgentTool.ResultAccessContext("tenant-a", null, null, null, null);
+        var ledger = new AgentToolRegistry.RunHistory(access, 42);
+        registry.validateRunResultAccess(ledger);
+        assertThat(registry.restoreStep(ledger, 1, "lookup", result.idempotencyKey(), "{\"id\":1}"))
+                .isEqualTo("{\"value\":1}");
+        assertThatThrownBy(() -> registry.restoreStep(new AgentToolRegistry.RunHistory(access, 43), 1, "lookup", result.idempotencyKey(), "{\"id\":1}"))
+                .hasMessageContaining("does not belong");
+        assertThatThrownBy(() -> registry.restoreStep(ledger, 1, "lookup", result.idempotencyKey(), "{\"id\":2}"))
+                .hasMessageContaining("does not belong");
     }
 
     @Test
@@ -188,12 +190,12 @@ class AgentToolRegistryTest {
         };
         var registry = new AgentToolRegistry(List.of(tool), AgentToolPolicyRepository.ALLOW_ALL,
                 new InMemoryAuditRepository(), new AgentOutputSchemaValidator(new ObjectMapper()), new ObjectMapper());
-        var request = new AgentTool.Request("tenant-a", Map.of(), Duration.ofSeconds(1), "trace", "key");
+        var request = new AgentTool.Request("tenant-a", Map.of(), Duration.ofSeconds(1), "trace", null, null, 42, "tool:1");
         registry.execute("tenant-a", "knowledge", request);
         allowed.set(false);
         assertThatThrownBy(() -> registry.execute("tenant-a", "knowledge", request)).hasMessageContaining("revoked");
-        assertThatThrownBy(() -> registry.restoreSucceededOutput(
-                new AgentTool.ResultAccessContext("tenant-a", 1L, "user", null, null), "knowledge", "key"))
+        assertThatThrownBy(() -> registry.validateRunResultAccess(
+                new AgentToolRegistry.RunHistory(new AgentTool.ResultAccessContext("tenant-a", 1L, "user", null, null), 42)))
                 .hasMessageContaining("revoked");
         assertThat(calls.get()).isEqualTo(1);
     }
@@ -289,7 +291,7 @@ class AgentToolRegistryTest {
         private final Map<String, Audit> entries = new HashMap<>();
 
         @Override
-        public List<Audit> findSucceededByRun(String tenantCode, long runId) {
+        public List<Audit> findSucceededByRun(String tenantCode, long runId, java.util.Set<String> loadedKeys) {
             return entries.values().stream().filter(audit -> audit.tenantCode().equals(tenantCode)
                     && audit.idempotencyKey().startsWith(runId + ":") && audit.status().equals("SUCCEEDED")).toList();
         }

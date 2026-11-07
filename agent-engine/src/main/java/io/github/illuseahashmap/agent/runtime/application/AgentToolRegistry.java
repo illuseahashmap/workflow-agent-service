@@ -119,16 +119,16 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
 
     public List<ModelProviderRequest.ToolDefinition> availableToolDefinitions(
             String tenantCode, long versionId, String versionToolSetJson, String nodeToolSetJson) {
-        var effective = availableToolCodes(versionToolSetJson, nodeToolSetJson).stream()
-                .filter(this::isRegistered).filter(code -> policyRepository.findAuthorized(tenantCode, code).isPresent())
-                .collect(Collectors.toUnmodifiableSet());
+        var requested = availableToolCodes(versionToolSetJson, nodeToolSetJson);
+        var effective = policyRepository.findAuthorized(tenantCode, requested).stream()
+                .filter(def -> def.readOnly() && !def.sideEffect()).map(AgentToolDefinition::toolCode)
+                .filter(this::isRegistered).collect(Collectors.toUnmodifiableSet());
         var frozen = snapshots.find(tenantCode, versionId).stream()
                 .filter(tool -> effective.contains(tool.toolCode())).toList();
         if (frozen.size() != effective.size()) {
             throw toolProtocol("AGENT_TOOL_SNAPSHOT_MISSING", "Published tool metadata is incomplete");
         }
-        return frozen.stream().filter(tool -> policyRepository.findAuthorized(tenantCode, tool.toolCode()).isPresent())
-                .filter(tool -> isRegistered(tool.toolCode()))
+        return frozen.stream()
                 .map(tool -> new ModelProviderRequest.ToolDefinition(tool.toolCode(), tool.toolName(), tool.inputSchema(),
                         tool.capabilityType())).toList();
     }
@@ -233,34 +233,68 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         return execute(tenantCode, null, null, toolCode, request);
     }
 
-    /** Rehydrates a previously committed tool result without invoking the external tool again. */
-    public Optional<String> restoreSucceededOutput(
-            AgentTool.ResultAccessContext context, String toolCode, String idempotencyKey
-    ) {
-        String tenantCode = context.tenantCode();
-        if (!StringUtils.hasText(tenantCode) || !StringUtils.hasText(toolCode)
-                || !StringUtils.hasText(idempotencyKey)) {
-            return Optional.empty();
+    /** One invocation-local cache of immutable outputs. Authorization decisions are never cached. */
+    public static final class RunHistory {
+        private final AgentTool.ResultAccessContext context;
+        private final long runId;
+        private final Map<String, AgentToolExecutionAuditRepository.Audit> entries = new java.util.HashMap<>();
+
+        public RunHistory(AgentTool.ResultAccessContext context, long runId) {
+            this.context = context;
+            this.runId = runId;
         }
-        return auditRepository.findByIdempotencyKey(tenantCode, toolCode, idempotencyKey)
-                .filter(audit -> "SUCCEEDED".equals(audit.status()))
-                .map(audit -> {
-                    validateResultAccess(context, toolCode, audit.output());
-                    return audit.output();
-                })
-                .filter(StringUtils::hasText);
+        public boolean contains(String reference) { return entries.containsKey(reference); }
+        public int size() { return entries.size(); }
+        public boolean conflicts(int step, String tool) {
+            String prefix = runId + ":tool:" + step + ":";
+            return entries.keySet().stream().anyMatch(key -> key.startsWith(prefix) && !key.equals(prefix + tool));
+        }
     }
 
-    public int validateRunResultAccess(AgentTool.ResultAccessContext context, long runId) {
-        if (runId < 1) {
-            return 0;
+    public int validateRunResultAccess(RunHistory history) {
+        var context = history.context;
+        long runId = history.runId;
+        var ledger = history.entries;
+        if (runId < 1) { return 0; }
+        var rows = auditRepository.findSucceededByRun(context.tenantCode(), runId, Set.copyOf(ledger.keySet()));
+        if (rows.size() > 1000) {
+            throw toolProtocol("AGENT_RESULT_HISTORY_LIMIT", "Tool result history exceeds recovery limit");
         }
-        var results = auditRepository.findSucceededByRun(context.tenantCode(), runId);
-        if (results.size() > 1000) {
-            throw toolProtocol("AGENT_RESULT_HISTORY_LIMIT", "Tool result history exceeds the safe recovery limit");
+        Set<String> seen = new java.util.HashSet<>();
+        Set<String> codes = rows.stream().map(AgentToolExecutionAuditRepository.Audit::toolCode).collect(Collectors.toSet());
+        Set<String> allowed = codes.isEmpty() ? Set.of() : policyRepository.findAuthorized(context.tenantCode(), codes)
+                .stream().filter(d -> d.readOnly() && !d.sideEffect()).map(AgentToolDefinition::toolCode).collect(Collectors.toSet());
+        if (!allowed.containsAll(codes) || (context.versionToolSetJson() != null
+                && !availableToolCodes(context.versionToolSetJson(), context.nodeToolSetJson()).containsAll(codes))) {
+            throw toolProtocol("AGENT_TOOL_NOT_AUTHORIZED", "Tool history is no longer authorized");
         }
-        results.forEach(audit -> validateResultAccess(context, audit.toolCode(), audit.output()));
-        return results.size();
+        var implementations = codes.stream().collect(Collectors.toMap(Function.identity(), this::require));
+        for (var row : rows) {
+            var key = row.idempotencyKey();
+            var committed = row.output() == null ? ledger.get(key) : row;
+            if (!key.startsWith(runId + ":tool:") || !seen.add(key) || committed == null
+                    || !context.tenantCode().equals(row.tenantCode()) || !"SUCCEEDED".equals(row.status())
+                    || !row.toolCode().equals(committed.toolCode()) || !row.argumentsHash().equals(committed.argumentsHash())) {
+                throw toolProtocol("AGENT_CHECKPOINT_INVALID", "Invalid or ambiguous tool result member");
+            }
+            implementations.get(row.toolCode()).validateResultAccess(context, committed.output());
+            ledger.put(key, committed);
+        }
+        if (!seen.containsAll(ledger.keySet())) {
+            throw toolProtocol("AGENT_CHECKPOINT_INVALID", "Committed tool result disappeared");
+        }
+        return rows.size();
+    }
+
+    public String restoreStep(RunHistory history, int step, String tool, String reference, String argumentsJson) {
+        long runId = history.runId;
+        String expected = runId + ":tool:" + step + ":" + tool;
+        var row = history.entries.get(expected);
+        if (runId < 1 || step < 1 || !expected.equals(reference) || row == null
+                || !tool.equals(row.toolCode()) || !row.argumentsHash().equals(hash(argumentsJson))) {
+            throw toolProtocol("AGENT_CHECKPOINT_INVALID", "Tool result does not belong to this run, step and arguments");
+        }
+        return row.output();
     }
 
     public void validateResultAccess(AgentTool.ResultAccessContext context, String toolCode, String output) {

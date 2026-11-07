@@ -23,17 +23,23 @@ public class JdbcAgentToolGovernanceRepository
 
     @Override
     public Optional<AgentToolDefinition> findAuthorized(String tenantCode, String toolCode) {
+        return findAuthorized(tenantCode, java.util.Set.of(toolCode)).stream().findFirst();
+    }
+
+    @Override
+    public java.util.List<AgentToolDefinition> findAuthorized(String tenantCode, java.util.Set<String> codes) {
+        if (codes.isEmpty()) return java.util.List.of();
         return jdbcTemplate.query("""
                         SELECT d.tool_code, d.tool_name, d.input_schema, d.read_only,
                                d.capability_type, d.risk_level, d.side_effect
                         FROM agent_tool_definition d
                         JOIN agent_tool_tenant_grant g ON g.tool_code = d.tool_code
-                        WHERE d.tool_code = :toolCode
+                        WHERE d.tool_code IN (:codes)
                           AND d.enabled = TRUE
                           AND g.tenant_code = :tenantCode
                           AND g.enabled = TRUE
                         """,
-                Map.of("tenantCode", tenantCode, "toolCode", toolCode),
+                Map.of("tenantCode", tenantCode, "codes", codes),
                 (resultSet, rowNum) -> new AgentToolDefinition(
                         resultSet.getString("tool_code"),
                         resultSet.getString("tool_name"),
@@ -41,8 +47,7 @@ public class JdbcAgentToolGovernanceRepository
                         resultSet.getBoolean("read_only"),
                         resultSet.getString("capability_type"),
                         resultSet.getString("risk_level"),
-                        resultSet.getBoolean("side_effect")))
-                .stream().findFirst();
+                        resultSet.getBoolean("side_effect")));
     }
 
     @Override
@@ -60,15 +65,17 @@ public class JdbcAgentToolGovernanceRepository
     }
 
     @Override
-    public java.util.List<Audit> findSucceededByRun(String tenantCode, long runId) {
+    public java.util.List<Audit> findSucceededByRun(String tenantCode, long runId, java.util.Set<String> loadedKeys) {
         return jdbcTemplate.query("""
                 SELECT tenant_code, tool_code, idempotency_key, arguments_hash,
-                       status, output_snapshot, error_code, trace_id, created_at
+                       status, CASE WHEN idempotency_key IN (:loadedKeys) THEN NULL ELSE output_snapshot END AS output_snapshot,
+                       error_code, trace_id, created_at
                 FROM agent_tool_execution_audit
                 WHERE tenant_code = :tenantCode AND status = 'SUCCEEDED'
                   AND idempotency_key LIKE :runPrefix
                 ORDER BY id LIMIT 1001
-                """, Map.of("tenantCode", tenantCode, "runPrefix", runId + ":%"),
+                """, Map.of("tenantCode", tenantCode, "runPrefix", runId + ":%",
+                        "loadedKeys", loadedKeys.isEmpty() ? java.util.Set.of("") : loadedKeys),
                 (resultSet, rowNum) -> mapAudit(resultSet));
     }
 

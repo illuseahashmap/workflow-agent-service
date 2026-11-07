@@ -19,7 +19,7 @@ class CheckpointContextPolicySpringTest {
 
             CheckpointContextPolicy policy = context.getBean(CheckpointContextPolicy.class);
 
-            assertThat(policy.compact("ready")).isEqualTo("ready");
+            assertThat(policy.preview("ready")).isEqualTo("ready");
         }
     }
 }

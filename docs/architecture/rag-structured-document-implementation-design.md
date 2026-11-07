@@ -291,7 +291,7 @@ D0 仍需用真实证据定案：MinerU 精确版本/运行后端与模型；CPU
 
 ## 13. 四项交叉评审整改（2026-11-04）
 
-1. **恢复授权**：AgentTool 增加结果访问校验端口；幂等命中和 Checkpoint 恢复复核当前工具授权，每次模型请求前复核该 Run 全部已提交结果及本次内存结果，不只检查最后一个工具。知识服务按可信主体重新求交 Profile/Scope，并核对成功 Trace、原始引用集合、冻结索引和当前文档及知识源状态。不重跑检索，不重写旧审计；撤权/缺来源返回 `KNOWLEDGE_RESULT_ACCESS_REVOKED` 并停止继续调用模型。含工具历史的 Checkpoint 没有完整可验证账本或不是可验证的 v3 格式时失败关闭，即使当前可用工具集合已为空也不能绕过。不能撤回已经发送的历史请求，权限保证作用于每个后续调用边界。
+1. **恢复授权**：AgentTool 增加结果访问校验端口；幂等命中和 Checkpoint 恢复复核当前工具授权，每次模型请求前复核该 Run 全部已提交结果及本次内存结果，不只检查最后一个工具。知识服务按可信主体重新求交 Profile/Scope，并核对成功 Trace、原始引用集合、冻结索引和当前文档及知识源状态。不重跑检索，不重写旧审计；撤权/缺来源返回 `KNOWLEDGE_RESULT_ACCESS_REVOKED` 并停止继续调用模型。含工具历史的 Checkpoint 没有完整可验证账本或不能校验逐步来源时失败关闭；v5 从候选/验证检查点恢复也必须复核权限和来源，即使当前可用工具集合已为空也不能绕过。不能撤回已经发送的历史请求，权限保证作用于每个后续调用边界。
 2. **结构定位与评测**：用例 Schema v3、locator v1、数据集清单 v2；金标有独立 evidenceId，章节/PDF/单元格/图像定位互斥。领域 `EvidenceLocator` 与 `SourceEvidenceAnchor` 不依赖 Jackson；基础设施 Codec 省略不属于该类型的空字段并严格拒绝未知字段，覆盖评分与精确 Citation 评分分开。未锁定的旧交换格式直接升级，不把不可变历史 Chunk ID 改成新格式；完整标注/发布语义校验仍属 E0 后续工作。
 3. **多来源冻结快照**：新增 V59 的 `knowledge_profile_index_binding`，组合外键保证租户/来源/索引一致，RLS 和发布后不可变约束覆盖成员及 Scope。创建/发布校验每个 Scope 恰有固定索引、向量成员使用同一 Embedding recipe；发布持有 Profile 行锁，避免成员检查与发布之间的竞争。检索在授权过滤后使用固定索引清单；Trace 保存实际 `indexBindings`，单索引字段仅在实际只有一个成员时填写。原 Profile 的单索引 ID 作为旧接口锚点保留，不表示其余来源自动选 ACTIVE。
 4. **有类型质量门禁**：Profile 持久化 ScorePolicy(kind/version/minimum)，结果附 scoreKind/scoreVersion，关键词、余弦、两路 RRF 与模型重排不能混用阈值。不匹配或未知尺度直接拒绝，低于阈值的证据及 Citation 一起剔除，不因另一条高分就放行全部。组筛选只接受与 Profile/策略相符的完整组分数，缺分数不能继承子块分数；未开启重排的现有检索继续使用明确的关键词/向量/RRF 尺度，不暗中启用模型。Embedding 模型身份继续固定在索引成员，RERANK version 必须明确模型/校准配方。该门禁不代替最终 Claim/Grounding。

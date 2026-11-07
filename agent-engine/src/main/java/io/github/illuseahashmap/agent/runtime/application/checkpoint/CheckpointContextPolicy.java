@@ -9,14 +9,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Deterministic Checkpoint context assembly. It preserves the immutable prefix and
- * latest execution evidence while replacing omitted history with a content digest.
+ * Working-memory budgets are measured in UTF-16 units; never truncate a recovery envelope or authoritative input.
  */
 @Component
 public class CheckpointContextPolicy {
 
-    private static final String OMITTED_MARKER = "\n\n[checkpoint history omitted sha256=%s]\n\n";
-
+    // Storage format invariant, independent of any worker's prompt budget.
+    static final int STORED_NOTES_LIMIT = 8_192;
     private final int maximumCharacters;
     private final int maximumInlineToolResultCharacters;
 
@@ -28,42 +27,28 @@ public class CheckpointContextPolicy {
     ) {
         this.maximumCharacters = Math.max(4_096, Math.min(maximumCharacters, 200_000));
         this.maximumInlineToolResultCharacters = Math.max(256,
-                Math.min(maximumInlineToolResultCharacters, 8_192));
+                Math.min(maximumInlineToolResultCharacters, Math.min(STORED_NOTES_LIMIT, this.maximumCharacters / 4)));
     }
 
     public CheckpointContextPolicy(int maximumCharacters) {
         this(maximumCharacters, 2_048);
     }
 
-    public String assembleInitial(String routeJson, String input) {
-        return compact("结构化执行计划：\n" + safe(routeJson) + "\n\n用户请求：\n" + safe(input));
+    public int inlineLimit() { return maximumInlineToolResultCharacters; }
+
+    public String preview(String value) {
+        if (value == null || value.length() <= inlineLimit()) return value;
+        String marker = "…[外置 sha256=" + digest(value) + "]";
+        return prefixByCodePoints(value, inlineLimit() - marker.length()) + marker;
     }
 
-    public String appendToolResult(String context, String toolName, String output, String resultReference) {
-        String reference = resultReference == null || resultReference.isBlank()
-                ? "unavailable" : resultReference;
-        String safeOutput = safe(output);
-        String preview = prefixByCodePoints(safeOutput, maximumInlineToolResultCharacters);
-        String omitted = preview.length() == safeOutput.length() ? ""
-                : "\n[tool result externalized chars=" + safeOutput.length()
-                        + " sha256=" + digest(safeOutput) + "]";
-        return compact(safe(context) + "\n\n工具 " + safe(toolName)
-                + " 返回（权威引用 " + reference + "）：\n" + preview + omitted);
-    }
-
-    public String compact(String value) {
-        String safeValue = safe(value);
-        if (safeValue.length() <= maximumCharacters) {
-            return safeValue;
+    public void requireFits(long characters) {
+        if (characters > maximumCharacters) {
+            throw new io.github.illuseahashmap.agent.runtime.application.AgentExecutionException(
+                    new io.github.illuseahashmap.agent.runtime.domain.AgentFailure("AGENT_CONTEXT_BUDGET_EXCEEDED",
+                    io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory.RESULT_POLICY, false,
+                    io.github.illuseahashmap.agent.runtime.domain.ResultStatus.REJECTED, "Request exceeds the configured context budget"));
         }
-        String omittedDigest = digest(safeValue);
-        String marker = OMITTED_MARKER.formatted(omittedDigest);
-        int available = maximumCharacters - marker.length();
-        int prefixLength = available / 2;
-        int suffixLength = available - prefixLength;
-        int prefixEnd = safePrefixBoundary(safeValue, prefixLength);
-        int suffixStart = safeSuffixBoundary(safeValue, safeValue.length() - suffixLength);
-        return safeValue.substring(0, prefixEnd) + marker + safeValue.substring(suffixStart);
     }
 
     public String digest(String value) {
@@ -100,12 +85,4 @@ public class CheckpointContextPolicy {
         return boundary;
     }
 
-    private int safeSuffixBoundary(String value, int requested) {
-        int boundary = Math.max(0, Math.min(requested, value.length()));
-        if (boundary > 0 && boundary < value.length()
-                && Character.isLowSurrogate(value.charAt(boundary))) {
-            boundary++;
-        }
-        return boundary;
-    }
 }

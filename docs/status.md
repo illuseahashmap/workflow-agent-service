@@ -62,7 +62,7 @@
 | P0 | 流程操作审计 | 租户隔离查询 API 支持事件、实例、Trace、时间范围和分页；人工流程操作及 Agent 节点成功、人工复核、空结果继续、运维保持决策均进入同一审计账本 | 通过容器化环境验证全链路可追溯，继续补齐派单规则命中/兜底决策证据 |
 | P1 | 租户纵深隔离 | 平台业务表及迁移时已存在且带租户字段的 Flowable 表已有强制 RLS；最小权限部署模板未完成 | 先补独立迁移/运行账号模板，在非超级用户下完成真实 Flowable 表评估、系统 Worker 授权和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；Checkpoint v3 保存 Schema、摘要、冻结路由工具集和工具账本引用，恢复时回填已提交结果且不会重复调用外部工具 | Docker 恢复后完成真实强杀、租约过期、运行中外部调用边界暂停和跨实例压力；将 RAG Evidence/超大对象外置并加入恢复等价评测，再推进集中式批量续租、公平调度、Guardrail 和高风险写工具确认 |
+| P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；[Checkpoint v5](architecture/agent-collaboration-design.md) 增量合并工作摘要，按当前权限回读不可变工具记录，核验声明的决策字段。同租户两单、连续两次压缩、成功工具回执缺失、终态事务回滚、预算调小、JSON 修复与 Flowable 分支已纳入 PostgreSQL 回归 | Docker 恢复后完成真实强杀、租约过期、运行中外部调用边界暂停和跨实例压力；将 RAG Evidence/超大对象外置并扩展恢复等价评测，再推进集中式批量续租、公平调度、Guardrail 和高风险写工具确认 |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |

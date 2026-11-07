@@ -264,6 +264,19 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         validateOutputSchema(version.outputSchema());
         validateInputSchema(version.inputSchema());
         validateToolSet(version.toolSetJson(), version.executionMode());
+        try {
+            var rule = io.github.illuseahashmap.agent.definition.domain.DecisionBinding.parse(objectMapper, version.outputSchema());
+            if (rule != null && version.executionMode() != AgentExecutionMode.PLATFORM_AGENT) {
+                throw io.github.illuseahashmap.agent.definition.domain.DecisionBinding.invalid();
+            }
+            if (rule != null) {
+                boolean bound = false;
+                for (var code : objectMapper.readTree(version.toolSetJson())) bound |= rule.tool().equals(code.textValue());
+                if (!bound) throw io.github.illuseahashmap.agent.definition.domain.DecisionBinding.invalid();
+            }
+        } catch (IllegalArgumentException | java.io.IOException e) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Decision contract requires a bound platform tool and string output");
+        }
         toolCatalog.freezePublication(tenantCode, versionId, version.toolSetJson());
         versionRepository.publish(tenantCode, definitionId, versionId, principalProvider.current().principalId());
         return toVersionView(requireVersion(tenantCode, definitionId, versionId));

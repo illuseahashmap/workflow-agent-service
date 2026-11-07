@@ -86,7 +86,7 @@ public interface AgentExecutor {
     record CheckpointState(String schemaVersion, String logicalStepId, int nextStep, String context,
                            String contextDigest, String previousToolResultJson,
                            String previousToolResultReference, List<String> routeTools) {
-        public static final String CURRENT_SCHEMA_VERSION = "3";
+        public static final String CURRENT_SCHEMA_VERSION = "5";
 
         public CheckpointState {
             schemaVersion = schemaVersion == null || schemaVersion.isBlank() ? "1" : schemaVersion;
@@ -96,10 +96,5 @@ public interface AgentExecutor {
             }
         }
 
-        public CheckpointState(String logicalStepId, int nextStep, String context,
-                               String previousToolResultJson) {
-            this(CURRENT_SCHEMA_VERSION, logicalStepId, nextStep, context, null,
-                    previousToolResultJson, null, List.of());
-        }
     }
 }

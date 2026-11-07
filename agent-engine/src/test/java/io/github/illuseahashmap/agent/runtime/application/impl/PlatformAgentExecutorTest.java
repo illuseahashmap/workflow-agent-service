@@ -267,7 +267,7 @@ class PlatformAgentExecutorTest {
             }
         };
         var audits = mock(io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository.class);
-        when(audits.findSucceededByRun("tenant-a", 42)).thenReturn(List.of(
+        when(audits.findSucceededByRun("tenant-a", 42, java.util.Set.of())).thenReturn(List.of(
                 new io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutionAuditRepository.Audit(
                         "tenant-a", "lookup", "42:tool:1:lookup", "hash", "SUCCEEDED", "secret", null,
                         "old-trace", java.time.Instant.EPOCH)));
@@ -311,7 +311,7 @@ class PlatformAgentExecutorTest {
     void deductsAuthorizationTimeBeforeEachModelRequest() {
         var clock = new java.util.concurrent.atomic.AtomicLong();
         var registry = mock(AgentToolRegistry.class);
-        when(registry.validateRunResultAccess(any(), org.mockito.ArgumentMatchers.anyLong())).thenAnswer(invocation -> {
+        when(registry.validateRunResultAccess(any())).thenAnswer(invocation -> {
             clock.addAndGet(Duration.ofMillis(200).toNanos());
             return 0;
         });
@@ -338,7 +338,7 @@ class PlatformAgentExecutorTest {
             default -> 3;
         };
         var registry = mock(AgentToolRegistry.class);
-        when(registry.validateRunResultAccess(any(), org.mockito.ArgumentMatchers.anyLong())).thenAnswer(invocation -> {
+        when(registry.validateRunResultAccess(any())).thenAnswer(invocation -> {
             if (calls.incrementAndGet() == expiresOn) { clock.set(Duration.ofSeconds(2).toNanos()); }
             return 0;
         });
@@ -403,6 +403,26 @@ class PlatformAgentExecutorTest {
                 .isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
                         failure -> assertThat(failure.failure().errorCode()).isEqualTo("AGENT_DEADLINE_EXCEEDED"));
         verify(adapter, org.mockito.Mockito.never()).invoke(any());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "content_filter,filtered,AGENT_RESULT_CONTENT_FILTERED",
+            "length,partial,AGENT_RESULT_INCOMPLETE",
+            "evidence_insufficient,invalid,AGENT_RESULT_EVIDENCE_INSUFFICIENT",
+            "business_rejected,invalid,AGENT_RESULT_BUSINESS_REJECTED",
+            "stop,{\"resultStatus\":\"REJECTED\"},AGENT_RESULT_BUSINESS_REJECTED"
+    })
+    void terminalSignalsNeverEnterRepair(String reason, String body, String code) {
+        var model = mock(ModelProviderPort.class);
+        when(model.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(model.invoke(any())).thenReturn(response(route()),
+                new ModelProviderResponse(body,"model","blocked",reason,1,1,0,1), response("{\"accepted\":true}"));
+        var executor = new PlatformAgentExecutor(mock(AgentCredentialResolver.class),
+                new ModelProviderRegistry(List.of(model)), new AgentOutputSchemaValidator(new ObjectMapper()));
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command("tenant-a", version(), provider(), "{}",
+                Duration.ofSeconds(10), "trace"))).hasMessageContaining(code);
+        verify(model, org.mockito.Mockito.times(2)).invoke(any());
     }
 
     private AgentProvider provider() {

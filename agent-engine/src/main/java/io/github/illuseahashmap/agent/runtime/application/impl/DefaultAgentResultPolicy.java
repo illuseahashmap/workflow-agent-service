@@ -28,9 +28,14 @@ public class DefaultAgentResultPolicy implements AgentResultPolicy {
 
     @Override
     public Decision evaluate(AgentDefinitionVersion version, ModelProviderResponse response) {
-        if (!StringUtils.hasText(response.content())) {
-            return Decision.rejected(ResultStatus.EMPTY, "AGENT_RESULT_EMPTY");
-        }
+        Decision signal = responseSignal(response);
+        if (!signal.accepted()) return signal;
+        return StringUtils.hasText(response.content()) ? Decision.accept()
+                : Decision.rejected(ResultStatus.EMPTY, "AGENT_RESULT_EMPTY");
+    }
+
+    /** Check before interpreting any model message, including native tool calls and repair attempts. */
+    Decision responseSignal(ModelProviderResponse response) {
         String finishReason = response.finishReason();
         if ("content_filter".equalsIgnoreCase(finishReason)) {
             return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_CONTENT_FILTERED");
@@ -45,7 +50,7 @@ public class DefaultAgentResultPolicy implements AgentResultPolicy {
         if ("length".equalsIgnoreCase(finishReason)) {
             return Decision.rejected(ResultStatus.PARTIAL, "AGENT_RESULT_INCOMPLETE");
         }
-        Decision declared = declaredBusinessDecision(response.content());
+        Decision declared = StringUtils.hasText(response.content()) ? declaredBusinessDecision(response.content()) : null;
         if (declared != null) {
             return declared;
         }
