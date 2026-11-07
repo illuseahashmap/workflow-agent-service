@@ -38,7 +38,10 @@ public final class DocumentIngestionService {
         var snapshots = documentStore.loadSnapshots(tenantCode, sourceCode, documentVersionId);
         DocumentSnapshot snapshot = snapshots.stream().filter(item -> item.documentVersion().id() == documentVersionId)
                 .findFirst().orElseThrow(io.github.illuseahashmap.knowledge.ingestion.domain.DocumentSupersededException::new);
-        List<Chunk> chunks = snapshots.stream().flatMap(item -> chunker.chunk(item).stream()).toList();
+        List<Chunk> chunks = snapshots.stream().flatMap(item -> item.nativeBlocks().isEmpty()
+                ? chunker.chunk(item).stream()
+                : java.util.stream.IntStream.range(0,item.nativeBlocks().size()).mapToObj(n ->
+                    Chunk.of(item.documentVersion(),n,item.nativeBlocks().get(n)))).toList();
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException("Document contains no indexable text");
         }

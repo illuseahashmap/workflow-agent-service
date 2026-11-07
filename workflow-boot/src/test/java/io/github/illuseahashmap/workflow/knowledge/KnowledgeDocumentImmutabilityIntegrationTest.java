@@ -580,6 +580,194 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
     }
 
     @Test
+    void nativeProcurementEvidenceRoundTrip() throws Exception {
+        Flyway.configure().dataSource(databaseUrl,databaseUser,databasePassword)
+                .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+        var ds=new DriverManagerDataSource(databaseUrl,databaseUser,databasePassword);
+        var tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
+        var db=new JdbcTemplate(ds);
+        var jdbc=new NamedParameterJdbcTemplate(ds);
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        var management=new PostgresKnowledgeManagementAdapter(jdbc);
+        var originals=new NativeEvidenceStore(jdbc,management,json);
+        var indexes=new PostgresKnowledgeIndexAdapter(jdbc);
+        var ingestion=new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                new PostgresKnowledgeDocumentStore(jdbc),indexes,new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(1200,120));
+        String tenant="native-"+suffix;
+        db.update("INSERT INTO workflow_tenant(tenant_id,tenant_code,tenant_name) VALUES(?,?,?)",tenant,tenant,tenant);
+        long provider=db.queryForObject("INSERT INTO agent_provider(tenant_code,provider_code,provider_name,provider_type) VALUES(?,'pilot','pilot','MOCK') RETURNING id",Long.class,tenant);
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new NativeEvidenceController(
+                originals,()->new io.github.illuseahashmap.workflow.shared.context.TenantContext.TenantInfo("1",tenant,tenant),
+                ()->new io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal("USER","buyer","buyer","buyer",tenant,java.util.Set.of(),java.util.Set.of())))
+                .setControllerAdvice(new io.github.illuseahashmap.workflow.shared.exception.GlobalExceptionHandler()).build();
+        var pilot=java.nio.file.Path.of("../docs/fixtures/knowledge/pilots/procurement-approval-v1");
+        var gold=java.nio.file.Files.readAllLines(pilot.resolve("anchors.tsv")).stream().skip(1)
+                .map(s->s.split("\\t")).collect(java.util.stream.Collectors.toMap(a->a[0],a->a));
+        var question=java.nio.file.Files.readAllLines(pilot.resolve("cases.tsv")).stream().filter(s->s.startsWith("B04\t"))
+                .findFirst().orElseThrow().split("\\t");
+        for(var fmt:java.util.List.of("MD","XLSX","DOCX","PDF")){
+            String scope="s-"+fmt, external="approval."+fmt.toLowerCase(java.util.Locale.ROOT);
+            byte[] bytes=java.nio.file.Files.readAllBytes(pilot.resolve("sources").resolve(external));
+            var upload=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/knowledge/originals")
+                    .file(new org.springframework.mock.web.MockMultipartFile("file",external,"application/octet-stream",bytes))
+                    .param("sourceCode",scope).param("externalDocumentId",external).param("version","1");
+            tx.executeWithoutResult(s->{
+                try {mvc.perform(upload).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());}
+                catch(Exception e){throw new IllegalStateException(e);}
+            });
+            var file=originals.coverage(tenant,scope,external,1).original();
+            var retry=tx.execute(s->originals.ingest(tenant,scope,external,1,fmt,bytes));
+            assertThat(retry).isEqualTo(file);
+            var coverage=originals.coverage(tenant,scope,external,1);
+            assertThat(coverage.locations()).hasSize(file.blocks());
+            assertThat(coverage.original()).isEqualTo(file);
+            assertThat(db.queryForObject("SELECT original_bytes FROM knowledge_native_original WHERE tenant_code=? AND source_code=?",
+                    byte[].class,tenant,scope)).isEqualTo(bytes);
+            if(fmt.equals("DOCX")||fmt.equals("PDF")){
+                assertThat(file.status()).isEqualTo("NOT_INDEXED");
+                assertThat(file.documentVersionId()).isNull();
+                assertThat(db.queryForObject("SELECT count(*) FROM knowledge_ingestion_job WHERE tenant_code=? AND source_code=?",
+                        Integer.class,tenant,scope)).isZero();
+                continue;
+            }
+            assertThat(file.blocks()).isGreaterThan(4);
+            var changed=java.util.Arrays.copyOf(bytes,bytes.length+1);
+            assertThatThrownBy(()->tx.execute(s->originals.ingest(tenant,scope,external,1,fmt,changed))).isInstanceOf(BusinessException.class);
+            var index=tx.execute(s->ingestion.ingest(tenant,scope,file.documentVersionId()).indexVersion());
+            tx.executeWithoutResult(s->indexes.activate(index));
+            var profile=tx.execute(s->management.createProfile(tenant,new KnowledgeManagementPort.CreateProfile(
+                    scope,"KEYWORD",16,0,index.id(),java.util.List.of(scope))));
+            tx.executeWithoutResult(s->{management.publishProfile(tenant,profile.id());
+                management.grant(tenant,new KnowledgeManagementPort.GrantScope("buyer",scope));});
+            var retrieval=new io.github.illuseahashmap.knowledge.retrieval.application.KnowledgeRetrievalService(
+                    ()->null,new io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever(new PostgresKeywordChunkSearchAdapter(jdbc)),
+                    new PostgresKnowledgeAccessPolicy(jdbc),new PostgresRetrievalTraceRepository(jdbc,json),new PostgresRetrievalProfileRepository(jdbc),
+                    new PostgresAgentRetrievalProfileBinding(jdbc),new PostgresEvidenceVisibilityAdapter(jdbc));
+            var byPosition=new java.util.HashMap<String,String>();
+            var excerpts=new java.util.HashMap<String,String>();
+
+            var beans=new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+            beans.registerSingleton("retrieval",retrieval);
+            var search=new io.github.illuseahashmap.workflow.agent.KnowledgeSearchAgentTool(
+                    beans.getBeanProvider(io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeRetrievalUseCase.class),json);
+            var governance=new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcAgentToolGovernanceRepository(jdbc);
+            var validator=new io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator(json);
+            var registry=new io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry(java.util.List.of(search),
+                    governance,governance,validator,json,java.util.List.of(),
+                    new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcAgentToolSnapshotRepository(jdbc));
+            // Independent oracle: review native positions against the frozen index before any search.
+            var chunkIds=db.queryForList("SELECT chunk_id FROM knowledge_chunk WHERE index_version_id=? ORDER BY ordinal",String.class,index.id());
+            assertThat(chunkIds).hasSize(coverage.locations().size());
+            var reviewed=new java.util.LinkedHashMap<String,String>();
+            for(int i=0;i<chunkIds.size();i++) {
+                var a=coverage.locations().get(i);
+                reviewed.put(fmt.equals("MD")?a.start():a.start()+":"+a.end(),chunkIds.get(i));
+            }
+            var required=java.util.Arrays.stream(question[2].split(",")).map(name->reviewed.get(gold.get(name)[fmt.equals("MD")?1:3])).toList();
+            assertThat(required).doesNotContainNull().doesNotHaveDuplicates().hasSize(4);
+            var schema=json.writeValueAsString(java.util.Map.of("type","object","properties",java.util.Map.of(
+                    "decision",java.util.Map.of("type","string"),"sources",java.util.Map.of("type","array","items",java.util.Map.of("type","string"))),
+                    "x-workflow-citation-claim",java.util.Map.of("version","1","amountField","amount","above",20000,"decisionField","decision",
+                            "disposition","CONDITIONAL","citationsField","sources","requiredChunks",required)));
+            var versions=new io.github.illuseahashmap.agent.definition.infrastructure.persistence.JdbcAgentDefinitionVersionRepository(jdbc);
+            var membership=new PostgresCitationPublicationAdapter(jdbc);
+            assertThat(membership.containsAll(tenant+"-other",profile.id(),java.util.Set.copyOf(required))).isFalse();
+            if (fmt.equals("XLSX")) {
+                String otherChunk=db.queryForObject("SELECT min(chunk_id) FROM knowledge_chunk WHERE tenant_code=? AND source_code='s-MD'",String.class,tenant);
+                assertThat(membership.containsAll(tenant,profile.id(),java.util.Set.of(required.getFirst(),otherChunk))).isFalse();
+            }
+            var publisher=new io.github.illuseahashmap.agent.definition.application.impl.AgentDefinitionServiceImpl(
+                    new io.github.illuseahashmap.agent.definition.infrastructure.persistence.JdbcAgentDefinitionRepository(jdbc),versions,
+                    new io.github.illuseahashmap.agent.provider.infrastructure.persistence.JdbcAgentProviderRepository(jdbc),
+                    ()->new io.github.illuseahashmap.workflow.shared.context.TenantContext.TenantInfo(tenant,tenant,tenant),
+                    ()->new io.github.illuseahashmap.workflow.shared.context.CurrentPrincipal("USER","buyer","buyer","buyer",tenant,java.util.Set.of(),java.util.Set.of()),
+                    json,validator,registry,membership);
+            var definition=tx.execute(s->publisher.create(new io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionCommand(scope,scope,"test",true)));
+            long vid=versions.findLatest(tenant,definition.id()).orElseThrow().id();
+            java.util.function.BiConsumer<Long,String> configure=(pid,contract)->tx.executeWithoutResult(s->
+                    publisher.updateDraft(definition.id(),vid,new io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand(
+                            io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode.PLATFORM_AGENT,provider,null,"policy",120,
+                            io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy.FAIL_PROCESS,
+                            "{\"type\":\"object\",\"properties\":{\"amount\":{\"type\":\"number\"}}}",contract,java.util.List.of("knowledge_search"),pid)));
+            var draft=tx.execute(s->management.createProfile(tenant,new KnowledgeManagementPort.CreateProfile(scope+"-draft","KEYWORD",16,0,index.id(),java.util.List.of(scope))));
+            for (Long invalid:java.util.Arrays.asList(null,draft.id(),profile.id())) {
+                configure.accept(invalid, java.util.Objects.equals(invalid,profile.id())?schema.replace(required.getLast(),"outside-profile"):schema);
+                assertThatThrownBy(()->tx.execute(s->publisher.publish(definition.id(),vid))).isInstanceOf(BusinessException.class)
+                        .hasMessageContaining("published retrieval profile");
+                assertThat(versions.findByVersionId(tenant,vid).orElseThrow().published()).isFalse();
+            }
+            configure.accept(profile.id(),schema);
+            tx.execute(s->publisher.publish(definition.id(),vid));
+            var version=versions.findByVersionId(tenant,vid).orElseThrow();
+            var request=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(
+                    tenant,java.util.Map.of("query",question[1],"maxResults",16),java.time.Duration.ofSeconds(10),
+                    "pilot","pilot:1","pilot",vid,"tool:1",vid,"buyer");
+            java.util.function.Supplier<String> invoke=()->registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",request).output();
+            var toolOutput=invoke.get();
+            assertThat(invoke.get()).isEqualTo(toolOutput);
+            var result=json.readTree(toolOutput);
+            final String trace=result.path("traceId").asText();
+            for(var citation:result.path("citations")){
+                    var key=citation.path("reference").path("locator").asText();
+                    assertThat(citation.has("excerpt")).isFalse();
+                    var v=originals.read(tenant,"buyer",trace,key);
+                    assertThat(v.originalSha256()).isEqualTo(file.sha256());
+                    assertThat(result.path("evidence")).anyMatch(e->citation.path("reference").equals(e.path("reference"))
+                            && v.excerpt().equals(e.path("text").asText()));
+                    var a=v.anchor();
+                    assertThat(a.version()).isEqualTo(2);
+                    if(fmt.equals("XLSX"))assertThat(a.part()).isEqualTo("审批矩阵");
+                    String pos=fmt.equals("MD") ? a.start() : a.start()+":"+a.end();
+                    byPosition.put(pos,key); excerpts.put(key,v.excerpt());
+            }
+            for(var name:question[2].split(",")){
+                String pos=gold.get(name)[fmt.equals("MD")?1:3];
+                assertThat(byPosition).as("%s %s %s",fmt,name,pos).containsKey(pos);
+                assertThat(byPosition.get(pos)).isEqualTo(reviewed.get(pos));
+            }
+            assertThat(required).doesNotHaveDuplicates().hasSize(4);
+            assertThat(excerpts.get(required.get(2))).contains("直属负责人","部门负责人","必要时","财务中心","复核预算");
+            assertThat(excerpts.get(required.get(3))).contains("未完成准入","核验");
+            // Only the reviewed conditional disposition can pass, and only with all four cited blocks.
+            var policy=new io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy(40000);
+            var cmd=new io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor.Command(tenant,version,null,"{\"amount\":20000.01}",null,"trace");
+            for(int missing:new int[]{-1,0,1,2,3}){
+                var memory=new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory(cmd,json,policy);
+                var delivered=result.deepCopy();
+                if(missing!=-1){
+                    for(var key:java.util.List.of("citations","evidence")){
+                        var entries=(com.fasterxml.jackson.databind.node.ArrayNode)delivered.path(key);
+                        for(int i=entries.size()-1;i>=0;i--) if(required.get(missing).equals(
+                                entries.get(i).path("reference").path("locator").textValue())) entries.remove(i);
+                    }
+                }
+                String tool=missing==-1 ? toolOutput : json.writeValueAsString(delivered);
+                memory.observe(new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory.Receipt("ref","call","knowledge_search","{}",policy.digest(tool)),tool);
+                String conditional=json.writeValueAsString(java.util.Map.of("decision","CONDITIONAL","sources",required));
+                String mandatory=json.writeValueAsString(java.util.Map.of("decision","MANDATORY","sources",required));
+                assertThatThrownBy(()->memory.verify(mandatory)).isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+                if(missing==-1) memory.verify(conditional);
+                else assertThatThrownBy(()->memory.verify(conditional)).isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+            }
+            final String chunk=required.getLast();
+            var read=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/knowledge/citations/preview")
+                    .param("traceId",trace).param("chunkId",chunk);
+            mvc.perform(read).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.originalSha256").value(file.sha256()));
+            assertThatThrownBy(()->originals.read(tenant+"-other","buyer",trace,chunk)).isInstanceOf(BusinessException.class);
+            assertThatThrownBy(()->originals.read(tenant,"buyer","not-the-trace",chunk)).isInstanceOf(BusinessException.class);
+            db.update("UPDATE knowledge_source SET enabled=false WHERE tenant_code=? AND source_code=?",tenant,scope);
+            assertThatThrownBy(()->originals.read(tenant,"buyer",trace,chunk)).isInstanceOf(BusinessException.class);
+            db.update("UPDATE knowledge_source SET enabled=true WHERE tenant_code=? AND source_code=?",tenant,scope);
+            tx.executeWithoutResult(s->management.revoke(tenant,new KnowledgeManagementPort.GrantScope("buyer",scope)));
+            assertThatThrownBy(invoke::get).isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
+                    error->assertThat(error.failure().errorCode()).isEqualTo("KNOWLEDGE_RESULT_ACCESS_REVOKED"));
+            mvc.perform(read).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+            assertThatThrownBy(()->originals.read(tenant,"buyer",trace,chunk)).isInstanceOf(BusinessException.class);
+        }
+    }
+
+    @Test
     void cancelsSlowJdbcReadsWithinTheExecutionBudgetWithoutLeakingTimeoutToReuse() throws Exception {
         var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
         var guarded = (javax.sql.DataSource) new io.github.illuseahashmap.workflow.config.TenantRlsDataSourcePostProcessor()

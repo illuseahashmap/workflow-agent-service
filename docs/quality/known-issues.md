@@ -86,7 +86,7 @@
 
 ### P1-2e 四格式原生摄取与来源追溯尚未完成
 
-- 2026-11-07 范围修订：以[四格式设计](../architecture/rag-four-format-evidence-design.md)为准。公共缺口是二进制原件、结构化 Markdown、Office 原生解析和不依赖页区域的定位。Excel/Word/PDF 各按真实文件独立过门禁；下列 D0–D3 和困难 PDF 条目是 PDF 子项，不是所有材料的开工条件。
+- V60 已补四格式不可变原件、覆盖清单和按 Trace/现权回读；采购 Markdown/XLSX 的 B04 多块判定已覆盖 PostgreSQL 上的发布与 Registry。评审确认的三个缺陷（不可达引用可发布、工具重复传正文、共享字符串导致派生文本超限）均有回归。浏览器原件上传与片段回读已接入，UI 接口模拟测试与数据库测试分开。待实现：DOCX/PDF 解析、复杂 Office 表头/嵌入内容审核、完整流程联测、派生重建切换和分格式评测。[实现与回归边界](../architecture/rag-four-format-evidence-design.md#5-已实现的原件切片)。
 
 - 当前：文本/Markdown 摄取可用；`TextChunker` 不理解 PDF 布局、表格单元格或图片像素。LangChain4j + MinerU 选型已确认，结构定位契约/Codec/来源覆盖评分于 2026-11-04 加固，但未安装部署 MinerU 或实现二进制 PDF 摄取，不能据此声称 PDF 可用。
 - 设计进展（2026-11-03）：已补[实施设计与开源实践评审](../architecture/rag-structured-document-implementation-design.md)，明确当前任务文档唯一性/Chunk ID/正文存储的改造点、远端任务丢失与重复计算边界、结构/资产模型、完整来源 Manifest、API/权限和 20 个场景条目；未实际执行 D0 试跑，问题仍为待实现。

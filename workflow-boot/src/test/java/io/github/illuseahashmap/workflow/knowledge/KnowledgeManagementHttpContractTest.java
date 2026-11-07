@@ -18,6 +18,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class KnowledgeManagementHttpContractTest {
     @Test
+    void mismatchedNativeMediaTypeIsRejectedBeforeStorage() throws Exception {
+        var store=mock(NativeEvidenceStore.class);
+        var mvc=MockMvcBuilders.standaloneSetup(new NativeEvidenceController(store,
+                ()->new TenantContext.TenantInfo("1","default","Default"),()->null))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/knowledge/originals")
+                .file(new org.springframework.mock.web.MockMultipartFile("file","wrong.xlsx","text/html","test".getBytes()))
+                .param("sourceCode","policies").param("externalDocumentId","doc").param("version","1"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(store);
+    }
+
+    @Test
     void invalidBodyAndPaginationReturn400BeforeApplicationInvocation() throws Exception {
         var management = mock(KnowledgeManagementPort.class);
         var mvc = MockMvcBuilders.standaloneSetup(new KnowledgeManagementController(management,

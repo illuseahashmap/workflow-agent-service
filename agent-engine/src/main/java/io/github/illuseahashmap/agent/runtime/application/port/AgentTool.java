@@ -6,6 +6,8 @@ import java.util.Map;
 /** Explicit application boundary for a tenant-authorized Agent tool. */
 public interface AgentTool {
 
+    int MAX_OUTPUT_CHARS = 20_000;
+
     String name();
 
     default String inputSchema() {

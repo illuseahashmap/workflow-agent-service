@@ -60,6 +60,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), "Invalid request parameter"));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> uploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException exception) {
+        return ResponseEntity.status(413).body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), "Upload exceeds size limit"));
+    }
+
+    @ExceptionHandler({org.springframework.web.multipart.MultipartException.class,
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class})
+    public ResponseEntity<ApiResponse<Void>> invalidMultipart(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.fail(ErrorCode.BAD_REQUEST.code(), "Invalid multipart request"));
+    }
+
     @ExceptionHandler(FlowableException.class)
     public ResponseEntity<ApiResponse<Void>> handleFlowableException(FlowableException exception) {
         LOGGER.warn("Flowable operation failed", exception);

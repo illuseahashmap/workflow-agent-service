@@ -34,6 +34,8 @@ public final class TaskMemory {
     private final Set<String> factRefs = new LinkedHashSet<>();
     private final Map<String,String> originals = new HashMap<>();
     private final DecisionBinding binding;
+    private final io.github.illuseahashmap.agent.definition.domain.CitationClaim claim;
+    private final Set<String> observedCitations = new LinkedHashSet<>();
     private final String input, owner;
     private Set<String> routeTools;
     private String route, notes = "", expected, fact;
@@ -46,11 +48,28 @@ public final class TaskMemory {
         this.owner = policy.digest(encode(Arrays.asList(c.tenantCode(), c.runId(), c.processInstanceId(),
                 c.version().id(), policy.digest(input))));
         this.binding = DecisionBinding.parse(json, c.version().outputSchema());
+        this.claim = io.github.illuseahashmap.agent.definition.domain.CitationClaim.parse(json, c.version().outputSchema());
     }
 
     public void route(String route, Set<String> tools) { this.route = route; this.routeTools = Set.copyOf(tools); }
     public ToolResult observe(Receipt r, String original) {
         if (r == null || original == null || !policy.digest(original).equals(r.outputDigest())) throw invalid("Tool result digest mismatch");
+        if (claim != null && "knowledge_search".equals(r.tool())) {
+            try {
+                var result=json.readTree(original);
+                if (!"SUCCESS".equals(result.path("status").textValue()) || !result.path("citations").isArray()
+                        || !result.path("evidence").isArray()) throw unverified();
+                var evidences=new java.util.HashSet<JsonNode>();
+                for (var e:result.get("evidence")) evidences.add(e.path("reference"));
+                for (var citation:result.get("citations")) {
+                    var ref=citation.path("reference");
+                    if (!evidences.remove(ref) || !"CHUNK".equals(ref.path("sourceType").textValue())
+                            || !ref.path("locator").isTextual()) throw unverified();
+                    observedCitations.add(ref.get("locator").textValue());
+                }
+                if (!evidences.isEmpty()) throw unverified();
+            } catch(java.io.IOException e){throw unverified();}
+        }
         if (binding != null && binding.tool().equals(r.tool())) {
             try {
                 var subject = json.readTree(input).path(binding.subjectField());
@@ -128,6 +147,12 @@ public final class TaskMemory {
                     "field", binding.factField(), "value", fact, "expectedOutput", expected, "sources", factRefs)));
     }
     public void verify(String output) {
+        if (claim != null) {
+            try {
+                var amountInput=json.reader().with(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readTree(input);
+                if (!claim.supported(amountInput, json.readTree(output), observedCitations)) throw unverified();
+            } catch (java.io.IOException | NullPointerException e) { throw unverified(); }
+        }
         if (binding == null) return;
         try {
             var answer = json.readTree(output);

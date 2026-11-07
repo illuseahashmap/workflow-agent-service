@@ -31,8 +31,6 @@ import org.springframework.util.StringUtils;
 @Component
 public class AgentToolRegistry implements AgentToolCatalogPort {
 
-    private static final int MAX_OUTPUT_CHARS = 20_000;
-
     private final Map<String, AgentTool> tools;
     private final AgentToolPolicyRepository policyRepository;
     private final AgentToolExecutionAuditRepository auditRepository;
@@ -375,7 +373,7 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
                         io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.minimum(request.timeout(), remaining));
             }
             AgentTool.Result result = tool.execute(executionRequest);
-            if (result == null || result.output() == null || result.output().length() > MAX_OUTPUT_CHARS) {
+            if (result == null || result.output() == null || result.output().length() > AgentTool.MAX_OUTPUT_CHARS) {
                 throw toolProtocol("AGENT_TOOL_OUTPUT_INVALID", "Agent tool output is empty or too large");
             }
             auditRepository.complete(new AgentToolExecutionAuditRepository.Audit(

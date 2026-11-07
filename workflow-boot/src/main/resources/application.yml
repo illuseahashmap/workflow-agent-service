@@ -1,6 +1,10 @@
 spring:
   application:
     name: workflow-agent-service
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   autoconfigure:
     exclude:
       - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration

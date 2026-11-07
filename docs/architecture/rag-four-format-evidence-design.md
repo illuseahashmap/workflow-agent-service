@@ -1,6 +1,6 @@
 # RAG 四格式摄取与证据设计
 
-2026-11-07，设计决策，非已实现能力。产品目标是原生支持 UTF-8 Markdown（.md）、Excel（.xlsx）、Word（.docx）、PDF（.pdf）。现有 UTF-8 纯文本入口保留；不把 .xls、.doc、宏工作簿、加密文件或给 Office 改扩展名纳入首版。四种格式分别验收，不以一个解析器代表整个产品。
+2026-11-07。目标为 UTF-8 Markdown、Excel（.xlsx）、Word（.docx）与 PDF 的原生证据。第 1–4 节保留目标与设计依据；**第 5 节是已实现范围**。旧纯文本入口保留，.xls、.doc、宏、加密文件不作为可检索格式。
 
 ## 1. 对现状的审查
 
@@ -58,4 +58,20 @@ Office 首轮可用 Apache POI 的 XSSF/XWPF 做小样验证，Markdown 可用�
 | 检索与引用 | 固定模型、Profile、问题和权限，分别记录每格式事实组覆盖、精确定位命中、未判定数和失败原因；不能只报四格式平均分 |
 | 运行与治理 | 引用能否以当前权限打开？关键事实缺失时是否拒答/复核且不错误推进？重试、强杀与晚到是否污染旧 Profile 或重复激活？ |
 
-审核夹具上，越权、关键金额边界/单位误判、伪造定位、关键缺失仍放行、迟到覆盖均硬阻断。延迟、内存、质量比例须在各格式实测后按文件规模批准，不虚设达标数据。本次设计不包含四种适配器实现、真实夹具、锁定金标或验收报告。
+审核夹具上，越权、金额边界/单位误判、伪造定位、关键缺失仍放行、迟到覆盖都应硬阻断。比例与性能阈值须按格式实测；不从一个采购场景推导发布级成绩。
+
+## 5. 已实现的原件切片
+
+- `POST /knowledge/originals` 接收 multipart 的 sourceCode、externalDocumentId、version、file。管理权限与旧文档接口一致。保存原始字节和 SHA-256（单件 2 MiB），与解析 recipe、覆盖清单、派生内容和既有索引区分。相同租户/来源/文档版本重交相同原件幂等；换字节或试图覆盖旧文本版本均拒绝。V60 不重算历史版本/Trace。
+- `GET /knowledge/originals/coverage` 按同一文档身份返回已解析位置和排除原因。PARSED 表示已解析并排队，不等于 ACTIVE；不支持的 DOCX/PDF 保存原件和 NOT_INDEXED 清单，不排队、不替代旧活跃索引。拒收伪装/超限包。当前解析同步有界，索引仍走原租约 Worker；未实现对同一原件在线重解析和切换 recipe。
+- CommonMark/GFM 解析 Markdown 段落及表格行；代码块不作为政策，HTML/图片等未经解释的内容不发布。POI/XSSF 解析可见工作表的行、数值原值和显示值、横向合并位置。隐藏行列/表剔除并记录，公式、错误单元格、纵向合并、图形/嵌入对象等不予索引。不把通用表语义或任意公式新鲜性当作已解决。
+- `GET /knowledge/citations/preview?traceId=…&chunkId=…` 使用已认证主体和可信租户。在同一 SQL 中核对成功 Trace 的原引用、已发布 Profile 与冻结索引、当前主体范围、来源与文档状态。仅返回匹配块、原件 SHA、recipe 与 v2 原生位置；猜测块、撤权和跨租户返回 404。Markdown 为原始行区间，Excel 为原工作表选区；Word 块和 PDF 区域有位置契约，但没有解析器生成可用引用。此协议未替换历史 EvidenceLocator v1 评分。
+- 需要驱动流程时可在 PLATFORM_AGENT 的发布输出 Schema 声明 `x-workflow-citation-claim` v1：`amountField` 对应数值输入，`above` 为不含下界，`decisionField/disposition` 为该档审核通过的处置，`citationsField` 为输出引用数组，`requiredChunks` 为审核人固定的块 ID。要求已绑定 knowledge_search。模型不能自定必要证据。校验仅接受本 Run 已观察且仍授权的工具引用，缺少任何一个、金额不适用或给出其他处置均拒绝；此门禁只保证已声明的结构化决策，不是自由文本通用 Grounding。没有在生产发布采购测试草案。
+- [采购报告及复跑入口](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)。两条原生路径分开建索引，使用同一 B04 原题；DOCX/PDF 仅核对原件和未索引状态。
+
+### 交叉评审后的约束
+
+- 发布事务锁定 Agent 草稿；必要块必须全部属于该租户已发布 Profile 的冻结来源/索引，且来源、文档当时可见。发布不授予任何人的读取权限；执行、历史回放和引用回读仍用当前授权。
+- 工具结果的正文只在 `evidence` 出现，`citations` 只保留身份与定位。整组序列化后超过 Registry 的 20,000 字符预算即返回 `KNOWLEDGE_EVIDENCE_BUDGET_EXCEEDED / PARTIAL`，不截掉限定词，不把 SUCCESS Trace 当作已向 Agent 交付的证据。
+- 原件与 ZIP 展开限制之外，解析器还限制派生 UTF-8 正文与排除说明合计 2 MiB、每块 8,000 字符、最多 4,096 个排除位置；在遍历过程中检查 10 秒预算。同步第三方解析调用不是可强制抢占的沙箱。
+- 知识库管理页支持二进制原件上传；“回读引用”用检索 traceId 和 reference.locator 获取当前允许查看的片段。它不是原件下载或 Office/PDF 图形预览。

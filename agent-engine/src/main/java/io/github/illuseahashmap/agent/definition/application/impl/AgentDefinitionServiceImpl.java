@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.agent.definition.application.AgentDefinitionService;
 import io.github.illuseahashmap.agent.definition.application.port.AgentToolCatalogPort;
+import io.github.illuseahashmap.agent.definition.application.port.CitationPublicationPort;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionCommand;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentDefinitionView;
 import io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand;
@@ -50,6 +51,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
     private final ObjectMapper objectMapper;
     private final AgentOutputSchemaValidator outputSchemaValidator;
     private final AgentToolCatalogPort toolCatalog;
+    private final CitationPublicationPort citationPublication;
 
     @Autowired
     public AgentDefinitionServiceImpl(
@@ -60,7 +62,8 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
             CurrentPrincipalProvider principalProvider,
             ObjectMapper objectMapper,
             AgentOutputSchemaValidator outputSchemaValidator,
-            AgentToolCatalogPort toolCatalog
+            AgentToolCatalogPort toolCatalog,
+            CitationPublicationPort citationPublication
     ) {
         this.definitionRepository = definitionRepository;
         this.versionRepository = versionRepository;
@@ -70,6 +73,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         this.objectMapper = objectMapper;
         this.outputSchemaValidator = outputSchemaValidator;
         this.toolCatalog = toolCatalog;
+        this.citationPublication = citationPublication;
     }
 
     public AgentDefinitionServiceImpl(
@@ -82,7 +86,7 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
     ) {
         this(definitionRepository, versionRepository, providerRepository, tenantProvider,
                 principalProvider, objectMapper, new AgentOutputSchemaValidator(objectMapper),
-                new io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry(List.of()));
+                new io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry(List.of()), (t,p,c) -> false);
     }
 
     @Override
@@ -265,6 +269,20 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         validateInputSchema(version.inputSchema());
         validateToolSet(version.toolSetJson(), version.executionMode());
         try {
+            var claim = io.github.illuseahashmap.agent.definition.domain.CitationClaim.parse(objectMapper, version.outputSchema());
+            if (claim != null) {
+                boolean bound = false;
+                for (var code : objectMapper.readTree(version.toolSetJson())) bound |= "knowledge_search".equals(code.textValue());
+                var inputSchema = StringUtils.hasText(version.inputSchema()) ? objectMapper.readTree(version.inputSchema()) : null;
+                if (!bound || version.executionMode() != AgentExecutionMode.PLATFORM_AGENT || inputSchema == null
+                        || !"number".equals(inputSchema.path("properties").path(claim.amountField()).path("type").asText()))
+                    throw new IllegalArgumentException("Citation claim requires knowledge_search and numeric input");
+                if (version.retrievalProfileVersionId() == null || !citationPublication.containsAll(
+                        tenantCode, version.retrievalProfileVersionId(), claim.requiredChunks())) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST,
+                            "Citation claim requires every reviewed chunk in the bound published retrieval profile");
+                }
+            }
             var rule = io.github.illuseahashmap.agent.definition.domain.DecisionBinding.parse(objectMapper, version.outputSchema());
             if (rule != null && version.executionMode() != AgentExecutionMode.PLATFORM_AGENT) {
                 throw io.github.illuseahashmap.agent.definition.domain.DecisionBinding.invalid();

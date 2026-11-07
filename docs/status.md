@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-07；新增[采购审批四格式原件、定位和 Markdown 基线](fixtures/knowledge/pilots/procurement-approval-v1/README.md)。9 道题在隔离 PostgreSQL 关键词检索中均于首条 Citation 找全所需原文；只有 1 个采购块，不代表模型答对、跨块检索或其他格式摄取已通过。最近的全模块治理回归仍见第五节。
+文档更新时间：2026-11-07。[采购四格式试点](fixtures/knowledge/pilots/procurement-approval-v1/README.md)保留旧 Markdown 单块 9 题基线，另有 B04 原生 Markdown/XLSX 跨块、引用回读及条件性决策回归。Word/PDF 可收件，不可检索。以下为研发进度，不代表生产发布门禁通过。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -51,7 +51,7 @@
 
 2026-11-04 四项交叉评审整改已落实代码：工具结果恢复/幂等复用/后续模型请求均重校验权限；结构定位 v1、用例 v3 与数据集 v2；V59 的多来源固定索引与发布不可变；ScorePolicy 与完整证据组筛选。Profile API/OpenAPI、Trace 与回归同步。细节见[实施设计第 13 节](architecture/rag-structured-document-implementation-design.md#13-四项交叉评审整改2026-11-04)和[V59 升级说明](operations/rag-governance-upgrade.md)。这不是 MinerU 接入、真实父块扩展或最终答案 Grounding 完成。
 
-2026-11-02 已确认结构化文档采用 **LangChain4j + MinerU**：选型及[专项方案](architecture/rag-structured-document-ingestion-design.md)已记录，版本/模型/许可/API 产物与资源试点尚未完成，解析服务未接入。当前仍仅承诺文本/Markdown 摄取；PDF、OCR、结构化表格和图片来源关联不能作为现有能力展示。
+2026-11-02 选定 **LangChain4j + MinerU**（MinerU 仅用于 PDF）。当时仅支持文本；当前 Markdown/XLSX 的原件切片见下表，PDF 解析服务、OCR、跨页表和图题关联仍未接入。
 
 2026-11-03 已补[结构化 PDF 实施设计](architecture/rag-structured-document-implementation-design.md)：参考开源项目官方机制，细化三层内容/派生身份、中立结构和端口、任务阶段/远端代次、完整来源 Manifest、API/权限/预览、迁移与 20 个测试场景条目。该进展属于设计，未锁定/安装 MinerU 或运行解析样本，D0 尚未全部完成。
 
@@ -66,7 +66,7 @@
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
-| P1 | 四格式证据摄取（P1-2e） | Markdown 目前按文本切分；XLSX、DOCX、PDF 原生摄取和定位待实现 | 按[四格式设计](architecture/rag-four-format-evidence-design.md)共用原件、授权和索引生命周期，各格式单独验证解析、拒绝、不越权、精确引用与恢复；MinerU 仅负责 PDF |
+| P1 | 四格式证据摄取（P1-2e） | V60 保存四种原件、解析清单与定位；Markdown/XLSX B04 经过发布服务及 Registry，四块缺一不放行。界面支持上传与按现权回读片段 | 扩展 Excel 困难样例、DOCX 段落/表/修订、PDF MinerU D0；补真实流程浏览器联测、多 recipe 重建和分格式质量门禁 |
 | P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固。十领域 40 篇文档草稿、评测用例契约和专项实施设计已形成，但未审核入库或建立锁定评测集 | 浏览器 UI 验收、最终答案 Citation 门禁、知识快照/历史时间查询、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
 | P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器链路和确定性 HTTPS 协议测试已完成；租户限流/并发配额、熔断、会话复用、凭据指纹轮换及 Checkpoint 接管已有测试；SDK/原生 MCP 共用连接时 DNS 地址校验与有界传输，基础重绑定拒绝已有回归 | 补真实 Secret Provider、确定性 MCP Server 容器故障注入、生产代理/网关边界、多实例租户治理及 Worker 强杀验收；完成前不得称为生产可用只读 MCP 闭环 |
@@ -79,7 +79,7 @@
 
 2026-11-02 用户选型后，研发主线调整为 RAG 结构化摄取设计与后续实现；当时只交付设计，2026-11-04 已进一步落实四项前置治理代码及回归，但 MinerU 仍未接入。以下是开发顺序，不是生产风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放，不能因先做 RAG 而豁免上线验收。
 
-1. 研发主线为[Markdown、Excel、Word、PDF 原生证据摄取](architecture/rag-four-format-evidence-design.md)。先做采购同题异源原件/锚点与 Markdown 采购试点评分，建立公共原件、覆盖清单和定位契约；按 Markdown → XLSX 金额矩阵 → DOCX 条款交付，PDF 的 MinerU D0 可并行，不是其余格式的开工条件。
+1. 研发主线为[四格式原生证据摄取](architecture/rag-four-format-evidence-design.md)。原件/覆盖/授权片段及 Markdown→XLSX 采购 B04 切片已实现。下一步做 DOCX 条款与例外并扩展 Excel 负例；PDF 的 MinerU D0 可并行。不要把两格式的单题结果当作四格式发布分数。
 2. 按[评测与路由专项](architecture/rag-evaluation-and-routing-delivery-plan.md)在固定身份与快照下分别验收四种格式。各格式 E1 依赖其自身结构质量与可追溯索引；收口 Grounding/Citation、历史时效/金标复核和发布门禁后，再依据基线决定是否启动加权融合、重排或查询路由。
 3. 在生产发布前完成 P0 运维闭环：重新检查 Docker/通知接线，补齐派单规则命中/兜底审计，真实触发 Prometheus/Alertmanager 告警并回放通知、前端处置和流程审计；完成独立迁移/运行账号模板与非超级用户 RLS 验证。
 4. 完成 Agent Runtime 和知识摄取真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。同阶段完成结构化意图路由五种模式、一次修复、越权、降级、失败策略和 ABSTAIN 的真实 Provider 及评测验收，补主体权限/风险显式投影。

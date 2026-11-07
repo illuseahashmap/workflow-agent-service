@@ -170,6 +170,12 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 Long.class);
         var identity = params(tenant).addValue("source", c.sourceCode())
                 .addValue("externalId", c.externalDocumentId()).addValue("version", c.version());
+        if (Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM knowledge_native_original WHERE tenant_code=:tenant AND source_code=:source
+                    AND external_document_id=:externalId AND version=:version)
+                """, identity, Boolean.class))) {
+            throw new BusinessException(ErrorCode.CONFLICT,"Use the original-file endpoint for this document version");
+        }
         var existing = jdbc.query("""
                 SELECT d.id, c.content, d.content_hash FROM knowledge_document_version d
                 JOIN knowledge_document_content c ON c.document_version_id=d.id

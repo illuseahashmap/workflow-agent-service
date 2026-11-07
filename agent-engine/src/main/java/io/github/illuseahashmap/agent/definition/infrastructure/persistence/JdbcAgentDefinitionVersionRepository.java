@@ -40,6 +40,7 @@ public class JdbcAgentDefinitionVersionRepository implements AgentDefinitionVers
         return jdbcTemplate.query("""
                         SELECT * FROM agent_definition_version
                         WHERE tenant_code = :tenantCode AND definition_id = :definitionId AND id = :versionId
+                        FOR UPDATE
                         """,
                 Map.of("tenantCode", tenantCode, "definitionId", definitionId, "versionId", versionId),
                 (resultSet, rowNum) -> mapVersion(resultSet)).stream().findFirst();

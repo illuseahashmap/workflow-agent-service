@@ -106,14 +106,22 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
                     false, resultStatus, "Knowledge search did not provide sufficient authorized evidence"));
         }
         try {
-            return new Result(objectMapper.writeValueAsString(Map.of(
+            String output = objectMapper.writeValueAsString(Map.of(
                     "status", result.status().name(),
                     "traceId", result.retrievalTraceId(),
                     "strategy", result.strategy(),
-                    "citations", result.citations(),
+                    "citations", result.citations().stream().map(c -> Map.of(
+                            "citationId", c.citationId(), "reference", c.reference())).toList(),
                     "evidence", result.evidence(),
                     "warnings", result.warnings(),
-                    "abstained", result.abstained())), request.idempotencyKey());
+                    "abstained", result.abstained()));
+            // Never truncate a qualifier or claim complete citations for omitted text.
+            if (output.length() > MAX_OUTPUT_CHARS) {
+                throw new AgentExecutionException(new AgentFailure("KNOWLEDGE_EVIDENCE_BUDGET_EXCEEDED",
+                        AgentFailureCategory.RESULT_POLICY, false, ResultStatus.PARTIAL,
+                        "完整证据超出工具输出预算，请缩小检索范围后重试"));
+            }
+            return new Result(output, request.idempotencyKey());
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Knowledge retrieval result cannot be serialized", exception);
         }

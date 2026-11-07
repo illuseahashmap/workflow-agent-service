@@ -1113,6 +1113,53 @@ paths:
       responses:
         '200': { description: Index versions, content: { application/json: { schema: { $ref: '#/components/schemas/KnowledgeIndexListApiResponse' } } } }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /knowledge/originals:
+    post:
+      tags: [Knowledge]
+      operationId: ingestKnowledgeOriginal
+      summary: Store an immutable original; only eligible native blocks are queued for indexing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [sourceCode, externalDocumentId, version, file]
+              properties:
+                sourceCode: { type: string, maxLength: 128 }
+                externalDocumentId: { type: string, maxLength: 512 }
+                version: { type: integer, minimum: 1 }
+                file: { type: string, format: binary, description: "MD/XLSX/DOCX/PDF, max 2 MiB" }
+      responses:
+        '200': { description: Intake (not index activation), content: { application/json: { schema: { $ref: '#/components/schemas/NativeIntakeApiResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { description: Multipart upload exceeds size limit, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+  /knowledge/originals/coverage:
+    get:
+      tags: [Knowledge]
+      operationId: getKnowledgeOriginalCoverage
+      summary: Inspect original identity, parsed locations and exclusions (document manager)
+      parameters:
+        - { name: sourceCode, in: query, required: true, schema: { type: string } }
+        - { name: externalDocumentId, in: query, required: true, schema: { type: string } }
+        - { name: version, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Parsing coverage, content: { application/json: { schema: { $ref: '#/components/schemas/NativeCoverageApiResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /knowledge/citations/preview:
+    get:
+      tags: [Knowledge]
+      operationId: previewKnowledgeCitation
+      summary: Reauthorize and return one cited source region; never downloads the whole original
+      parameters:
+        - { name: traceId, in: query, required: true, schema: { type: string } }
+        - { name: chunkId, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Authorized excerpt, content: { application/json: { schema: { $ref: '#/components/schemas/NativePreviewApiResponse' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
   /knowledge/documents:
     post:
       tags: [Knowledge]
@@ -1503,6 +1550,61 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { type: array, items: { $ref: '#/components/schemas/KnowledgeIndex' } } }
+    NativeIntake:
+      type: object
+      properties:
+        format: { type: string, enum: [MD, XLSX, DOCX, PDF] }
+        sha256: { type: string }
+        status: { type: string, enum: [PARSED, NOT_INDEXED] }
+        documentVersionId: { type: integer, format: int64, nullable: true }
+        blocks: { type: integer }
+        exclusions: { type: array, items: { type: string } }
+    NativeLocator:
+      type: object
+      properties:
+        version: { type: integer, enum: [2] }
+        kind: { type: string, enum: [MD_LINES, XLSX_CELLS, WORD_BLOCKS, PDF_REGION] }
+        part: { type: string, nullable: true }
+        start: { type: string, nullable: true }
+        end: { type: string, nullable: true }
+        region:
+          type: object
+          nullable: true
+          properties:
+            page: { type: integer }
+            left: { type: number }
+            top: { type: number }
+            right: { type: number }
+            bottom: { type: number }
+    NativeIntakeApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/NativeIntake' } }
+    NativeCoverageApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                original: { $ref: '#/components/schemas/NativeIntake' }
+                recipe: { type: string }
+                locations: { type: array, items: { $ref: '#/components/schemas/NativeLocator' } }
+    NativePreviewApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                originalSha256: { type: string }
+                format: { type: string }
+                recipe: { type: string }
+                anchor: { $ref: '#/components/schemas/NativeLocator' }
+                excerpt: { type: string }
     KnowledgeDocumentApiResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'

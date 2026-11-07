@@ -15,9 +15,11 @@ import java.time.Instant;
 public final class PostgresKnowledgeDocumentStore implements KnowledgeDocumentStore {
     private static final String LOAD_SQL = """
             SELECT d.id, d.tenant_code, d.source_code, d.external_document_id, d.version,
-                   d.content_hash, d.status, d.created_at, c.content
+                   d.content_hash, d.status, d.created_at, c.content,
+                   ARRAY(SELECT b->>'text' FROM jsonb_array_elements(o.manifest->'blocks') WITH ORDINALITY AS item(b,pos) ORDER BY pos) AS blocks
             FROM knowledge_document_version d
             JOIN knowledge_document_content c ON c.document_version_id = d.id
+            LEFT JOIN knowledge_native_original o ON o.tenant_code=d.tenant_code AND o.document_version_id=d.id
             WHERE d.tenant_code = :tenantCode
               AND d.source_code = :sourceCode
               AND d.id = :documentVersionId
@@ -41,7 +43,7 @@ public final class PostgresKnowledgeDocumentStore implements KnowledgeDocumentSt
                     row.getString("external_document_id"), row.getInt("version"),
                     row.getString("content_hash"), row.getString("status"),
                     instant(row.getTimestamp("created_at")));
-            return new DocumentSnapshot(version, row.getString("content"));
+            return new DocumentSnapshot(version, row.getString("content"), java.util.List.of((String[])row.getArray("blocks").getArray()));
         });
     }
 
@@ -50,8 +52,10 @@ public final class PostgresKnowledgeDocumentStore implements KnowledgeDocumentSt
         loadSnapshot(tenantCode, sourceCode, documentVersionId);
         return jdbcTemplate.query("""
                 SELECT DISTINCT ON (d.external_document_id) d.id,d.tenant_code,d.source_code,
-                    d.external_document_id,d.version,d.content_hash,d.status,d.created_at,c.content
+                    d.external_document_id,d.version,d.content_hash,d.status,d.created_at,c.content,
+                    ARRAY(SELECT b->>'text' FROM jsonb_array_elements(o.manifest->'blocks') WITH ORDINALITY AS item(b,pos) ORDER BY pos) AS blocks
                 FROM knowledge_document_version d JOIN knowledge_document_content c ON c.document_version_id=d.id
+                LEFT JOIN knowledge_native_original o ON o.tenant_code=d.tenant_code AND o.document_version_id=d.id
                 WHERE d.tenant_code=:tenant AND d.source_code=:source AND d.status IN ('READY','ACTIVE')
                   AND NOT EXISTS (SELECT 1 FROM knowledge_document_version newer
                       WHERE newer.tenant_code=d.tenant_code AND newer.source_code=d.source_code
@@ -60,7 +64,8 @@ public final class PostgresKnowledgeDocumentStore implements KnowledgeDocumentSt
                 """, new MapSqlParameterSource("tenant", tenantCode).addValue("source", sourceCode),
                 (row, n) -> new DocumentSnapshot(new DocumentVersion(row.getLong("id"), tenantCode, sourceCode,
                         row.getString("external_document_id"), row.getInt("version"), row.getString("content_hash"),
-                        row.getString("status"), instant(row.getTimestamp("created_at"))), row.getString("content")));
+                        row.getString("status"), instant(row.getTimestamp("created_at"))), row.getString("content"),
+                        java.util.List.of((String[])row.getArray("blocks").getArray())));
     }
 
     private Instant instant(Timestamp timestamp) {
