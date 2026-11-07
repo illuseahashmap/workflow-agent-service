@@ -519,6 +519,67 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
     }
 
     @Test
+    void procurementMarkdownRetrievalBaseline() throws Exception {
+        Flyway.configure().dataSource(databaseUrl, databaseUser, databasePassword)
+                .locations("classpath:db/migration/platform", "classpath:db/migration/vector").load().migrate();
+        var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
+        var jdbc = new NamedParameterJdbcTemplate(source);
+        var tx = new TransactionTemplate(new DataSourceTransactionManager(source));
+        var management = new PostgresKnowledgeManagementAdapter(jdbc);
+        var indexes = new PostgresKnowledgeIndexAdapter(jdbc);
+        var ingestion = new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                new PostgresKnowledgeDocumentStore(jdbc), indexes,
+                new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(1200, 120));
+        var retriever = new io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever(
+                new PostgresKeywordChunkSearchAdapter(jdbc));
+        var fixtures = java.nio.file.Path.of("../docs/fixtures/knowledge");
+        var pilot = fixtures.resolve("pilots/procurement-approval-v1");
+        var policy = pilot.resolve("sources/approval.md");
+        String tenant = "pilot-" + suffix;
+        String scope = "procurement-pilot";
+        Long indexId = null;
+        for (var path : java.util.List.of(fixtures.resolve("domains/finance/FIN-POL-01.md"), policy)) {
+            var body = DocumentContent.from(java.nio.file.Files.readString(path));
+            var doc = tx.execute(status -> management.createDocument(tenant, new KnowledgeManagementPort.CreateDocument(
+                    scope, "Pilot", path.getFileName().toString(), 1, body.sha256(), body.text())));
+            var index = tx.execute(status -> ingestion.ingest(tenant, scope, doc.id()).indexVersion());
+            tx.executeWithoutResult(status -> indexes.activate(index));
+            indexId = index.id();
+        }
+        var lines = java.nio.file.Files.readAllLines(policy);
+        var anchors = new java.util.HashMap<String, String>();
+        java.nio.file.Files.readAllLines(pilot.resolve("anchors.tsv")).stream().skip(1).forEach(line -> {
+            var cells = line.split("\t");
+            anchors.put(cells[0], lines.get(Integer.parseInt(cells[1]) - 1));
+        });
+        assertThat(anchors).hasSize(7);
+        assertThat(anchors.values()).allMatch(value -> !value.isBlank());
+        var cases = java.nio.file.Files.readAllLines(pilot.resolve("cases.tsv")).stream().skip(1).toList();
+        assertThat(cases).hasSize(9);
+        for (String line : cases) {
+            var cells = line.split("\t");
+            var request = new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest(cells[1],
+                    java.util.List.of(scope), java.util.List.of(), null, 3,
+                    io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.KEYWORD,
+                    0, java.util.List.of(), indexId);
+            var citations = retriever.retrieve(tenant, request).citations();
+            int rank = 0;
+            for (int i = 0; i < citations.size(); i++) {
+                var citation = citations.get(i);
+                if (citation.reference().sourceId().equals("approval.md") && citation.reference().sourceVersion().equals("1")
+                        && java.util.Arrays.stream(cells[2].split(",")).map(anchors::get)
+                        .allMatch(citation.excerpt()::contains)) {
+                    rank = i + 1;
+                    break;
+                }
+            }
+            System.out.printf("PROC-PILOT %s completeEvidenceRank=%d candidates=%d%n", cells[0], rank, citations.size());
+            assertThat(rank).as("All required policy excerpts in Top 3 for %s", cells[0]).isBetween(1, 3);
+            assertThat(retriever.retrieve(tenant + "-other", request).citations()).isEmpty();
+        }
+    }
+
+    @Test
     void cancelsSlowJdbcReadsWithinTheExecutionBudgetWithoutLeakingTimeoutToReuse() throws Exception {
         var source = new DriverManagerDataSource(databaseUrl, databaseUser, databasePassword);
         var guarded = (javax.sql.DataSource) new io.github.illuseahashmap.workflow.config.TenantRlsDataSourcePostProcessor()

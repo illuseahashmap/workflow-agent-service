@@ -65,7 +65,7 @@
 - 当前：中立 Evidence、应用层授权范围求交、主体范围授权、Profile/索引绑定、摄取和关键词/pgvector/RRF 混合检索已落地；V48 已恢复受授权约束的 `knowledge_search`。本地真实 AgentRun 的 HYBRID 检索与 Flowable 审批链路已有验证，详见状态页；仅有检索阶段的 Evidence/Citation 校验，不等于最终答案完成 Grounding。
 - 待实现：最终回答逐字段/逐结论 Grounding 与 Citation 门禁、文档审核和固定快照评测基线、锁定评测集与发布门禁、历史时间查询与金标变更复核、向量模型历史版本并存、生产级 Trace 查询。十领域 40 篇语料仍为草稿，不能当作已审核生产基线。
 - 待验收：授权/跨租户、零召回、删除传播、浏览器 UI、摄取/Agent 跨 Attempt 和强杀恢复及容器门禁；摄取租约专项由 P1-2c 跟踪，避免重复关闭。
-- 顺序：2026-11-02 确认 LangChain4j + MinerU，解析专项由 P1-2e 跟踪；先固定 D0 解析契约/困难样本，文本 E0 契约与试点可并行。按[评测与路由实施设计](../architecture/rag-evaluation-and-routing-delivery-plan.md)建立 E1 固定快照基线（PDF 子集先完成 D1/D2），再完成 Grounding、历史时效和发布门禁；加权 RRF、Rerank 和查询级路由仅在评测证明收益后推进。
+- 顺序：各格式摄取由 P1-2e 跟踪。既有 Markdown 的 E0/采购工具链评分先行，各格式 E1 只依赖其自身的结构质量门禁。再完成 Grounding、历史时效和发布门禁；加权 RRF、Rerank 和查询级路由仅在评测证明收益后推进。
 - 验收：已发布 AgentVersion 只能检索绑定 Profile 及当前主体允许的范围；未授权、无 Profile、零证据、证据不足和检索失败不能伪装为成功推进流程；关键结论可定位到原文版本，评测运行可复现，未通过门禁不得自动切换版本。
 
 ### P1-2b 历史文档指纹完整性与 V55 部署检查
@@ -84,7 +84,9 @@
 - 剩余验收：PostgreSQL 接管、迟到终态、旧所有者续租拒绝和激活回滚已在隔离实例通过；多实例负载、强杀和容器故障仍待验收。升级须先停旧 Worker，存量任务身份映射存在歧义会阻止 V56，不猜测最新文档；见[升级手册](../operations/knowledge-ingestion-upgrade.md)。本项尚不关闭。
 - 验收：双 Worker 并发领取、租约过期接管、旧 Attempt 迟到完成、激活后回写失败和进程强杀均有真实 PostgreSQL 测试；旧 Worker 不能覆盖新 Attempt 或改变当前活跃索引。
 
-### P1-2e 结构化 PDF 摄取与图表来源追溯尚未实现
+### P1-2e 四格式原生摄取与来源追溯尚未完成
+
+- 2026-11-07 范围修订：以[四格式设计](../architecture/rag-four-format-evidence-design.md)为准。公共缺口是二进制原件、结构化 Markdown、Office 原生解析和不依赖页区域的定位。Excel/Word/PDF 各按真实文件独立过门禁；下列 D0–D3 和困难 PDF 条目是 PDF 子项，不是所有材料的开工条件。
 
 - 当前：文本/Markdown 摄取可用；`TextChunker` 不理解 PDF 布局、表格单元格或图片像素。LangChain4j + MinerU 选型已确认，结构定位契约/Codec/来源覆盖评分于 2026-11-04 加固，但未安装部署 MinerU 或实现二进制 PDF 摄取，不能据此声称 PDF 可用。
 - 设计进展（2026-11-03）：已补[实施设计与开源实践评审](../architecture/rag-structured-document-implementation-design.md)，明确当前任务文档唯一性/Chunk ID/正文存储的改造点、远端任务丢失与重复计算边界、结构/资产模型、完整来源 Manifest、API/权限和 20 个场景条目；未实际执行 D0 试跑，问题仍为待实现。

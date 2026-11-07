@@ -3,7 +3,7 @@
 决策日期：2026-11-02。性质：选型记录与待实现设计；不是接入或验收报告。
 实施设计修订：2026-11-03，见[结构化 PDF 摄取实施设计与开源实践评审](rag-structured-document-implementation-design.md)，细化端口/数据/异步状态、来源 Manifest、API、测试矩阵与迁移策略。本文件保留选型和总体边界，不重复维护实施细节。
 治理增量（2026-11-04）：恢复授权、结构定位/评分契约和 Profile 多源固定索引已落实代码与回归；具体已交付/待实现边界见[实施设计第 13 节](rag-structured-document-implementation-design.md#13-四项交叉评审整改2026-11-04)。没有因此安装 MinerU 或完成真实 PDF 摄取。
-当前状态唯一入口为[项目状态](../status.md)，缺口跟踪于[问题 P1-2e](../quality/known-issues.md#p1-2e-结构化-pdf-摄取与图表来源追溯尚未实现)。
+2026-11-07：本文件限于[四格式证据设计](rag-four-format-evidence-design.md)的 PDF 适配，MinerU 不承担 Word、Excel 或 Markdown 的原生解析。当前状态见[项目状态](../status.md)，缺口见[问题 P1-2e](../quality/known-issues.md#p1-2e-四格式原生摄取与来源追溯尚未完成)。
 
 ## 1. 决策、背景与非目标
 

@@ -1,0 +1,4 @@
+approval.md text eol=lf
+*.xlsx binary
+*.docx binary
+*.pdf binary

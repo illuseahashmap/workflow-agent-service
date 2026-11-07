@@ -17,7 +17,8 @@
 - [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
 - [开发方向与防偏离门禁](architecture/development-direction-guardrails.md)：参考项目边界、技术主线、功能准入门禁和代表性验收闭环。
 - [RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)：知识模块、中立检索契约、可靠摄取、Evidence/Citation、评测和图谱扩展边界。
-- [RAG 结构化文档摄取设计](architecture/rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、PDF/OCR/跨页表、原件/资产来源追溯、版本与可靠性门禁；尚未实现。
+- [RAG 四格式原生证据设计](architecture/rag-four-format-evidence-design.md)：统一原件、证据与评测，分别定义 Markdown、Excel、Word、PDF 的结构、定位和发布门禁。
+- [RAG PDF 解析适配设计](architecture/rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、PDF/OCR/跨页表；尚未接入。
 - [RAG 结构化 PDF 实施设计](architecture/rag-structured-document-implementation-design.md)：前置恢复授权、引用/快照/评分契约已加固；MinerU 解析、结构扩展和完整业务闭环仍待实施。
 - [RAG 治理 V59 升级](operations/rag-governance-upgrade.md)：恢复授权、多来源索引冻结、ScorePolicy 与交换格式升级边界；不是 MinerU 部署说明。
 - [MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)：连接器、工具目录快照、AgentVersion 绑定、协议调用、安全和可靠性闭环。

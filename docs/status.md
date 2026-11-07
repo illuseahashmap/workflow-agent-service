@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-04；本轮整改基于 `main 1a470a1`，代码、回归与文档随同提交。四项治理及二次评审的共享预算、严格定位解析、稳定 TopK 已落实代码并运行回归；未部署 MinerU、未调用付费模型。测试环境与边界分项记录，不将历史生产/容器状态当作当前结论。
+文档更新时间：2026-11-07；新增[采购审批四格式原件、定位和 Markdown 基线](fixtures/knowledge/pilots/procurement-approval-v1/README.md)。9 道题在隔离 PostgreSQL 关键词检索中均于首条 Citation 找全所需原文；只有 1 个采购块，不代表模型答对、跨块检索或其他格式摄取已通过。最近的全模块治理回归仍见第五节。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -66,7 +66,7 @@
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
-| P1 | 结构化 PDF 摄取（P1-2e） | 已选 LangChain4j + MinerU，原件/结构/资产、跨页表、派生来源和 D0–D3 设计已记录；未部署、未实现 | D0 固定版本/模型/许可/API 与困难样本及资源预算，再完成 D1 解析任务、D2 结构索引/引用和 D3 端到端；全页覆盖、错合并负例、关键单位/表头、资产权限与恢复必须通过 |
+| P1 | 四格式证据摄取（P1-2e） | Markdown 目前按文本切分；XLSX、DOCX、PDF 原生摄取和定位待实现 | 按[四格式设计](architecture/rag-four-format-evidence-design.md)共用原件、授权和索引生命周期，各格式单独验证解析、拒绝、不越权、精确引用与恢复；MinerU 仅负责 PDF |
 | P1 | 受治理 RAG 最小闭环 | 关键词闭环已验证；可选 pgvector/方舟 Embedding、RRF 混合召回、索引版本固定和基础离线指标已接入。`employee-handbook.md` 第 1 版生成活跃索引第 2 版及 3 条 1024 维向量；新 Profile 4、AgentVersion 14 和采购流程第 3 版已发布。真实 AgentRun 50 的 HYBRID Trace/Citation 与 Flowable 直属负责人审批任务均通过本地验收；Ark 暂时/永久失败分类及有界重试已加固。十领域 40 篇文档草稿、评测用例契约和专项实施设计已形成，但未审核入库或建立锁定评测集 | 浏览器 UI 验收、最终答案 Citation 门禁、知识快照/历史时间查询、评测集发布门禁、摄取/Agent 强杀恢复、多模型版本治理和 Docker 容器门禁仍未完成 |
 | P1 | 权威组织关系解析 | 方向已与 RAG 拆分，尚未建立 `organization-engine` 和组织关系数据模型 | 完成组织实体/关系有效期、有限跳查询、参与人策略、空/多人/停用兜底、路径审计和跨租户负面测试 |
 | P1 | 受治理 MCP 最小闭环 | MCP-1/MCP-2 本地浏览器链路和确定性 HTTPS 协议测试已完成；租户限流/并发配额、熔断、会话复用、凭据指纹轮换及 Checkpoint 接管已有测试；SDK/原生 MCP 共用连接时 DNS 地址校验与有界传输，基础重绑定拒绝已有回归 | 补真实 Secret Provider、确定性 MCP Server 容器故障注入、生产代理/网关边界、多实例租户治理及 Worker 强杀验收；完成前不得称为生产可用只读 MCP 闭环 |
@@ -79,8 +79,8 @@
 
 2026-11-02 用户选型后，研发主线调整为 RAG 结构化摄取设计与后续实现；当时只交付设计，2026-11-04 已进一步落实四项前置治理代码及回归，但 MinerU 仍未接入。以下是开发顺序，不是生产风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放，不能因先做 RAG 而豁免上线验收。
 
-1. 按[LangChain4j + MinerU 摄取设计](architecture/rag-structured-document-ingestion-design.md)及[实施设计](architecture/rag-structured-document-implementation-design.md)推进 D0：方案已细化，下一步固定解析版本/模型/许可、真实产物样本、困难 PDF 和资源试点；通过后依次开发 D1-a 原件/任务身份、D1-b 异步解析恢复、D2-a 结构/ChunkSet 与 D2-b 完整索引/引用。不引入 RAGFlow、不自研 OCR/表格模型，不将跨页续表等同于任意跨页图像重建。
-2. 既有文本的评测 E0 契约/试点可并行；按[评测与路由专项实施设计](architecture/rag-evaluation-and-routing-delivery-plan.md)审核文档和权限身份、建立固定快照基线及可校验评测集（PDF 的 E1 先通过 D1/D2）。再收口 D3、Grounding/Citation、历史时效/金标复核和发布门禁。加权 RRF/Rerank/查询级路由仅在基线证明收益后启动。Grounding 基于检索状态、Evidence/Citation 和确定性规则触发处置，不以相似度或模型自报 `confidence` 决定网关。
+1. 研发主线为[Markdown、Excel、Word、PDF 原生证据摄取](architecture/rag-four-format-evidence-design.md)。先做采购同题异源原件/锚点与 Markdown 采购试点评分，建立公共原件、覆盖清单和定位契约；按 Markdown → XLSX 金额矩阵 → DOCX 条款交付，PDF 的 MinerU D0 可并行，不是其余格式的开工条件。
+2. 按[评测与路由专项](architecture/rag-evaluation-and-routing-delivery-plan.md)在固定身份与快照下分别验收四种格式。各格式 E1 依赖其自身结构质量与可追溯索引；收口 Grounding/Citation、历史时效/金标复核和发布门禁后，再依据基线决定是否启动加权融合、重排或查询路由。
 3. 在生产发布前完成 P0 运维闭环：重新检查 Docker/通知接线，补齐派单规则命中/兜底审计，真实触发 Prometheus/Alertmanager 告警并回放通知、前端处置和流程审计；完成独立迁移/运行账号模板与非超级用户 RLS 验证。
 4. 完成 Agent Runtime 和知识摄取真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。同阶段完成结构化意图路由五种模式、一次修复、越权、降级、失败策略和 ABSTAIN 的真实 Provider 及评测验收，补主体权限/风险显式投影。
 5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；HTTPS 连接地址防护已有实现，下一步完成生产代理/网关边界、真实 Secret Provider、确定性 MCP Server 容器故障注入和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。

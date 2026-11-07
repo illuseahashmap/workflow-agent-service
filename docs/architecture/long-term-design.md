@@ -36,7 +36,8 @@
 
 - [开发方向与防偏离门禁](development-direction-guardrails.md)：参考项目边界、三条技术主线、功能准入条件和代表性验收闭环。
 - [RAG 短期实施方案](rag-short-term-implementation-plan.md)：知识限界上下文、中立 Evidence 契约、可靠摄取和多 Retriever 扩展验收。
-- [结构化文档摄取设计](rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、原件/结构/资产契约、跨页图表边界、可靠任务及质量验收。
+- [四格式证据摄取总设计](rag-four-format-evidence-design.md)：Excel、Word、PDF、Markdown 各按原生结构取证，统一权限、快照、切分语义和发布门禁。MinerU 只负责 PDF，不是所有材料的必经服务。
+- [结构化 PDF 适配设计](rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、原件/结构/资产契约、跨页图表边界、可靠任务及质量验收。
 - [结构化 PDF 实施设计](rag-structured-document-implementation-design.md)：开源实践取舍、派生身份/任务恢复/完整来源 Manifest、API/权限、结构切分与分层测试；恢复授权、多来源冻结与有类型评分已实现，MinerU/结构化摄取仍待实施。
 - [RAG 评测用例契约](rag-evaluation-case-contract.md)与[专项实施设计](rag-evaluation-and-routing-delivery-plan.md)：结构定位 v1、case v3/dataset v2 交换契约已有代码及回归；完整评测、历史时效/变更复核、发布门禁及查询级路由仍为目标方案。
 - [MCP 短期实施方案](mcp-short-term-implementation-plan.md)：MCP 作为受治理工具适配器的连接、目录版本、AgentVersion 绑定、调用和故障边界。

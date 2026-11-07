@@ -2,7 +2,7 @@
 
 设计日期：2026-11-03；基于代码 `7a92bb5`、选型记录 `cea8117`。性质：待实施设计，不是 D0 试跑、服务部署或业务验收结果。
 2026-11-04 实施增量：四项交叉评审问题已进入代码和回归，具体边界见第 13 节；仍未部署 MinerU，D0/D1/D2/D3 不因前置加固自动完成。
-前置决策：[LangChain4j + MinerU](rag-structured-document-ingestion-design.md)；当前进度仍以[项目状态](../status.md)为准，开放项为[问题 P1-2e](../quality/known-issues.md#p1-2e-结构化-pdf-摄取与图表来源追溯尚未实现)。
+适用范围：本文件为[四格式证据设计](rag-four-format-evidence-design.md)中的 PDF 实施子案；共用身份、发布与恢复机制，不将远端任务或页区域强加给 Office/Markdown。前置决策：[LangChain4j + MinerU](rag-structured-document-ingestion-design.md)；当前进度见[项目状态](../status.md)，开放项见[问题 P1-2e](../quality/known-issues.md#p1-2e-四格式原生摄取与来源追溯尚未完成)。
 
 ## 1. 决策摘要
 

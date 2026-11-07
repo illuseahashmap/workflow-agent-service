@@ -1,7 +1,7 @@
 # RAG 短期实施方案与长期扩展边界
 
-更新时间：2026-11-04
-状态：关键词、真实向量摄取/混合检索与 AgentRun→Flowable 本地链路已验证；LangChain4j + MinerU 结构化 PDF 选型已确认但尚未接入；浏览器、生产化与强杀恢复仍待验收
+更新时间：2026-11-07
+状态：既有文本/Markdown 摄取、混合检索与 AgentRun→Flowable 本地链路已验证；四格式原生证据设计已确定，非四格式均已实现。
 
 本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
 知识源和外部检索服务时，不需要重写 Agent Runtime、Flowable 集成和证据治理模型。
@@ -296,7 +296,7 @@ DocumentVersion 创建
 - Parser、Chunker、Embedding Provider 和 Index Writer 都通过端口扩展；
 - 文档大小、类型、页数、解析时间和 Chunk 数量必须有租户配额。
 
-当前可运行文件范围仍为 UTF-8 文本和 Markdown。下一摄取里程碑 RAG-2P 明确纳入 MinerU 结构化 PDF、OCR、表格/跨页续表和图题/资产来源关联；先固定解析契约与困难样本，再接上传/解析和结构索引，不得因为文件类型扩展改变检索结果或 AgentRun/Flowable 契约。全页覆盖、表头/单位/脚注、跨页区域与原件引用是发布检查项；只返回 Markdown 或只解析部分页不能视为完成。
+当前可运行文件范围仍为 UTF-8 文本和 Markdown。下一里程碑按[四格式证据设计](rag-four-format-evidence-design.md)统一原件、结构、发布和授权；Markdown 结构、Excel 单元格、Word 块/表与 PDF 页面分别验收。不能把 PDF 页区域设为全部格式的必要字段。
 文档作者现在即按[知识文档编写与多模态扩展规范](rag-document-authoring-standard.md)
 保存简单表格、图示文字等价内容和版本化资产元数据；这属于语料设计，不代表当前摄取链路
 已经支持图像像素理解或结构化表格引用。后续扩展须验证资产打包、同租户授权、表格行列/图像
@@ -453,6 +453,10 @@ EvaluationDataset
 `knowledge_search` 已在真实 Retriever、权限求交、Trace、Profile 绑定和失败边界具备后，以只读方式启用；
 Grounding、评测和容器故障验收完成前不得将其标记为生产级 RAG。
 
+### 四格式原生摄取（待实现）
+
+公共契约与采购试点先行，Markdown、XLSX、DOCX 各自纵向交付；详见[设计和质量矩阵](rag-four-format-evidence-design.md)。下列 RAG-2P 是 PDF 子项，不阻塞前三者。
+
 ### RAG-2P：LangChain4j + MinerU 结构化 PDF 摄取（待实现）
 
 - 按[结构化文档摄取设计](rag-structured-document-ingestion-design.md)完成 D0 版本/模型/许可、API 产物、资源试点与困难样本；现阶段只确认选型，未安装或部署；
@@ -521,7 +525,7 @@ RAG 短期能力完成时必须同时满足：
 7. 离线评测能够比较索引和 RetrievalProfile 版本，防止质量静默回退；
 8. 增加 GraphRetriever、StructuredRetriever 或外部 Retriever 时，不修改 AgentRun、Flowable
    恢复协议和公开检索契约；
-9. 对声明支持的 PDF 固定样本，原件、解析 recipe、完整页覆盖、图表资产与结构引用可追溯，跨页错合并/关键单位丢失硬阻断；不确定或未解析部分按冻结策略拒答/复核，不能用文本命中掩盖缺失。
+9. 四格式分别通过真实上传、关键结构、授权检索和原生定位验收；同一采购事实须逐格式评分。PDF 另验全页覆盖、错合并和表头单位，Excel 校验单位/公式/隐藏区域，Word 校验条款/修订/表，Markdown 校验标题/代码/表格；不确定内容不得冒充完整证据。
 
 ### 14.1 `knowledge_search` 发布门禁
 
