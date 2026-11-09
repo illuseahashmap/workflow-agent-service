@@ -277,6 +277,9 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
                 if (!bound || version.executionMode() != AgentExecutionMode.PLATFORM_AGENT || inputSchema == null
                         || !"number".equals(inputSchema.path("properties").path(claim.amountField()).path("type").asText()))
                     throw new IllegalArgumentException("Citation claim requires knowledge_search and numeric input");
+                if(claim.conditionField()!=null && !"string".equals(inputSchema.path("properties")
+                        .path(claim.conditionField()).path("type").asText()))
+                    throw new BusinessException(ErrorCode.BAD_REQUEST,"Citation condition requires a string workflow input");
                 if (version.retrievalProfileVersionId() == null || !citationPublication.containsAll(
                         tenantCode, version.retrievalProfileVersionId(), claim.requiredChunks())) {
                     throw new BusinessException(ErrorCode.BAD_REQUEST,

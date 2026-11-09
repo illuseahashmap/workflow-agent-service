@@ -5,6 +5,8 @@
 契约加固：2026-11-04，已落地恢复结果重新授权、用例 Schema v3/定位 v1、数据集清单 v2、Profile 多来源固定索引与有类型评分门禁；完整发布门禁/解析服务仍待实现，不能将局部整改等同全部 E0–E3 完成。
 主契约：[评测用例](rag-evaluation-case-contract.md)；语料：[十领域设计](rag-ten-domain-corpus-design.md)；运行边界：[RAG 短期计划](rag-short-term-implementation-plan.md)。
 
+2026-11-08 观测：[三格式采购 DEV 夹具与结果](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)已在隔离 PostgreSQL 上执行 9 题 × 3 格式 × 3 档 K。组召回、可授权回读的必需引用与最终处置分栏；没有调用模型，最终处置一律 NOT_RUN，并非已交付正式 E1 或查询路由。
+
 ## 1. 决策和非目标
 
 优先建立固定检索 Profile 的**可信评测基线**，然后做历史时间检索和自动发布门禁；加权 RRF、Reranker 与查询级路由只有基线表明收益且前置安全条件满足后才实施。动态路由只从 AgentVersion 明确绑定的不可变策略快照选择，绝不产生临时权重、模型、租户、知识范围或索引版本。Agent 只得到已授权检索结果；文档不能决定真实审批参与人。

@@ -580,6 +580,173 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
     }
 
     @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="workflow.rag.benchmark", matches="true")
+    void specimenTransferGeneralizationAndScale() throws Exception {
+        withScratchDatabase(url -> {
+            Flyway.configure().dataSource(url,databaseUser,databasePassword)
+                    .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+            SpecimenTransferBenchmark.run(new DriverManagerDataSource(url,databaseUser,databasePassword));
+        });
+    }
+
+    @FunctionalInterface private interface DatabaseCheck { void run(String url) throws Exception; }
+
+    private void withScratchDatabase(DatabaseCheck check) throws Exception {
+        // Readers use separate sessions. A private database makes committed data visible to
+        // them without leaving corpus rows or changing planner statistics in the shared test DB.
+        String name="specimen_"+java.util.UUID.randomUUID().toString().replace("-","");
+        var admin=new JdbcTemplate(new DriverManagerDataSource(databaseUrl,databaseUser,databasePassword));
+        String url="jdbc:postgresql://"+java.net.URI.create(databaseUrl.substring(5)).getRawAuthority()+"/"+name;
+        admin.execute("CREATE DATABASE "+name);
+        try {
+            check.run(url);
+        } finally {
+            admin.execute("DROP DATABASE "+name);
+        }
+    }
+
+    @Test
+    void comparisonNeedsIndependentAuthorizedProseFromBothSources() {
+        var ds=new DriverManagerDataSource(databaseUrl,databaseUser,databasePassword);
+        Flyway.configure().dataSource(ds).locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+        var jdbc=new NamedParameterJdbcTemplate(ds);
+        String tenant="comparison-"+suffix;
+        new TransactionTemplate(new DataSourceTransactionManager(ds)).executeWithoutResult(tx->{
+            var nativeStore=new NativeEvidenceStore(jdbc,new PostgresKnowledgeManagementAdapter(jdbc),
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var indexes=new PostgresKnowledgeIndexAdapter(jdbc);
+            var ingest=new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                    new PostgresKnowledgeDocumentStore(jdbc),indexes,new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(1200,120));
+            var sources=java.util.Map.of("local","## 档案内部交接\n\n本章为内部流转细则。\n\n内部交接按台账登记，不经运输商。\n\n## 无关事项\n\n仅限用于展陈。",
+                    "external","## 档案跨区运输\n\n跨区运输仅限经批准的密封箱。");
+            sources.forEach((source,md)->{
+                var doc=nativeStore.ingest(tenant,source,source,1,"MD",md.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                indexes.activate(ingest.ingest(tenant,source,doc.documentVersionId()).indexVersion());
+            });
+            var retriever=new io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever(new PostgresKeywordChunkSearchAdapter(jdbc));
+            java.util.function.BiFunction<java.util.List<String>,Integer,io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult> query=
+                    (scopes,k)->retriever.retrieve(tenant,new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest(
+                        "档案内部交接能否套用档案跨区运输的条件？",scopes,java.util.List.of(),null,k,
+                        io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.KEYWORD,0,java.util.List.of()));
+            var both=java.util.List.of("local","external");
+            assertThat(query.apply(both,5).abstained()).isFalse();
+            assertThat(query.apply(both,5).citations()).noneMatch(c->c.excerpt().contains("展陈"));
+            assertThat(query.apply(both,1).abstained()).as("never infer both from a single slot").isTrue();
+            for(var source:both){
+                var one=query.apply(java.util.List.of(source),5);
+                assertThat(one.status()).isEqualTo(io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalStatus.PARTIAL);
+                assertThat(one.evidence()).allMatch(e->e.reference().sourceId().equals(source));
+            }
+            jdbc.getJdbcTemplate().update("UPDATE knowledge_source SET enabled=false WHERE tenant_code=? AND source_code='local'",tenant);
+            assertThat(query.apply(both,5).abstained()).isTrue();
+            tx.setRollbackOnly();
+        });
+    }
+
+    @Test
+    void scopeTermsBackfillFrozenHeadersAndFollowTheirTransactionAndTenant() throws Exception {
+        withScratchDatabase(url -> {
+            var ds=new DriverManagerDataSource(url,databaseUser,databasePassword);
+            var flyway=Flyway.configure().dataSource(ds).locations("classpath:db/migration/platform");
+            flyway.target("62").load().migrate();
+            var jdbc=new NamedParameterJdbcTemplate(ds);
+            var db=jdbc.getJdbcTemplate();
+            var tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
+            var nativeStore=new NativeEvidenceStore(jdbc,new PostgresKnowledgeManagementAdapter(jdbc),
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var indexes=new PostgresKnowledgeIndexAdapter(jdbc);
+            var ingest=new io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService(
+                    new PostgresKnowledgeDocumentStore(jdbc),indexes,new io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker(1200,120));
+            var bytes=java.nio.file.Files.readAllBytes(SpecimenTransferBenchmark.INPUT.resolve("policy.md"));
+            for(String tenant:java.util.List.of("buyer","other")){
+                tx.executeWithoutResult(s->{
+                    var doc=nativeStore.ingest(tenant,"logistics","specimen",1,"MD",bytes);
+                    var first=ingest.ingest(tenant,"logistics",doc.documentVersionId()).indexVersion();
+                    indexes.activate(first);
+                    indexes.activate(ingest.ingest(tenant,"logistics",doc.documentVersionId()).indexVersion());
+                });
+            }
+            Flyway.configure().dataSource(ds).locations("classpath:db/migration/platform").load().migrate();
+            String expected="""
+                    SELECT c.tenant_code,c.source_code,k AS term,c.index_version_id,c.chunk_id FROM knowledge_chunk c
+                    CROSS JOIN LATERAL unnest(c.table_scope_keys) k
+                    """;
+            assertThat(db.queryForObject("SELECT count(DISTINCT index_version_id) FROM knowledge_scope_term",Integer.class)).isEqualTo(4);
+            assertThat(db.queryForList("("+expected+" EXCEPT ALL SELECT * FROM knowledge_scope_term) UNION ALL "+
+                    "(SELECT * FROM knowledge_scope_term EXCEPT ALL "+expected+")")).isEmpty();
+            long frozen=db.queryForObject("SELECT id FROM knowledge_index_version WHERE tenant_code='buyer' AND status='RETIRED'",Long.class);
+            var req=new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest("样品冷链寄送 3,600 元",
+                    java.util.List.of("logistics"),java.util.List.of(),null,5,
+                    io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest.StrategyHint.KEYWORD,0,java.util.List.of(),frozen);
+            var engine=new PostgresKeywordChunkSearchAdapter(jdbc);
+            assertThat(engine.search("buyer",req,5).getFirst().chunk().text()).contains("物流协调员");
+            assertThat(engine.search("other",req,5)).isEmpty();
+            tx.executeWithoutResult(s->{
+                db.update("UPDATE knowledge_source SET enabled=false WHERE tenant_code='buyer'");
+                assertThat(engine.search("buyer",req,5)).isEmpty();
+                db.update("UPDATE knowledge_chunk SET table_scope_keys=NULL WHERE index_version_id=?",frozen);
+                assertThat(db.queryForObject("SELECT count(*) FROM knowledge_scope_term WHERE index_version_id=?",Integer.class,frozen)).isZero();
+                s.setRollbackOnly();
+            });
+            assertThat(engine.search("buyer",req,5).getFirst().chunk().text()).contains("物流协调员");
+            tx.executeWithoutResult(s->{
+                String role="scope_reader_"+suffix;
+                db.execute("CREATE ROLE "+role);
+                db.execute("GRANT SELECT ON knowledge_scope_term TO "+role);
+                db.execute("SET LOCAL ROLE "+role);
+                db.execute("SET LOCAL app.tenant_code='buyer'");
+                assertThat(db.queryForList("SELECT DISTINCT tenant_code FROM knowledge_scope_term",String.class)).containsExactly("buyer");
+                s.setRollbackOnly();
+            });
+        });
+    }
+
+    @Test
+    void maintenanceHoldoutComparesFrozenKeywordsWithNativeCompanions() {
+        Flyway.configure().dataSource(databaseUrl,databaseUser,databasePassword)
+                .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+        var ds=new DriverManagerDataSource(databaseUrl,databaseUser,databasePassword);
+        new TransactionTemplate(new DataSourceTransactionManager(ds)).executeWithoutResult(tx->{
+            try { MaintenanceHoldout.run(new NamedParameterJdbcTemplate(ds),"blind-"+suffix); }
+            catch(Exception e){throw new IllegalStateException(e);}
+            finally{tx.setRollbackOnly();}
+        });
+    }
+
+    @Test
+    void legacyAmountIndexRequiresExplicitRebuildAndLeavesFrozenHistoryAlone() throws Exception {
+        Flyway.configure().dataSource(databaseUrl,databaseUser,databasePassword)
+                .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+        var ds=new DriverManagerDataSource(databaseUrl,databaseUser,databasePassword);
+        var db=new JdbcTemplate(ds); var named=new NamedParameterJdbcTemplate(ds);
+        var tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
+        var source="legacy-money-"+suffix; String tenant=source;
+        var bytes=java.nio.file.Files.readAllBytes(java.nio.file.Path.of("../docs/fixtures/knowledge/pilots/procurement-approval-v1/sources/approval.md"));
+        var parsed=NativeDocumentParser.parse("MD",bytes);
+        var text=DocumentContent.from(String.join("\n",parsed.blocks().stream().map(NativeDocumentParser.Block::text).toList()));
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        var legacy=json.valueToTree(parsed);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)legacy).put("recipe","commonmark-gfm-v1");
+        legacy.get("blocks").forEach(b->((com.fasterxml.jackson.databind.node.ObjectNode)b).remove("tableWidth"));
+        var manager=new PostgresKnowledgeManagementAdapter(named); var indexes=new PostgresKnowledgeIndexAdapter(named);
+        tx.executeWithoutResult(status->{
+            var created=manager.createDocument(tenant,new KnowledgeManagementPort.CreateDocument(source,source,"original",1,text.sha256(),text.text()));
+            var doc=new PostgresKnowledgeDocumentStore(named).loadSnapshot(tenant,source,created.id()).documentVersion();
+            var chunks=java.util.stream.IntStream.range(0,parsed.blocks().size()).mapToObj(i->
+                    io.github.illuseahashmap.knowledge.ingestion.domain.Chunk.of(doc,i,parsed.blocks().get(i).text())).toList();
+            var frozen=indexes.build(doc,chunks); indexes.activate(frozen);
+            db.update("INSERT INTO knowledge_original_file VALUES(?,?,?,1,'MD',encode(sha256(?),'hex'),?)",tenant,source,"original",bytes,bytes);
+            db.update("INSERT INTO knowledge_native_derivation VALUES(?,?,?,1,'commonmark-gfm-v1',?,CAST(? AS jsonb))",
+                    tenant,source,"original",doc.id(),legacy.toString());
+            var rebuilt=indexes.build(doc,chunks); indexes.activate(rebuilt);
+            assertThat(db.queryForObject("SELECT count(cny_interval) FROM knowledge_chunk WHERE index_version_id=?",Integer.class,frozen.id())).isZero();
+            assertThat(db.queryForObject("SELECT count(cny_interval) FROM knowledge_chunk WHERE index_version_id=?",Integer.class,rebuilt.id())).isEqualTo(3);
+            assertThat(db.queryForObject("SELECT recipe FROM knowledge_native_derivation WHERE document_version_id=?",String.class,doc.id())).isEqualTo("commonmark-gfm-v1");
+            status.setRollbackOnly();
+        });
+    }
+
+    @Test
     void nativeProcurementEvidenceRoundTrip() throws Exception {
         Flyway.configure().dataSource(databaseUrl,databaseUser,databasePassword)
                 .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
@@ -603,11 +770,15 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
         var pilot=java.nio.file.Path.of("../docs/fixtures/knowledge/pilots/procurement-approval-v1");
         var gold=java.nio.file.Files.readAllLines(pilot.resolve("anchors.tsv")).stream().skip(1)
                 .map(s->s.split("\\t")).collect(java.util.stream.Collectors.toMap(a->a[0],a->a));
+        var baseline=new ProcurementRetrievalBaseline(pilot);
         var question=java.nio.file.Files.readAllLines(pilot.resolve("cases.tsv")).stream().filter(s->s.startsWith("B04\t"))
                 .findFirst().orElseThrow().split("\\t");
-        for(var fmt:java.util.List.of("MD","XLSX","DOCX","PDF")){
-            String scope="s-"+fmt, external="approval."+fmt.toLowerCase(java.util.Locale.ROOT);
-            byte[] bytes=java.nio.file.Files.readAllBytes(pilot.resolve("sources").resolve(external));
+        for(var scenario:java.util.List.of("MD","XLSX","DOCX","PDF","XLSX-pressure")){
+            boolean pressure=scenario.endsWith("-pressure");
+            String fmt=pressure?"XLSX":scenario;
+            String scope="s-"+scenario, external="approval."+fmt.toLowerCase(java.util.Locale.ROOT);
+            byte[] original=java.nio.file.Files.readAllBytes(pilot.resolve("sources").resolve(external));
+            byte[] bytes=pressure?withSimilarSheet(original):original;
             var upload=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/knowledge/originals")
                     .file(new org.springframework.mock.web.MockMultipartFile("file",external,"application/octet-stream",bytes))
                     .param("sourceCode",scope).param("externalDocumentId",external).param("version","1");
@@ -623,7 +794,7 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
             assertThat(coverage.original()).isEqualTo(file);
             assertThat(db.queryForObject("SELECT original_bytes FROM knowledge_native_original WHERE tenant_code=? AND source_code=?",
                     byte[].class,tenant,scope)).isEqualTo(bytes);
-            if(fmt.equals("DOCX")||fmt.equals("PDF")){
+            if(fmt.equals("PDF")){
                 assertThat(file.status()).isEqualTo("NOT_INDEXED");
                 assertThat(file.documentVersionId()).isNull();
                 assertThat(db.queryForObject("SELECT count(*) FROM knowledge_ingestion_job WHERE tenant_code=? AND source_code=?",
@@ -661,15 +832,26 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
             var reviewed=new java.util.LinkedHashMap<String,String>();
             for(int i=0;i<chunkIds.size();i++) {
                 var a=coverage.locations().get(i);
-                reviewed.put(fmt.equals("MD")?a.start():a.start()+":"+a.end(),chunkIds.get(i));
+                if(!fmt.equals("XLSX") || a.part().equals("审批矩阵"))
+                    reviewed.put(fmt.equals("XLSX")?a.start()+":"+a.end():a.start(),chunkIds.get(i));
             }
-            var required=java.util.Arrays.stream(question[2].split(",")).map(name->reviewed.get(gold.get(name)[fmt.equals("MD")?1:3])).toList();
+            int goldColumn=switch(fmt){case "XLSX"->3;case "DOCX"->6;default->1;};
+            var required=java.util.Arrays.stream(question[2].split(",")).map(name->reviewed.get(gold.get(name)[goldColumn])).toList();
             assertThat(required).doesNotContainNull().doesNotHaveDuplicates().hasSize(4);
             var schema=json.writeValueAsString(java.util.Map.of("type","object","properties",java.util.Map.of(
                     "decision",java.util.Map.of("type","string"),"sources",java.util.Map.of("type","array","items",java.util.Map.of("type","string"))),
                     "x-workflow-citation-claim",java.util.Map.of("version","1","amountField","amount","above",20000,"decisionField","decision",
                             "disposition","CONDITIONAL","citationsField","sources","requiredChunks",required)));
             var versions=new io.github.illuseahashmap.agent.definition.infrastructure.persistence.JdbcAgentDefinitionVersionRepository(jdbc);
+            if(fmt.equals("DOCX")) {
+                var root=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(schema);
+                var claim=(com.fasterxml.jackson.databind.node.ObjectNode)root.get("x-workflow-citation-claim");
+                claim.remove(java.util.List.of("disposition","requiredChunks"));
+                claim.put("version","2").put("conditionField","admission");
+                claim.set("cases",json.valueToTree(java.util.Map.of("UNKNOWN",java.util.Map.of("disposition","CONDITIONAL","requiredChunks",required),
+                        "INCOMPLETE",java.util.Map.of("disposition","MANDATORY","requiredChunks",required.subList(1,4)))));
+                schema=root.toString();
+            }
             var membership=new PostgresCitationPublicationAdapter(jdbc);
             assertThat(membership.containsAll(tenant+"-other",profile.id(),java.util.Set.copyOf(required))).isFalse();
             if (fmt.equals("XLSX")) {
@@ -688,7 +870,7 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
                     publisher.updateDraft(definition.id(),vid,new io.github.illuseahashmap.agent.definition.application.dto.AgentVersionCommand(
                             io.github.illuseahashmap.agent.definition.domain.AgentExecutionMode.PLATFORM_AGENT,provider,null,"policy",120,
                             io.github.illuseahashmap.agent.definition.domain.AgentFailurePolicy.FAIL_PROCESS,
-                            "{\"type\":\"object\",\"properties\":{\"amount\":{\"type\":\"number\"}}}",contract,java.util.List.of("knowledge_search"),pid)));
+                            "{\"type\":\"object\",\"properties\":{\"amount\":{\"type\":\"number\"},\"admission\":{\"type\":\"string\"}}}",contract,java.util.List.of("knowledge_search"),pid)));
             var draft=tx.execute(s->management.createProfile(tenant,new KnowledgeManagementPort.CreateProfile(scope+"-draft","KEYWORD",16,0,index.id(),java.util.List.of(scope))));
             for (Long invalid:java.util.Arrays.asList(null,draft.id(),profile.id())) {
                 configure.accept(invalid, java.util.Objects.equals(invalid,profile.id())?schema.replace(required.getLast(),"outside-profile"):schema);
@@ -699,6 +881,60 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
             configure.accept(profile.id(),schema);
             tx.execute(s->publisher.publish(definition.id(),vid));
             var version=versions.findByVersionId(tenant,vid).orElseThrow();
+            if(!pressure) baseline.run(fmt,tenant,vid,profile.id(),index.id(),coverage,retrieval,originals,db);
+            var policy=new io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy(40000);
+            var cmd=new io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor.Command(tenant,version,null,"{\"amount\":20000.01,\"admission\":\"UNKNOWN\"}",null,"trace");
+            if(pressure) {
+                // Both sheets say "采购"; a currency/unit match is not a business discriminator.
+                var ambiguous=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(tenant,
+                        java.util.Map.of("query",question[1],"maxResults",3),java.time.Duration.ofSeconds(10),
+                        "ambiguous","ambiguous","pilot",vid,"tool:scope-check",vid,"buyer");
+                var conflict=json.readTree(registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",ambiguous).output());
+                var sheets=new java.util.HashSet<String>();
+                conflict.path("evidence").forEach(e->sheets.add(originals.read(tenant,"buyer",conflict.path("traceId").asText(),
+                        e.path("reference").path("locator").asText()).anchor().part()));
+                assertThat(sheets).containsExactlyInAnyOrder("审批矩阵","资本采购审批矩阵");
+                var alternatives=registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",
+                        new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(tenant,
+                            java.util.Map.of("query","普通办公采购或资本采购，20,000.01 元如何审批？","maxResults",3),
+                            java.time.Duration.ofSeconds(10),"alternatives","alternatives","pilot",vid,"scope:alternatives",vid,"buyer"));
+                var unresolved=json.readTree(alternatives.output());
+                var alternativesReturned=new java.util.HashSet<String>();
+                unresolved.path("evidence").forEach(e->alternativesReturned.add(originals.read(tenant,"buyer",
+                        unresolved.path("traceId").asText(),e.path("reference").path("locator").asText()).anchor().part()));
+                assertThat(alternativesReturned).as("A longer business name cannot override a distinct alternative")
+                        .containsExactlyInAnyOrder("审批矩阵","资本采购审批矩阵");
+                var req=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(tenant,
+                        java.util.Map.of("query","普通办公"+question[1],"maxResults",3),java.time.Duration.ofSeconds(10),
+                        "pressure","pressure","pilot",vid,"tool:1",vid,"buyer");
+                String payload=registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",req).output();
+                var entries=json.readTree(payload).path("evidence");
+                var carried=new java.util.ArrayList<String>();
+                entries.forEach(e->carried.add(e.path("reference").path("locator").asText()));
+                assertThat(carried).containsExactlyInAnyOrder(required.get(1),required.get(2),required.get(3));
+                var unitRequest=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(tenant,
+                        java.util.Map.of("query","万元","maxResults",1),java.time.Duration.ofSeconds(10),
+                        "unit","unit","pilot",vid,"tool:2",vid,"buyer");
+                String unit=registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",unitRequest).output();
+                var unitResult=json.readTree(unit);
+                var wrongHeader=unitResult.path("evidence").get(0).path("reference").path("locator").asText();
+                var preview=originals.read(tenant,"buyer",unitResult.path("traceId").asText(),wrongHeader);
+                assertThat(preview.anchor().part()).isEqualTo("资本采购审批矩阵");
+                assertThat(preview.excerpt()).contains("万元");
+                assertThat(required).doesNotContain(wrongHeader);
+                var memory=new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory(cmd,json,policy);
+                memory.observe(new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory.Receipt(
+                        "ref","call","knowledge_search","{}",policy.digest(payload)),payload);
+                memory.observe(new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory.Receipt(
+                        "unit-ref","unit-call","knowledge_search","{}",policy.digest(unit)),unit);
+                var substituted=new java.util.ArrayList<>(required);
+                substituted.set(1,wrongHeader);
+                assertThatThrownBy(()->memory.verify(json.writeValueAsString(java.util.Map.of("decision","CONDITIONAL","sources",substituted))))
+                        .isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+                assertThatThrownBy(()->memory.verify(json.writeValueAsString(java.util.Map.of("decision","CONDITIONAL","sources",required))))
+                        .isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+                continue;
+            }
             var request=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(
                     tenant,java.util.Map.of("query",question[1],"maxResults",16),java.time.Duration.ofSeconds(10),
                     "pilot","pilot:1","pilot",vid,"tool:1",vid,"buyer");
@@ -717,11 +953,12 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
                     var a=v.anchor();
                     assertThat(a.version()).isEqualTo(2);
                     if(fmt.equals("XLSX"))assertThat(a.part()).isEqualTo("审批矩阵");
-                    String pos=fmt.equals("MD") ? a.start() : a.start()+":"+a.end();
+                    if(fmt.equals("DOCX"))assertThat(a.part()).isEqualTo("word/document.xml");
+                    String pos=fmt.equals("XLSX") ? a.start()+":"+a.end() : a.start();
                     byPosition.put(pos,key); excerpts.put(key,v.excerpt());
             }
             for(var name:question[2].split(",")){
-                String pos=gold.get(name)[fmt.equals("MD")?1:3];
+                String pos=gold.get(name)[goldColumn];
                 assertThat(byPosition).as("%s %s %s",fmt,name,pos).containsKey(pos);
                 assertThat(byPosition.get(pos)).isEqualTo(reviewed.get(pos));
             }
@@ -729,8 +966,27 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
             assertThat(excerpts.get(required.get(2))).contains("直属负责人","部门负责人","必要时","财务中心","复核预算");
             assertThat(excerpts.get(required.get(3))).contains("未完成准入","核验");
             // Only the reviewed conditional disposition can pass, and only with all four cited blocks.
-            var policy=new io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy(40000);
-            var cmd=new io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor.Command(tenant,version,null,"{\"amount\":20000.01}",null,"trace");
+            if(fmt.equals("DOCX")) {
+                var q9=java.nio.file.Files.readAllLines(pilot.resolve("cases.tsv")).stream().filter(s->s.startsWith("B09\t")).findFirst().orElseThrow().split("\t");
+                var refs=java.util.Arrays.stream(q9[2].split(",")).map(n->reviewed.get(gold.get(n)[goldColumn])).toList();
+                var req=new io.github.illuseahashmap.agent.runtime.application.port.AgentTool.Request(tenant,
+                        java.util.Map.of("query",q9[1],"maxResults",16),java.time.Duration.ofSeconds(10),"b09","b09","pilot",vid,"tool:2",vid,"buyer");
+                String output=registry.execute(tenant,version.toolSetJson(),null,"knowledge_search",req).output();
+                String trace9=json.readTree(output).get("traceId").asText();
+                for(String ref:refs) assertThat(originals.read(tenant,"buyer",trace9,ref).anchor().part()).isEqualTo("word/document.xml");
+                for(String fact:java.util.List.of("INCOMPLETE","UNKNOWN","UNRECOGNIZED")){
+                    var task=new io.github.illuseahashmap.agent.runtime.application.port.AgentExecutor.Command(tenant,version,null,
+                            json.writeValueAsString(java.util.Map.of("amount",20000.01,"admission",fact)),null,"trace");
+                    var memory=new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory(task,json,policy);
+                    memory.observe(new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory.Receipt("ref","call","knowledge_search","{}",policy.digest(output)),output);
+                    var mandatory=json.writeValueAsString(java.util.Map.of("decision","MANDATORY","sources",refs));
+                    if(fact.equals("INCOMPLETE")) {
+                        memory.verify(mandatory);
+                        assertThatThrownBy(()->memory.verify(json.writeValueAsString(java.util.Map.of("decision","CONDITIONAL","sources",refs))))
+                                .isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+                    } else assertThatThrownBy(()->memory.verify(mandatory)).isInstanceOf(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class);
+                }
+            }
             for(int missing:new int[]{-1,0,1,2,3}){
                 var memory=new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory(cmd,json,policy);
                 var delivered=result.deepCopy();
@@ -764,6 +1020,23 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
                     error->assertThat(error.failure().errorCode()).isEqualTo("KNOWLEDGE_RESULT_ACCESS_REVOKED"));
             mvc.perform(read).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
             assertThatThrownBy(()->originals.read(tenant,"buyer",trace,chunk)).isInstanceOf(BusinessException.class);
+        }
+        baseline.writeReport();
+    }
+
+    private static byte[] withSimilarSheet(byte[] original) throws Exception {
+        try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(original));
+            var out=new java.io.ByteArrayOutputStream()){
+            var sheet=book.cloneSheet(0);
+            book.setSheetName(book.getSheetIndex(sheet),"资本采购审批矩阵");
+            var header=sheet.getRow(5);
+            boolean converted=false;
+            for(var cell:header) if(cell.toString().contains("元")){
+                cell.setCellValue(cell.toString().replace("元","万元")); converted=true;
+            }
+            assertThat(converted).isTrue();
+            book.write(out);
+            return out.toByteArray();
         }
     }
 

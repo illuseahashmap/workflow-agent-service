@@ -18,8 +18,8 @@ public record NativeLocator(int version, Kind kind, String part, String start, S
         boolean valid=switch(kind) {
             case MD_LINES -> region==null && "".equals(part) && line(start)>0 && line(end)>=line(start);
             case XLSX_CELLS -> region==null && part!=null && !part.isBlank() && cellRange(start,end);
-            case WORD_BLOCKS -> region==null && part!=null && part.startsWith("word/") && !part.contains("..")
-                    && start!=null && !start.isBlank() && end!=null && !end.isBlank();
+            case WORD_BLOCKS -> region==null && "word/document.xml".equals(part) && start!=null && start.equals(end)
+                    && start.matches("body/(p\\[[1-9][0-9]{0,5}\\]|tbl\\[[1-9][0-9]{0,5}\\]/tr\\[[1-9][0-9]{0,5}\\])");
             case PDF_REGION -> region!=null && part==null && start==null && end==null;
         };
         if(!valid) throw new IllegalArgumentException("Invalid native locator coordinates");

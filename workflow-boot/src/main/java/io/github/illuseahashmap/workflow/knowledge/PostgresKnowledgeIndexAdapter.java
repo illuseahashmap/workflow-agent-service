@@ -66,14 +66,25 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
         if (indexId == null) {
             throw new IllegalStateException("Unable to create knowledge index version");
         }
+        var lookup = NativeAmountProjectionStore.forSnapshot(jdbcTemplate, sourceParameters, chunks);
+        record Position(long document,int ordinal) {}
+        var directories=new java.util.HashMap<Position,NativeTableScope>();
+        for(var c:chunks) {
+            var r=lookup.get(c.chunkId());
+            if(r!=null && r.scope()!=null) directories.put(new Position(c.documentVersion().id(),r.header()),r.scope());
+        }
         for (int ordinal = 0; ordinal < chunks.size(); ordinal++) {
             Chunk chunk = chunks.get(ordinal);
+            var interval = lookup.get(chunk.chunkId());
+            var directory=directories.get(new Position(chunk.documentVersion().id(),chunk.ordinal()));
             jdbcTemplate.update("""
                     INSERT INTO knowledge_chunk
                         (tenant_code, source_code, document_version_id, index_version_id,
-                         chunk_id, ordinal, content, content_fingerprint)
+                         chunk_id, ordinal, content, content_fingerprint, cny_interval, interval_header_ordinal, qualifier_ordinal,
+                         table_scope_keys,scope_title_ordinal,scope_basis_ordinal,scope_note_ordinal,range_row_label)
                     VALUES (:tenantCode, :sourceCode, :documentVersionId, :indexVersionId,
-                            :chunkId, :ordinal, :content, :contentFingerprint)
+                            :chunkId, :ordinal, :content, :contentFingerprint, CAST(:bounds AS numrange), :header, :qualifier,
+                            CAST(:keys AS text[]),:title,:basis,:note,:label)
                     ON CONFLICT (tenant_code, index_version_id, chunk_id) DO NOTHING
                     """, new MapSqlParameterSource()
                     .addValue("tenantCode", documentVersion.tenantCode())
@@ -83,7 +94,15 @@ public class PostgresKnowledgeIndexAdapter implements KnowledgeIndexPort, Knowle
                     .addValue("chunkId", chunk.chunkId())
                     .addValue("ordinal", chunk.ordinal())
                     .addValue("content", chunk.text())
-                    .addValue("contentFingerprint", chunk.contentFingerprint()));
+                    .addValue("contentFingerprint", chunk.contentFingerprint())
+                    .addValue("bounds", interval == null ? null : interval.bounds().literal())
+                    .addValue("keys",directory==null?null:NativeTableScope.literal(directory.keys()))
+                    .addValue("title",directory==null?null:directory.title())
+                    .addValue("basis",directory==null?null:directory.basis())
+                    .addValue("note",directory==null?null:directory.note())
+                    .addValue("label",interval==null?null:interval.label())
+                    .addValue("header", interval == null ? null : interval.header())
+                    .addValue("qualifier", interval == null ? null : interval.qualifier()));
             if (embeddings != null) {
                 jdbcTemplate.update("""
                         INSERT INTO knowledge_chunk_embedding

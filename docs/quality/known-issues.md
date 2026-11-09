@@ -86,7 +86,11 @@
 
 ### P1-2e 四格式原生摄取与来源追溯尚未完成
 
-- V60 已补四格式不可变原件、覆盖清单和按 Trace/现权回读；采购 Markdown/XLSX 的 B04 多块判定已覆盖 PostgreSQL 上的发布与 Registry。评审确认的三个缺陷（不可达引用可发布、工具重复传正文、共享字符串导致派生文本超限）均有回归。浏览器原件上传与片段回读已接入，UI 接口模拟测试与数据库测试分开。待实现：DOCX/PDF 解析、复杂 Office 表头/嵌入内容审核、完整流程联测、派生重建切换和分格式评测。[实现与回归边界](../architecture/rag-four-format-evidence-design.md#5-已实现的原件切片)。
+- 2026-11-09 已修复原生关键词检索的已知错表：V62 在新索引按表记录范围依据，先选范围再匹配区间，同表重叠保留待区分行与补录原文；跨业务套用只给范围依据。H02/H08/H09/H10 在三格式上有固定 K 回归。见[实测与边界](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)。[样品制度实测](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)新增三个可复现问题：无金额表的比较发起方依据漏召（S05）；同义范围无显式标题重合时漏目标行、扩容后还返回无关表头（S06）；同范围索引扩大后四路热读显著变慢。第三项的目录扫描已在[V63 固定样本复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)改善；S05 已在[V64](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)按双方依据修复，S06 仍开放。仍缺更大语料、混合检索及实际 Agent 拒答验收。
+
+- 2026-11-09 修复：[旧关键词基线](../fixtures/knowledge/pilots/procurement-approval-v1/baseline-keyword-dev-v1.tsv)中 B02 三格式 Top10 均漏中档行、B04 Excel Top5 缺表头；[同题复测](../fixtures/knowledge/pilots/procurement-approval-v1/amount-companions-dev-v1.tsv)已分别在 Top3/Top5 取齐。候选索引保存单位与端点明确的区间，关联取回仍受来源、版本、授权和 K 的约束。四块不能塞进 Top3；不把条件性审批当金额必审。多金额解释、跨来源冲突和生产分布下的质量/时延仍待独立验收。
+
+- V60 已补四格式不可变原件、覆盖清单和按 Trace/现权回读；采购 Markdown/XLSX/DOCX 的 B04 多块判定已覆盖 PostgreSQL 上的发布与 Registry。评审确认的三个缺陷（不可达引用可发布、工具重复传正文、共享字符串导致派生文本超限）均有回归。浏览器原件上传与片段回读已接入，UI 接口模拟测试与数据库测试分开。Word 可索引简单段落/表行，修订或不支持结构整份不索引；B09 与 Excel 干扰项已有回归。待实现：PDF 解析、复杂 Office 结构/表头、缺失证据组补召回、完整流程联测、派生重建切换和分格式评测。[实现与回归边界](../architecture/rag-four-format-evidence-design.md#5-已实现的原件切片)。
 
 - 当前：文本/Markdown 摄取可用；`TextChunker` 不理解 PDF 布局、表格单元格或图片像素。LangChain4j + MinerU 选型已确认，结构定位契约/Codec/来源覆盖评分于 2026-11-04 加固，但未安装部署 MinerU 或实现二进制 PDF 摄取，不能据此声称 PDF 可用。
 - 设计进展（2026-11-03）：已补[实施设计与开源实践评审](../architecture/rag-structured-document-implementation-design.md)，明确当前任务文档唯一性/Chunk ID/正文存储的改造点、远端任务丢失与重复计算边界、结构/资产模型、完整来源 Manifest、API/权限和 20 个场景条目；未实际执行 D0 试跑，问题仍为待实现。

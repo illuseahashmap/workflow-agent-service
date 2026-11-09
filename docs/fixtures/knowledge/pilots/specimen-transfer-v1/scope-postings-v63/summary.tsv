@@ -1,0 +1,5 @@
+noiseDocs	docs	chunks	workers	samples	complete	contaminated	cleanComplete	p95ms
+0	1	14	1	64	6	0	6	8.384
+0	1	14	4	64	6	0	6	9.691
+32	33	1582	1	64	6	1	6	11.747
+32	33	1582	4	64	6	1	6	16.152

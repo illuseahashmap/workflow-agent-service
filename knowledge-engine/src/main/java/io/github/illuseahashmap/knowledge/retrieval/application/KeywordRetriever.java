@@ -7,6 +7,7 @@ import io.github.illuseahashmap.knowledge.retrieval.domain.Citation;
 import io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference;
 import io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceType;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
+import io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalStatus;
 
@@ -38,6 +39,9 @@ public final class KeywordRetriever implements KnowledgeRetriever {
         }
         List<ChunkEvidence> evidence = new ArrayList<>();
         List<Citation> citations = new ArrayList<>();
+        var groups=new java.util.EnumMap<PolicyComparison.Side,List<EvidenceReference>>(PolicyComparison.Side.class);
+        if(PolicyComparison.parse(request.query()).isPresent())
+            for(var side:PolicyComparison.Side.values())groups.put(side,new ArrayList<>());
         for (ChunkSearchPort.SearchHit hit : hits) {
             var chunk = hit.chunk();
             EvidenceReference reference = new EvidenceReference(EvidenceType.CHUNK,
@@ -46,9 +50,10 @@ public final class KeywordRetriever implements KnowledgeRetriever {
             evidence.add(ChunkEvidence.scored(reference, chunk.text(), hit.score(),
                     chunk.documentVersion().externalDocumentId(), "KEYWORD"));
             citations.add(new Citation("citation-" + chunk.chunkId(), reference, chunk.text()));
+            if(groups.containsKey(hit.supportedSide()))groups.get(hit.supportedSide()).add(reference);
         }
         return new RetrievalResult(RetrievalStatus.SUCCESS, List.copyOf(evidence), List.copyOf(citations),
-                traceId, "KEYWORD", List.of(), false);
+                traceId, "KEYWORD", List.of(), false,List.copyOf(groups.values())).requireCoverage();
     }
 
     private boolean supportsRequestedEvidence(RetrievalRequest request) {

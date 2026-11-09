@@ -8,7 +8,9 @@ import java.util.*;
 /** A reviewed claim for a specific amount band. Evidence identities and disposition are frozen at publication,
  * never selected by the model. Missing support means no workflow decision, not the opposite decision. */
 public record CitationClaim(String amountField, BigDecimal above, String decisionField, String disposition,
-                            String citationsField, Set<String> requiredChunks) {
+                            String citationsField, Set<String> requiredChunks, String conditionField,
+                            Map<String,Case> cases) {
+    public record Case(String disposition,Set<String> requiredChunks) {}
     public static CitationClaim parse(ObjectMapper json,String schema) {
         if(schema==null||schema.isBlank()) return null;
         try {
@@ -16,12 +18,32 @@ public record CitationClaim(String amountField, BigDecimal above, String decisio
             var c=root.get("x-workflow-citation-claim");
             if(c==null) return null;
             var amount=field(c,"amountField"); var decision=field(c,"decisionField"); var cited=field(c,"citationsField");
-            if (!"1".equals(field(c,"version")) || c.size()!=7 || !c.path("above").isNumber()
+            if (!c.path("above").isNumber()
                     || !"string".equals(root.path("properties").path(decision).path("type").asText())
                     || !"array".equals(root.path("properties").path(cited).path("type").asText())
                     || !"string".equals(root.path("properties").path(cited).path("items").path("type").asText())) throw invalid();
-            return new CitationClaim(amount,c.get("above").decimalValue(),decision,field(c,"disposition"),cited,
-                    keys(c.path("requiredChunks")));
+            return switch(field(c,"version")) {
+                case "1" -> {
+                    if(c.size()!=7) throw invalid();
+                    yield new CitationClaim(amount,c.get("above").decimalValue(),decision,field(c,"disposition"),cited,
+                            keys(c.path("requiredChunks")),null,Map.of());
+                }
+                case "2" -> {
+                    var branches=c.path("cases");
+                    if(c.size()!=7 || !branches.isObject() || branches.isEmpty() || branches.size()>16) throw invalid();
+                    var cases=new LinkedHashMap<String,Case>(); var union=new HashSet<String>();
+                    branches.fields().forEachRemaining(entry->{
+                        var branch=entry.getValue();
+                        if(entry.getKey().isBlank() || branch.size()!=2) throw invalid();
+                        var chunks=keys(branch.path("requiredChunks")); union.addAll(chunks);
+                        cases.put(entry.getKey(),new Case(field(branch,"disposition"),chunks));
+                    });
+                    if(union.size()>32) throw invalid();
+                    yield new CitationClaim(amount,c.get("above").decimalValue(),decision,null,cited,
+                            Set.copyOf(union),field(c,"conditionField"),Map.copyOf(cases));
+                }
+                default -> throw invalid();
+            };
         } catch(java.io.IOException e){throw invalid();}
     }
     private static String field(JsonNode n,String k){
@@ -36,11 +58,16 @@ public record CitationClaim(String amountField, BigDecimal above, String decisio
     }
     public boolean supported(JsonNode input,JsonNode answer,Set<String> observed) {
         var amount=input.path(amountField);
-        if (!amount.isNumber() || amount.decimalValue().compareTo(above)<=0
-                || !disposition.equals(answer.path(decisionField).textValue())) return false;
+        if (!amount.isNumber() || amount.decimalValue().compareTo(above)<=0) return false;
+        var branch=new Case(disposition,requiredChunks);
+        if(conditionField!=null) {
+            var fact=input.path(conditionField);
+            if(!fact.isTextual() || (branch=cases.get(fact.textValue()))==null) return false;
+        }
+        if(!branch.disposition().equals(answer.path(decisionField).textValue())) return false;
         try {
             var cited=keys(answer.path(citationsField));
-            return cited.containsAll(requiredChunks) && observed.containsAll(cited);
+            return cited.containsAll(branch.requiredChunks()) && observed.containsAll(cited);
         } catch(IllegalArgumentException invalid){return false;}
     }
     private static IllegalArgumentException invalid(){return new IllegalArgumentException("Invalid version-bound citation claim");}

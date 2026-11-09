@@ -9,7 +9,8 @@ import java.util.List;
 public interface ChunkSearchPort {
     List<SearchHit> search(String tenantCode, RetrievalRequest request, int limit);
 
-    record SearchHit(Chunk chunk, double score) {
+    record SearchHit(Chunk chunk, double score, io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.Side supportedSide) {
+        public SearchHit(Chunk chunk,double score){ this(chunk,score,null); }
         public SearchHit {
             if (chunk == null) {
                 throw new NullPointerException("chunk must not be null");

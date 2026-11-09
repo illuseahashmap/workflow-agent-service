@@ -32,6 +32,25 @@ class StrategyRetrieverTest {
     }
 
     @Test
+    void vectorSimilarityCannotFillOrContaminateAComparison() {
+        var request=new RetrievalRequest("内部交接能否套用外部运输制度",List.of("policy"),List.of(),null,5,
+                RetrievalRequest.StrategyHint.HYBRID,0,List.of());
+        var pair=result("KEYWORD","a","b");
+        var verified=new RetrievalResult(pair.status(),pair.evidence(),pair.citations(),pair.retrievalTraceId(),"KEYWORD",List.of(),false,
+                pair.evidence().stream().map(e->List.of(e.reference())).toList());
+        KnowledgeRetriever vector=(tenant,r)->result("VECTOR","other-amount-band","b");
+        var merged=new StrategyRetriever((tenant,r)->verified,vector).retrieve("t",request);
+        assertThat(merged.status()).isEqualTo(RetrievalStatus.SUCCESS);
+        assertThat(merged.evidence()).extracting(e->e.reference().locator()).containsExactlyInAnyOrder("a","b");
+        var absent=RetrievalResult.empty("no-scope","KEYWORD");
+        var incomplete=new StrategyRetriever((tenant,r)->absent,vector).retrieve("t",request);
+        assertThat(incomplete.abstained()).isTrue();
+        var vectorOnly=new RetrievalRequest(request.query(),request.knowledgeScopes(),List.of(),null,5,
+                RetrievalRequest.StrategyHint.VECTOR,0,List.of());
+        assertThat(new StrategyRetriever((t,r)->verified,vector).retrieve("t",vectorOnly).abstained()).isTrue();
+    }
+
+    @Test
     void hybridDeduplicatesByStableReferenceAndUsesBothRankings() {
         KnowledgeRetriever keyword = (tenant, request) -> result("KEYWORD", "a", "b");
         KnowledgeRetriever vector = (tenant, request) -> result("VECTOR", "b", "c");

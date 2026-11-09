@@ -32,7 +32,8 @@ final class NativeDocumentParser {
         charge(reason);
         exclusions.add(reason);
     }
-    record Block(NativeLocator anchor, String text) {}
+    // Physical width, not a count inferred from a printed delimiter inside a cell.
+    record Block(NativeLocator anchor, String text, int tableWidth) {}
     record Manifest(String status, String recipe, List<Block> blocks, List<String> exclusions) {}
     private static final Parser MARKDOWN = Parser.builder().extensions(List.of(TablesExtension.create()))
             .includeSourceSpans(IncludeSourceSpans.BLOCKS).build();
@@ -53,7 +54,7 @@ final class NativeDocumentParser {
                     if (parts.stream().anyMatch(p -> p.endsWith(".bin") || p.contains("/externalLinks/")
                             || p.contains("/embeddings/") || p.contains("/drawings/")))
                         yield unavailable(format, "Embedded, linked or drawing content requires review");
-                    yield workbook ? excel(bytes) : unavailable(format, "Word parser not enabled");
+                    yield workbook ? excel(bytes) : new NativeWordParser(this).parse(bytes);
                 }
                 case "PDF" -> {
                     if (!new String(bytes,0,Math.min(5,bytes.length),StandardCharsets.US_ASCII).equals("%PDF-"))
@@ -66,7 +67,7 @@ final class NativeDocumentParser {
             throw new IllegalArgumentException("Malformed or unsupported original", e);
         }
     }
-    private static Manifest unavailable(String format, String reason) {
+    static Manifest unavailable(String format, String reason) {
         return new Manifest("NOT_INDEXED",format+"-intake-v1",List.of(),List.of(reason));
     }
     private Set<String> inspectZip(byte[] bytes,String format) throws IOException {
@@ -120,10 +121,13 @@ final class NativeDocumentParser {
         } catch(javax.xml.stream.XMLStreamException e){throw new IllegalArgumentException("Invalid Office manifest",e);}
         if(!mime.equals(mainOverride==null ? xmlDefault : mainOverride)) throw new IllegalArgumentException("Office main part type mismatch");
     }
-    private void append(List<Block> blocks, String kind, String part, String start, String end,String text) {
+    void append(List<Block> blocks, String kind, String part, String start, String end,String text) {
+        append(blocks,kind,part,start,end,text,0);
+    }
+    void append(List<Block> blocks, String kind, String part, String start, String end,String text,int width) {
         if (blocks.size()>=MAX_BLOCKS || text.length()>MAX_BLOCK_CHARS) throw new IllegalArgumentException("Structure exceeds block budget");
         charge(text);
-        blocks.add(new Block(new NativeLocator(2,NativeLocator.Kind.valueOf(kind),part,start,end,null),text.strip()));
+        blocks.add(new Block(new NativeLocator(2,NativeLocator.Kind.valueOf(kind),part,start,end,null),text.strip(),width));
     }
     private Manifest markdown(byte[] bytes) throws IOException {
         String text=StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
@@ -142,14 +146,17 @@ final class NativeDocumentParser {
             if (!(node instanceof Paragraph || node instanceof Heading || node instanceof TableBlock || node instanceof ListBlock)
                     || containsUnsupported(node)) return unavailable("MD","Unsupported markup at line "+(from+1));
             if (node instanceof TableBlock) {
+                // CommonMark's parsed header determines the width; do not infer table structure from paragraph text.
+                Node firstRow=node.getFirstChild().getFirstChild(); int width=0;
+                for(Node cell=firstRow.getFirstChild();cell!=null;cell=cell.getNext()) width++;
                 for (int i=from;i<=to;i++) {
                     if (i==from+1) { omit(omitted,"line "+(i+1)+": table delimiter"); continue; }
-                    append(blocks,"MD_LINES","",String.valueOf(i+1),String.valueOf(i+1),lines[i]);
+                    append(blocks,"MD_LINES","",String.valueOf(i+1),String.valueOf(i+1),lines[i],width);
                 }
             } else append(blocks,"MD_LINES","",String.valueOf(from+1),String.valueOf(to+1),
                     String.join("\n",Arrays.copyOfRange(lines,from,to+1)));
         }
-        return blocks.isEmpty()?unavailable("MD","No eligible text"):new Manifest("PARSED","commonmark-gfm-v1",blocks,omitted);
+        return blocks.isEmpty()?unavailable("MD","No eligible text"):new Manifest("PARSED","commonmark-gfm-v2",blocks,omitted);
     }
     private static boolean containsUnsupported(Node n) {
         var remaining = new ArrayDeque<Node>();
@@ -182,7 +189,7 @@ final class NativeDocumentParser {
                     checkTime();
                     if (++visited>MAX_BLOCKS || row.getLastCellNum()>256) throw new IllegalArgumentException("Worksheet exceeds limit");
                     if (row.getZeroHeight()) { omit(omitted,name+"!"+(row.getRowNum()+1)+": hidden row"); continue; }
-                    var values=new StringBuilder(); int first=-1,last=-1;
+                    var values=new StringBuilder(); int first=-1,last=-1,count=0;
                     for (Cell cell:row) {
                         int col=cell.getColumnIndex();
                         if (sheet.isColumnHidden(col)) { omit(omitted,name+"!"+cell.getAddress()+": hidden column"); continue; }
@@ -191,6 +198,7 @@ final class NativeDocumentParser {
                             return unavailable("XLSX",name+"!"+cell.getAddress()+": unverified formula or error");
                         String shown=display.formatCellValue(cell);
                         if (shown.isBlank()) continue;
+                        count++;
                         String raw=cell instanceof org.apache.poi.xssf.usermodel.XSSFCell x && cell.getCellType()==CellType.NUMERIC ? x.getRawValue() : null;
                         if(first<0) first=col;
                         last=col;
@@ -205,10 +213,10 @@ final class NativeDocumentParser {
                     for(int col=first;col<=last;col++) if(sheet.isColumnHidden(col))
                         return unavailable("XLSX",name+": noncontiguous visible selection requires review");
                     append(blocks,"XLSX_CELLS",name,new org.apache.poi.ss.util.CellAddress(row.getRowNum(),first).formatAsString(),
-                            new org.apache.poi.ss.util.CellAddress(row.getRowNum(),last).formatAsString(),values.toString());
+                            new org.apache.poi.ss.util.CellAddress(row.getRowNum(),last).formatAsString(),values.toString(),count);
                 }
             }
         }
-        return blocks.isEmpty()?unavailable("XLSX","No visible cells"):new Manifest("PARSED","xssf-visible-rows-v1",blocks,omitted);
+        return blocks.isEmpty()?unavailable("XLSX","No visible cells"):new Manifest("PARSED","xssf-visible-rows-v2",blocks,omitted);
     }
 }

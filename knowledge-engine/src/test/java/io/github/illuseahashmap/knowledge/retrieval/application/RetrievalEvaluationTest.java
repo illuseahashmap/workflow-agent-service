@@ -7,6 +7,25 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RetrievalEvaluationTest {
+    @org.junit.jupiter.api.Test
+    void requiredGroupsAreConjunctiveWithAlternativesAndSeparateLeakAccounting() {
+        var scorer=new RetrievalEvaluation();
+        var groups=java.util.List.of(java.util.List.of("clause","equivalent"),java.util.List.of("exception"));
+        var labels=java.util.Map.of("clause",2,"equivalent",2,"exception",2,"background",1);
+        var ranked=java.util.List.of("equivalent","equivalent","unjudged","secret","exception");
+        var r=scorer.evaluateGroups(groups,labels,java.util.Set.of("secret"),ranked,4);
+        org.assertj.core.api.Assertions.assertThat(r.matchedGroups()).isOne();
+        org.assertj.core.api.Assertions.assertThat(r.unjudged()).isOne();
+        org.assertj.core.api.Assertions.assertThat(r.leaks()).containsExactly("secret");
+        org.assertj.core.api.Assertions.assertThat(r.missing()).containsExactly(java.util.List.of("exception"));
+        org.assertj.core.api.Assertions.assertThat(scorer.evaluateGroups(groups,labels,java.util.Set.of("secret"),ranked,5).complete()).isTrue();
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->scorer.evaluateGroups(groups,labels,java.util.Set.of("exception"),ranked,4))
+                .isInstanceOf(IllegalArgumentException.class);
+        var absence=scorer.evaluateGroups(java.util.List.of(),java.util.Map.of(),java.util.Set.of("secret"),ranked,5);
+        org.assertj.core.api.Assertions.assertThat(absence.applicable()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(absence.complete()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(absence.leaks()).containsExactly("secret");
+    }
     @Test
     void computesRankSensitiveMetricsWithoutCountingDuplicateHits() {
         var a = ref("a");

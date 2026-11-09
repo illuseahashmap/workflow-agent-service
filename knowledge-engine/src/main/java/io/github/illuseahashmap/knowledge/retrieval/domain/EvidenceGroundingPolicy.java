@@ -36,7 +36,7 @@ public final class EvidenceGroundingPolicy {
         var selectedReferences = selected.stream().map(Evidence::reference).collect(java.util.stream.Collectors.toSet());
         return new RetrievalResult(result.status(), selected,
                 result.citations().stream().filter(citation -> selectedReferences.contains(citation.reference())).toList(),
-                result.retrievalTraceId(), result.strategy(), result.warnings(), result.abstained());
+                result.retrievalTraceId(), result.strategy(), result.warnings(), result.abstained(),result.requiredEvidenceGroups()).requireCoverage();
     }
 
     /** Evidence groups are selected atomically: support segments never compete with their anchor for a slot. */

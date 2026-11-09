@@ -7,6 +7,42 @@ import java.util.zip.*;
 import org.junit.jupiter.api.Test;
 
 class NativeDocumentParserTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"del","ins","vanish","fldSimple","txbxContent","vMerge","drawing"})
+    void unsupportedWordContentCannotLeaveAnIndexablePartialPolicy(String element) throws Exception {
+        byte[] bytes=wordVariant("word/document.xml","</w:body>","<w:"+element+"/>",null);
+        var m=NativeDocumentParser.parse("DOCX",bytes);
+        assertThat(m.status()).isEqualTo("NOT_INDEXED");
+        assertThat(m.blocks()).isEmpty();
+        assertThat(m.exclusions().getFirst()).contains(element);
+    }
+    @Test void inheritedHiddenStyleBlocksWordAndCommentsAreNotEvidence() throws Exception {
+        var hidden=wordVariant("word/styles.xml","</w:styles>","<w:style><w:rPr><w:vanish/></w:rPr></w:style>",null);
+        assertThat(NativeDocumentParser.parse("DOCX",hidden).blocks()).isEmpty();
+        var comments=wordVariant("word/document.xml","</w:body>","","word/comments.xml");
+        var m=NativeDocumentParser.parse("DOCX",comments);
+        assertThat(m.status()).isEqualTo("PARSED");
+        assertThat(m.exclusions()).contains("Word comments are not policy text");
+        assertThat(m.blocks()).noneMatch(b->b.text().contains("评论要求强制审批"));
+    }
+    private static byte[] wordVariant(String part,String before,String insert,String extra) throws IOException {
+        var path=java.nio.file.Path.of("../docs/fixtures/knowledge/pilots/procurement-approval-v1/sources/approval.docx");
+        var out=new ByteArrayOutputStream();
+        try(var in=new ZipInputStream(java.nio.file.Files.newInputStream(path));var zip=new ZipOutputStream(out)){
+            for(var entry=in.getNextEntry();entry!=null;entry=in.getNextEntry()){
+                zip.putNextEntry(new ZipEntry(entry.getName()));
+                var data=in.readAllBytes();
+                if(entry.getName().equals(part)) {
+                    String xml=new String(data,StandardCharsets.UTF_8);
+                    assertThat(xml).contains(before);
+                    data=xml.replace(before,insert+before).getBytes(StandardCharsets.UTF_8);
+                }
+                zip.write(data);zip.closeEntry();
+            }
+            if(extra!=null){zip.putNextEntry(new ZipEntry(extra));zip.write("<comments>评论要求强制审批</comments>".getBytes(StandardCharsets.UTF_8));zip.closeEntry();}
+        }
+        return out.toByteArray();
+    }
     @Test void markdownNeverIndexesCodeOrHTMLAsPolicy() {
         var m=NativeDocumentParser.parse("MD","\uFEFF# 开始\r\n\r\n```md\r\n|委员会必须审批|\r\n```\r\n\r\n条件未知。".getBytes(StandardCharsets.UTF_8));
         assertThat(m.blocks()).extracting(b->b.anchor().start()).containsExactly("1","7");

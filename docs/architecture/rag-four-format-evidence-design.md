@@ -1,6 +1,6 @@
 # RAG 四格式摄取与证据设计
 
-2026-11-07。目标为 UTF-8 Markdown、Excel（.xlsx）、Word（.docx）与 PDF 的原生证据。第 1–4 节保留目标与设计依据；**第 5 节是已实现范围**。旧纯文本入口保留，.xls、.doc、宏、加密文件不作为可检索格式。
+2026-11-08。目标为 UTF-8 Markdown、Excel（.xlsx）、Word（.docx）与 PDF 的原生证据。第 1–4 节保留目标与设计依据；**第 5 节是已实现范围**。旧纯文本入口保留，.xls、.doc、宏、加密文件不作为可检索格式。
 
 ## 1. 对现状的审查
 
@@ -65,11 +65,23 @@ Office 首轮可用 Apache POI 的 XSSF/XWPF 做小样验证，Markdown 可用�
 - `POST /knowledge/originals` 接收 multipart 的 sourceCode、externalDocumentId、version、file。管理权限与旧文档接口一致。保存原始字节和 SHA-256（单件 2 MiB），与解析 recipe、覆盖清单、派生内容和既有索引区分。相同租户/来源/文档版本重交相同原件幂等；换字节或试图覆盖旧文本版本均拒绝。V60 不重算历史版本/Trace。
 - `GET /knowledge/originals/coverage` 按同一文档身份返回已解析位置和排除原因。PARSED 表示已解析并排队，不等于 ACTIVE；不支持的 DOCX/PDF 保存原件和 NOT_INDEXED 清单，不排队、不替代旧活跃索引。拒收伪装/超限包。当前解析同步有界，索引仍走原租约 Worker；未实现对同一原件在线重解析和切换 recipe。
 - CommonMark/GFM 解析 Markdown 段落及表格行；代码块不作为政策，HTML/图片等未经解释的内容不发布。POI/XSSF 解析可见工作表的行、数值原值和显示值、横向合并位置。隐藏行列/表剔除并记录，公式、错误单元格、纵向合并、图形/嵌入对象等不予索引。不把通用表语义或任意公式新鲜性当作已解决。
-- `GET /knowledge/citations/preview?traceId=…&chunkId=…` 使用已认证主体和可信租户。在同一 SQL 中核对成功 Trace 的原引用、已发布 Profile 与冻结索引、当前主体范围、来源与文档状态。仅返回匹配块、原件 SHA、recipe 与 v2 原生位置；猜测块、撤权和跨租户返回 404。Markdown 为原始行区间，Excel 为原工作表选区；Word 块和 PDF 区域有位置契约，但没有解析器生成可用引用。此协议未替换历史 EvidenceLocator v1 评分。
+- `GET /knowledge/citations/preview?traceId=…&chunkId=…` 使用已认证主体和可信租户。在同一 SQL 中核对成功 Trace 的原引用、已发布 Profile 与冻结索引、当前主体范围、来源与文档状态。仅返回匹配块、原件 SHA、recipe 与 v2 原生位置；猜测块、撤权和跨租户返回 404。Markdown 为原始行区间，Excel 为原工作表选区；Word 使用 word/document.xml 内直接正文段落或表行路径（从 1 编号），PDF 区域仍只有契约。此协议未替换历史 EvidenceLocator v1 评分。
 - 需要驱动流程时可在 PLATFORM_AGENT 的发布输出 Schema 声明 `x-workflow-citation-claim` v1：`amountField` 对应数值输入，`above` 为不含下界，`decisionField/disposition` 为该档审核通过的处置，`citationsField` 为输出引用数组，`requiredChunks` 为审核人固定的块 ID。要求已绑定 knowledge_search。模型不能自定必要证据。校验仅接受本 Run 已观察且仍授权的工具引用，缺少任何一个、金额不适用或给出其他处置均拒绝；此门禁只保证已声明的结构化决策，不是自由文本通用 Grounding。没有在生产发布采购测试草案。
-- [采购报告及复跑入口](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)。两条原生路径分开建索引，使用同一 B04 原题；DOCX/PDF 仅核对原件和未索引状态。
+- [采购报告及复跑入口](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)。三种可解析格式分开建索引，使用同一 B04 原题；PDF 仅核对原件和未索引状态。
 
 ### 交叉评审后的约束
+
+**候选索引的结构化检索投影（2026-11-09）**：V61 在原生金额表行上保存人民币十进制区间和同一文档的表头/条件块序号，引用正文、Chunk ID、AgentRun 和 Flowable 协议不变。正文与定位仍是证据；投影只选择要取回的原文。
+
+- 数据来自冻结原件及解析清单，解析配方 v2 额外记录真实行宽。支持明确的变量不等式或上下限列、含/不含端点及元/万元；显示值与原值不一致、列数/位置不明、单位不明时不建立该区间。条件块需在同一局部范围（最多六块）、重复相同档位和条件动作且唯一；不跨表凭相似文字拼接。
+- V62：新候选的表头保存从原件标题/工作表名提取的业务范围检索键，以及同文档适用口径、局部补录条款的位置；表行另存原行标识。先在授权的冻结版本内按业务名称匹配范围，再对入选表执行 `numrange` 点查，金额不参与表选择。相同范围匹配强度不靠金额打破平局；同表重叠且类别未明确时优先补录条款和冲突行。询问能否套用另一制度时优先给该制度的标题和适用口径，而非具体档位。各块均占原 K，词法分不冒充决策置信度。范围键是检索提示，不是租户权限或审批授权。已激活索引不回填；需重建并切换 Profile 才具备该能力。
+- V64：显式跨制度比较不走金额档位查找。按发起方、参照方分别定位已授权的范围段落；Markdown 标题前缀只用于预筛，完整标题、原生清单、文档与冻结索引必须一致。两侧各至少保留一段有效依据，评分或 TopK 丢掉一侧则返回 PARTIAL，禁止向模型作成功交付。详见[双侧证据回归与 P95](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)。
+- 普通文本、历史冻结索引不被数据库升级改写。老原件重建候选时，从字节重解析并逐块对齐定位、正文和排除清单；不一致就不添加金额投影。新候选须按原有激活、Profile 发布与 AgentVersion 绑定流程切换。每个候选及其关联块均在同租户、授权范围、可见文档及许可的索引版本内检索。
+- 不计算多笔金额或推测未知费用，不推断实时供应商状态，不把“必要时”升级成“必须”。跨文档显式链接、任意自然语言条件解析、不同领域的金额上下文消歧及负载验收仍未完成。
+
+Word 的 `word-body-rows-v1` 只发布白名单中的正文段落与简单原生表行，保留运行顺序，不依赖打印页码。批注不是证据；修订、隐藏样式、域、合并或嵌套表、外链及未识别结构均整份不索引，不交付删除了例外的“部分政策”。旧版本的 NOT_INDEXED 清单不可变；重传同一版本不会偷偷改写历史，需要新版本或后续显式重解析。
+
+同一冻结 AgentVersion 需要处理不同业务状态时，可声明 `x-workflow-citation-claim` v2：保留 `amountField/above/decisionField/citationsField`，增加 `conditionField` 和 `cases`（输入状态 → disposition + requiredChunks），替代 v1 顶层 disposition/requiredChunks。发布校验各分支证据的并集；执行只接受当前结构化输入命中的分支及该分支的全部引用。未知业务状态须显式建分支，缺值或无匹配一律拒绝。生产流程应从授权业务源取得准入状态，政策引用不证明某供应商的实际状态。
 
 - 发布事务锁定 Agent 草稿；必要块必须全部属于该租户已发布 Profile 的冻结来源/索引，且来源、文档当时可见。发布不授予任何人的读取权限；执行、历史回放和引用回读仍用当前授权。
 - 工具结果的正文只在 `evidence` 出现，`citations` 只保留身份与定位。整组序列化后超过 Registry 的 20,000 字符预算即返回 `KNOWLEDGE_EVIDENCE_BUDGET_EXCEEDED / PARTIAL`，不截掉限定词，不把 SUCCESS Trace 当作已向 Agent 交付的证据。

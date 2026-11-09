@@ -1,0 +1,8 @@
+{"id":"S01","query":"样品冷链寄送，含税承运总价 3,600 元，找谁核签？","requiredEvidenceGroups":[[5],[7],[9]],"forbiddenEvidence":[10,18,19],"expectedDisposition":"ANSWER","expectedAnswer":"物流协调员签收报价"}
+{"id":"S02","query":"样品冷链寄送，含税承运总价 3,600.01 元，必须提交质量例会吗？","requiredEvidenceGroups":[[5],[7],[10],[12]],"forbiddenEvidence":[9,18,19],"expectedDisposition":"CONDITIONAL","expectedAnswer":"生物安全主管复核；仅出现温度记录断点才提交例会"}
+{"id":"S03","query":"样品常温寄送报价 3,800 元，尚无装箱单，谁核签？","requiredEvidenceGroups":[[16],[18],[19],[21]],"forbiddenEvidence":[9,10],"expectedDisposition":"ABSTAIN","expectedAnswer":"补录装箱单，两种包装均可能"}
+{"id":"S04","query":"样品常温寄送，防震箱报价 3,800 元，谁核签？","requiredEvidenceGroups":[[16],[19],[21]],"forbiddenEvidence":[9,10,18],"expectedDisposition":"ANSWER","expectedAnswer":"包装工程师核签"}
+{"id":"S05","query":"样品库内移交能否套用样品冷链寄送的 3,600 元核签制度？","requiredEvidenceGroups":[[3,5],[25]],"forbiddenEvidence":[9,10,18,19],"expectedDisposition":"ANSWER","expectedAnswer":"库内移交只登记；寄送规则不适用"}
+{"id":"S06","query":"全程低温发运标本，承运含税 3,601 元，有没有额外会审条件？","requiredEvidenceGroups":[[7],[10],[12]],"forbiddenEvidence":[9,18,19],"expectedDisposition":"CONDITIONAL","expectedAnswer":"主管复核；温度记录断点才提交例会"}
+{"id":"S07","query":"样品冷链寄送报价 3,590 元，干冰附加费未确定，可以按常规线路签收吗？","requiredEvidenceGroups":[[5]],"forbiddenEvidence":[18,19],"expectedDisposition":"ABSTAIN","expectedAnswer":"补齐不可拆分费用，不能按已知报价定档"}
+{"id":"S08","query":"样品寄送报价 3,800 元，温控方式和包装尚未填写，可以确定核签人吗？","requiredEvidenceGroups":[[3,5],[10],[18],[19],[21]],"forbiddenEvidence":[],"expectedDisposition":"ABSTAIN","expectedAnswer":"确认冷链或常温及包装类别，不能给出唯一责任人"}

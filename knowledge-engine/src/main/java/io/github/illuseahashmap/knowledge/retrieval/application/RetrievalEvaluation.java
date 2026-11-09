@@ -8,6 +8,28 @@ import java.util.Set;
 
 /** Reproducible retrieval metrics for a frozen set of expected evidence references. */
 public final class RetrievalEvaluation {
+    /** AND across groups, OR within each group. Unjudged candidates are not negative labels. */
+    public GroupCoverage evaluateGroups(List<List<String>> groups, java.util.Map<String,Integer> judgments,
+            Set<String> forbidden, List<String> ranked, int k) {
+        if (k < 1 || judgments.entrySet().stream().anyMatch(e ->
+                e.getValue() < 0 || e.getValue() > 2 || forbidden.contains(e.getKey())))
+            throw new IllegalArgumentException("Invalid retrieval judgments");
+        var missing = new java.util.ArrayList<List<String>>();
+        var top = ranked.stream().limit(k).toList();
+        for (var group : groups) {
+            if (group.isEmpty() || Set.copyOf(group).size()!=group.size()
+                    || group.stream().anyMatch(id -> !Integer.valueOf(2).equals(judgments.get(id))))
+                throw new IllegalArgumentException("Each required alternative needs an authorized decisive judgment");
+            if (java.util.Collections.disjoint(group, top)) missing.add(List.copyOf(group));
+        }
+        return new GroupCoverage(groups.size()-missing.size(), List.copyOf(missing),
+                top.stream().filter(forbidden::contains).distinct().toList(),
+                top.stream().filter(id -> !judgments.containsKey(id) && !forbidden.contains(id)).count());
+    }
+    public record GroupCoverage(int matchedGroups, List<List<String>> missing, List<String> leaks, long unjudged) {
+        public boolean applicable() { return matchedGroups > 0 || !missing.isEmpty(); }
+        public boolean complete() { return applicable() && missing.isEmpty(); }
+    }
     public Score evaluate(List<EvidenceReference> expected, List<EvidenceReference> ranked, int k) {
         Objects.requireNonNull(expected, "expected");
         Objects.requireNonNull(ranked, "ranked");

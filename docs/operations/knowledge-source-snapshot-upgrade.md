@@ -11,3 +11,9 @@ V58 初始化每个租户/Profile 的 last_version，后续创建在同一事务
 使用独立迁移/运行账号的部署，需由迁移账号为运行角色授予新增 knowledge_profile_identity 表的 SELECT/INSERT/UPDATE 权限，并保留强制 RLS；不能通过赋予运行角色超级用户权限来解决授权错误。
 
 所有出站路径使用同一受治理传输。自定义 HTTPS 信任上下文仍保持主机名验证；测试私网端点必须显式注入测试地址策略，生产默认拒绝。传输不会使用任意系统代理代替连接校验；生产统一网关接入需另行审批配置和验证。
+
+### V63：原生表范围词索引
+
+V63 在迁移事务中把已有 V62 表头的范围词投影到 `knowledge_scope_term`，包括已退休的冻结索引；没有 V62 范围数据的旧索引不会因此获得新语义。新表头由触发器在同一事务维护。无需重传原件、重建 V62 索引或重发 Profile。旧范围列和 GIN 索引保留，回退应用不需要删除数据或改 Flyway 校验和。
+
+上线先在副本统计 `SELECT count(*),sum(cardinality(table_scope_keys)) FROM knowledge_chunk WHERE table_scope_keys IS NOT NULL`，估算回填耗时、写入锁窗口、磁盘及 WAL。大库应在维护窗口执行。分离账号的部署需给查询角色新表 SELECT、给写入表头的角色新表 INSERT/DELETE 及相应 SELECT 权限；保留强制租户 RLS，不使用超级用户运行应用。大批摄取后核查块、文档、来源、索引版本和范围词表的统计信息，避免把缺统计造成的慢查询误判为正常成本。

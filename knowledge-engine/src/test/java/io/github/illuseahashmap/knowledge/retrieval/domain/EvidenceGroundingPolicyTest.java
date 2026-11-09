@@ -9,6 +9,19 @@ class EvidenceGroundingPolicyTest {
     private final EvidenceReference reference = new EvidenceReference(EvidenceType.CHUNK, "policy", "1", "chunk-1");
 
     @Test
+    void scoreCutoffCannotRemoveOneComparisonSideAndStillSucceed() {
+        var other=new EvidenceReference(EvidenceType.CHUNK,"second","1","second-clause");
+        var both=new RetrievalResult(RetrievalStatus.SUCCESS,
+                List.of(ChunkEvidence.scored(reference,"A",0.9,"A","KEYWORD"),ChunkEvidence.scored(other,"B",0.2,"B","KEYWORD")),
+                List.of(new Citation("a",reference,"A"),new Citation("b",other,"B")),"trace","KEYWORD",List.of(),false,
+                List.of(List.of(reference),List.of(other)));
+        assertThat(policy.apply(both,0).status()).isEqualTo(RetrievalStatus.SUCCESS);
+        var partial=policy.apply(both,0.5);
+        assertThat(partial.status()).isEqualTo(RetrievalStatus.PARTIAL);
+        assertThat(partial.abstained()).isTrue();
+    }
+
+    @Test
     void rejectsEvidenceWithoutCitationBeforeModelSeesIt() {
         var result = new RetrievalResult(RetrievalStatus.SUCCESS,
                 List.of(ChunkEvidence.scored(reference, "text", 0.8, "policy", "KEYWORD")), List.of(),

@@ -19,6 +19,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class KnowledgeSearchAgentToolTest {
+    @Test
+    void partialApplicabilityIsNotDeliveredToTheModelAsAnAnswer() {
+        var retrieval=mock(KnowledgeRetrievalUseCase.class);
+        when(retrieval.searchForAgent(any(),eq("t"),eq(14L),eq("buyer"))).thenReturn(
+                new io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult(
+                    io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalStatus.PARTIAL,java.util.List.of(),
+                    java.util.List.of(),"trace","KEYWORD",java.util.List.of("Missing subject-side policy"),true));
+        var beans=new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+        beans.registerSingleton("retrieval",retrieval);
+        var tool=new KnowledgeSearchAgentTool(beans.getBeanProvider(KnowledgeRetrievalUseCase.class),new ObjectMapper());
+        assertThatThrownBy(()->tool.execute(new AgentTool.Request("t",Map.of("query","采购可否套用检修制度"),
+                Duration.ofSeconds(5),"trace","step",null,1,"tool:1",14L,"buyer")))
+                .isInstanceOfSatisfying(AgentExecutionException.class,e->assertThat(e.failure().errorCode())
+                        .isEqualTo("KNOWLEDGE_EVIDENCE_INSUFFICIENT"));
+    }
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(ints = {2, 4})
     void registryDeliversLongEvidenceWholeOrReturnsExplicitInsufficiency(int count) throws Exception {

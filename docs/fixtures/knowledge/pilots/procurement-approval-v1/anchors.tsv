@@ -1,8 +1,8 @@
-id	mdLine	xlsxSheet	xlsxRange	wordPart	wordSelection
-basis	7	审批矩阵	A4:D4	word/document.xml	第一条 金额口径 / 正文段落 1
-header	11	审批矩阵	A6:D6	word/document.xml	第二条 审批矩阵 / 表 1 / 第 1 行
-low	13	审批矩阵	A7:D7	word/document.xml	第二条 审批矩阵 / 表 1 / 第 2 行
-mid	14	审批矩阵	A8:D8	word/document.xml	第二条 审批矩阵 / 表 1 / 第 3 行
-high	15	审批矩阵	A9:D9	word/document.xml	第二条 审批矩阵 / 表 1 / 第 4 行
-committee	19	审批矩阵	A11:D11	word/document.xml	第三条 委员会与下单门禁 / 正文段落 1
-order	21	审批矩阵	A13:D13	word/document.xml	第三条 委员会与下单门禁 / 正文段落 2
+id	mdLine	xlsxSheet	xlsxRange	wordPart	wordSelection	wordPath
+basis	7	审批矩阵	A4:D4	word/document.xml	第一条 金额口径 / 正文段落 1	body/p[4]
+header	11	审批矩阵	A6:D6	word/document.xml	第二条 审批矩阵 / 表 1 / 第 1 行	body/tbl[1]/tr[1]
+low	13	审批矩阵	A7:D7	word/document.xml	第二条 审批矩阵 / 表 1 / 第 2 行	body/tbl[1]/tr[2]
+mid	14	审批矩阵	A8:D8	word/document.xml	第二条 审批矩阵 / 表 1 / 第 3 行	body/tbl[1]/tr[3]
+high	15	审批矩阵	A9:D9	word/document.xml	第二条 审批矩阵 / 表 1 / 第 4 行	body/tbl[1]/tr[4]
+committee	19	审批矩阵	A11:D11	word/document.xml	第三条 委员会与下单门禁 / 正文段落 1	body/p[7]
+order	21	审批矩阵	A13:D13	word/document.xml	第三条 委员会与下单门禁 / 正文段落 2	body/p[8]

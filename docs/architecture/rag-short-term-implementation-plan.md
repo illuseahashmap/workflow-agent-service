@@ -1,7 +1,7 @@
 # RAG 短期实施方案与长期扩展边界
 
-更新时间：2026-11-07
-状态：既有文本、混合检索及 AgentRun→Flowable 本地链路保留；四格式原件收件与清单已落地，Markdown/XLSX 已完成采购 B04 跨块验证，DOCX/PDF 解析未开放。
+更新时间：2026-11-08
+状态：既有文本、混合检索及 AgentRun→Flowable 本地链路保留；四格式原件收件与清单已落地，Markdown/XLSX/DOCX 已完成采购 B04 跨块验证；Word B09 和 Excel 近似表负例已加入。PDF 尚未开放解析。
 
 B04 已覆盖真实发布服务、冻结工具快照、Registry 和授权片段回读。知识库界面支持原件上传和按引用读取片段。尚未把浏览器、真实模型和 Flowable 联成一次四格式验收。
 
@@ -298,7 +298,7 @@ DocumentVersion 创建
 - Parser、Chunker、Embedding Provider 和 Index Writer 都通过端口扩展；
 - 文档大小、类型、页数、解析时间和 Chunk 数量必须有租户配额。
 
-旧 JSON 文本入口按原协议运行，不补造历史原件。新 multipart 入口保存四格式字节，Markdown 和 Excel 以原生块建索引，Word/PDF 只收件。详见[现行协议与验收边界](rag-four-format-evidence-design.md#5-已实现的原件切片)。
+旧 JSON 文本入口按原协议运行，不补造历史原件。新 multipart 入口保存四格式字节，Markdown、Excel、受支持的 Word 正文以原生块建索引，PDF 只收件。详见[现行协议与验收边界](rag-four-format-evidence-design.md#5-已实现的原件切片)。
 文档作者现在即按[知识文档编写与多模态扩展规范](rag-document-authoring-standard.md)
 保存简单表格、图示文字等价内容和版本化资产元数据；这属于语料设计，不代表当前摄取链路
 已经支持图像像素理解或结构化表格引用。后续扩展须验证资产打包、同租户授权、表格行列/图像
@@ -455,9 +455,13 @@ EvaluationDataset
 `knowledge_search` 已在真实 Retriever、权限求交、Trace、Profile 绑定和失败边界具备后，以只读方式启用；
 Grounding、评测和容器故障验收完成前不得将其标记为生产级 RAG。
 
-### 四格式原生摄取（Markdown/XLSX 试点已实现，余项待验收）
+### 四格式原生摄取（三格式采购 DEV 基线已实测，PDF 仅收件）
 
 公共契约与采购试点先行，Markdown、XLSX、DOCX 各自纵向交付；详见[设计和质量矩阵](rag-four-format-evidence-design.md)。下列 RAG-2P 是 PDF 子项，不阻塞前三者。
+
+2026-11-09：[采购对照实验](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)按同一金标比较原生关键词与“精确金额区间＋有界关联块”。三格式 B02 在 Top3、B04 在 Top5 已取全；B09 能从条件原文回到对应表行和表头。下一步用独立表格、相邻/重叠区间、多个金额、单位否定及不相关制度扩盲测，单列时延与误关联率，再决定是否扩大支持范围；不能据此宣称完整 Agent 或 PDF 已验收。
+
+**三格式回归已完成**：设备维护制度[原始留出实验](../fixtures/knowledge/pilots/maintenance-holdout-v1/README.md)揭示跨表金额错排；[按业务范围检索的复测](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)保留原金标与 K。H02 验证点值收益，H08 验证冲突行及补录条款，H10 验证不跨业务套用金额档。[新制度固定 K 实验](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)已在 Markdown 及两个规模档取证；S05/S06 漏证，[V63 范围词索引复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)已验证扩容后的查询成本与排序等价。[V64 固定 Top5 复测](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已覆盖比较双方、只见一方、授权变化和阈值截断。下一步验证 S06 同义范围和真实 Agent 拒答。PDF D0 排期独立。
 
 ### RAG-2P：LangChain4j + MinerU 结构化 PDF 摄取（待实现）
 

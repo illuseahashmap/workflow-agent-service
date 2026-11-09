@@ -31,7 +31,10 @@ public final class StrategyRetriever implements KnowledgeRetriever {
     public RetrievalResult retrieve(String tenantCode, RetrievalRequest request) {
         return switch (request.strategyHint()) {
             case KEYWORD -> keyword.retrieve(tenantCode, request);
-            case VECTOR -> requireVector().retrieve(tenantCode, request);
+            case VECTOR -> io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.parse(request.query()).isPresent()
+                    ? new RetrievalResult(RetrievalStatus.REJECTED,List.of(),List.of(),UUID.randomUUID().toString(),"VECTOR",
+                        List.of("Vector-only retrieval cannot verify both applicability scopes"),true)
+                    : requireVector().retrieve(tenantCode, request);
             case HYBRID -> hybrid(tenantCode, request);
             case AUTO -> keyword.retrieve(tenantCode, request);
             case GRAPH -> throw new IllegalArgumentException("Graph retrieval is not configured");
@@ -47,6 +50,10 @@ public final class StrategyRetriever implements KnowledgeRetriever {
 
     private RetrievalResult hybrid(String tenantCode, RetrievalRequest request) {
         var keywordResult = keyword.retrieve(tenantCode, request);
+        boolean comparison=io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.parse(request.query()).isPresent();
+        if(comparison && (keywordResult.status()!=RetrievalStatus.SUCCESS || keywordResult.requiredEvidenceGroups().isEmpty()))
+            return new RetrievalResult(RetrievalStatus.PARTIAL,List.of(),List.of(),keywordResult.retrievalTraceId(),"HYBRID",
+                    List.of("Both authorized applicability scopes are required before fusion"),true);
         var vectorResult = requireVector().retrieve(tenantCode, request);
         if (keywordResult.status() == RetrievalStatus.REJECTED
                 || vectorResult.status() == RetrievalStatus.REJECTED) {
@@ -55,7 +62,9 @@ public final class StrategyRetriever implements KnowledgeRetriever {
         }
         Map<EvidenceReference, RankedEvidence> merged = new LinkedHashMap<>();
         addRanks(merged, keywordResult, request.maxResults());
+        var authorizedComparisonRefs=comparison?java.util.Set.copyOf(merged.keySet()):java.util.Set.of();
         addRanks(merged, vectorResult, request.maxResults());
+        if(comparison)merged.keySet().retainAll(authorizedComparisonRefs);
         var ranked = merged.values().stream()
                 .sorted(Comparator.comparingDouble(RankedEvidence::score).reversed()
                         .thenComparing(value -> value.evidence().reference().locator()))
@@ -74,7 +83,7 @@ public final class StrategyRetriever implements KnowledgeRetriever {
             citations.add(item.citation());
         }
         return new RetrievalResult(RetrievalStatus.SUCCESS, evidence, citations,
-                UUID.randomUUID().toString(), "HYBRID", List.of(), false);
+                UUID.randomUUID().toString(), "HYBRID", List.of(), false,keywordResult.requiredEvidenceGroups()).requireCoverage();
     }
 
     private void addRanks(Map<EvidenceReference, RankedEvidence> merged,
