@@ -1,5 +1,7 @@
 package io.github.illuseahashmap.workflow.knowledge;
 
+import io.github.illuseahashmap.knowledge.retrieval.domain.ConditionalAmountQuestion;
+
 import io.github.illuseahashmap.knowledge.catalog.domain.DocumentVersion;
 import io.github.illuseahashmap.knowledge.ingestion.domain.Chunk;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.ChunkSearchPort;
@@ -78,7 +80,7 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
             ), winner AS (
                 SELECT * FROM lex ORDER BY score DESC,ordinal,source_code COLLATE "C",ix,chunk_id COLLATE "C" LIMIT 1
             ), matching AS MATERIALIZED (
-                SELECT r.ordinal,r.qualifier_ordinal,r.range_row_label,b.*,
+                SELECT r.ordinal,r.qualifier_ordinal,r.range_row_label,b.* %s,
                        (char_length(r.range_row_label)>=2 AND strpos(:query,r.range_row_label)>0 AND :asserted) AS named
                 FROM best b JOIN eligible r ON r.index_version_id=b.ix AND r.document_version_id=b.doc
                     AND r.interval_header_ordinal=b.hdr AND r.cny_interval IS NOT NULL
@@ -108,7 +110,7 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                     AND (l.member IS NULL OR EXISTS (SELECT 1 FROM best WHERE doc=l.doc AND ix=l.ix AND hdr=l.member)
                          OR (CAST(:point AS numeric) IS NULL AND (SELECT n FROM decision)=0))
             )
-            SELECT c.*, %s AS ts_rank FROM (SELECT id,max(p) p FROM candidates GROUP BY id) a JOIN eligible c ON c.id=a.id
+            SELECT c.*, %s AS ts_rank %s FROM (SELECT id,max(p) p FROM candidates GROUP BY id) a JOIN eligible c ON c.id=a.id
             ORDER BY a.p DESC,ts_rank DESC,c.ordinal,c.source_code COLLATE "C",c.index_version_id,c.chunk_id COLLATE "C" LIMIT :limit
             """;
 
@@ -153,7 +155,25 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                 .addValue("monetary",MoneyLookup.mentionsAmount(request.query()))
                 .addValue("keys",NativeTableScope.literal(NativeTableScope.queryKeys(request.query())))
                 .addValue("asserted",NativeTableScope.assertsCategory(request.query()));
-        String sql = ELIGIBLE + (comparison.isPresent()?ApplicabilitySearch.SQL.formatted(rank):SCOPED.formatted(rank,lexicalPredicate,rank));
+        boolean condition=ConditionalAmountQuestion.matches(request.query());
+        // Only one resolved table row can establish an unambiguous obligation. Never borrow
+        // a paragraph from an adjacent row, another document, or a different index version.
+        String role = condition ? """
+                , (SELECT CASE c.ordinal WHEN s.hdr THEN 'HEADER' WHEN s.ordinal THEN 'ROW'
+                              WHEN s.qualifier_ordinal THEN CASE WHEN EXISTS (
+                                  SELECT 1 FROM regexp_split_to_table(c.content,'[。；;！？]') clause
+                                  WHERE strpos(clause,s.range_row_label)>0 AND strpos(clause,s.action)>0
+                                    AND clause ~ '(仅在|只有)[^。；！？]{2,64}(时|才)')
+                                  AND NOT EXISTS (SELECT 1 FROM eligible boundary
+                                      WHERE boundary.index_version_id=s.ix AND boundary.document_version_id=s.doc
+                                        AND boundary.ordinal>s.ordinal AND boundary.ordinal<c.ordinal
+                                        AND boundary.content ~ '^#{1,6}[[:space:]]')
+                                  THEN 'QUALIFIER' END END
+                   FROM selected s WHERE (SELECT count(*) FROM selected)=1 AND (SELECT n FROM decision)=1
+                     AND CAST(:point AS numeric) IS NOT NULL AND c.index_version_id=s.ix AND c.document_version_id=s.doc) AS condition_role
+                """ : "";
+        String action=condition?", substring(r.content from '(?:必要时|视情况)([^。；;|[:space:]]{4,24})(?:[。；;]|$)') AS action":"";
+        String sql = ELIGIBLE + (comparison.isPresent()?ApplicabilitySearch.SQL.formatted(rank):SCOPED.formatted(rank,lexicalPredicate,action,rank,role));
         return jdbcTemplate.query(sql, parameters, (row, rowNumber) -> {
             DocumentVersion document = new DocumentVersion(
                     row.getLong("document_version_id"), tenantCode, row.getString("source_code"),
@@ -164,7 +184,8 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                     row.getString("content"), row.getString("content_fingerprint"));
             String side=comparison.isPresent()?row.getString("supported_side"):null;
             return new SearchHit(chunk,row.getDouble("ts_rank"),side==null?null:
-                    PolicyComparison.Side.valueOf(side));
+                    PolicyComparison.Side.valueOf(side),condition && row.getString("condition_role")!=null
+                    ? ConditionalAmountQuestion.Role.valueOf(row.getString("condition_role")):null);
         });
     }
 

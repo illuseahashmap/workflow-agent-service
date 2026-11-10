@@ -71,8 +71,8 @@ final class SpecimenTransferBenchmark {
                     if(prior!=null)assertThat(ranked).isEqualTo(prior);
                     var missing=q.requiredEvidenceGroups.stream().filter(g->g.stream().noneMatch(i->ranked.contains("L"+i))).toList();
                     var wrong=ranked.stream().filter(k->!k.startsWith("L") || q.forbiddenEvidence.contains(Integer.parseInt(k.substring(1)))).toList();
-                    if(q.id.equals("S05")){
-                        assertThat(missing).as("both applicability clauses at fixed Top5").isEmpty();
+                    if(Set.of("S05","S06").contains(q.id)){
+                        assertThat(missing).as("all required native groups at fixed Top5 for %s",q.id).isEmpty();
                         assertThat(wrong).isEmpty();
                     }
                     if(missing.isEmpty())complete++;
@@ -111,7 +111,7 @@ final class SpecimenTransferBenchmark {
         assertThat(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))).as(name).isEqualTo(hash);
         return bytes;
     }
-    private static Snapshot seed(NamedParameterJdbcTemplate jdbc,String scope,byte[] bytes,int count){
+    static Snapshot seed(NamedParameterJdbcTemplate jdbc,String scope,byte[] bytes,int count){
         var store=new NativeEvidenceStore(jdbc,new PostgresKnowledgeManagementAdapter(jdbc),JSON);
         var ix=new PostgresKnowledgeIndexAdapter(jdbc);
         var doc=store.ingest("default",scope,"specimen",1,"MD",bytes);

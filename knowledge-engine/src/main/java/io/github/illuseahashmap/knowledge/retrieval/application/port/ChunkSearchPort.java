@@ -1,5 +1,8 @@
 package io.github.illuseahashmap.knowledge.retrieval.application.port;
 
+import io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison;
+import io.github.illuseahashmap.knowledge.retrieval.domain.ConditionalAmountQuestion;
+
 import io.github.illuseahashmap.knowledge.ingestion.domain.Chunk;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
 
@@ -9,7 +12,9 @@ import java.util.List;
 public interface ChunkSearchPort {
     List<SearchHit> search(String tenantCode, RetrievalRequest request, int limit);
 
-    record SearchHit(Chunk chunk, double score, io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.Side supportedSide) {
+    record SearchHit(Chunk chunk, double score, PolicyComparison.Side supportedSide,
+            ConditionalAmountQuestion.Role conditionRole) {
+        public SearchHit(Chunk chunk,double score,PolicyComparison.Side side){ this(chunk,score,side,null); }
         public SearchHit(Chunk chunk,double score){ this(chunk,score,null); }
         public SearchHit {
             if (chunk == null) {

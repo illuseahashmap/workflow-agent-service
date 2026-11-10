@@ -1,5 +1,8 @@
 package io.github.illuseahashmap.knowledge.retrieval.application;
 
+import io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison;
+import io.github.illuseahashmap.knowledge.retrieval.domain.ConditionalAmountQuestion;
+
 import io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeRetriever;
 import io.github.illuseahashmap.knowledge.retrieval.domain.ChunkEvidence;
 import io.github.illuseahashmap.knowledge.retrieval.domain.Citation;
@@ -31,9 +34,9 @@ public final class StrategyRetriever implements KnowledgeRetriever {
     public RetrievalResult retrieve(String tenantCode, RetrievalRequest request) {
         return switch (request.strategyHint()) {
             case KEYWORD -> keyword.retrieve(tenantCode, request);
-            case VECTOR -> io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.parse(request.query()).isPresent()
+            case VECTOR -> requiresStructuralEvidence(request)
                     ? new RetrievalResult(RetrievalStatus.REJECTED,List.of(),List.of(),UUID.randomUUID().toString(),"VECTOR",
-                        List.of("Vector-only retrieval cannot verify both applicability scopes"),true)
+                        List.of("Vector-only retrieval cannot verify the required structural evidence"),true)
                     : requireVector().retrieve(tenantCode, request);
             case HYBRID -> hybrid(tenantCode, request);
             case AUTO -> keyword.retrieve(tenantCode, request);
@@ -50,10 +53,10 @@ public final class StrategyRetriever implements KnowledgeRetriever {
 
     private RetrievalResult hybrid(String tenantCode, RetrievalRequest request) {
         var keywordResult = keyword.retrieve(tenantCode, request);
-        boolean comparison=io.github.illuseahashmap.knowledge.retrieval.domain.PolicyComparison.parse(request.query()).isPresent();
-        if(comparison && (keywordResult.status()!=RetrievalStatus.SUCCESS || keywordResult.requiredEvidenceGroups().isEmpty()))
+        boolean guarded=requiresStructuralEvidence(request);
+        if(guarded && (keywordResult.status()!=RetrievalStatus.SUCCESS || keywordResult.requiredEvidenceGroups().isEmpty()))
             return new RetrievalResult(RetrievalStatus.PARTIAL,List.of(),List.of(),keywordResult.retrievalTraceId(),"HYBRID",
-                    List.of("Both authorized applicability scopes are required before fusion"),true);
+                    List.of("Required authorized structural evidence is missing before fusion"),true);
         var vectorResult = requireVector().retrieve(tenantCode, request);
         if (keywordResult.status() == RetrievalStatus.REJECTED
                 || vectorResult.status() == RetrievalStatus.REJECTED) {
@@ -62,9 +65,9 @@ public final class StrategyRetriever implements KnowledgeRetriever {
         }
         Map<EvidenceReference, RankedEvidence> merged = new LinkedHashMap<>();
         addRanks(merged, keywordResult, request.maxResults());
-        var authorizedComparisonRefs=comparison?java.util.Set.copyOf(merged.keySet()):java.util.Set.of();
+        var structuralRefs=guarded?java.util.Set.copyOf(merged.keySet()):java.util.Set.of();
         addRanks(merged, vectorResult, request.maxResults());
-        if(comparison)merged.keySet().retainAll(authorizedComparisonRefs);
+        if(guarded)merged.keySet().retainAll(structuralRefs);
         var ranked = merged.values().stream()
                 .sorted(Comparator.comparingDouble(RankedEvidence::score).reversed()
                         .thenComparing(value -> value.evidence().reference().locator()))
@@ -111,4 +114,8 @@ public final class StrategyRetriever implements KnowledgeRetriever {
     }
 
     private record RankedEvidence(ChunkEvidence evidence, Citation citation, double score) {}
+    private static boolean requiresStructuralEvidence(RetrievalRequest request) {
+        return PolicyComparison.parse(request.query()).isPresent()
+                || ConditionalAmountQuestion.matches(request.query());
+    }
 }

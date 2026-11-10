@@ -589,6 +589,25 @@ class KnowledgeDocumentImmutabilityIntegrationTest {
         });
     }
 
+    @Test
+    void conditionalAmountNeedsLinkedTriggerEvenWhenMoneyRowSurvives() throws Exception {
+        specimenConditions(false);
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="workflow.rag.live-specimen", matches="true")
+    void liveSpecimenAgentUsesOnlyCompleteEvidence() throws Exception {
+        specimenConditions(true);
+    }
+
+    private void specimenConditions(boolean live) throws Exception {
+        withScratchDatabase(url -> {
+            Flyway.configure().dataSource(url,databaseUser,databasePassword)
+                    .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+            SpecimenConditionAcceptance.run(new DriverManagerDataSource(url,databaseUser,databasePassword),live);
+        });
+    }
+
     @FunctionalInterface private interface DatabaseCheck { void run(String url) throws Exception; }
 
     private void withScratchDatabase(DatabaseCheck check) throws Exception {

@@ -86,7 +86,7 @@
 
 ### P1-2e 四格式原生摄取与来源追溯尚未完成
 
-- 2026-11-09 已修复原生关键词检索的已知错表：V62 在新索引按表记录范围依据，先选范围再匹配区间，同表重叠保留待区分行与补录原文；跨业务套用只给范围依据。H02/H08/H09/H10 在三格式上有固定 K 回归。见[实测与边界](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)。[样品制度实测](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)新增三个可复现问题：无金额表的比较发起方依据漏召（S05）；同义范围无显式标题重合时漏目标行、扩容后还返回无关表头（S06）；同范围索引扩大后四路热读显著变慢。第三项的目录扫描已在[V63 固定样本复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)改善；S05 已在[V64](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)按双方依据修复，S06 仍开放。仍缺更大语料、混合检索及实际 Agent 拒答验收。
+- 2026-11-09 已修复原生关键词检索的已知错表：V62 在新索引按表记录范围依据，先选范围再匹配区间，同表重叠保留待区分行与补录原文；跨业务套用只给范围依据。H02/H08/H09/H10 在三格式上有固定 K 回归。见[实测与边界](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)。[样品制度实测](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)新增三个可复现问题：无金额表的比较发起方依据漏召（S05）；同义范围无显式标题重合时漏目标行、扩容后还返回无关表头（S06）；同范围索引扩大后四路热读显著变慢。第三项的目录扫描已在[V63 固定样本复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)改善；S05 已在[V64](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)按双方依据修复，[S06 复测](../fixtures/knowledge/pilots/specimen-transfer-v1/controlled-terms-v1/README.md)已修复经审定别名下的漏证。仍缺其他领域的术语覆盖、更大语料、混合检索质量及真实 Agent 拒答验收（本机方舟 DNS 返回非全局地址，正式出站策略在调用前拒绝）。
 
 - 2026-11-09 修复：[旧关键词基线](../fixtures/knowledge/pilots/procurement-approval-v1/baseline-keyword-dev-v1.tsv)中 B02 三格式 Top10 均漏中档行、B04 Excel Top5 缺表头；[同题复测](../fixtures/knowledge/pilots/procurement-approval-v1/amount-companions-dev-v1.tsv)已分别在 Top3/Top5 取齐。候选索引保存单位与端点明确的区间，关联取回仍受来源、版本、授权和 K 的约束。四块不能塞进 Top3；不把条件性审批当金额必审。多金额解释、跨来源冲突和生产分布下的质量/时延仍待独立验收。
 

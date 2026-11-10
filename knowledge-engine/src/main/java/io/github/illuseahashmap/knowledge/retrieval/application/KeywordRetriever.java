@@ -1,5 +1,7 @@
 package io.github.illuseahashmap.knowledge.retrieval.application;
 
+import io.github.illuseahashmap.knowledge.retrieval.domain.ConditionalAmountQuestion;
+
 import io.github.illuseahashmap.knowledge.retrieval.application.port.ChunkSearchPort;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.KnowledgeRetriever;
 import io.github.illuseahashmap.knowledge.retrieval.domain.ChunkEvidence;
@@ -40,6 +42,9 @@ public final class KeywordRetriever implements KnowledgeRetriever {
         List<ChunkEvidence> evidence = new ArrayList<>();
         List<Citation> citations = new ArrayList<>();
         var groups=new java.util.EnumMap<PolicyComparison.Side,List<EvidenceReference>>(PolicyComparison.Side.class);
+        var conditions=new java.util.EnumMap<ConditionalAmountQuestion.Role,List<EvidenceReference>>(ConditionalAmountQuestion.Role.class);
+        if(ConditionalAmountQuestion.matches(request.query()))
+            for(var role:ConditionalAmountQuestion.Role.values())conditions.put(role,new ArrayList<>());
         if(PolicyComparison.parse(request.query()).isPresent())
             for(var side:PolicyComparison.Side.values())groups.put(side,new ArrayList<>());
         for (ChunkSearchPort.SearchHit hit : hits) {
@@ -51,9 +56,10 @@ public final class KeywordRetriever implements KnowledgeRetriever {
                     chunk.documentVersion().externalDocumentId(), "KEYWORD"));
             citations.add(new Citation("citation-" + chunk.chunkId(), reference, chunk.text()));
             if(groups.containsKey(hit.supportedSide()))groups.get(hit.supportedSide()).add(reference);
+            if(conditions.containsKey(hit.conditionRole()))conditions.get(hit.conditionRole()).add(reference);
         }
         return new RetrievalResult(RetrievalStatus.SUCCESS, List.copyOf(evidence), List.copyOf(citations),
-                traceId, "KEYWORD", List.of(), false,List.copyOf(groups.values())).requireCoverage();
+                traceId, "KEYWORD", List.of(), false,conditions.isEmpty()?List.copyOf(groups.values()):List.copyOf(conditions.values())).requireCoverage();
     }
 
     private boolean supportsRequestedEvidence(RetrievalRequest request) {

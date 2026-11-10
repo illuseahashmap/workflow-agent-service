@@ -59,6 +59,6 @@ record NativeTableScope(List<String> keys, int title, Integer basis, Integer not
             if(h.anchor().part().equals(b.anchor().part()) && b.tableWidth()<=1 && !caption(b)
                     && b.text().matches(".*(?:补录|补充|选行|退回|不得默认|仅适用).*")) note=end;
         }
-        return new NativeTableScope(keys(name),title,basis,note);
+        return new NativeTableScope(NativeScopeVocabulary.headerKeys(name),title,basis,note);
     }
 }

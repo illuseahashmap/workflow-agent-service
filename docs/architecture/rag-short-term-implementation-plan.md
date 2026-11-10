@@ -461,7 +461,7 @@ Grounding、评测和容器故障验收完成前不得将其标记为生产级 R
 
 2026-11-09：[采购对照实验](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)按同一金标比较原生关键词与“精确金额区间＋有界关联块”。三格式 B02 在 Top3、B04 在 Top5 已取全；B09 能从条件原文回到对应表行和表头。下一步用独立表格、相邻/重叠区间、多个金额、单位否定及不相关制度扩盲测，单列时延与误关联率，再决定是否扩大支持范围；不能据此宣称完整 Agent 或 PDF 已验收。
 
-**三格式回归已完成**：设备维护制度[原始留出实验](../fixtures/knowledge/pilots/maintenance-holdout-v1/README.md)揭示跨表金额错排；[按业务范围检索的复测](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)保留原金标与 K。H02 验证点值收益，H08 验证冲突行及补录条款，H10 验证不跨业务套用金额档。[新制度固定 K 实验](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)已在 Markdown 及两个规模档取证；S05/S06 漏证，[V63 范围词索引复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)已验证扩容后的查询成本与排序等价。[V64 固定 Top5 复测](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已覆盖比较双方、只见一方、授权变化和阈值截断。下一步验证 S06 同义范围和真实 Agent 拒答。PDF D0 排期独立。
+**三格式回归已完成**：设备维护制度[原始留出实验](../fixtures/knowledge/pilots/maintenance-holdout-v1/README.md)揭示跨表金额错排；[按业务范围检索的复测](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)保留原金标与 K。H02 验证点值收益，H08 验证冲突行及补录条款，H10 验证不跨业务套用金额档。[新制度固定 K 实验](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)已在 Markdown 及两个规模档取证；S05/S06 漏证，[V63 范围词索引复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)已验证扩容后的查询成本与排序等价。[V64 固定 Top5 复测](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已覆盖比较双方、只见一方、授权变化和阈值截断。[受控术语与触发条款复测](../fixtures/knowledge/pilots/specimen-transfer-v1/controlled-terms-v1/README.md)已验证 S06 固定 Top5、缺条款拒答；真实 Agent 须在满足出站策略的环境重跑两个对照场景。PDF D0 排期独立。
 
 ### RAG-2P：LangChain4j + MinerU 结构化 PDF 摄取（待实现）
 

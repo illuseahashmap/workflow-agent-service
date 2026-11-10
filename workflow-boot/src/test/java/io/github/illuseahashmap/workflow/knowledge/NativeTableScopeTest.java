@@ -6,6 +6,12 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NativeTableScopeTest {
+    @Test void aliasesRequireAnExactCaptionAndACompleteAffirmativePhrase() {
+        assertThat(NativeScopeVocabulary.headerKeys("样品冷链寄送"))
+                .contains("标本低温发运").doesNotContain("低温","发运","标本");
+        assertThat(NativeScopeVocabulary.headerKeys("食品冷链寄送")).doesNotContain("标本低温发运");
+        assertThat(NativeTableScope.queryKeys("并非标本低温发运，而是常温寄送")).doesNotContain("标本低温发运");
+    }
     @Test void explicitNegationIsNotAnAffirmativeTableName() {
         assertThat(NativeTableScope.queryKeys("不是年度检修，而是临时外协，金额 6200 元"))
                 .contains("临时外协").doesNotContain("年度检修");

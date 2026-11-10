@@ -44,6 +44,6 @@ public record RetrievalResult(
         var refs=evidence.stream().map(Evidence::reference).collect(java.util.stream.Collectors.toSet());
         if(status!=RetrievalStatus.SUCCESS || requiredEvidenceGroups.stream().allMatch(g->g.stream().anyMatch(refs::contains)))return this;
         return new RetrievalResult(RetrievalStatus.PARTIAL,evidence,citations,retrievalTraceId,strategy,
-                List.of("Missing authorized applicability evidence for one or both sides of the comparison"),true,requiredEvidenceGroups);
+                List.of("One or more required authorized evidence groups are missing"),true,requiredEvidenceGroups);
     }
 }

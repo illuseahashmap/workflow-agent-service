@@ -51,6 +51,17 @@ class StrategyRetrieverTest {
     }
 
     @Test
+    void similarParagraphCannotSupplyMissingAmountTrigger() {
+        var request=new RetrievalRequest("低温寄送标本，3601 元，会审条件是什么？",List.of("policy"),List.of(),null,5,
+                RetrievalRequest.StrategyHint.HYBRID,0,List.of());
+        KnowledgeRetriever unrelated=(t,r)->{throw new AssertionError("must not consult unrelated vector hits");};
+        var strategy=new StrategyRetriever((t,r)->RetrievalResult.empty("trace","KEYWORD"),unrelated);
+        assertThat(strategy.retrieve("t",request).abstained()).isTrue();
+        assertThat(strategy.retrieve("t",new RetrievalRequest(request.query(),request.knowledgeScopes(),List.of(),null,5,
+                RetrievalRequest.StrategyHint.VECTOR,0,List.of())).abstained()).isTrue();
+    }
+
+    @Test
     void hybridDeduplicatesByStableReferenceAndUsesBothRankings() {
         KnowledgeRetriever keyword = (tenant, request) -> result("KEYWORD", "a", "b");
         KnowledgeRetriever vector = (tenant, request) -> result("VECTOR", "b", "c");
