@@ -10,7 +10,7 @@
 - Java 平台：工具桥接复用 Registry 的授权/Schema/幂等；MODEL 单次调用已有 Provider 端口，先存原响应再原子发布参数/回执；VALIDATE 共用原生拒绝/Schema/证据规则。`tests/fake_gateway.py` 是独立图测试替身，`tests/java_cognition_probe.py` 则连接真实 JDBC 权威/引用与 Registry，模型和版本/Provider 仓储仍使用确定性夹具。
 - `RunBinding`：冻结租户、Run、版本、输入/主体引用、artifact、deadline 和逻辑调用上限。同一线程变更绑定明确拒绝，不偷偷新建线程。
 - `InvocationRequest`：先持久化稳定操作 ID 和参数摘要，再调用网关；网关必须原子领取、比较请求哈希并复用回执。不能把每次 HTTP 重试当成新的逻辑操作。
-- `CANDIDATE_READY` 不是业务成功；Java 还须复核原回执、当前权限和结果策略，事务性提交业务结果与完成 Outbox。
+- `CANDIDATE_READY` 不是业务成功。V69 的 Java 验收器已复核原回执、当前工具/知识回读权限和结果策略，原子提交 Run/Attempt 终态与完成 Outbox；既有消费者再核对激活并推进 Flowable。第一次领取建立一个业务 Attempt，后续 generation 不增加重试。回归与剩余边界见[结果交接记录](../docs/quality/graph-completion-regression.md)。
 
 Python 不接收模型/MCP 凭据或任意服务 URL，不直读业务库；图内只存受限引用。引用不是授权，Gateway 必须检查来源与 Run 绑定。LangSmith SDK 是框架的传递依赖，但 `advance()` 显式关闭其自动云追踪，不需要开通服务。
 

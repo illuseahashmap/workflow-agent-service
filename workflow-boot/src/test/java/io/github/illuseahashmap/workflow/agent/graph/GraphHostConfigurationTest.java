@@ -29,6 +29,8 @@ class GraphHostConfigurationTest {
             .withBean(ModelProviderRegistry.class, () -> mock(ModelProviderRegistry.class))
             .withBean(AgentOutputSchemaValidator.class, () -> mock(AgentOutputSchemaValidator.class))
             .withBean(CheckpointContextPolicy.class, () -> mock(CheckpointContextPolicy.class))
+            .withBean(io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher.class,
+                    () -> mock(io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher.class))
             .withBean(ObjectMapper.class, ObjectMapper::new);
 
     @Test void disabledHostDoesNotRequireSecretsOrCreateExecutionBeans() {

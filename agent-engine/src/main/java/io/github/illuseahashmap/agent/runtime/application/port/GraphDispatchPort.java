@@ -4,7 +4,7 @@ import io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayCont
 import java.time.Instant;
 import java.util.Optional;
 
-/** Whole-graph delivery only. Never interprets graph node positions or creates business Attempts. */
+/** Whole-graph delivery only. First delivery starts one business Attempt; resumed generations reuse it. */
 public interface GraphDispatchPort {
     /** Trusted submission path only; atomically reserves an untouched QUEUED Run. Not a public grant API. */
     Binding reserve(String tenantCode, long runId, String artifactDigest, int maxModelCalls, int maxToolCalls);
@@ -38,5 +38,6 @@ public interface GraphDispatchPort {
     record Observation(String status, String checkpointId, String candidateRef, String validationReceiptRef) { }
 
     record DispatchView(String commandId, String status, String executionState, long generation,
-                        Instant availableAt, Observation observation) { }
+                        Instant availableAt, Observation observation, String completionStatus, String completionReason,
+                        Instant completedAt) { }
 }

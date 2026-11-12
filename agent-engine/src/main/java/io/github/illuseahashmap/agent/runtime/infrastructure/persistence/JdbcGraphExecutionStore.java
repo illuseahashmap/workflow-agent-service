@@ -26,7 +26,7 @@ import static io.github.illuseahashmap.agent.runtime.application.graph.GraphGate
 import static io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayContract.require;
 import static io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayException.Code.AUTHORITY_DENIED;
 
-/** Not a Spring bean until MODEL/VALIDATE and admission gates are ready. No permissive fallback. */
+/** Explicitly composed by the opt-in graph host. No permissive identity or lease fallback. */
 public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRunAuthorityPort {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String LIVE = """
@@ -38,7 +38,8 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
               AND e.lease_expires_at>clock_timestamp() AND e.generation=:generation
               AND r.requested_by=e.principal_id AND r.input_snapshot_json::text=e.input_json
               AND r.process_instance_id IS NOT DISTINCT FROM e.process_instance_id
-            """;
+              AND r.current_attempt_id=e.attempt_id AND e.business_identity=
+            """ + GraphRunPersistence.IDENTITY;
     private final NamedParameterJdbcTemplate jdbc;
     private final GraphGatewayCodec codec;
     private final TransactionTemplate transaction;
@@ -96,9 +97,9 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                     .addValue("nodeTools", "null".equals(s.nodeTools()) ? null : s.nodeTools()).addValue("command", UUID.randomUUID());
             jdbc.update("""
                     INSERT INTO agent_graph_execution(tenant_code,run_id,binding_json,binding_digest,input_json,principal_id,
-                        process_instance_id,version_tools_json,node_tools_json)
-                    VALUES (:tenant,:run,:binding,:digest,:input,:principal,:process,:tools,:nodeTools)
-                    """, params);
+                        process_instance_id,version_tools_json,node_tools_json,business_identity)
+                    SELECT :tenant,:run,:binding,:digest,:input,:principal,:process,:tools,:nodeTools,
+                    """ + GraphRunPersistence.IDENTITY + " FROM agent_run r WHERE r.tenant_code=:tenant AND r.id=:run", params);
             jdbc.update("INSERT INTO agent_graph_dispatch(tenant_code,run_id,command_id,status) VALUES (:tenant,:run,:command,'READY')", params);
             jdbc.update("UPDATE agent_run SET execution_backend='LANGGRAPH' WHERE tenant_code=:tenant AND id=:run", key);
             jdbc.update("INSERT INTO agent_graph_tenant_turn(tenant_code) VALUES(:tenant) ON CONFLICT DO NOTHING", key);
@@ -142,7 +143,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                       AND EXISTS (SELECT 1 FROM agent_run r JOIN agent_graph_execution e ON e.tenant_code=r.tenant_code AND e.run_id=r.id
                           JOIN agent_graph_dispatch d ON d.tenant_code=e.tenant_code AND d.run_id=e.run_id
                           WHERE r.tenant_code=t.tenant_code AND r.execution_backend='LANGGRAPH' AND r.status IN ('QUEUED','RUNNING')
-                            AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND d.available_at<=clock_timestamp()
+                            AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND e.business_identity IS NOT NULL AND d.available_at<=clock_timestamp()
                             AND (:artifact IS NULL OR e.binding_json::jsonb->>'graph_artifact_digest'=:artifact)
                             AND (d.status='READY' OR (d.status='RUNNING' AND e.lease_expires_at<=clock_timestamp())))
                     ORDER BY t.last_dispatch,t.tenant_code LIMIT 1
@@ -157,7 +158,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                     JOIN agent_graph_execution e ON e.tenant_code=r.tenant_code AND e.run_id=r.id
                     JOIN agent_graph_dispatch d ON d.tenant_code=e.tenant_code AND d.run_id=e.run_id
                     WHERE r.tenant_code=:tenant AND r.execution_backend='LANGGRAPH' AND r.status IN ('QUEUED','RUNNING')
-                      AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND d.available_at<=clock_timestamp()
+                      AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND e.business_identity IS NOT NULL AND d.available_at<=clock_timestamp()
                       AND (:artifact IS NULL OR e.binding_json::jsonb->>'graph_artifact_digest'=:artifact)
                       AND (d.status='READY' OR (d.status='RUNNING' AND e.lease_expires_at<=clock_timestamp()))
                     ORDER BY d.available_at,r.id LIMIT 1 FOR UPDATE OF r SKIP LOCKED
@@ -172,6 +173,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                     """, Map.of("tenant", tenant));
             if (candidates.isEmpty()) { return Optional.empty(); }
             long run = candidates.getFirst();
+            startBusinessAttempt(tenant, run);
             byte[] entropy = new byte[32];
             RANDOM.nextBytes(entropy);
             String capability = "graph." + HexFormat.of().formatHex(entropy);
@@ -267,14 +269,16 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
 
     @Override public Optional<DispatchView> inspect(String tenant, long run) {
         return jdbc.query("""
-                SELECT d.command_id,d.status,e.state,e.generation,d.available_at,d.observation_json
+                SELECT d.command_id,d.status,e.state,e.generation,d.available_at,d.observation_json,
+                    d.completion_status,d.completion_reason,d.completed_at
                 FROM agent_graph_dispatch d JOIN agent_graph_execution e USING(tenant_code,run_id)
                 WHERE d.tenant_code=:tenant AND d.run_id=:run
                 """, Map.of("tenant", tenant, "run", run), (rs, n) -> {
                     String observation = rs.getString("observation_json");
                     return new DispatchView(rs.getString("command_id"), rs.getString("status"), rs.getString("state"),
                             rs.getLong("generation"), rs.getObject("available_at", OffsetDateTime.class).toInstant(),
-                            observation == null ? null : codec.read(observation.getBytes(StandardCharsets.UTF_8), Observation.class));
+                            observation == null ? null : codec.read(observation.getBytes(StandardCharsets.UTF_8), Observation.class),
+                            rs.getString("completion_status"), rs.getString("completion_reason"), GraphRunPersistence.instant(rs, "completed_at"));
                 }).stream().findFirst();
     }
 
@@ -304,7 +308,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
         if (rows.size() != 1 || !expected.equals(rows.getFirst())) { throw denied(); }
     }
 
-    private AuthorizedRun authority(ResultSet rs) throws SQLException {
+    AuthorizedRun authority(ResultSet rs) throws SQLException {
         Binding binding = decode(rs.getString("binding_json"));
         if (binding.agentVersionId() != rs.getLong("agent_version_id")
                 || binding.deadlineEpochMs() != rs.getObject("deadline_at", OffsetDateTime.class).toInstant().toEpochMilli()
@@ -330,6 +334,25 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
         var found = jdbc.query("SELECT id FROM agent_run WHERE tenant_code=:tenant AND id=:run FOR UPDATE",
                 Map.of("tenant", tenant, "run", run), (rs, n) -> rs.getLong(1));
         if (found.isEmpty()) { throw denied(); }
+    }
+    private void startBusinessAttempt(String tenant, long id) {
+        var key = Map.of("tenant", tenant, "run", id);
+        var run = jdbc.queryForObject("SELECT * FROM agent_run WHERE tenant_code=:tenant AND id=:run", key,
+                (rs, n) -> GraphRunPersistence.read(rs));
+        if (run.currentAttemptId() != null) { return; }
+        Instant now = jdbc.queryForObject("SELECT clock_timestamp()", Map.of(), OffsetDateTime.class).toInstant();
+        long attempt = jdbc.queryForObject("""
+                INSERT INTO agent_run_attempt(tenant_code,agent_run_id,attempt_no,status,started_at)
+                VALUES(:tenant,:run,1,'RUNNING',clock_timestamp()) RETURNING id
+                """, key, Long.class);
+        var context = new io.github.illuseahashmap.agent.runtime.domain.AgentRunTransitionContext(attempt, "GRAPH_STARTED",
+                io.github.illuseahashmap.agent.runtime.domain.AgentRunOperatorType.SYSTEM, "graph-dispatch", UUID.randomUUID().toString(), now);
+        new io.github.illuseahashmap.agent.runtime.domain.AgentRunStateMachine().startDelegated(run, context);
+        var params = new org.springframework.jdbc.core.namedparam.MapSqlParameterSource(key).addValue("attempt", attempt)
+                .addValue("now", GraphRunPersistence.timestamp(now));
+        jdbc.update("UPDATE agent_run SET status='RUNNING',current_attempt_id=:attempt,started_at=:now,updated_at=:now WHERE tenant_code=:tenant AND id=:run", params);
+        jdbc.update("UPDATE agent_graph_execution SET attempt_id=:attempt WHERE tenant_code=:tenant AND run_id=:run", params);
+        GraphRunPersistence.history(jdbc, run.stateHistory().getLast());
     }
     private long countOutstanding(String tenant) {
         return jdbc.queryForObject("""

@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Executes actual V65-V68 on isolated PostgreSQL. Earlier tables are a minimal fixture, not full Flyway upgrade acceptance. */
+/** Executes actual V65-V69 on isolated PostgreSQL. Earlier tables are a minimal fixture, not full Flyway upgrade acceptance. */
 @EnabledIfEnvironmentVariable(named = "WORKFLOW_LANGGRAPH_JDBC_URL", matches = ".+")
 class GraphPersistenceIntegrationTest {
     private final GraphGatewayCodec codec = new GraphGatewayCodec();
@@ -68,6 +68,8 @@ class GraphPersistenceIntegrationTest {
     private String url;
     private String user;
     private String password;
+    private AgentDefinitionVersionRepository completionVersions;
+    private AgentToolRegistry completionTools;
 
     @BeforeEach void initialize() throws Exception {
         url = System.getenv("WORKFLOW_LANGGRAPH_JDBC_URL");
@@ -82,8 +84,18 @@ class GraphPersistenceIntegrationTest {
                 CREATE TABLE agent_definition_version(id BIGINT,tenant_code TEXT,status TEXT,tool_set_json JSONB,PRIMARY KEY(id,tenant_code));
                 CREATE TABLE agent_run(id BIGINT,tenant_code TEXT,agent_version_id BIGINT,status TEXT,current_attempt_id BIGINT,
                     deadline_at TIMESTAMPTZ,available_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    input_snapshot_json JSONB,requested_by TEXT,process_instance_id TEXT,PRIMARY KEY(id,tenant_code));
-                CREATE TABLE agent_run_attempt(tenant_code TEXT,agent_run_id BIGINT);
+                    input_snapshot_json JSONB,requested_by TEXT,process_instance_id TEXT,PRIMARY KEY(id,tenant_code),
+                    execution_id TEXT DEFAULT 'exec',activity_id TEXT DEFAULT 'agent',activity_activation_id TEXT DEFAULT 'activation',
+                    output_mapping_json JSONB DEFAULT '{}',process_failure_policy TEXT DEFAULT 'HOLD',trigger_type TEXT DEFAULT 'FLOWABLE',
+                    idempotency_key TEXT DEFAULT 'fixture',lease_owner TEXT,lease_expires_at TIMESTAMPTZ,started_at TIMESTAMPTZ,
+                    completed_at TIMESTAMPTZ,created_at TIMESTAMPTZ DEFAULT clock_timestamp(),updated_at TIMESTAMPTZ DEFAULT clock_timestamp(),
+                    result_status TEXT,error_code TEXT,output_snapshot_json JSONB,pause_requested_at TIMESTAMPTZ);
+                CREATE TABLE agent_run_attempt(id BIGSERIAL PRIMARY KEY,tenant_code TEXT,agent_run_id BIGINT,attempt_no INT,
+                    status TEXT,started_at TIMESTAMPTZ,completed_at TIMESTAMPTZ,updated_at TIMESTAMPTZ,error_code TEXT,
+                    UNIQUE(id,tenant_code,agent_run_id));
+                CREATE TABLE agent_run_state_history(tenant_code TEXT,agent_run_id BIGINT,attempt_id BIGINT,old_status TEXT,new_status TEXT,
+                    reason_code TEXT,operator_type TEXT,operator_id TEXT,trace_id TEXT,created_at TIMESTAMPTZ);
+                CREATE TABLE completion_test_outbox(tenant_code TEXT,run_id BIGINT,attempt_id BIGINT,output TEXT);
                 CREATE TABLE agent_tool_execution_audit(id BIGSERIAL,tenant_code TEXT,tool_code TEXT,idempotency_key TEXT,status TEXT,output_snapshot TEXT,
                     arguments_hash TEXT,error_code TEXT,trace_id TEXT,created_at TIMESTAMPTZ,claim_owner TEXT,lease_expires_at TIMESTAMPTZ,fencing_token BIGINT,
                     UNIQUE(tenant_code,tool_code,idempotency_key));
@@ -107,6 +119,7 @@ class GraphPersistenceIntegrationTest {
                 new org.springframework.jdbc.datasource.DataSourceTransactionManager(named.getJdbcTemplate().getDataSource()))
                 .executeWithoutResult(status -> db.execute(admissionMigration));
         db.execute("ALTER TABLE agent_definition_version ADD COLUMN provider_id BIGINT DEFAULT 1");
+        db.execute(Files.readString(Path.of("../platform-migrations/src/main/resources/db/migration/platform/V69__add_graph_business_completion.sql")));
         reconnectStores();
     }
 
@@ -295,7 +308,7 @@ class GraphPersistenceIntegrationTest {
     }
 
     @Test void attemptedOrUnpublishedRunsCannotBeAdopted() {
-        db.update("INSERT INTO agent_run_attempt VALUES ('alpha',1)");
+        db.update("INSERT INTO agent_run_attempt(tenant_code,agent_run_id) VALUES ('alpha',1)");
         assertThatThrownBy(() -> executions.reserve("alpha", 1, "a".repeat(64), 10, 20)).isInstanceOf(GraphGatewayException.class);
         db.update("UPDATE agent_definition_version SET status='DRAFT' WHERE tenant_code='alpha'");
         assertThatThrownBy(() -> executions.reserve("alpha", 2, "a".repeat(64), 10, 20)).isInstanceOf(GraphGatewayException.class);
@@ -341,7 +354,7 @@ class GraphPersistenceIntegrationTest {
         assertThat(executions.renew(replacement, 60)).isTrue();
     }
 
-    @Test void deferredWaitReleasesAuthorityAndSurvivesRestartWithoutAttempt() {
+    @Test void deferredWaitReleasesAuthorityAndSurvivesRestartWithoutNewAttempt() {
         Claim old = reserveAndClaim(1);
         assertThat(executions.defer(old, "checkpoint:1", "wait:1", Instant.now().plusSeconds(60))).isTrue();
         assertThatThrownBy(() -> executions.authorize(old.capability(), old.binding(), old.generation())).isInstanceOf(GraphGatewayException.class);
@@ -352,7 +365,7 @@ class GraphPersistenceIntegrationTest {
         assertThat(next.commandId()).isNotEqualTo(old.commandId());
         assertThat(next.checkpointId()).isEqualTo("checkpoint:1");
         assertThat(next.waitId()).isEqualTo("wait:1");
-        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isEqualTo(1);
     }
 
     @Test void acknowledgeIsFencedAndCannotCompleteBusinessRun() {
@@ -367,7 +380,7 @@ class GraphPersistenceIntegrationTest {
         assertThat(executions.inspect("beta", 1)).isEmpty();
         assertThat(executions.acknowledge(claim, observed())).isFalse();
         assertThat(executions.claim("alpha", "worker-two", 60)).isEmpty();
-        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("QUEUED");
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("RUNNING");
         assertThat(db.queryForObject("SELECT observation_json FROM agent_graph_dispatch", String.class)).contains("CANDIDATE_READY");
         var wrongDatabase = new NamedParameterJdbcTemplate(new DriverManagerDataSource(url, user, password));
         assertThatThrownBy(() -> new JdbcGraphReferenceStore(wrongDatabase, executions, codec)).isInstanceOf(IllegalArgumentException.class);
@@ -546,7 +559,7 @@ class GraphPersistenceIntegrationTest {
         assertThat(invoke(restored, claim, validation)).isEqualTo(accepted);
         assertThat(calls).hasValue(2);
         assertThat(db.queryForObject("SELECT count(*) FROM agent_tool_execution_audit WHERE status='SUCCEEDED'", Integer.class)).isEqualTo(1);
-        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("QUEUED");
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("RUNNING");
     }
 
     @Test void rawResponseSurvivesFailureBeforeDecisionAndDoesNotNeedModelAgain() {
@@ -737,7 +750,7 @@ class GraphPersistenceIntegrationTest {
             assertThat(calls).hasValue(2);
             assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_validation", Integer.class)).isEqualTo(1);
             assertThat(db.queryForObject("SELECT count(*) FROM agent_tool_execution_audit", Integer.class)).isEqualTo(1);
-            assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("QUEUED");
+            assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("RUNNING");
         } finally {
             server.stop(0);
             workers.shutdownNow();
@@ -794,7 +807,7 @@ class GraphPersistenceIntegrationTest {
         assertThat(executions.claimNext("third", 60)).isEmpty();
         executions.defer(first, "cp:one", "wait:one", Instant.now().plusSeconds(10));
         assertThat(executions.claimNext("third", 60).orElseThrow().binding().runId()).isEqualTo(2);
-        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isEqualTo(3);
     }
 
     @Test void sharedAccountPermitsAreAtomicAndUnknownsStayCountedAfterLeaseExpiry() throws Exception {
@@ -956,6 +969,186 @@ class GraphPersistenceIntegrationTest {
         assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit WHERE state='QUARANTINED'", Integer.class)).isEqualTo(1);
     }
 
+    @Test void acknowledgedCandidateSurvivesRestartAndCommitsExactlyOneCompletion() {
+        var calls = new AtomicInteger();
+        var claim = completedGraph(calls, false);
+        reconnectStores();
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("SUCCEEDED");
+        assertThat(db.queryForObject("SELECT completion_status FROM agent_graph_dispatch WHERE run_id=1", String.class)).isEqualTo("COMMITTED");
+        assertThat(db.queryForObject("SELECT output_snapshot_json->>'content' FROM agent_run WHERE id=1", String.class)).isEqualTo("{\"count\":2}");
+        reconnectStores(); // process dies after commit but before caller receives success
+        assertThat(completion(false).completeNext()).isFalse();
+        assertThat(executions.acknowledge(claim, observed())).isFalse();
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isEqualTo(1);
+        assertThat(calls).hasValue(2);
+        assertThat(admitted()).isEqualTo(2);
+    }
+
+    @Test void crashAfterOutboxInsertRollsBackEverythingAndReusesCandidateOnRestart() {
+        var calls = new AtomicInteger();
+        completedGraph(calls, false);
+        assertThatThrownBy(() -> completion(true).completeNext()).isInstanceOf(IllegalStateException.class);
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("RUNNING");
+        assertThat(db.queryForObject("SELECT completion_status FROM agent_graph_dispatch WHERE run_id=1", String.class)).isNull();
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_state_history WHERE new_status='SUCCEEDED'", Integer.class)).isZero();
+        assertThat(admitted()).isEqualTo(3);
+        reconnectStores();
+        assertThat(completion(false).completeNext()).isFalse();
+        assertThat(db.queryForObject("SELECT completion_failures FROM agent_graph_dispatch WHERE run_id=1", Integer.class)).isEqualTo(1);
+        db.update("UPDATE agent_graph_dispatch SET available_at=clock_timestamp()-interval '1 second' WHERE run_id=1");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(calls).hasValue(2);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_tool_execution_audit", Integer.class)).isEqualTo(1);
+    }
+
+    @Test void killedDatabaseSessionCannotLeaveHalfCommittedBusinessCompletion() {
+        var calls = new AtomicInteger();
+        completedGraph(calls, false);
+        var store = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore(named, executions, codec);
+        assertThatThrownBy(() -> store.completeNext(e ->
+                new io.github.illuseahashmap.agent.runtime.application.port.GraphCompletionPort.Outcome(true, "SUCCESS", "ACCEPTED", "{}"),
+                (run, output) -> {
+                    db.update("INSERT INTO completion_test_outbox VALUES(?,?,?,?)", run.tenantCode(), run.id(), run.currentAttemptId(), output);
+                    int pid = db.queryForObject("SELECT pg_backend_pid()", Integer.class);
+                    assertThat(admin.queryForObject("SELECT pg_terminate_backend(?)", Boolean.class, pid)).isTrue();
+                    db.queryForObject("SELECT 1", Integer.class);
+                })).isInstanceOf(RuntimeException.class);
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("RUNNING");
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isZero();
+        reconnectStores();
+        db.update("UPDATE agent_graph_dispatch SET available_at=clock_timestamp()-interval '1 second' WHERE run_id=1");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(calls).hasValue(2);
+    }
+
+    @Test void overlappingCompletionWorkersCannotPublishTwice() throws Exception {
+        completedGraph(new AtomicInteger(), false);
+        var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var one = pool.submit(() -> {
+                start.await();
+                return completion(false).completeNext();
+            });
+            var two = pool.submit(() -> {
+                start.await();
+                return completion(false).completeNext();
+            });
+            start.countDown();
+            boolean a = one.get(10, TimeUnit.SECONDS);
+            boolean b = two.get(10, TimeUnit.SECONDS);
+            assertThat(a ^ b).isTrue();
+        }
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test void cancelledRunCannotBeOverwrittenByAcknowledgedResult() {
+        completedGraph(new AtomicInteger(), false);
+        db.update("UPDATE agent_run SET status='CANCELLED' WHERE id=1");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("CANCELLED");
+        assertThat(db.queryForObject("SELECT completion_status FROM agent_graph_dispatch WHERE run_id=1", String.class)).isEqualTo("DISCARDED");
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isZero();
+    }
+
+    @Test void workflowActivationAndMappingCannotChangeBetweenReservationAndAcceptance() {
+        completedGraph(new AtomicInteger(), false);
+        db.update("UPDATE agent_run SET activity_activation_id='different-activation' WHERE id=1");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT completion_status FROM agent_graph_dispatch WHERE run_id=1", String.class)).isEqualTo("BLOCKED");
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isZero();
+    }
+
+    @Test void inventedValidationReceiptCannotCompleteAndDoesNotStayInHotPollLoop() {
+        var claim = reserveAndClaim(1);
+        executions.acknowledge(claim, observed());
+        var store = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore(named, executions, codec);
+        assertThat(store.completeNext(e -> { throw new AssertionError("untrusted evidence"); }, (r, s) -> { throw new AssertionError(); })).isTrue();
+        assertThat(store.completeNext(e -> { throw new AssertionError(); }, (r, s) -> { throw new AssertionError(); })).isFalse();
+        assertThat(db.queryForObject("SELECT completion_reason FROM agent_graph_dispatch WHERE run_id=1", String.class)).isEqualTo("GRAPH_RECEIPT_INVALID");
+    }
+
+    @Test void revokedToolPermissionAtFinalCommitRejectsWithoutModelRepair() {
+        var calls = new AtomicInteger();
+        completedGraph(calls, false);
+        db.update("UPDATE agent_tool_tenant_grant SET enabled=false WHERE tenant_code='alpha'");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("FAILED");
+        assertThat(db.queryForObject("SELECT error_code FROM agent_run WHERE id=1", String.class)).isEqualTo("AGENT_TOOL_NOT_AUTHORIZED");
+        assertThat(db.queryForObject("SELECT output_snapshot_json::text FROM agent_run WHERE id=1", String.class)).isNull();
+        assertThat(calls).hasValue(2);
+    }
+
+    @Test void durableBusinessRejectionCannotBecomeSuccessDuringAcceptance() {
+        var calls = new AtomicInteger();
+        completedGraph(calls, true);
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("FAILED");
+        assertThat(db.queryForObject("SELECT result_status FROM agent_run WHERE id=1", String.class)).isEqualTo("REJECTED");
+        assertThat(calls).hasValue(2);
+    }
+
+    @Test void sameTenantForeignObservationIsBlockedButDoesNotBlockValidRun() {
+        completedGraph(new AtomicInteger(), false);
+        var other = reserveAndClaim(2);
+        var foreign = executions.inspect("alpha", 1).orElseThrow().observation();
+        executions.acknowledge(other, foreign);
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class)).isEqualTo("SUCCEEDED");
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=2", String.class)).isEqualTo("RUNNING");
+        assertThat(db.queryForObject("SELECT completion_status FROM agent_graph_dispatch WHERE run_id=2", String.class)).isEqualTo("BLOCKED");
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test void completionDeadlineIsCheckedAfterValidationAndDoesNotPublishLateAnswer() {
+        db.update("UPDATE agent_run SET deadline_at=clock_timestamp()+interval '3 seconds' WHERE id=1");
+        completedGraph(new AtomicInteger(), false);
+        var store = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore(named, executions, codec);
+        assertThat(store.completeNext(e -> {
+            long remaining = e.run().binding().deadlineEpochMs() - System.currentTimeMillis();
+            try { Thread.sleep(Math.max(0, remaining) + 50); }
+            catch (InterruptedException failure) { throw new AssertionError(failure); }
+            return new io.github.illuseahashmap.agent.runtime.application.port.GraphCompletionPort.Outcome(true, "SUCCESS", "ACCEPTED", "{}");
+        }, (run, output) -> {
+            assertThat(run.status().name()).isEqualTo("TIMED_OUT");
+            assertThat(output).isNull();
+        })).isTrue();
+        assertThat(db.queryForObject("SELECT error_code FROM agent_run WHERE id=1", String.class)).isEqualTo("AGENT_DEADLINE_EXCEEDED");
+    }
+
+    @Test void acknowledgedObservationAndCompletionDecisionAreImmutable() {
+        completedGraph(new AtomicInteger(), false);
+        assertThatThrownBy(() -> db.update("UPDATE agent_graph_dispatch SET observation_json='{}' WHERE run_id=1")).isInstanceOf(DataAccessException.class);
+        completion(false).completeNext();
+        assertThatThrownBy(() -> db.update("UPDATE agent_graph_dispatch SET completion_status=NULL WHERE run_id=1")).isInstanceOf(DataAccessException.class);
+    }
+
+    private Claim completedGraph(AtomicInteger calls, boolean reject) {
+        var gateway = cognition(calls, n -> n == 1 ? toolResponse() : answer(reject ? "{\"resultStatus\":\"REJECTED\"}" : "{\"count\":2}"), null, 40000);
+        Claim claim = reserveAndClaim(1);
+        Receipt model = invoke(gateway, claim, new Invocation("MODEL", "model:1", List.of(claim.binding().inputRef()), null));
+        Receipt tool = invoke(gateway, claim, new Invocation("TOOL", "tool:1", List.of(), model.decision().tools().getFirst()));
+        Receipt answer = invoke(gateway, claim, new Invocation("MODEL", "model:2", List.of(claim.binding().inputRef(), model.receiptRef(), tool.receiptRef()), null));
+        Receipt validation = invoke(gateway, claim, new Invocation("VALIDATE", "validate:1",
+                List.of(answer.decision().candidateRef(), model.receiptRef(), tool.receiptRef(), answer.receiptRef()), null));
+        assertThat(executions.acknowledge(claim, new Observation(validation.accepted() ? "CANDIDATE_READY" : "REJECTED", "cp:final",
+                answer.decision().candidateRef(), validation.receiptRef()))).isTrue();
+        return claim;
+    }
+
+    private GraphCompletionService completion(boolean crash) {
+        var mapper = new ObjectMapper();
+        return new GraphCompletionService(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore(named, executions, codec),
+                completionVersions, completionTools, new GraphCandidateGate(new AgentOutputSchemaValidator(mapper), mapper, new CheckpointContextPolicy(4096)),
+                (run, output) -> {
+                    db.update("INSERT INTO completion_test_outbox VALUES(?,?,?,?)", run.tenantCode(), run.id(), run.currentAttemptId(), output);
+                    if (crash) { throw new IllegalStateException("crash before transaction commit"); }
+                }, mapper);
+    }
+
     private GraphCognitionGateway cognition(AtomicInteger calls, IntFunction<ModelProviderResponse> responses, String outputSchema, int budget) {
         db.update("UPDATE agent_run SET input_snapshot_json='{\"input\":{\"amount\":20000.01,\"word\":\"hi\"}}' WHERE execution_backend='NATIVE'");
         var mapper = new ObjectMapper();
@@ -971,6 +1164,8 @@ class GraphPersistenceIntegrationTest {
                 1L, "fixture", "Return a grounded answer", 120, AgentFailurePolicy.FAIL_PROCESS, null, outputSchema,
                 "reviewer", "reviewer", null, null, null, "[\"lookup\"]");
         when(versions.findByVersionId("alpha", 10)).thenReturn(Optional.of(version));
+        completionVersions = versions;
+        completionTools = registry;
         var providers = mock(AgentProviderRepository.class);
         when(providers.findById("alpha", 1)).thenReturn(Optional.of(new AgentProvider(1L, "alpha", "fixture", "Fixture", AgentProviderType.MOCK,
                 "https://unused.invalid", "fixture", true, false, null, null, null)));

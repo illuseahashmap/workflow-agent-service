@@ -1,10 +1,12 @@
 # LangGraph 内部运行时接入与平台治理设计
 
-状态：开源部署路线已选定；G0 图模块与 Java 工具桥接已有联合回归，生产身份/派发及 G0–G3 完整门禁待完成
+状态：开源路线、认证派发、V67/V68 并发治理及 V69 结果→Run/Outbox→Flowable 交接已实现；完整 G0–G3 与业务版本切换仍未完成
 
 更新时间：2026-11-12
 
 关联：[长期设计](long-term-design.md)、[资源治理](agent-resource-governance.md)、[协作模型](agent-collaboration-design.md)、[计划](../status.md)、[D-1 / P1-3 / P1-6](../quality/known-issues.md)
+
+最新结果交接实现见[验收事务与故障矩阵](../quality/graph-completion-regression.md)。图 VALIDATE 与最终业务验收共享确定性门禁；首次领取建立单一业务 Attempt，正常 resume 仅换执行代次；完成事件复用既有 Outbox，不新增图内步骤调度或第二套恢复游标。
 
 ## 1. 决策与官方能力对照
 
@@ -188,4 +190,4 @@ V67 已增加图接管 outstanding、全局/租户活跃上限、持久租户轮
 
 同日装配进展：认证 dispatch HTTP、Python Worker CLI、artifact 领取筛选、V68 全平台 Run 创建/终态重试原子准入、共享账户配置/事务审计已经落地；默认关闭图宿主，未切换业务版本。详见[部署手册](../operations/graph-dispatch-host.md)。历史章节的未装配描述是当时快照，以本节和 status 为准。
 
-下一步：可信未知外呼/命令对账、最终业务接纳，补控制面故障、网络分区、受控异步/连接预算、加权公平/预留和容量报告；与 G1 图节点等价共同验收后才接 AgentVersion 后端发布。MODEL/VALIDATE 已有实现，不再列成从零开发。客户端 OS DNS 硬截止仍是部署门禁。不得因局部联调通过便开放新 AgentVersion 或关闭 P1-3/P1-6。
+后续 V69 已完成 ACK 的最终业务接纳与既有 Flowable 事务桥接，见[结果交接记录](../quality/graph-completion-regression.md)。下一步是可信未知外呼/命令对账、整体图运维、控制面故障、网络分区、受控异步/连接预算、加权公平/预留和容量报告；与 G1 图节点等价共同验收后才接 AgentVersion 后端发布。客户端 OS DNS 硬截止仍是部署门禁。不得因局部联调通过便开放新 AgentVersion 或关闭 P1-3/P1-6。

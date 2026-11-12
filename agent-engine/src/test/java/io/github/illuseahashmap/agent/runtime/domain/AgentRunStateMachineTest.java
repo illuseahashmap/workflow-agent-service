@@ -14,6 +14,28 @@ class AgentRunStateMachineTest {
 
     private final AgentRunStateMachine stateMachine = new AgentRunStateMachine();
 
+    @Test void delegatedAttemptUsesFrameworkLeaseButExistingBusinessCompletionRules() {
+        var run = queuedRun();
+        stateMachine.startDelegated(run, workerContext(ATTEMPT_ID, "GRAPH_STARTED", CREATED_AT.plusSeconds(1)));
+        assertThat(run.status()).isEqualTo(AgentRunStatus.RUNNING);
+        assertThat(run.leaseOwner()).isNull();
+        assertThat(run.currentAttemptId()).isEqualTo(ATTEMPT_ID);
+        assertThatThrownBy(() -> stateMachine.startDelegated(run,
+                workerContext(ATTEMPT_ID + 1, "GRAPH_STARTED", CREATED_AT.plusSeconds(2))))
+                .isInstanceOf(AgentRunTransitionException.class);
+        assertThatThrownBy(() -> stateMachine.markSucceeded(run, true, false,
+                workerContext(ATTEMPT_ID, "GRAPH_ACCEPTED", CREATED_AT.plusSeconds(3))))
+                .isInstanceOf(AgentRunTransitionException.class);
+        stateMachine.markSucceeded(run, true, true, workerContext(ATTEMPT_ID, "GRAPH_ACCEPTED", CREATED_AT.plusSeconds(4)));
+        assertThat(run.status()).isEqualTo(AgentRunStatus.SUCCEEDED);
+        assertThat(run.stateHistory()).hasSize(2);
+    }
+
+    @Test void expiredDelegatedRunCannotStart() {
+        assertThatThrownBy(() -> stateMachine.startDelegated(queuedRun(), workerContext(ATTEMPT_ID, "GRAPH_STARTED", DEADLINE_AT)))
+                .isInstanceOf(AgentRunTransitionException.class);
+    }
+
     @Test
     void startsQueuedRunWithValidLeaseAndRecordsAuditHistory() {
         AgentRun run = queuedRun();

@@ -66,14 +66,14 @@ ReferencePort 必须原子登记或核对不可变回执引用；引用指向已
 ## 持久交接与交叉审查
 
 - 一个 Run 只有一个当前整图命令。V67 准入/领取/调用分配的锁顺序为全局策略行 → Run 行；只更新回执/续租的事务只锁 Run、不反向取得策略锁。租约上限 120 秒且不超过 Run deadline；数据库时钟决定有效期，过期续租不能复活旧身份。
-- 传输失败不改 command ID；过期重领仅换 generation/能力，Python 仍核对同一 thread 的权威 Checkpoint。`defer` 原子保存 opaque checkpoint/wait 与 available_at、创建下一整图命令并释放能力。正常等待不创建 Attempt，也不保存 Java nextStep。
+- 传输失败不改 command ID；过期重领仅换 generation/能力，Python 仍核对同一 thread 的权威 Checkpoint。`defer` 原子保存 opaque checkpoint/wait 与 available_at、创建下一整图命令并释放能力。V69 首次领取建立一个业务 Attempt；正常等待/接管不增加 Attempt，也不保存 Java nextStep。
 - `acknowledge` 只保存候选/拒绝观察结果并释放能力，**不把 Run 标成功、不产生 Flowable 完成事件**。最终接受观察结果前仍需核对候选引用、校验回执和业务权限。
 - `inspect` 提供内部持久命令查询，ACK 回复丢失后可核对 command ID、状态与已存观察，不返回能力明文/哈希或图内状态；生产 HTTP 查询接口及自动对账循环仍未接通。引用仓储构造时强制与执行租约仓储共享同一 DataSource，避免误配置造成“校验和写入不在同一事务”。
 - 参数/回执写入持有 Run 行锁；检查当前授权前后包围写入，过期时整笔回滚。结果回执必须找到现有 SUCCEEDED 工具账本并核对输出摘要、获准参数引用；不另建工具成功状态。
 - 本轮交叉审查修复：回执 Map 键顺序随 JVM 重启变化造成字节比较失败（改为确定性键序）；引用写入中途租约过期仍提交（提交前复核与故障注入）；回执登记未自行核验参数引用（补回读）；续租/交接校验与实际更新间过期（更新条件再次检查数据库时钟）。
 - 13 项新增集成覆盖：原子保留及故障回滚、禁止接管历史 Attempt、NATIVE 排除、凭证哈希/串单、过期代次、等待冷重建、观察与业务完成分离、取消/撤销/输入变更、八并发单赢家、不可变引用、成功账本引用、写入期间租约过期回滚、非 owner RLS 读写。
 
-2026-11-12 后续：受保护 dispatch HTTP/Worker CLI、artifact 领取、V68 全平台 Run 创建/重试准入及账户配置/审计已装配，默认关闭；路径、凭据、启动与迁移规范见[宿主手册](../operations/graph-dispatch-host.md)。下一步是可信未知外呼/命令对账、最终业务接纳与容量验收。路由、增量摘要、READ_RESULT 和有限 JSON 修复仍由图节点完成，之后共同验收 P-17/双采购/Flowable 与容量，再允许业务 AgentVersion 发布到 LANGGRAPH。机制与限制见[并发回归记录](../quality/graph-capacity-regression.md)。
+2026-11-12 后续：认证 dispatch、Worker CLI、artifact 领取、V68 准入与账户审计已装配；V69 另接通 ACK 最终业务接纳，仍默认关闭图宿主。验收器复核完整业务身份和当前工具/知识权限，只复用原候选/回执，与完成 Outbox 同事务提交；既有消费者处理 Flowable，见[结果交接记录](../quality/graph-completion-regression.md)。下一步是未知外呼/命令对账、整体图运维与容量验收。路由、增量摘要、READ_RESULT 和有限 JSON 修复仍需迁到图节点；共同验收 P-17/双采购与容量后，才允许业务 AgentVersion 发布到 LANGGRAPH。部署见[宿主手册](../operations/graph-dispatch-host.md)。
 
 部署门禁：V65 只是存储前置，不会自动调用 reserve。必须先完成所有原生 Worker 的后端过滤升级，再开放图版本准入；不能在仍有旧二进制 Worker 时手动改 Run 后端。已有图 Run 不允许回滚给忽略 execution_backend 的旧 Worker，后端切换遵循 G3 排空而非重放转换。
 

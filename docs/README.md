@@ -1,6 +1,6 @@
 # 项目文档导航
 
-最近权威入口文档核对：2026-11-12（认证派发宿主/Worker CLI、V68 全平台 Run 准入、账户配置与审计已接通，回归见[并发治理记录](quality/graph-capacity-regression.md)，启用边界见[部署手册](operations/graph-dispatch-host.md)。业务等价、最终业务接纳及容量报告仍开放，现有业务未切换）。
+最近权威入口文档核对：2026-11-12（V69 已接通图结果确定性验收、AgentRun/Outbox 原子完成与既有 Flowable 消费，见[结果交接回归](quality/graph-completion-regression.md)。并发治理见[治理记录](quality/graph-capacity-regression.md)，启用/升级边界见[部署手册](operations/graph-dispatch-host.md)。图运行整体运维、业务等价和容量报告仍开放，现有业务未切换）。
 
 项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
 

@@ -159,6 +159,12 @@ public final class AgentRun {
         transitionTo(AgentRunStatus.RUNNING, context);
     }
 
+    void startDelegated(long attemptId, AgentRunTransitionContext context) {
+        currentAttemptId = attemptId;
+        startedAt = context.occurredAt();
+        transitionTo(AgentRunStatus.RUNNING, context);
+    }
+
     void finish(AgentRunStatus targetStatus, AgentRunTransitionContext context) {
         clearLease();
         completedAt = context.occurredAt();

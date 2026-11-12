@@ -151,6 +151,44 @@ public final class JdbcGraphCognitionStore implements GraphCognitionPort {
         });
     }
 
+    /** Only the completion repository calls this while holding the same Run row lock. */
+    io.github.illuseahashmap.agent.runtime.application.port.GraphCompletionPort.Evidence completionEvidence(
+            AuthorizedRun run, io.github.illuseahashmap.agent.runtime.application.port.GraphDispatchPort.Observation observation) {
+        var refs = new ArrayList<String>();
+        String candidate = null;
+        int toolNumber = 0;
+        for (Call call : calls(run)) {
+            if (call.receipt() == null || candidate != null
+                    || !codec.fingerprint(run.binding()).equals(call.receipt().bindingDigest())
+                    || !call.request().equals(call.receipt().requestDigest())) { throw mismatch(); }
+            refs.add(call.receipt().receiptRef());
+            if (call.receipt().decision().candidateRef() != null) {
+                candidate = call.receipt().decision().candidateRef();
+            } else {
+                require(call.receipt().decision().tools().size() == 1);
+                refs.add(fact(run, call.receipt().decision().tools().getFirst(), ++toolNumber).receiptRef());
+            }
+        }
+        if (candidate == null || !candidate.equals(observation.candidateRef())) { throw mismatch(); }
+        refs.addFirst(candidate);
+        var invocation = new Invocation("VALIDATE", "validate:1", refs, null);
+        var history = historyLocked(run, invocation);
+        var evidence = jdbc.query("SELECT request_digest,receipt_json,reason_code FROM agent_graph_validation WHERE tenant_code=:tenant AND run_id=:run",
+                key(run), (rs, n) -> {
+                    Receipt receipt = read(rs.getString("receipt_json"), Receipt.class);
+                    if (!codec.fingerprint(invocation).equals(rs.getString("request_digest"))
+                            || !codec.fingerprint(invocation).equals(receipt.requestDigest())
+                            || !codec.fingerprint(run.binding()).equals(receipt.bindingDigest())
+                            || !"validate:1".equals(receipt.operationId()) || receipt.accepted() == null
+                            || !observation.validationReceiptRef().equals(receipt.receiptRef())
+                            || !(receipt.accepted() ? "CANDIDATE_READY" : "REJECTED").equals(observation.status())) { throw mismatch(); }
+                    return new io.github.illuseahashmap.agent.runtime.application.port.GraphCompletionPort.Evidence(
+                            run, history, receipt.accepted(), rs.getString("reason_code"));
+                });
+        if (evidence.size() != 1) { throw mismatch(); }
+        return evidence.getFirst();
+    }
+
     private History historyLocked(AuthorizedRun run, Invocation request) {
         boolean model = "MODEL".equals(request.kind());
         require(model || ("VALIDATE".equals(request.kind()) && "validate:1".equals(request.operationId())));

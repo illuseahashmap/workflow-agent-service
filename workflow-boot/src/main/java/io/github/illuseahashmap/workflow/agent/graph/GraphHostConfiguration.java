@@ -10,11 +10,15 @@ import io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry;
 import io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy;
 import io.github.illuseahashmap.agent.runtime.application.graph.GraphCapacityGateway;
 import io.github.illuseahashmap.agent.runtime.application.graph.GraphCognitionGateway;
+import io.github.illuseahashmap.agent.runtime.application.graph.GraphCandidateGate;
+import io.github.illuseahashmap.agent.runtime.application.graph.GraphCompletionService;
+import io.github.illuseahashmap.agent.runtime.application.port.AgentRunEventPublisher;
 import io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayCodec;
 import io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayContract;
 import io.github.illuseahashmap.agent.runtime.application.graph.GraphToolGateway;
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore;
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCognitionStore;
+import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore;
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphExecutionStore;
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphReferenceStore;
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration;
@@ -24,11 +28,27 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import static io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayContract.require;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name="workflow.agent.graph.enabled", havingValue="true")
 public class GraphHostConfiguration {
+    @Bean public GraphCompletionService graphCompletionService(
+            NamedParameterJdbcTemplate jdbc, JdbcGraphExecutionStore executions, AgentDefinitionVersionRepository versions,
+            AgentToolRegistry tools, AgentOutputSchemaValidator schemas, CheckpointContextPolicy budget, ObjectMapper json,
+            AgentRunEventPublisher publisher) {
+        return new GraphCompletionService(new JdbcGraphCompletionStore(jdbc, executions, new GraphGatewayCodec()),
+                versions, tools, new GraphCandidateGate(schemas, json, budget), publisher, json);
+    }
+    @Bean(name="graphCompletionScheduler") public ThreadPoolTaskScheduler graphCompletionScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("graph-completion-");
+        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setAwaitTerminationSeconds(15);
+        return scheduler;
+    }
     @Bean public GraphHostSettings graphHostSettings(
             @Value("${workflow.agent.graph.worker-token}") String token,
             @Value("${workflow.agent.graph.artifact-digest}") String artifact,

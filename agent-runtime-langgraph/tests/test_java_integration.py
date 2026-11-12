@@ -32,10 +32,10 @@ def test_java_tool_gateway_postgres_and_python_http(postgres_dsn, tmp_path):
             [
                 *wrapper,
                 "-pl",
-                "agent-engine",
+                "workflow-boot",
                 "-am",
                 "-Dsurefire.failIfNoSpecifiedTests=false",
-                "-Dtest=GraphToolGatewayTest,GraphGatewayIntegrationTest,GraphPersistenceIntegrationTest,AgentToolRegistryTest,AgentArchitectureTest",
+                "-Dtest=GraphToolGatewayTest,GraphGatewayIntegrationTest,GraphPersistenceIntegrationTest,AgentToolRegistryTest,AgentArchitectureTest,GraphCompletionFlowableIntegrationTest,GraphHostConfigurationTest,GraphHostControllerTest",
                 "test",
             ],
             cwd=root,
@@ -59,3 +59,11 @@ def test_java_tool_gateway_postgres_and_python_http(postgres_dsn, tmp_path):
         assert (
             result.attrib["skipped"] == result.attrib["failures"] == result.attrib["errors"] == "0"
         )
+    report = (
+        root
+        / "workflow-boot/target/surefire-reports"
+        / "TEST-io.github.illuseahashmap.workflow.agent.GraphCompletionFlowableIntegrationTest.xml"
+    )
+    result = etree.parse(report).getroot()
+    assert int(result.attrib["tests"]) >= 4
+    assert result.attrib["skipped"] == result.attrib["failures"] == result.attrib["errors"] == "0"

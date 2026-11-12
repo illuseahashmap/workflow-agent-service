@@ -67,6 +67,25 @@ V67 `max_outstanding` 仍是图接管子额度。V68 覆盖全平台接收，**�
 
 ## 上线门禁与仍开放项
 
-宿主不公开 `reserve`：只能通过受信平台版本路由接管尚无 Attempt 的 QUEUED Run。当前业务版本仍为 NATIVE；artifact 领取筛选已接通，但新 AgentVersion 后端发布路由、图观察→业务结果/Flowable Outbox 的最终接纳、完整节点等价尚未开放。
+宿主不公开 `reserve`：只能通过受信平台版本路由接管尚无 Attempt 的 QUEUED Run。当前业务版本仍为 NATIVE；artifact 筛选和 V69 图观察→业务结果/Flowable Outbox 的最终接纳已接通，但新 AgentVersion 后端发布路由和完整节点等价尚未开放。
+
+## V69 最终结果接纳与升级
+
+- 不修改 V65–V68。应用 V69 前停止旧图宿主和 Worker；旧预约没有完整业务绑定，`business_identity` 保持 NULL，不从当前字段伪造历史授权。先核对这些预约并通过受信运维取消；需要执行时提交新 Run。旧预约不会被新 Worker 领取，也不能自动验收。该门禁不影响 NATIVE Run。
+- 开启图宿主同时装配独立 `graphCompletionScheduler`（单线程，每轮最多 20 条），`workflow.agent.graph.completion-interval-ms` 默认 1000。每次事务只领取一个 Run，跨实例 `SKIP LOCKED`，单事务超时 10 秒，不做模型/工具网络调用。
+- `agent_graph_dispatch.status=ACKNOWLEDGED` 仅表示收到图观察；`completion_status=COMMITTED` 才表示 Run/Attempt/状态历史/完成 Outbox 同事务提交。Flowable 是否处理仍看 `agent_run.workflow_resumed_at` 与 Outbox/Inbox，不能混为一个成功状态。
+- 验收基础设施失败：ACK 保留，`completion_failures` 递增，`completion_reason=GRAPH_COMPLETION_RETRY`，`available_at` 持久退避 1–60 秒；数据库完全不可用时不能写退避，恢复后扫描已有 ACK。
+- `BLOCKED` 表示绑定/回执证据不可信，`DISCARDED` 表示 Run 已终态。两者不覆盖 Run、不发送新完成事件；先查看 `completion_reason`，不要 SQL 清空不可变标记或重新调用模型掩盖问题。确认原件与身份后按受信运维取消/新建执行处理，自动修复入口尚未提供。
+- `inspect` 仓储投影包含完成状态、原因和时间；浏览器运维页/控制面查询 API 尚未接入。只向运维展示稳定原因，不输出候选、原凭据或 capability。
+
+只读核对（在受信运维数据库会话执行，租户边界仍适用）：
+
+```sql
+SELECT d.tenant_code,d.run_id,d.status,d.completion_status,d.completion_reason,
+       d.completion_failures,d.available_at,r.status AS run_status,r.workflow_resumed_at
+FROM agent_graph_dispatch d JOIN agent_run r ON r.tenant_code=d.tenant_code AND r.id=d.run_id
+WHERE d.status='ACKNOWLEDGED'
+ORDER BY d.available_at,d.run_id;
+```
 
 后续按 G0/G2 完成未知请求可信对账、控制面可观测性、加权/预留、异步与连接预算、多实例持续压力；按 G1 完成路由/摘要/READ_RESULT/有限修复，再做 P-17/Flowable 业务回归，最后 G3 切换排空。具体证据见[并发回归记录](../quality/graph-capacity-regression.md)。

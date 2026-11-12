@@ -7,6 +7,18 @@ import java.util.Objects;
  */
 public final class AgentRunStateMachine {
 
+    /** One business attempt; framework dispatch generations do not consume retries. */
+    public AgentRun startDelegated(AgentRun run, AgentRunTransitionContext context) {
+        requireInputs(run, context);
+        requireStatus(run, AgentRunStatus.QUEUED, "startDelegated");
+        if (run.currentAttemptId() != null || context.attemptId() == null
+                || !context.occurredAt().isBefore(run.deadlineAt())) {
+            throw new AgentRunTransitionException("Invalid delegated attempt");
+        }
+        run.startDelegated(context.attemptId(), context);
+        return run;
+    }
+
     public AgentRun startLease(
             AgentRun run,
             AgentRunLease lease,

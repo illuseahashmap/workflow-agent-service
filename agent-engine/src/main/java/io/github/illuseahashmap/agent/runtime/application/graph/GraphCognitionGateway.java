@@ -12,12 +12,10 @@ import io.github.illuseahashmap.agent.provider.application.port.ModelProviderReq
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderResponse;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderRepository;
 import io.github.illuseahashmap.agent.provider.domain.AgentProviderType;
-import io.github.illuseahashmap.agent.runtime.application.AgentCandidateValidator;
 import io.github.illuseahashmap.agent.runtime.application.AgentExecutionException;
 import io.github.illuseahashmap.agent.runtime.application.AgentOutputSchemaValidator;
 import io.github.illuseahashmap.agent.runtime.application.AgentToolRegistry;
 import io.github.illuseahashmap.agent.runtime.application.checkpoint.CheckpointContextPolicy;
-import io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory;
 import io.github.illuseahashmap.agent.runtime.application.impl.DefaultAgentResultPolicy;
 import io.github.illuseahashmap.agent.runtime.application.port.AgentTool;
 import io.github.illuseahashmap.agent.runtime.application.port.GraphCognitionPort;
@@ -106,7 +104,7 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
             schemas.validateInput(version.inputSchema(), input);
             Receipt receipt = "MODEL".equals(request.request().kind())
                     ? model(capability, request, run, version, history, input)
-                    : validate(request, run, version, history, input);
+                    : validate(request, run, version, history);
             budget.remaining();
             if (!run.equals(authority.authorize(capability, request.binding(), request.generation()))) {
                 throw new GraphGatewayException(AUTHORITY_DENIED);
@@ -177,19 +175,10 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
     }
 
     private Receipt validate(InvokeRequest request, AuthorizedRun run, AgentDefinitionVersion version,
-                             GraphCognitionPort.History history, String input) {
+                             GraphCognitionPort.History history) {
         require("VALIDATE".equals(request.request().kind()) && history.candidate() != null);
         try {
-            new AgentCandidateValidator(schemas, json).validate(version, history.candidate(), output -> {
-                // Reuse the existing subject/decision/citation gate from immutable current-Run tool originals.
-                var context = new TaskMemory.Context(run.binding().tenantCode(), run.binding().runId(), run.processInstanceId(), version, input);
-                var evidence = new TaskMemory(context, json, contextBudget);
-                for (var fact : history.tools()) {
-                    evidence.observe(new TaskMemory.Receipt(fact.receiptRef(), fact.receiptRef(), fact.toolCode(),
-                            fact.argumentsJson(), fact.outputDigest()), fact.output());
-                }
-                evidence.verify(output);
-            });
+            new GraphCandidateGate(schemas, json, contextBudget).validate(run, version, history);
             return store.finishValidation(run, request.request(), true, "ACCEPTED");
         } catch (AgentExecutionException rejected) {
             if (!VALIDATION_REJECTIONS.contains(rejected.failure().errorCode())) { throw rejected; }

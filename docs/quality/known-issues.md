@@ -1,6 +1,6 @@
 # 待修复问题与下一步整改
 
-文档更新时间：2026-11-12；认证派发宿主/Worker CLI、V68 全平台 Run 准入及账户配置/审计已接通，证据见[并发回归](graph-capacity-regression.md)，操作见[宿主手册](../operations/graph-dispatch-host.md)。最终业务接纳和完整 G0–G3 尚未完成，默认未切换业务后端。此前已修复事项不重新列为缺失，当前开放项与发布门禁继续分项跟踪。
+文档更新时间：2026-11-12；V69 已补图端 ACK 的最终业务接纳、单一业务 Attempt、终态与 Outbox 原子提交，并补齐真实 Flowable 事务回归，见[结果交接记录](graph-completion-regression.md)。此前的“观察无法接回业务终态”不再列为未实现；未知外呼对账、未 ACK 图运行的取消/超时/暂停运维、发布切换及完整 G0–G3 仍开放。图宿主默认关闭，业务后端未切换。操作见[宿主手册](../operations/graph-dispatch-host.md)。
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
@@ -17,13 +17,15 @@
 
 ## D-1：开源 LangGraph 契约模块已实现，业务接入与迁移尚未完成
 
+2026-11-12 补充：最终结果交接已实现，验收事务只读不可变候选/回执，不调用模型。阻塞记录使用 `BLOCKED` 原因，终态冲突使用 `DISCARDED`；基础设施故障保持 ACK 并持久退避。V69 前的图预约缺少完整业务身份，不能从现态补造旧授权；须在关闭图宿主的维护窗口确认并取消旧预约，再提交新 Run。仍缺整体图运维和生产级故障/负载门禁，不因该切片关闭 D-1/P1-3/P1-6。
+
 2026-11-07 曾记为选型待决策；2026-11-11 明确采用 LangGraph 管内部编排/Checkpoint/恢复，撤回自研通用 ExecutionTask/Continuation 方向。Flowable 管业务流程，Java 管 Run、授权、配额、回执和最终验收；图执行成功不等于审批通过。详见[接入方案](../architecture/langgraph-runtime-adoption-design.md)。
 
 - **现状与重叠**：LangChain4j 已用于模型、Embedding 和 MCP 客户端适配。LangGraph 的主要重叠对象是 Java 的 `PlatformAgentExecutor`（路由、工具循环、内部步骤恢复），不是工具适配层。工具数量增加本身不是换框架的理由；若问题是选错工具，应先检查授权后的候选范围与工具描述。
 - **下一步 G0**：采用开源 Python LangGraph + 官方 PostgreSQL saver，版本和依赖已锁定。继续生产 Gateway、稳定命令/查询/取消/对账与 artifact 路由；图库不等于分布式服务，同会话检查点保护不直接证明全部网络分区、外呼与业务提交安全。
 - **G1/G2**：沿用 P-17 七场景、同租户双采购及压缩恢复基线。工具成功而 checkpoint 未写、候选已存而 Run 未提交不能要求模型重答；Java 拒绝旧提交之外还须证明图状态不受迟到写污染。图内重试与平台预算统一，正常 resume 不增加失败 Attempt。
 - **G3**：AgentVersion 固定 backend/artifact/state schema；新版本切换、旧运行排空，删除原生内部循环与恢复代码，不长久维护两套竞争权威。租户/工具/知识/Flowable 语义及本地评分不得退化。
-- **已验证切片**：独立图/Python HTTP/Worker/Java MODEL/TOOL/VALIDATE 及 V65–V68 持久层保持回归，认证派发宿主/CLI、全平台事务准入、账户配置与审计已落地；最新数量与测试边界统一见[并发回归](graph-capacity-regression.md)。**仍开放**：未知外呼/命令可信对账、最终业务接纳、后端发布路由；路由、增量摘要、READ_RESULT、有限修复节点；真实模型/MCP、Java/Flowable/P-17 与容量报告。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
+- **已验证切片**：独立图/Python HTTP/Worker/Java MODEL/TOOL/VALIDATE、V65–V69、认证派发、全平台准入和账户审计保持回归；V69 最终验收与真实 Flowable 事务见[结果交接记录](graph-completion-regression.md)，并发机制见[并发回归](graph-capacity-regression.md)。**仍开放**：未知外呼/命令对账、整体图运维和后端发布路由；路由、增量摘要、READ_RESULT、有限修复节点；真实模型/MCP、完整 P-17 与容量报告。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
 - **部署决策（2026-11-11）**：用户已明确开源，不再采用商业 Agent Server，许可不再是阻碍。使用本地独立临时 PostgreSQL 可验证持久化，不要求本机 Docker；生产持久命令、Worker 并发上限、连接预算、网络分区和容量仍需交付，不能以新增模块冒充整个平台迁移。
 
 ## P0：发布与生产基线
@@ -163,7 +165,7 @@
 - 当前已增加 MCP 外部调用边界的跨实例租户令牌桶、并发硬上限和连接器熔断；该治理不替代 Worker 领取公平调度。
 - V67 新图组件：已实现图接管 outstanding、全局/租户领取上限、持久等份轮转、调用包络/资源硬上限和未知隔离；同数据库竞争与恢复已回归。有预算图片段持久让出，有界 Worker 不预取，调用中不释放槽位。模型/工具已存回执独立只读恢复并复核授权；不能因隔离额度要求模型重答。
 - V68 补齐全平台 Run 创建/终态重试事务准入（含 NATIVE），认证 HTTP/Worker CLI 与 artifact 领取、Provider/连接器共享账户配置及 append-only revision 审计已接通。默认不开启图宿主，不自动切换业务版本。
-- 缺口：未知请求可信对账、最终业务接纳、拒绝/积压指标、加权/管理预留及全部配额策略统一版本管理仍待闭环；账户映射审计不能冒充全部治理策略历史。原生在途硬上限尚未由图机制替代。同步槽位仍持有 checkpoint 连接，嵌套调用精确计数与异步 I/O 待实现。目标见[资源治理](../architecture/agent-resource-governance.md)，不自研第二套图节点任务队列，也不把测试中的小并发等同容量验收。
+- 缺口：未知请求可信对账、整体图运维、拒绝/积压指标、加权/管理预留及全部配额策略统一版本管理仍待闭环；最终 ACK 业务接纳已由 V69 实现，账户映射审计不能冒充全部治理策略历史。原生在途硬上限尚未由图机制替代。同步槽位仍持有 checkpoint 连接，嵌套调用精确计数与异步 I/O 待实现。目标见[资源治理](../architecture/agent-resource-governance.md)，不自研第二套图节点任务队列，也不把测试中的小并发等同容量验收。
 - 验收：单一租户或慢 Provider 不能长期占满全部执行资源，跨实例压力测试下无无界线程、连接和重复领取。
 
 ### P1-7 核心服务与查询仓储仍偏大
