@@ -1,6 +1,6 @@
 # 项目文档导航
 
-最近权威入口文档核对：2026-11-11（LangGraph MODEL/TOOL/VALIDATE、V65/V66 JDBC 持久层已有 52 项联合回归，内嵌 Java 60 项；真实图故障恢复使用确定性模型。生产 Worker/HTTP、路由/压缩/修复节点、Flowable 等价与容量验收尚未完成，现有业务未切换）。
+最近权威入口文档核对：2026-11-12（认证派发宿主/Worker CLI、V68 全平台 Run 准入、账户配置与审计已接通，回归见[并发治理记录](quality/graph-capacity-regression.md)，启用边界见[部署手册](operations/graph-dispatch-host.md)。业务等价、最终业务接纳及容量报告仍开放，现有业务未切换）。
 
 项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
 

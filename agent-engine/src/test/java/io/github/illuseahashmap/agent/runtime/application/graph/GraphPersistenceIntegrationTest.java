@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Executes the actual V65 on isolated PostgreSQL. Earlier tables are a minimal fixture, not full Flyway upgrade acceptance. */
+/** Executes actual V65-V68 on isolated PostgreSQL. Earlier tables are a minimal fixture, not full Flyway upgrade acceptance. */
 @EnabledIfEnvironmentVariable(named = "WORKFLOW_LANGGRAPH_JDBC_URL", matches = ".+")
 class GraphPersistenceIntegrationTest {
     private final GraphGatewayCodec codec = new GraphGatewayCodec();
@@ -100,11 +100,188 @@ class GraphPersistenceIntegrationTest {
                 """);
         db.execute(Files.readString(Path.of("../platform-migrations/src/main/resources/db/migration/platform/V65__add_graph_execution_handoff.sql")));
         db.execute(Files.readString(Path.of("../platform-migrations/src/main/resources/db/migration/platform/V66__add_graph_cognition_receipts.sql")));
+        db.execute(Files.readString(Path.of("../platform-migrations/src/main/resources/db/migration/platform/V67__add_graph_capacity_governance.sql")));
+        String admissionMigration = Files.readString(Path.of(
+                "../platform-migrations/src/main/resources/db/migration/platform/V68__enforce_run_admission_and_bind_call_accounts.sql"));
+        new org.springframework.transaction.support.TransactionTemplate(
+                new org.springframework.jdbc.datasource.DataSourceTransactionManager(named.getJdbcTemplate().getDataSource()))
+                .executeWithoutResult(status -> db.execute(admissionMigration));
+        db.execute("ALTER TABLE agent_definition_version ADD COLUMN provider_id BIGINT DEFAULT 1");
         reconnectStores();
     }
 
     @AfterEach void cleanup() {
         if (admin != null && schema != null) { admin.execute("DROP SCHEMA " + schema + " CASCADE"); }
+    }
+
+    @Test void admissionCountsBothBackendsPausedRunsAndTerminalRetriesAtomically() {
+        assertThat(admitted()).isEqualTo(3);
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        db.update("UPDATE agent_run_admission SET hard_limit=3 WHERE scope='GLOBAL'");
+        db.update("UPDATE agent_run SET status='PAUSED' WHERE id=1");
+        assertThat(admitted()).isEqualTo(3);
+        assertThatThrownBy(() -> insertRun(4, "beta")).isInstanceOf(DataAccessException.class).hasMessageContaining("capacity exhausted");
+        db.update("UPDATE agent_run SET status='FAILED' WHERE id=2");
+        assertThat(admitted()).isEqualTo(2);
+        insertRun(4, "beta");
+        assertThatThrownBy(() -> db.update("UPDATE agent_run SET status='QUEUED' WHERE id=2"))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("capacity exhausted");
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=2", String.class)).isEqualTo("FAILED");
+        assertThat(admitted()).isEqualTo(3);
+        db.update("DELETE FROM agent_run WHERE id=4");
+        db.update("UPDATE agent_run SET status='QUEUED' WHERE id=2");
+        assertThat(admitted()).isEqualTo(3);
+    }
+
+    @Test void admissionChargesNeitherConflictNoOpNorRolledBackSubmission() {
+        db.update("INSERT INTO agent_run(id,tenant_code,status) VALUES(1,'alpha','QUEUED') ON CONFLICT DO NOTHING");
+        assertThat(admitted()).isEqualTo(3);
+        var tx = new org.springframework.transaction.support.TransactionTemplate(
+                new org.springframework.jdbc.datasource.DataSourceTransactionManager(named.getJdbcTemplate().getDataSource()));
+        tx.executeWithoutResult(status -> {
+            insertRun(4, "beta");
+            status.setRollbackOnly();
+        });
+        assertThat(admitted()).isEqualTo(3);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run WHERE id=4", Integer.class)).isZero();
+        db.update("UPDATE agent_run_admission SET hard_limit=2 WHERE scope='TENANT:alpha'");
+        assertThatThrownBy(() -> insertRun(4, "alpha")).isInstanceOf(DataAccessException.class);
+        insertRun(5, "beta");
+        assertThat(admitted()).isEqualTo(4);
+    }
+
+    @Test void concurrentNativeSubmissionsCannotOverbookLastGlobalSlot() throws Exception {
+        db.update("UPDATE agent_run_admission SET hard_limit=4 WHERE scope='GLOBAL'");
+        var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var futures = java.util.stream.IntStream.range(4, 6).mapToObj(id -> pool.submit(() -> {
+                start.await();
+                try {
+                    insertRun(id, "beta");
+                    return true;
+                } catch (DataAccessException full) { return false; }
+            })).toList();
+            start.countDown();
+            int winners = 0;
+            for (var future : futures) { if (future.get(10, TimeUnit.SECONDS)) { winners++; } }
+            assertThat(winners).isEqualTo(1);
+        }
+        assertThat(admitted()).isEqualTo(4);
+    }
+
+    @Test void dispatchOnlyClaimsCompatibleArtifacts() {
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        assertThat(executions.claimNext("worker", 90, "b".repeat(64))).isEmpty();
+        assertThat(executions.claimNext("worker", 90, "a".repeat(64))).isPresent();
+    }
+
+    @Test void resourceBindingsShareAccountAndCannotMoveOutstandingCalls() {
+        db.update("UPDATE agent_definition_version SET provider_id=2 WHERE tenant_code='beta'");
+        var config = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration(named);
+        var settings = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Configuration(
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Resource("account:shared", 1)),
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Binding("alpha", "PROVIDER", "1", "account:shared"),
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Binding("beta", "PROVIDER", "2", "account:shared")));
+        config.configure(settings);
+        Claim one = reserveAndClaim(1);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        Claim two = executions.claim("beta", "worker-beta", 90).orElseThrow();
+        var invocation = new Invocation("MODEL", "model:1", List.of(one.binding().inputRef()), null);
+        var first = new InvokeRequest(one.binding(), one.generation(), invocation);
+        var second = new InvokeRequest(two.binding(), two.generation(), new Invocation("MODEL", "model:1", List.of(two.binding().inputRef()), null));
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var permit = capacity.acquire(executions.authorize(one.capability(), one.binding(), one.generation()), invocation, () -> config.apply(first)).orElseThrow();
+        assertThat(capacity.acquire(executions.authorize(two.capability(), two.binding(), two.generation()), second.request(), () -> config.apply(second))).isEmpty();
+        var moved = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Configuration(
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Resource("account:new", 1)),
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Binding("alpha", "PROVIDER", "1", "account:new")));
+        assertThatThrownBy(() -> config.configure(moved)).isInstanceOf(GraphGatewayException.class);
+        assertThat(config.apply(first)).containsExactly("account:shared");
+        capacity.completed(permit);
+        config.configure(moved);
+        assertThat(config.apply(first)).containsExactly("account:new");
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_resource_audit", Integer.class)).isEqualTo(2);
+        assertThatThrownBy(() -> db.update("DELETE FROM agent_graph_resource_audit")).isInstanceOf(DataAccessException.class);
+        db.update("DELETE FROM agent_graph_resource_binding WHERE tenant_code='alpha'");
+        assertThatThrownBy(() -> config.apply(first)).isInstanceOf(GraphGatewayException.class);
+    }
+
+    @Test void mcpAccountComesFromPublishedTenantSnapshotNotToolSuppliedHints() {
+        db.execute("""
+                CREATE TABLE mcp_connector_version(id BIGINT,tenant_code TEXT,connector_id BIGINT);
+                CREATE TABLE mcp_tool_catalog_version(id BIGINT,tenant_code TEXT,connector_version_id BIGINT,status TEXT);
+                CREATE TABLE mcp_tool_snapshot(id BIGINT,tenant_code TEXT,catalog_version_id BIGINT,tool_name TEXT);
+                INSERT INTO mcp_connector_version VALUES(8,'alpha',50);
+                INSERT INTO mcp_tool_catalog_version VALUES(9,'alpha',8,'PUBLISHED');
+                INSERT INTO mcp_tool_snapshot VALUES(11,'alpha',9,'count_words');
+                """);
+        var config = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration(named);
+        config.configure(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Configuration(
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Resource("mcp:directory-account", 2)),
+                List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Binding(
+                        "alpha", "CONNECTOR", "50", "mcp:directory-account"))));
+        var claim = reserveAndClaim(1);
+        var operation = new Invocation("TOOL", "tool:1", List.of(claim.binding().inputRef()),
+                new ToolIntent("mcp:11:count_words", "arguments:one", "b".repeat(64)));
+        assertThat(config.apply(new InvokeRequest(claim.binding(), claim.generation(), operation))).containsExactly("mcp:directory-account");
+        var beta = executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        assertThatThrownBy(() -> config.apply(new InvokeRequest(beta, 1, operation))).isInstanceOf(GraphGatewayException.class);
+        db.update("UPDATE mcp_tool_catalog_version SET status='DRAFT'");
+        assertThatThrownBy(() -> config.apply(new InvokeRequest(claim.binding(), claim.generation(), operation))).isInstanceOf(GraphGatewayException.class);
+    }
+
+    @Test void accountSnapshotRemainsBoundedAcrossMultiplePatches() {
+        db.update("INSERT INTO agent_graph_call_resource SELECT 'account:'||n,1 FROM generate_series(1,1000) n");
+        var config = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration(named);
+        assertThat(config.read().resources()).hasSize(1000);
+        assertThatThrownBy(() -> config.configure(
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Configuration(
+                        List.of(new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphResourceConfiguration.Resource("account:extra", 1)), List.of())))
+                .isInstanceOf(GraphGatewayException.class);
+        assertThat(config.read().resources()).hasSize(1000);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_resource_audit", Integer.class)).isZero();
+    }
+
+    private long admitted() { return db.queryForObject("SELECT used FROM agent_run_admission WHERE scope='GLOBAL'", Long.class); }
+
+    @Test void migrationBackfillSeesForcedRlsRowsWithNonSuperuserOwner() throws Exception {
+        String role = "migration_" + UUID.randomUUID().toString().replace("-", "");
+        String isolated = role + "_schema";
+        admin.execute("CREATE ROLE " + role + " NOLOGIN NOSUPERUSER NOBYPASSRLS");
+        admin.execute("CREATE SCHEMA " + isolated + " AUTHORIZATION " + role);
+        try (var connection = DriverManager.getConnection(url, user, password); var stmt = connection.createStatement()) {
+            stmt.execute("SET ROLE " + role);
+            stmt.execute("SET search_path=" + isolated);
+            stmt.execute("CREATE TABLE agent_run(id BIGINT,tenant_code TEXT,status TEXT)");
+            stmt.execute("CREATE TABLE agent_graph_call_resource(resource_key VARCHAR(256) PRIMARY KEY)");
+            stmt.execute("INSERT INTO agent_run VALUES(1,'alpha','QUEUED'),(2,'beta','PAUSED')");
+            stmt.execute("ALTER TABLE agent_run ENABLE ROW LEVEL SECURITY");
+            stmt.execute("ALTER TABLE agent_run FORCE ROW LEVEL SECURITY");
+            stmt.execute("CREATE POLICY tenant_scope ON agent_run USING(current_setting('app.system_worker',true)='true')");
+            connection.setAutoCommit(false);
+            stmt.execute(Files.readString(Path.of(
+                    "../platform-migrations/src/main/resources/db/migration/platform/V68__enforce_run_admission_and_bind_call_accounts.sql")));
+            connection.commit();
+            try (var rs = stmt.executeQuery("SELECT used FROM agent_run_admission WHERE scope='GLOBAL'")) {
+                rs.next();
+                assertThat(rs.getLong(1)).isEqualTo(2);
+            }
+            try (var rs = stmt.executeQuery("SELECT count(*) FROM agent_run")) {
+                rs.next();
+                assertThat(rs.getInt(1)).isZero(); // local elevation ended with the migration transaction
+            }
+            connection.rollback();
+        } finally {
+            admin.execute("DROP SCHEMA " + isolated + " CASCADE");
+            admin.execute("DROP ROLE " + role);
+        }
+    }
+    private void insertRun(long id, String tenant) {
+        db.update("""
+                INSERT INTO agent_run(id,tenant_code,agent_version_id,status,deadline_at,input_snapshot_json,requested_by,process_instance_id)
+                VALUES(?,?,10,'QUEUED',clock_timestamp()+interval '1 hour','{}','reviewer',?)
+                """,
+                id, tenant, "process-" + id);
     }
 
     @Test void reservationIsIdempotentImmutableAndExcludesNativeWorkers() {
@@ -297,6 +474,7 @@ class GraphPersistenceIntegrationTest {
             admin.execute("GRANT USAGE ON SCHEMA " + schema + " TO " + role);
             admin.execute("GRANT SELECT ON ALL TABLES IN SCHEMA " + schema + " TO " + role);
             admin.execute("GRANT INSERT ON " + schema + ".agent_graph_reference TO " + role);
+            admin.execute("GRANT INSERT,UPDATE ON " + schema + ".agent_run TO " + role);
             try (var connection = DriverManager.getConnection(url, user, password); var stmt = connection.createStatement()) {
                 stmt.execute("SET ROLE " + role);
                 stmt.execute("SET app.platform_admin='true'");
@@ -305,6 +483,18 @@ class GraphPersistenceIntegrationTest {
                     assertThat(rs.getInt(1)).isZero();
                 }
                 stmt.execute("SET app.tenant_code='alpha'");
+                stmt.execute("INSERT INTO " + schema + ".agent_run(id,tenant_code,status) VALUES(4,'alpha','QUEUED')");
+                assertThat(admitted()).isEqualTo(4);
+                try (var rs = stmt.executeQuery("SELECT count(*) FROM " + schema + ".agent_run_admission")) {
+                    rs.next();
+                    assertThat(rs.getInt(1)).isZero();
+                }
+                stmt.execute("UPDATE " + schema + ".agent_run SET status='FAILED' WHERE id=4");
+                assertThat(admitted()).isEqualTo(3);
+                try (var rs = stmt.executeQuery("SELECT count(*) FROM " + schema + ".agent_graph_capacity_policy")) {
+                    rs.next();
+                    assertThat(rs.getInt(1)).isZero();
+                }
                 try (var rs = stmt.executeQuery("SELECT count(*) FROM " + schema + ".agent_graph_execution")) {
                     rs.next();
                     assertThat(rs.getInt(1)).isEqualTo(2);
@@ -552,6 +742,218 @@ class GraphPersistenceIntegrationTest {
             server.stop(0);
             workers.shutdownNow();
         }
+    }
+
+    @Test void outstandingIncludesDeferredRevokedAndIdempotentReservations() {
+        db.update("UPDATE agent_graph_capacity_policy SET max_outstanding=1,tenant_outstanding=1");
+        Claim first = reserveAndClaim(1);
+        executions.defer(first, "cp:one", "wait:one", Instant.now().plusSeconds(10));
+        assertThat(executions.reserve("alpha", 1, "a".repeat(64), 10, 20)).isEqualTo(first.binding());
+        assertThatThrownBy(() -> executions.reserve("beta", 3, "a".repeat(64), 10, 20)).hasMessage("CAPACITY_EXHAUSTED");
+        executions.revoke("alpha", 1);
+        assertThatThrownBy(() -> executions.reserve("beta", 3, "a".repeat(64), 10, 20)).hasMessage("CAPACITY_EXHAUSTED");
+        db.update("UPDATE agent_run SET status='CANCELLED' WHERE id=1");
+        assertThat(executions.reserve("beta", 3, "a".repeat(64), 10, 20)).isNotNull();
+    }
+
+    @Test void twoSchedulersCannotTakeLastGlobalSlotAndShrinkDoesNotEvict() throws Exception {
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        db.update("UPDATE agent_graph_capacity_policy SET max_active=1");
+        var gate = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var a = pool.submit(() -> {
+                gate.await();
+                return executions.claimNext("one", 60);
+            });
+            var b = pool.submit(() -> {
+                gate.await();
+                return new JdbcGraphExecutionStore(named, codec).claimNext("two", 60);
+            });
+            gate.countDown();
+            var results = List.of(a.get(10, TimeUnit.SECONDS), b.get(10, TimeUnit.SECONDS));
+            assertThat(results.stream().filter(Optional::isPresent).count()).isEqualTo(1);
+            Claim winner = results.stream().flatMap(Optional::stream).findFirst().orElseThrow();
+            assertThat(executions.renew(winner, 60)).isTrue();
+            assertThat(executions.claimNext("third", 60)).isEmpty();
+            executions.defer(winner, "cp:one", "wait:one", Instant.now());
+            assertThat(executions.claimNext("third", 60).orElseThrow().binding().tenantCode()).isNotEqualTo(winner.binding().tenantCode());
+        }
+    }
+
+    @Test void tenantFairnessSurvivesRestartAndSkipsSaturatedTenant() {
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        executions.reserve("alpha", 2, "a".repeat(64), 10, 20);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        db.update("UPDATE agent_graph_capacity_policy SET tenant_active=1");
+        var first = executions.claimNext("first", 60).orElseThrow();
+        reconnectStores();
+        var second = executions.claimNext("second", 60).orElseThrow();
+        assertThat(first.binding().tenantCode()).isEqualTo("alpha");
+        assertThat(second.binding().tenantCode()).isEqualTo("beta");
+        assertThat(executions.claimNext("third", 60)).isEmpty();
+        executions.defer(first, "cp:one", "wait:one", Instant.now().plusSeconds(10));
+        assertThat(executions.claimNext("third", 60).orElseThrow().binding().runId()).isEqualTo(2);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_run_attempt", Integer.class)).isZero();
+    }
+
+    @Test void sharedAccountPermitsAreAtomicAndUnknownsStayCountedAfterLeaseExpiry() throws Exception {
+        Claim first = reserveAndClaim(1);
+        Claim second = reserveAndClaim(2);
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1),('account:fast',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var a = executions.authorize(first.capability(), first.binding(), first.generation());
+        var b = executions.authorize(second.capability(), second.binding(), second.generation());
+        var operation = new Invocation("MODEL", "model:1", List.of(first.binding().inputRef()), null);
+        var other = new Invocation("MODEL", "model:1", List.of(second.binding().inputRef()), null);
+        String token = capacity.acquire(a, operation, List.of("account:shared")).orElseThrow();
+        capacity.uncertain(token);
+        db.update("UPDATE agent_graph_execution SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE run_id=1");
+        Claim newer = executions.claim("alpha", "successor", 60).orElseThrow();
+        var current = executions.authorize(newer.capability(), newer.binding(), newer.generation());
+        assertThat(capacity.acquire(current, operation, List.of("account:shared"))).isEmpty();
+        assertThat(capacity.acquire(b, other, List.of("account:shared"))).isEmpty();
+        String fast = capacity.acquire(b, other, List.of("account:fast")).orElseThrow();
+        capacity.completed(fast);
+        assertThat(capacity.reconcile(token, "receipt:remote-cancel-confirmed")).isTrue();
+        assertThat(capacity.reconcile(token, "receipt:duplicate")).isFalse();
+        String retry = capacity.acquire(current, operation, List.of("account:shared")).orElseThrow();
+        capacity.completed(token); // old result cannot release the new token
+        assertThat(capacity.acquire(b, other, List.of("account:shared"))).isEmpty();
+        capacity.completed(retry);
+        assertThat(capacity.acquire(b, other, List.of("account:shared"))).isPresent();
+    }
+
+    @Test void lastCallPermitRaceAndMultiResourceDenialLeaveNoPartialAllocation() throws Exception {
+        Claim one = reserveAndClaim(1);
+        Claim two = reserveAndClaim(2);
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1),('connector:one',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var gate = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var futures = List.of(one, two).stream().map(claim -> pool.submit(() -> {
+                gate.await();
+                return capacity.acquire(executions.authorize(claim.capability(), claim.binding(), claim.generation()),
+                        new Invocation("MODEL", "model:1", List.of(claim.binding().inputRef()), null), List.of("connector:one", "account:shared"));
+            })).toList();
+            gate.countDown();
+            assertThat(List.of(futures.get(0).get(10, TimeUnit.SECONDS), futures.get(1).get(10, TimeUnit.SECONDS))
+                    .stream().filter(Optional::isPresent).count()).isEqualTo(1);
+        }
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit", Integer.class)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_allocation", Integer.class)).isEqualTo(2);
+    }
+
+    @Test void capacityGatewayDefersWithoutCallingModelAndReleasesCompletedEnvelope() {
+        var calls = new AtomicInteger();
+        var delegate = cognition(calls, n -> answer("{\"count\":2}"), null, 40000);
+        Claim first = reserveAndClaim(1);
+        Claim second = reserveAndClaim(2);
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        String held = capacity.acquire(executions.authorize(second.capability(), second.binding(), second.generation()),
+                new Invocation("MODEL", "model:1", List.of(second.binding().inputRef()), null), List.of("account:shared")).orElseThrow();
+        var gateway = new GraphCapacityGateway(delegate, executions, capacity, request -> List.of("account:shared"), codec);
+        var request = new InvokeRequest(first.binding(), first.generation(), new Invocation("MODEL", "model:1", List.of(first.binding().inputRef()), null));
+        var wait = gateway.invoke(first.capability(), request);
+        assertThat(wait.deferred().reason()).isEqualTo("QUOTA");
+        assertThat(calls).hasValue(0);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_model_call", Integer.class)).isZero();
+        capacity.completed(held);
+        assertThat(gateway.invoke(first.capability(), request).receipt()).isNotNull();
+        assertThat(gateway.invoke(first.capability(), request).receipt()).isNotNull();
+        assertThat(calls).hasValue(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit WHERE state<>'RELEASED'", Integer.class)).isZero();
+    }
+
+    @Test void capacityMissingPolicyAndArgumentConflictsFailClosed() {
+        Claim claim = reserveAndClaim(1);
+        var run = executions.authorize(claim.capability(), claim.binding(), claim.generation());
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var operation = new Invocation("MODEL", "model:1", List.of(claim.binding().inputRef()), null);
+        assertThatThrownBy(() -> capacity.acquire(run, operation, List.of("missing:account"))).isInstanceOf(GraphGatewayException.class);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit", Integer.class)).isZero();
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1)");
+        String token = capacity.acquire(run, operation, List.of("account:shared")).orElseThrow();
+        capacity.completed(token);
+        assertThatThrownBy(() -> capacity.acquire(run, new Invocation("MODEL", "model:1", List.of("input:changed"), null),
+                List.of("account:shared"))).isInstanceOf(GraphGatewayException.class);
+    }
+
+    @Test void durableResponsesBypassUnknownCapacityAndReconcileWithoutNewExternalCall() {
+        var calls = new AtomicInteger();
+        var delegate = cognition(calls, n -> toolResponse(), null, 40000);
+        Claim claim = reserveAndClaim(1);
+        var run = executions.authorize(claim.capability(), claim.binding(), claim.generation());
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var operation = new Invocation("MODEL", "model:1", List.of(claim.binding().inputRef()), null);
+        String token = capacity.acquire(run, operation, List.of("account:shared")).orElseThrow();
+        var committed = invoke(delegate, claim, operation);
+        capacity.uncertain(token); // crash/lost acknowledgement after response was committed
+        var governed = new GraphCapacityGateway(delegate, executions, capacity, request -> List.of("account:shared"), codec);
+        assertThat(governed.invoke(claim.capability(), new InvokeRequest(claim.binding(), claim.generation(), operation)).receipt()).isEqualTo(committed);
+        assertThat(calls).hasValue(1);
+        var tool = new Invocation("TOOL", "tool:1", List.of(), committed.decision().tools().getFirst());
+        String toolToken = capacity.acquire(run, tool, List.of("account:shared")).orElseThrow();
+        invoke(delegate, claim, tool);
+        capacity.uncertain(toolToken);
+        assertThat(governed.invoke(claim.capability(), new InvokeRequest(claim.binding(), claim.generation(), tool)).receipt()).isNotNull();
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_tool_execution_audit", Integer.class)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit WHERE state<>'RELEASED'", Integer.class)).isZero();
+        db.update("UPDATE agent_tool_tenant_grant SET enabled=false");
+        assertThatThrownBy(() -> governed.invoke(claim.capability(), new InvokeRequest(claim.binding(), claim.generation(), tool)))
+                .isInstanceOf(GraphGatewayException.class).hasMessage("TOOL_REJECTED");
+    }
+
+    @Test void recoveryClassifiesOrphansButNeverFreesUnknownRemoteCapacity() {
+        Claim claim = reserveAndClaim(1);
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:shared',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        String token = capacity.acquire(executions.authorize(claim.capability(), claim.binding(), claim.generation()),
+                new Invocation("MODEL", "model:1", List.of(claim.binding().inputRef()), null), List.of("account:shared")).orElseThrow();
+        assertThat(capacity.quarantineOrphans(10)).isZero();
+        executions.revoke("alpha", 1);
+        assertThat(capacity.quarantineOrphans(10)).isEqualTo(1);
+        assertThat(capacity.quarantineOrphans(10)).isZero();
+        assertThat(db.queryForObject("SELECT state FROM agent_graph_call_permit", String.class)).isEqualTo("QUARANTINED");
+        capacity.completed(token); // a definitive late completion may settle its OWN envelope
+        assertThat(db.queryForObject("SELECT state FROM agent_graph_call_permit", String.class)).isEqualTo("RELEASED");
+    }
+
+    @Test void lockedTenantDoesNotKeepOtherTenantsBehindHeadOfQueue() throws Exception {
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        try (var connection = DriverManager.getConnection(url + "?currentSchema=" + schema, user, password)) {
+            connection.setAutoCommit(false);
+            try (var stmt = connection.createStatement()) {
+                stmt.executeQuery("SELECT id FROM agent_run WHERE id=1 FOR UPDATE");
+                assertThat(executions.claimNext("worker", 60)).isEmpty();
+                assertThat(executions.claimNext("worker", 60).orElseThrow().binding().tenantCode()).isEqualTo("beta");
+            } finally { connection.rollback(); }
+        }
+    }
+
+    @Test void uncertainProviderFailureDefersNewCallsButIndependentAccountContinues() {
+        var calls = new AtomicInteger();
+        var delegate = cognition(calls, n -> {
+            if (n == 1) { throw new IllegalStateException("connection reset after possible submission"); }
+            return answer("{\"count\":2}");
+        }, null, 40000);
+        Claim first = reserveAndClaim(1);
+        Claim second = reserveAndClaim(2);
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:slow',1),('account:fast',1)");
+        var capacity = new io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore(named, executions, codec);
+        var gateway = new GraphCapacityGateway(delegate, executions, capacity,
+                request -> List.of(request.binding().runId() == 1 ? "account:slow" : "account:fast"), codec);
+        var one = new InvokeRequest(first.binding(), first.generation(), new Invocation("MODEL", "model:1", List.of(first.binding().inputRef()), null));
+        assertThatThrownBy(() -> gateway.invoke(first.capability(), one)).isInstanceOf(IllegalStateException.class);
+        assertThat(gateway.invoke(first.capability(), one).deferred().reason()).isEqualTo("QUOTA");
+        assertThat(calls).hasValue(1);
+        var two = new InvokeRequest(second.binding(), second.generation(), new Invocation("MODEL", "model:1", List.of(second.binding().inputRef()), null));
+        assertThat(gateway.invoke(second.capability(), two).receipt()).isNotNull();
+        assertThat(calls).hasValue(2);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_call_permit WHERE state='QUARANTINED'", Integer.class)).isEqualTo(1);
     }
 
     private GraphCognitionGateway cognition(AtomicInteger calls, IntFunction<ModelProviderResponse> responses, String outputSchema, int budget) {

@@ -20,6 +20,7 @@ from .contracts import (
     RunBinding,
     RuntimeContractError,
     RuntimeView,
+    SliceBudget,
     ToolCall,
 )
 
@@ -54,6 +55,8 @@ class GovernedAgentGraph:
         checkpointer: BaseCheckpointSaver,
         artifact_digest: str,
         clock_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
+        slice_budget: SliceBudget | None = None,
+        monotonic_ms: Callable[[], int] = lambda: time.monotonic_ns() // 1_000_000,
     ) -> None:
         if binding.graph_artifact_digest != artifact_digest:
             raise RuntimeContractError("GRAPH_ARTIFACT_MISMATCH")
@@ -61,6 +64,10 @@ class GovernedAgentGraph:
         self.session = session
         self.gateway = gateway
         self.clock_ms = clock_ms
+        self.slice_budget = slice_budget or SliceBudget()
+        self.monotonic_ms = monotonic_ms
+        self.slice_calls = 0
+        self.slice_started = 0
         self.config = {
             "configurable": {"thread_id": binding.thread_id},
             "recursion_limit": 8 * (binding.max_model_calls + binding.max_tool_calls) + 32,
@@ -99,6 +106,8 @@ class GovernedAgentGraph:
             return self._advance(resume)
 
     def _advance(self, resume: ResumeSignal | None) -> RuntimeView:
+        self.slice_calls = 0
+        self.slice_started = self.monotonic_ms()
         self._authorize()
         snapshot = self.graph.get_state(self.config)
         if not snapshot.values:
@@ -191,6 +200,20 @@ class GovernedAgentGraph:
     def _invoke_gateway(self, state: GraphState) -> dict[str, Any]:
         self._guard(state)
         request = self._request(state)
+        # Do not yield during I/O: commit its receipt first. Resume executes this
+        # same pending intent, without incrementing logical operation counters.
+        if self.slice_calls >= self.slice_budget.max_invocations or (
+            self.slice_calls > 0
+            and self.monotonic_ms() - self.slice_started >= self.slice_budget.max_elapsed_ms
+        ):
+            return {
+                "waiting": Deferred(
+                    wait_id=f"slice:{request.operation_id}:{len(state['receipt_refs'])}",
+                    reason="SLICE",
+                    not_before_epoch_ms=self.clock_ms(),
+                ).model_dump(mode="json")
+            }
+        self.slice_calls += 1
         result = self.gateway.invoke(self.binding, self.session, request)
         # Recheck after I/O: timeout/revocation cannot become a successful checkpoint.
         self._authorize()

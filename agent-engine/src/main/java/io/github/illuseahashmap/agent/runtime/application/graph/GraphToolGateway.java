@@ -70,16 +70,8 @@ public final class GraphToolGateway implements io.github.illuseahashmap.agent.ru
             require(request.inputRefs().isEmpty() && request.operationId().matches("tool:[1-9][0-9]{0,2}"));
             int ordinal = Integer.parseInt(request.operationId().substring(5));
             require(ordinal <= run.binding().maxToolCalls());
-            var argument = references.arguments(run, request);
+            var argument = verifiedArguments(run, request);
             String bindingDigest = codec.fingerprint(run.binding());
-            if (argument == null || !bindingDigest.equals(argument.bindingDigest())
-                    || !request.operationId().equals(argument.operationId())
-                    || !request.tool().toolCode().equals(argument.toolCode())
-                    || !request.tool().argumentsDigest().equals(argument.argumentsDigest())
-                    || argument.json() == null
-                    || !argument.argumentsDigest().equals(GraphGatewayCodec.sha256(argument.json()))) {
-                throw new GraphGatewayException(REFERENCE_DENIED);
-            }
             // Parsing happens only after authoritative lookup; the runtime never submits raw arguments.
             var arguments = codec.arguments(argument.json());
             if (!run.equals(resolve(capability, submitted.binding(), submitted.generation()))) {
@@ -110,12 +102,58 @@ public final class GraphToolGateway implements io.github.illuseahashmap.agent.ru
         } catch (ExecutionDeadline.Exceeded failure) {
             throw new GraphGatewayException(DEADLINE_EXPIRED);
         } catch (AgentExecutionException failure) {
-            throw new GraphGatewayException(switch (failure.failure().errorCode()) {
-                case "AGENT_TOOL_EXECUTION_IN_PROGRESS" -> TOOL_IN_PROGRESS;
-                case "AGENT_TOOL_EXECUTION_UNKNOWN" -> TOOL_OUTCOME_UNKNOWN;
-                default -> failure.failure().retryable() ? TOOL_TRANSIENT : TOOL_REJECTED;
-            });
+            throw toolFailure(failure);
         }
+    }
+
+    @Override public java.util.Optional<Reply> replay(String capability, InvokeRequest submitted) {
+        try (var budget = ExecutionDeadline.open(remaining(submitted.binding()), ticker)) {
+            var run = resolve(capability, submitted.binding(), submitted.generation());
+            var request = submitted.request();
+            require("TOOL".equals(request.kind()) && request.inputRefs().isEmpty()
+                    && request.operationId().matches("tool:[1-9][0-9]{0,2}"));
+            int ordinal = Integer.parseInt(request.operationId().substring(5));
+            require(ordinal <= run.binding().maxToolCalls());
+            var argument = verifiedArguments(run, request);
+            var access = new AgentTool.ResultAccessContext(run.binding().tenantCode(), run.binding().agentVersionId(), run.principalId(),
+                    run.versionToolSetJson(), run.nodeToolSetJson());
+            var history = new AgentToolRegistry.RunHistory(access, run.binding().runId());
+            registry.validateRunResultAccess(history);
+            String key = run.binding().runId() + ":" + request.operationId() + ":" + request.tool().toolCode();
+            if (!history.contains(key)) { return java.util.Optional.empty(); }
+            String output = registry.restoreStep(history, ordinal, request.tool().toolCode(), key, codec.arguments(argument.json()));
+            String ref = references.recordReceipt(run, request, key, GraphGatewayCodec.sha256(output));
+            budget.remaining();
+            resolve(capability, submitted.binding(), submitted.generation());
+            String binding = codec.fingerprint(run.binding());
+            String digest = codec.fingerprint(request);
+            return java.util.Optional.of(new Reply(binding, request.operationId(), digest,
+                    new Receipt(binding, request.operationId(), digest, ref, null, null), null));
+        } catch (ExecutionDeadline.Exceeded failure) {
+            throw new GraphGatewayException(DEADLINE_EXPIRED);
+        } catch (AgentExecutionException failure) {
+            throw toolFailure(failure);
+        }
+    }
+
+    private GraphReferencePort.Arguments verifiedArguments(GraphRunAuthorityPort.AuthorizedRun run, GraphGatewayContract.Invocation request) {
+        var argument = references.arguments(run, request);
+        if (argument == null || !codec.fingerprint(run.binding()).equals(argument.bindingDigest())
+                || !request.operationId().equals(argument.operationId())
+                || !request.tool().toolCode().equals(argument.toolCode())
+                || !request.tool().argumentsDigest().equals(argument.argumentsDigest())
+                || argument.json() == null
+                || !argument.argumentsDigest().equals(GraphGatewayCodec.sha256(argument.json()))) {
+            throw new GraphGatewayException(REFERENCE_DENIED);
+        }
+        return argument;
+    }
+    private static GraphGatewayException toolFailure(AgentExecutionException failure) {
+        return new GraphGatewayException(switch (failure.failure().errorCode()) {
+            case "AGENT_TOOL_EXECUTION_IN_PROGRESS" -> TOOL_IN_PROGRESS;
+            case "AGENT_TOOL_EXECUTION_UNKNOWN" -> TOOL_OUTCOME_UNKNOWN;
+            default -> failure.failure().retryable() ? TOOL_TRANSIENT : TOOL_REJECTED;
+        });
     }
 
     private GraphRunAuthorityPort.AuthorizedRun resolve(String capability, Binding binding, long generation) {

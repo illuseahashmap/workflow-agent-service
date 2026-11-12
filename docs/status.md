@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-11。本轮完成 LangGraph 单次 MODEL/确定性 VALIDATE 与原响应持久回执（V66），真实图/HTTP/JDBC 链路通过候选和校验回复丢失恢复；联合回归 52 项、内嵌 Java 60 项通过，另复测原生链路等 66 项。模型仍是确定性替身；生产 Worker/HTTP、路由/压缩/修复图节点及 Flowable 等价尚未完成，业务链路未切换。[采购四格式试点](fixtures/knowledge/pilots/procurement-approval-v1/README.md)保留 Markdown 单块、三格式原生关键词、金额区间与关联块三次实验，并单独验证 Word B09 条件分支与 Excel 单位干扰项。PDF 仅收件。以下为研发进度，不代表生产发布门禁通过。
+文档更新时间：2026-11-12。本轮接通认证派发 HTTP/Worker CLI、按 artifact 领取、V68 全平台 Run 事务准入，以及共享账户/连接器配置与审计。短执行片段、持久等待和 V67 隔离机制保留。配置与部署见[派发宿主手册](operations/graph-dispatch-host.md)，证据见[并发回归](quality/graph-capacity-regression.md)。图宿主默认关闭，业务版本未切换，不代表生产高并发验收通过。V66 模型/校验和 RAG 四格式既有基线保留，PDF 仍仅收件。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -83,12 +83,12 @@
 
 目标已明确为 [LangGraph 接入设计](architecture/langgraph-runtime-adoption-design.md)，不是继续开发自研 ExecutionTask/Continuation。现有 Java 原生执行器仍在运行，P-17 原生 7/7 不能记为框架接入成绩。
 
-1. **G0：补完部署和恢复契约。** 图内恢复、检查点所有权、JDBC 授权/引用/整图命令、MODEL/TOOL/VALIDATE 已有测试。下一步显式迁移路由、压缩、回读和有限修复节点，再接生产 Worker/HTTP、命令自动对账与 artifact 发布路由；不能用原生整 Run 执行器包一层代替，也不因基本链路跑通提前切换。
-2. **G1：复用既有治理跑 P-17。** Java 保留模型/工具/知识 Gateway、回执、授权和 Flowable 最终验收；框架接管内部游标。用同七场景和双采购压缩/恢复基线验收。本机脚本模型先行，方舟真实模型继续暂缓，不绕过出站保护。
-3. **G2：补跨实例配额、公平性及故障容量报告。** 验证慢供应商不拖垮独立资源、挂起不占执行槽、重试预算不叠加；成功工具/候选恢复不依赖模型重答，旧 Worker 不能污染图状态。
+1. **优先 G0/G2：收口运营与容量验收。** 认证派发/Worker CLI、全平台创建与终态重试准入、账户配置/审计、artifact 领取已实现。下一步补未知外呼可信对账、命令观察与最终业务接纳、拒绝/等待/隔离指标、加权/管理预留和多实例负载报告；原生在途并发及嵌套外呼仍不冒充图许可覆盖。同步 HTTP 未结束不能释放全部额度；完整业务后端发布切换仍受 G1/G3 门禁。
+2. **G1：补节点等价并复用治理跑 P-17。** 路由、压缩、回读、有限修复迁到图节点；Java 保留模型/工具/知识 Gateway、回执、授权和 Flowable 最终验收。用同七场景和双采购压缩/恢复基线验收。本机脚本模型先行，方舟真实模型继续暂缓，不绕过出站保护。
+3. **G2：补完整多实例故障与容量报告。** 硬上限竞争和未知额度保留已有真实 PostgreSQL 回归，仍需加权/预留策略、异步/连接预算、持续负载和故障恢复报告；验证慢供应商不拖垮独立资源、挂起不占执行槽，不能把少量并发单测当吞吐验收。
 4. **G3：新版本切换、旧运行排空并删除重复代码。** AgentVersion 固定 backend/artifact/state schema；禁止把运行中 v5 改为图状态、双执行或修改已发布版本。只有验收通过才移除原生内部循环/Recovery。
 
-本轮完成 G0 的可执行契约切片，G0–G3 整体均未完成；不新增通用图画布、写工具或第二套节点调度引擎。
+本轮在 G0 契约基础上推进 G2 治理组件，G0–G3 整体均未完成；不新增通用图画布、写工具或第二套节点调度引擎。2026-11-12 的最终回归与交叉审查记录见[并发治理回归](quality/graph-capacity-regression.md)。
 
 2026-11-11 用户已确认开源路线，商业 Agent Server 授权不再作为阻碍。新增 [agent-runtime-langgraph](../agent-runtime-langgraph/README.md)：框架图控制流、同步意图检查点、引用信封、持久等待、同会话 advisory lock + 官方 saver；未接生产 Gateway、未改现有 AgentVersion/Worker。通过脚本 `scripts/test-langgraph-runtime.ps1 -PostgresBin 'C:/Program Files/PostgreSQL/18/bin'` 跑 **27 项测试（21 图逻辑 + 6 PostgreSQL），0 skipped**，包括同租户两 Run、两次等待、拒绝不重答、进程强杀回执/候选复用和旧数据库会话不能写入。测试使用独立临时集群，不依赖 Docker/方舟，也不冒充 P-17 Java/Flowable 联调；容量/网络分区仍待验收。依据与边界见[接入设计](architecture/langgraph-runtime-adoption-design.md#10-已实现切片与回归证据2026-11-11)。
 

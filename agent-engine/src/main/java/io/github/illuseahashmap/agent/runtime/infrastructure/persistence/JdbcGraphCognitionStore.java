@@ -42,6 +42,16 @@ public final class JdbcGraphCognitionStore implements GraphCognitionPort {
         return executions.withCurrentRun(run, () -> historyLocked(run, request));
     }
 
+    @Override public boolean hasResponse(AuthorizedRun run, Invocation request) {
+        return executions.withCurrentRun(run, () -> {
+            historyLocked(run, request);
+            return jdbc.queryForObject("""
+                    SELECT count(*) FROM agent_graph_model_call WHERE tenant_code=:tenant AND run_id=:run
+                        AND ordinal=:ordinal AND request_digest=:digest AND response_json IS NOT NULL
+                    """, key(run).addValue("ordinal", ordinal(run, request)).addValue("digest", codec.fingerprint(request)), Long.class) == 1;
+        });
+    }
+
     @Override public ModelClaim beginModel(AuthorizedRun run, Invocation request, String configurationDigest) {
         int ordinal = ordinal(run, request);
         return executions.withCurrentRun(run, () -> {

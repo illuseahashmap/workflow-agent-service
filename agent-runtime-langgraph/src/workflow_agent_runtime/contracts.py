@@ -96,8 +96,15 @@ class InvocationReceipt(Contract):
 
 class Deferred(Contract):
     wait_id: Reference
-    reason: Literal["QUOTA", "RETRY"]
+    reason: Literal["QUOTA", "RETRY", "SLICE"]
     not_before_epoch_ms: int = Field(ge=0)
+
+
+class SliceBudget(Contract):
+    """Cooperative boundary, not cancellation of an already submitted request."""
+
+    max_invocations: int = Field(default=16, ge=1, le=64)
+    max_elapsed_ms: int = Field(default=30_000, ge=1, le=120_000)
 
 
 class ResumeSignal(Contract):

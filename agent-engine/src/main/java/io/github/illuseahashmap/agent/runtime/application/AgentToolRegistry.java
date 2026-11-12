@@ -295,6 +295,10 @@ public class AgentToolRegistry implements AgentToolCatalogPort {
         return row.output();
     }
 
+    public String restoreStep(RunHistory history, int step, String tool, String reference, Map<String, Object> arguments) {
+        return restoreStep(history, step, tool, reference, serialize(arguments));
+    }
+
     public void validateResultAccess(AgentTool.ResultAccessContext context, String toolCode, String output) {
         AgentTool tool = require(toolCode);
         if (context.versionToolSetJson() != null

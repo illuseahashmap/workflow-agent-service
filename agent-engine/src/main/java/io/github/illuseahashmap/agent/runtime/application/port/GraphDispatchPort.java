@@ -12,6 +12,9 @@ public interface GraphDispatchPort {
     /** Caller has already acquired admission capacity; no unbounded batch prefetch. */
     Optional<Claim> claim(String tenantCode, String workerId, int leaseSeconds);
 
+    /** Equal-share, least-recently-dispatched tenant; call only with a free local slot. */
+    Optional<Claim> claimNext(String workerId, int leaseSeconds);
+
     boolean renew(Claim claim, int leaseSeconds);
 
     /** Only transports the LangGraph interrupt token. Does not choose a next graph node. */

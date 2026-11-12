@@ -57,6 +57,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
         digest(artifact);
         require(run > 0 && modelBudget > 0 && modelBudget <= 100 && toolBudget >= 0 && toolBudget <= 200);
         return atomic(() -> {
+            var policy = GraphCapacityLock.lock(jdbc);
             lockRun(tenant, run);
             var key = Map.of("tenant", tenant, "run", run);
             var existing = jdbc.query("SELECT binding_json FROM agent_graph_execution WHERE tenant_code=:tenant AND run_id=:run",
@@ -65,6 +66,11 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                 Binding old = existing.getFirst();
                 require(old.graphArtifactDigest().equals(artifact) && old.maxModelCalls() == modelBudget && old.maxToolCalls() == toolBudget);
                 return old;
+            }
+            long outstanding = countOutstanding(null);
+            long tenantOutstanding = countOutstanding(tenant);
+            if (outstanding >= policy.outstanding() || tenantOutstanding >= policy.tenantOutstanding()) {
+                throw new GraphGatewayException(GraphGatewayException.Code.CAPACITY_EXHAUSTED);
             }
             var source = jdbc.query("""
                     SELECT r.*, v.tool_set_json::text AS tools, r.input_snapshot_json::text AS input,
@@ -95,24 +101,75 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
                     """, params);
             jdbc.update("INSERT INTO agent_graph_dispatch(tenant_code,run_id,command_id,status) VALUES (:tenant,:run,:command,'READY')", params);
             jdbc.update("UPDATE agent_run SET execution_backend='LANGGRAPH' WHERE tenant_code=:tenant AND id=:run", key);
+            jdbc.update("INSERT INTO agent_graph_tenant_turn(tenant_code) VALUES(:tenant) ON CONFLICT DO NOTHING", key);
             return binding;
         });
     }
 
     @Override public Optional<Claim> claim(String tenant, String worker, int seconds) {
         reference(tenant);
+        return claimEligible(tenant, worker, seconds);
+    }
+
+    @Override public Optional<Claim> claimNext(String worker, int seconds) {
+        return claimEligible(null, worker, seconds);
+    }
+
+    public Optional<Claim> claimNext(String worker, int seconds, String artifact) {
+        digest(artifact);
+        return claimEligible(null, worker, seconds, artifact);
+    }
+
+    private Optional<Claim> claimEligible(String requestedTenant, String worker, int seconds) {
+        return claimEligible(requestedTenant, worker, seconds, null);
+    }
+    private Optional<Claim> claimEligible(String requestedTenant, String worker, int seconds, String artifact) {
         require(worker != null && worker.matches("[A-Za-z0-9_.:-]{1,128}"));
         lease(seconds);
         return atomic(() -> {
+            var policy = GraphCapacityLock.lock(jdbc);
+            long active = jdbc.queryForObject("""
+                    SELECT count(*) FROM agent_graph_execution e JOIN agent_graph_dispatch d USING(tenant_code,run_id)
+                    WHERE d.status='RUNNING' AND e.state='ACTIVE' AND e.lease_expires_at>clock_timestamp()
+                    """, Map.of(), Long.class);
+            if (active >= policy.active()) { return Optional.empty(); }
+            var eligible = jdbc.query("""
+                    SELECT t.tenant_code FROM agent_graph_tenant_turn t
+                    WHERE (:target IS NULL OR t.tenant_code=:target)
+                      AND (SELECT count(*) FROM agent_graph_execution e JOIN agent_graph_dispatch d USING(tenant_code,run_id)
+                           WHERE e.tenant_code=t.tenant_code AND e.state='ACTIVE' AND d.status='RUNNING'
+                             AND e.lease_expires_at>clock_timestamp()) < :limit
+                      AND EXISTS (SELECT 1 FROM agent_run r JOIN agent_graph_execution e ON e.tenant_code=r.tenant_code AND e.run_id=r.id
+                          JOIN agent_graph_dispatch d ON d.tenant_code=e.tenant_code AND d.run_id=e.run_id
+                          WHERE r.tenant_code=t.tenant_code AND r.execution_backend='LANGGRAPH' AND r.status IN ('QUEUED','RUNNING')
+                            AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND d.available_at<=clock_timestamp()
+                            AND (:artifact IS NULL OR e.binding_json::jsonb->>'graph_artifact_digest'=:artifact)
+                            AND (d.status='READY' OR (d.status='RUNNING' AND e.lease_expires_at<=clock_timestamp())))
+                    ORDER BY t.last_dispatch,t.tenant_code LIMIT 1
+                    """, new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                    .addValue("target", requestedTenant, java.sql.Types.VARCHAR).addValue("limit", policy.tenantActive())
+                    .addValue("artifact", artifact, java.sql.Types.VARCHAR),
+                    (rs, n) -> rs.getString(1));
+            if (eligible.isEmpty()) { return Optional.empty(); }
+            String tenant = eligible.getFirst();
             var candidates = jdbc.query("""
                     SELECT r.id FROM agent_run r
                     JOIN agent_graph_execution e ON e.tenant_code=r.tenant_code AND e.run_id=r.id
                     JOIN agent_graph_dispatch d ON d.tenant_code=e.tenant_code AND d.run_id=e.run_id
                     WHERE r.tenant_code=:tenant AND r.execution_backend='LANGGRAPH' AND r.status IN ('QUEUED','RUNNING')
                       AND r.deadline_at>clock_timestamp() AND e.state='ACTIVE' AND d.available_at<=clock_timestamp()
+                      AND (:artifact IS NULL OR e.binding_json::jsonb->>'graph_artifact_digest'=:artifact)
                       AND (d.status='READY' OR (d.status='RUNNING' AND e.lease_expires_at<=clock_timestamp()))
                     ORDER BY d.available_at,r.id LIMIT 1 FOR UPDATE OF r SKIP LOCKED
-                    """, Map.of("tenant", tenant), (rs, n) -> rs.getLong(1));
+                    """, new org.springframework.jdbc.core.namedparam.MapSqlParameterSource("tenant", tenant)
+                    .addValue("artifact", artifact, java.sql.Types.VARCHAR), (rs, n) -> rs.getLong(1));
+            // Rotate even if this tenant's Run rows are transiently locked. A busy
+            // tenant must not monopolize successive bounded scans of the dispatcher.
+            jdbc.update("UPDATE agent_graph_capacity_policy SET dispatch_sequence=dispatch_sequence+1 WHERE id=1", Map.of());
+            jdbc.update("""
+                    UPDATE agent_graph_tenant_turn SET last_dispatch=(SELECT dispatch_sequence FROM agent_graph_capacity_policy WHERE id=1)
+                    WHERE tenant_code=:tenant
+                    """, Map.of("tenant", tenant));
             if (candidates.isEmpty()) { return Optional.empty(); }
             long run = candidates.getFirst();
             byte[] entropy = new byte[32];
@@ -240,7 +297,7 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
         });
     }
 
-    private void verifyCurrent(AuthorizedRun expected) {
+    void verifyCurrent(AuthorizedRun expected) {
         var rows = jdbc.query("SELECT e.*,r.agent_version_id,r.deadline_at " + LIVE,
                 Map.of("tenant", expected.binding().tenantCode(), "run", expected.binding().runId(), "generation", expected.generation()),
                 (rs, n) -> authority(rs));
@@ -273,6 +330,13 @@ public final class JdbcGraphExecutionStore implements GraphDispatchPort, GraphRu
         var found = jdbc.query("SELECT id FROM agent_run WHERE tenant_code=:tenant AND id=:run FOR UPDATE",
                 Map.of("tenant", tenant, "run", run), (rs, n) -> rs.getLong(1));
         if (found.isEmpty()) { throw denied(); }
+    }
+    private long countOutstanding(String tenant) {
+        return jdbc.queryForObject("""
+                SELECT count(*) FROM agent_graph_execution e JOIN agent_run r ON r.tenant_code=e.tenant_code AND r.id=e.run_id
+                WHERE r.status IN ('QUEUED','RUNNING','WAITING','PAUSED')
+                    AND (:tenant IS NULL OR e.tenant_code=:tenant)
+                """, new org.springframework.jdbc.core.namedparam.MapSqlParameterSource().addValue("tenant", tenant, java.sql.Types.VARCHAR), Long.class);
     }
     private <T> T atomic(Supplier<T> work) { return transaction.execute(status -> work.get()); }
     private Binding decode(String json) { return codec.read(json.getBytes(StandardCharsets.UTF_8), Binding.class); }

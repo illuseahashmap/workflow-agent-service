@@ -155,19 +155,39 @@ class HttpGovernedGateway:
         remaining = min(self.timeout, binding.deadline_epoch_ms / 1000 - time.time())
         if remaining <= 0:
             raise GatewayFailure("GATEWAY_DEADLINE_EXPIRED")
-        deadline = time.monotonic() + remaining
         body = {"binding": binding.model_dump(mode="json"), "generation": session.generation}
         if request is not None:
             body["request"] = request.model_dump(mode="json")
+        return self.exchange(
+            self.PREFIX + "/" + action,
+            body,
+            {"Authorization": "Bearer " + session.claim_token},
+            remaining,
+        )
+
+    def exchange(self, path, body, headers, remaining=None):
+        """Shared bounded transport; callers supply fixed internal paths, never user URLs."""
+        remaining = min(self.timeout, remaining if remaining is not None else self.timeout)
+        deadline = time.monotonic() + remaining
         encoded = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
         if len(encoded) > self.MAX_BYTES:
             raise GatewayFailure("GATEWAY_REQUEST_TOO_LARGE")
+
+        class RetainedConnection(
+            http.client.HTTPSConnection if self.secure else http.client.HTTPConnection
+        ):
+            # HTTP/1.0 and Connection: close otherwise close the socket object after
+            # headers, before our deadline-aware body reader can set its timeout.
+            retain_socket = False
+
+            def close(self):
+                if not self.retain_socket:
+                    super().close()
+
         connection = (
-            http.client.HTTPSConnection(
-                self.host, self.port, timeout=remaining, context=self.context
-            )
+            RetainedConnection(self.host, self.port, timeout=remaining, context=self.context)
             if self.secure
-            else http.client.HTTPConnection(self.host, self.port, timeout=remaining)
+            else RetainedConnection(self.host, self.port, timeout=remaining)
         )
 
         def budget():
@@ -190,15 +210,16 @@ class HttpGovernedGateway:
             transport.settimeout(budget())
             connection.request(
                 "POST",
-                self.PREFIX + "/" + action,
+                path,
                 encoded,
                 headers={
-                    "Authorization": "Bearer " + session.claim_token,
+                    **headers,
                     "Content-Type": "application/json",
                     "Accept": "application/json",
                 },
             )
             transport.settimeout(budget())
+            connection.retain_socket = True
             with connection.getresponse() as response:
                 # Never follow redirects or forward the capability to another host.
                 if 300 <= response.status < 400:
@@ -247,6 +268,7 @@ class HttpGovernedGateway:
         except (OSError, http.client.HTTPException):
             raise GatewayFailure("GATEWAY_UNAVAILABLE", retryable=True) from None
         finally:
+            connection.retain_socket = False
             connection.close()
 
     @staticmethod

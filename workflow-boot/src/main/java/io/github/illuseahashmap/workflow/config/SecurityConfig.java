@@ -22,6 +22,22 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    // These filters belong only to the business SecurityFilterChain. Servlet auto-registration
+    // would also run them after the isolated graph chain and consume/re-authenticate its requests.
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<AuthSecurityFilter> authFilterRegistration(AuthSecurityFilter filter) {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<ServiceTokenAuthenticationFilter> serviceFilterRegistration(
+            ServiceTokenAuthenticationFilter filter) {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     @Bean
     public CurrentPrincipalProvider currentPrincipalProvider() {
         return CurrentPrincipalContext::current;

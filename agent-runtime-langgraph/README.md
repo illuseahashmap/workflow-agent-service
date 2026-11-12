@@ -2,7 +2,7 @@
 
 选择 **LangGraph 开源库 + 官方 PostgreSQL checkpointer**，不依赖商业 Agent Server、LangSmith 账号或许可。锁定依赖见 `pyproject.toml` / `uv.lock`。
 
-当前是 G0 的可执行契约切片，**不是已经替换 Java 执行器的服务**。MODEL/TOOL/VALIDATE 已通过 Python 图、HTTP、Java JDBC 授权/引用和 PostgreSQL 检查点联调，V65/V66 提供持久会话、整图命令和模型/校验回执。生产 Worker/HTTP、artifact 路由和容量调度尚未接通；现有 AgentVersion 和业务运行没有切换。
+当前是 G0/G2 的可执行组件，**不是已经替换 Java 执行器的服务**。MODEL/TOOL/VALIDATE、V65/V66 持久层已有联调；V67 增加跨实例领取上限/等份轮转/调用隔离。认证 dispatch 客户端/Java 宿主、Worker CLI、artifact 领取、V68 全平台准入和账户配置/审计已接通。图宿主默认关闭，现有 AgentVersion 和业务运行没有切换。最新证据见[并发治理回归](../docs/quality/graph-capacity-regression.md)，环境变量和启动方式见[部署手册](../docs/operations/graph-dispatch-host.md)。
 
 ## 职责
 
@@ -15,6 +15,8 @@
 Python 不接收模型/MCP 凭据或任意服务 URL，不直读业务库；图内只存受限引用。引用不是授权，Gateway 必须检查来源与 Run 绑定。LangSmith SDK 是框架的传递依赖，但 `advance()` 显式关闭其自动云追踪，不需要开通服务。
 
 ## 检查点所有权
+
+`SliceBudget` 默认每片最多 16 次 Gateway 调用、30 秒协作时间阈值。在调用边界保存待执行意图并进入 SLICE interrupt，恢复不会递增已有操作 ID。时间阈值不抢占已发 HTTP；单次调用还有独立硬超时。Worker 的同步 RPC 占槽位/连接，调用返回或挂起后才释放，不宣称已完成异步 I/O。`poll()` 必须由宿主持续驱动，RPC 有界、续租频率与租约共同配置；服务停止时阻止后续动作，但不伪造远端取消。
 
 生产持久化入口是 `exclusive_postgres_checkpoint(dsn, binding.thread_id)`：在**同一个、不自动重连的数据库会话**上取得 advisory lock，并执行全部官方 saver 读写。竞争执行返回 `RuntimeBusy`，不得 TTL 强抢或另起随机 thread。连接失效后旧 saver 不能恢复写入，外部调用仍另受 Java 执行代次约束。
 
@@ -44,12 +46,12 @@ uv run ruff format --check .
 uv run pytest -q
 ```
 
-测试覆盖意图先提交、同租户双 Run、持久等待、版本/权限/预算、图互斥、进程强杀恢复、有界 HTTP 及 Registry 账本并发/丢 ACK。全套 52 项通过，其中 Java 启动测试内含 60 项 Java 回归：24 项 V65/V66 持久层/cognition 集成，包含真实 Python 图丢 model:2/validate:1 回复后的冷恢复、原响应先提交、串单、缺证拒绝与撤权。模型为确定性替身；不是 Flowable/P-17 联调，不将内嵌测试重复相加。
+测试覆盖意图先提交、同租户双 Run、持久等待、连续预算让出、Worker 槽位/交接/失租、版本/权限/图互斥、进程强杀、有界 HTTP、认证派发协议、全平台准入、共享账户与 Registry 账本并发/丢 ACK。当前数量及独立 Spring 安全链回归见[并发治理记录](../docs/quality/graph-capacity-regression.md)。模型为确定性替身；不是 Flowable/P-17 联调，不将内嵌测试重复相加。
 
 ## 仍需完成的接入
 
 1. 将独立意图路由、增量摘要、READ_RESULT 和有限 JSON 修复显式迁到图节点。当前 MODEL 不隐藏循环/修复/摘要调用；上下文超限明确拒绝。已有确定性证据校验不等于通用语义 Grounding，完整 P-17 等价仍须验证。
-2. 基于已有整图命令仓储接通生产 Worker、查询/ACK 丢失对账、受保护 HTTP、artifact 发布路由及准入配额；业务 Attempt 与执行代次已分开，只调度图实例，不复制图内部 nextStep。实际 V65 已在隔离集群验证，历史全量升级及完整命令服务另验。
+2. 接通命令/未知外呼可信对账、最终业务结果接纳与 artifact 发布路由。认证宿主和准入已实现但默认未启用；业务 Attempt 与执行代次分开，只调度图实例，不复制图内部 nextStep。V65–V68 在隔离集群验证，历史全量升级和最终业务提交另验。
 3. P-17 七场景和真实 Java/Flowable 故障回归，再做多实例公平配额、网络分区、取消及压力验收。
 4. 通过 G0–G3 后只对新发布版本启用；旧运行排空后删除原生内部循环和恢复实现。
 

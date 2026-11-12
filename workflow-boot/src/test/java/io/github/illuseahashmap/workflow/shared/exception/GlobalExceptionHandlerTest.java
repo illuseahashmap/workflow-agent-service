@@ -22,6 +22,19 @@ class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler exceptionHandler = new GlobalExceptionHandler();
 
+    @Test void admissionFullIs429EvenWhenWrappedByWorkflowOrBusinessLayer() {
+        var sql = new java.sql.SQLException("private SQL detail", "PWA01");
+        var wrapped = new org.springframework.dao.DataIntegrityViolationException("private table detail", sql);
+        assertThat(exceptionHandler.handleException(wrapped).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(exceptionHandler.handleFlowableException(new FlowableException("internal", wrapped)).getStatusCode())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        var business = new BusinessException(ErrorCode.INTERNAL_ERROR, "internal");
+        business.initCause(wrapped);
+        var response = exceptionHandler.handleBusinessException(business);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getBody().message()).doesNotContain("private", "internal");
+    }
+
     @ParameterizedTest
     @MethodSource("businessErrors")
     void mapsBusinessErrorsToStableHttpResponses(ErrorCode errorCode, HttpStatus expectedStatus) {

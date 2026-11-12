@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
+        if (capacityExhausted(exception)) { return capacityResponse(); }
         HttpStatus status = switch (exception.getErrorCode()) {
             case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
@@ -73,6 +74,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(FlowableException.class)
     public ResponseEntity<ApiResponse<Void>> handleFlowableException(FlowableException exception) {
+        if (capacityExhausted(exception)) { return capacityResponse(); }
         LOGGER.warn("Flowable operation failed", exception);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.fail(ErrorCode.WORKFLOW_ERROR.code(), ErrorCode.WORKFLOW_ERROR.defaultMessage()));
@@ -86,8 +88,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception exception) {
+        if (capacityExhausted(exception)) { return capacityResponse(); }
         LOGGER.error("Unhandled request failure", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail(ErrorCode.INTERNAL_ERROR.code(), ErrorCode.INTERNAL_ERROR.defaultMessage()));
+    }
+    private boolean capacityExhausted(Throwable failure) {
+        for (int depth = 0; failure != null && depth < 32; depth++, failure = failure.getCause()) {
+            if (failure instanceof java.sql.SQLException sql && "PWA01".equals(sql.getSQLState())) { return true; }
+        }
+        return false;
+    }
+    private ResponseEntity<ApiResponse<Void>> capacityResponse() {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.fail(ErrorCode.RATE_LIMITED.code(), "Agent capacity exhausted; retry after existing runs complete"));
     }
 }

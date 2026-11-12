@@ -1,6 +1,6 @@
 # 待修复问题与下一步整改
 
-文档更新时间：2026-11-11；本次同步 LangGraph/Java MODEL/VALIDATE 与持久原响应/回执（V66）及交叉审查修复：52 项联合回归内嵌 60 项 Java 测试，另复测原生相关 66 项；生产接入和完整 G0–G3 尚未完成。此前四项治理及二次评审三项逻辑缺陷已落实代码；恢复授权、多源冻结、结构定位、分数尺度、授权预算、定位隐式补值和同分排序不再列为缺失。验证记录见[状态页](../status.md)，生产环境、真实解析与质量门禁仍分项跟踪。
+文档更新时间：2026-11-12；认证派发宿主/Worker CLI、V68 全平台 Run 准入及账户配置/审计已接通，证据见[并发回归](graph-capacity-regression.md)，操作见[宿主手册](../operations/graph-dispatch-host.md)。最终业务接纳和完整 G0–G3 尚未完成，默认未切换业务后端。此前已修复事项不重新列为缺失，当前开放项与发布门禁继续分项跟踪。
 
 本文只保留尚未关闭的问题。已完成内容见[项目状态总览](../status.md)，不可破坏的架构约束见[长期设计总览](../architecture/long-term-design.md)。历史问题不在本文重复记录。
 
@@ -23,7 +23,7 @@
 - **下一步 G0**：采用开源 Python LangGraph + 官方 PostgreSQL saver，版本和依赖已锁定。继续生产 Gateway、稳定命令/查询/取消/对账与 artifact 路由；图库不等于分布式服务，同会话检查点保护不直接证明全部网络分区、外呼与业务提交安全。
 - **G1/G2**：沿用 P-17 七场景、同租户双采购及压缩恢复基线。工具成功而 checkpoint 未写、候选已存而 Run 未提交不能要求模型重答；Java 拒绝旧提交之外还须证明图状态不受迟到写污染。图内重试与平台预算统一，正常 resume 不增加失败 Attempt。
 - **G3**：AgentVersion 固定 backend/artifact/state schema；新版本切换、旧运行排空，删除原生内部循环与恢复代码，不长久维护两套竞争权威。租户/工具/知识/Flowable 语义及本地评分不得退化。
-- **已验证切片**：独立图/Python HTTP/Java MODEL/TOOL/VALIDATE 联合 52 项通过，无跳过（内嵌 Java 60 项）。V65/V66 已实现能力换代、不可变引用、整图命令及原响应/校验回执；新增真实图到 JDBC 权威/回执/Registry 的候选与校验回复丢失测试，恢复不增加模型或工具调用。共用原生拒绝/Schema/确定性证据校验，补了重复 JSON 字段覆盖拒绝和写后不可读响应等缺陷。**仍开放**：路由、增量摘要、READ_RESULT、有限修复节点迁移；生产 Worker/HTTP、artifact 发布路由与自动对账；真实模型/MCP、Java/Flowable/P-17 与容量。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
+- **已验证切片**：独立图/Python HTTP/Worker/Java MODEL/TOOL/VALIDATE 及 V65–V68 持久层保持回归，认证派发宿主/CLI、全平台事务准入、账户配置与审计已落地；最新数量与测试边界统一见[并发回归](graph-capacity-regression.md)。**仍开放**：未知外呼/命令可信对账、最终业务接纳、后端发布路由；路由、增量摘要、READ_RESULT、有限修复节点；真实模型/MCP、Java/Flowable/P-17 与容量报告。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
 - **部署决策（2026-11-11）**：用户已明确开源，不再采用商业 Agent Server，许可不再是阻碍。使用本地独立临时 PostgreSQL 可验证持久化，不要求本机 Docker；生产持久命令、Worker 并发上限、连接预算、网络分区和容量仍需交付，不能以新增模块冒充整个平台迁移。
 
 ## P0：发布与生产基线
@@ -161,7 +161,9 @@
 
 - 当前：Worker 已有有界线程池、队列及租户 RUNNING 数量筛选，默认阈值 2；COUNT 后锁不同候选 Run 存在并发竞争，不能视为跨实例硬上限。
 - 当前已增加 MCP 外部调用边界的跨实例租户令牌桶、并发硬上限和连接器熔断；该治理不替代 Worker 领取公平调度。
-- 缺口：Provider 级配额、统一全局调用许可、拒绝与积压指标、动态配额、租户公平分配和对账尚未闭环。目标为 Java 业务准入/调用治理 + LangGraph 内部推进/恢复，见[资源治理](../architecture/agent-resource-governance.md)；不自研第二套图节点任务队列，LangGraph 也不自动替代平台公平性验收。
+- V67 新图组件：已实现图接管 outstanding、全局/租户领取上限、持久等份轮转、调用包络/资源硬上限和未知隔离；同数据库竞争与恢复已回归。有预算图片段持久让出，有界 Worker 不预取，调用中不释放槽位。模型/工具已存回执独立只读恢复并复核授权；不能因隔离额度要求模型重答。
+- V68 补齐全平台 Run 创建/终态重试事务准入（含 NATIVE），认证 HTTP/Worker CLI 与 artifact 领取、Provider/连接器共享账户配置及 append-only revision 审计已接通。默认不开启图宿主，不自动切换业务版本。
+- 缺口：未知请求可信对账、最终业务接纳、拒绝/积压指标、加权/管理预留及全部配额策略统一版本管理仍待闭环；账户映射审计不能冒充全部治理策略历史。原生在途硬上限尚未由图机制替代。同步槽位仍持有 checkpoint 连接，嵌套调用精确计数与异步 I/O 待实现。目标见[资源治理](../architecture/agent-resource-governance.md)，不自研第二套图节点任务队列，也不把测试中的小并发等同容量验收。
 - 验收：单一租户或慢 Provider 不能长期占满全部执行资源，跨实例压力测试下无无界线程、连接和重复领取。
 
 ### P1-7 核心服务与查询仓储仍偏大

@@ -8,4 +8,6 @@ import io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayCont
 public interface GraphGatewayPort {
     Authorized authorize(String capability, AuthorizationRequest request);
     Reply invoke(String capability, InvokeRequest request);
+    /** No external I/O. Revalidates current access before reusing immutable stored results. */
+    default java.util.Optional<Reply> replay(String capability, InvokeRequest request) { return java.util.Optional.empty(); }
 }

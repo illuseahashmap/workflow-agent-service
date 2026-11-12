@@ -80,6 +80,16 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
 
     @Override public Authorized authorize(String capability, AuthorizationRequest request) { return tools.authorize(capability, request); }
 
+    @Override public java.util.Optional<Reply> replay(String capability, InvokeRequest request) {
+        if ("TOOL".equals(request.request().kind())) { return tools.replay(capability, request); }
+        var run = authority.authorize(capability, request.binding(), request.generation());
+        if ("VALIDATE".equals(request.request().kind()) || store.hasResponse(run, request.request())) {
+            // Raw responses are immutable. invoke cannot enter the provider branch once one exists.
+            return java.util.Optional.of(invoke(capability, request));
+        }
+        return java.util.Optional.empty();
+    }
+
     @Override public Reply invoke(String capability, InvokeRequest request) {
         if ("TOOL".equals(request.request().kind())) { return tools.invoke(capability, request); }
         long remaining = request.binding().deadlineEpochMs() - System.currentTimeMillis();

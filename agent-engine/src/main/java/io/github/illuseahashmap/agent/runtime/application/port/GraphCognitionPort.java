@@ -9,6 +9,7 @@ import java.util.List;
 /** Durable model-response/validation receipts, not a graph cursor or execution loop. */
 public interface GraphCognitionPort {
     History history(AuthorizedRun run, Invocation request);
+    boolean hasResponse(AuthorizedRun run, Invocation request);
     ModelClaim beginModel(AuthorizedRun run, Invocation request, String configurationDigest);
     void saveResponse(AuthorizedRun run, Invocation request, String ticket, ModelProviderResponse response);
     Receipt finishModel(AuthorizedRun run, Invocation request, String tool, String argumentsJson);

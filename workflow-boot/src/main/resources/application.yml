@@ -51,6 +51,12 @@ workflow:
       query-instruction: ${WORKFLOW_KNOWLEDGE_EMBEDDING_QUERY_INSTRUCTION:}
       corpus-instruction: ${WORKFLOW_KNOWLEDGE_EMBEDDING_CORPUS_INSTRUCTION:}
   agent:
+    graph:
+      enabled: ${WORKFLOW_GRAPH_ENABLED:false}
+      worker-token: ${WORKFLOW_GRAPH_WORKER_TOKEN:}
+      artifact-digest: ${WORKFLOW_GRAPH_ARTIFACT_DIGEST:}
+      lease-seconds: ${WORKFLOW_GRAPH_LEASE_SECONDS:90}
+      allow-loopback-http: ${WORKFLOW_GRAPH_LOOPBACK_HTTP:false}
     platform:
       max-steps: ${WORKFLOW_AGENT_PLATFORM_MAX_STEPS:4}
       checkpoint:

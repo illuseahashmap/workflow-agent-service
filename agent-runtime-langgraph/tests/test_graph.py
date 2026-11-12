@@ -12,12 +12,13 @@ from workflow_agent_runtime.contracts import (
     ModelDecision,
     ResumeSignal,
     RuntimeContractError,
+    SliceBudget,
 )
 from workflow_agent_runtime.graph import GovernedAgentGraph
 
 
 @contextmanager
-def runtime(path, binding, session, gateway, clock_ms=lambda: 1000):
+def runtime(path, binding, session, gateway, clock_ms=lambda: 1000, **options):
     with SqliteSaver.from_conn_string(str(path)) as saver:
         yield GovernedAgentGraph(
             binding=binding,
@@ -26,7 +27,51 @@ def runtime(path, binding, session, gateway, clock_ms=lambda: 1000):
             checkpointer=saver,
             artifact_digest="a" * 64,
             clock_ms=clock_ms,
+            **options,
         )
+
+
+def test_slices_survive_cold_restarts_without_consuming_extra_operations(
+    tmp_path, binding, session
+):
+    gateway = LedgerGateway(tmp_path / "ledger.db")
+    signal = None
+    counts = []
+    for _ in range(5):
+        with runtime(
+            tmp_path / "graph.db",
+            binding,
+            session,
+            gateway,
+            slice_budget=SliceBudget(max_invocations=1),
+        ) as graph:
+            view = graph.advance(signal)
+            counts.append(gateway.count(binding))
+            if view.status == "WAITING":
+                assert view.wait.reason == "SLICE"
+                assert graph.advance() == view
+                signal = ResumeSignal(checkpoint_id=view.checkpoint_id, wait_id=view.wait.wait_id)
+    assert view.status == "CANDIDATE_READY"
+    assert counts == [1, 2, 3, 4, 5]
+
+
+def test_elapsed_slice_yields_after_receipt_not_during_request(tmp_path, binding, session):
+    gateway = LedgerGateway(tmp_path / "ledger.db")
+    ticks = iter([0, 101])
+    with runtime(
+        tmp_path / "graph.db",
+        binding,
+        session,
+        gateway,
+        slice_budget=SliceBudget(max_invocations=16, max_elapsed_ms=100),
+        monotonic_ms=lambda: next(ticks),
+    ) as graph:
+        view = graph.advance()
+        assert view.status == "WAITING"
+        assert gateway.count(binding) == 1
+        snapshot = graph.graph.get_state(graph.config)
+        assert len(snapshot.values["receipt_refs"]) == 1
+        assert snapshot.values["pending"]["operation_id"] == "tool:1"
 
 
 @pytest.mark.parametrize("crash", ["model:1", "tool:1", "tool:2", "model:2", "validate:1"])
