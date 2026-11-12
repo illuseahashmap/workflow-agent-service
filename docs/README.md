@@ -1,6 +1,6 @@
 # 项目文档导航
 
-最近权威入口文档核对：2026-11-04（本次为 `main 1a470a1` 后的代码整改，代码、回归与文档随本轮提交发布；回归环境与边界见状态页，尚未部署 MinerU）。
+最近权威入口文档核对：2026-11-11（LangGraph MODEL/TOOL/VALIDATE、V65/V66 JDBC 持久层已有 52 项联合回归，内嵌 Java 60 项；真实图故障恢复使用确定性模型。生产 Worker/HTTP、路由/压缩/修复节点、Flowable 等价与容量验收尚未完成，现有业务未切换）。
 
 项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
 
@@ -23,6 +23,8 @@
 - [RAG 治理 V59 升级](operations/rag-governance-upgrade.md)：恢复授权、多来源索引冻结、ScorePolicy 与交换格式升级边界；不是 MinerU 部署说明。
 - [MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)：连接器、工具目录快照、AgentVersion 绑定、协议调用、安全和可靠性闭环。
 - [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
+- [LangGraph 内部运行时接入](architecture/langgraph-runtime-adoption-design.md)：开源部署、内部状态唯一权威、跨服务命令/结果、图版本、治理网关和 G0–G3 门禁；独立模块已有回归，业务接入待完成。
+- [LangGraph 治理 Gateway 契约](architecture/langgraph-governed-gateway-contract.md)：Python/Java 引用与身份交换、工具账本复用、有界 HTTP、联调证据及尚未开放的生产入口。
 - [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。
 - [工作流与 Agent 交互契约](architecture/workflow-agent-interaction-contract.md)：当前交互契约和表单扩展边界。
 - [历史交付记录](workflows/README.md)：保留分阶段需求、设计、任务和追踪证据，只用于审计，不承担当前状态判断。

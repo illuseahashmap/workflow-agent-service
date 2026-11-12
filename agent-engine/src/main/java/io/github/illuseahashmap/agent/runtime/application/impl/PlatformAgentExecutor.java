@@ -438,9 +438,8 @@ public class PlatformAgentExecutor implements AgentExecutor {
         var answer = candidate.response();
         if (ledger.size() > step - 1 || answer.toolCall() != null || isReadResponse(answer.content())
                 || parseToolCall(answer.content()) != null) throw checkpointFailure("Invalid final candidate", null);
-        requireAccepted(responsePolicy.evaluate(command.version(), answer));
-        schemaValidator.validateOutput(command.version().outputSchema(), answer.content());
-        memory.verify(answer.content());
+        new io.github.illuseahashmap.agent.runtime.application.AgentCandidateValidator(schemaValidator, objectMapper)
+                .validate(command.version(), answer, memory::verify);
         if (!alreadyValidated) {
             addStep(command, steps, "validation", "VALIDATION", "SUCCEEDED", null,
                     checkpoint("validation", step, memory.snapshot(null, candidate),

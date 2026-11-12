@@ -1,7 +1,9 @@
 # Agent 协作架构设计
 
-更新时间：2026-10-12
-状态：长期架构基线；首个 Agent Service Task 纵向闭环已实施，取消/人工确认、Guardrail、资源治理和生产级自治仍属于后续能力。
+更新时间：2026-11-11
+状态：业务协作架构基线；原生 Agent 闭环已实施，LangGraph 接入、Guardrail、统一资源治理和生产级自治仍待实施/验收。
+
+2026-11-11 运行时决策：目标采用[LangGraph 内部运行时](langgraph-runtime-adoption-design.md)，接管内部图状态、Checkpoint 和恢复；Java 保留业务 Run、权限、回执和 Flowable 完成权。下文的原生 Worker/Checkpoint v5 为当前实现及旧运行恢复依据，不是要求再为 LangGraph 复制同一套机制。部署接入、版本绑定及退出旧路径按 G0–G3 执行。
 
 MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.md)。本文负责长期架构边界，MVP 文档负责第一轮可开发任务拆分。
 当前实现状态和下一步目标以[《下一步计划与当前状态》](../status.md)为准。
@@ -14,7 +16,7 @@ MVP 实施设计见[《Agent MVP 实施设计》](agent-mvp-implementation-plan.
 本方案不以复制 Flowable Enterprise 或 Dify 的完整产品能力为目标。平台中的两类编排职责必须保持分离：
 
 - Flowable 负责 BPMN 业务流程、人工任务、长期状态、事务一致性和补偿路径。
-- `agent-engine` 负责模型调用、对话、工具执行、结构化输出、运行状态和成本审计。
+- Java `agent-engine` 负责版本、业务运行、模型/工具治理、结构化结果验收和成本审计；目标由 LangGraph 服务执行内部图与恢复，具体能力通过 Java 治理端口提供。
 
 Agent 不直接控制 Flowable，也不绕过工作流应用服务完成任务。
 
@@ -334,6 +336,8 @@ Conversation 只允许以下范围：
 第一阶段默认 `TASK`，禁止跨流程实例记忆。Message 保存用户可见内容、角色、顺序号、状态和必要的引用证据，不保存模型私有思维链。
 
 ### 7.5 AgentCheckpoint
+
+本节具体字段描述当前原生后端。目标图后端的内部状态只由 LangGraph 持久化，Java 保存其引用/审计；原生 v5 与图状态不同时驱动同一 Run。来源完整性、当前授权、稳定回执和增量摘要规则仍需迁移保留，不能改用框架默认消息裁剪替代。
 
 Agent Worker 不得把完整模型与工具循环视为一次不可恢复的方法调用。每次模型响应、工具请求、工具结果和人工中断后都应保存检查点，至少包含：
 
@@ -791,8 +795,8 @@ public interface AgentExecutor {
 
 `MODEL_ONLY` 由 `ModelOnlyAgentExecutor` 实现，`PLATFORM_AGENT` 由
 `PlatformAgentExecutor` 实现，`REMOTE_AGENT` 由 `RemoteAgentExecutor` 与
-`RemoteAgentConnector` 协作实现。三者复用同一套 AgentRun、Attempt、Step、Checkpoint、
-结果信封和事件协议，禁止各建一套运行账本。
+`RemoteAgentConnector` 协作实现。三者复用业务 AgentRun、Attempt、Step 审计、
+结果信封和事件协议，禁止各建一套业务账本。目标 LangGraph 后端改走异步提交/查询/恢复/取消端口；内部 Checkpoint 由固定 backend 持有，不能要求异步服务套进阻塞 execute() 或再返回一份原生游标。
 
 当前 `PlatformAgentExecutor` 已经把一次运行拆成“计划阶段”和“执行阶段”两阶段受控循环，
 工具意图只能通过 `AgentToolRegistry` 查找已注册的只读工具，并经过租户授权、输入 Schema、
@@ -801,7 +805,7 @@ public interface AgentExecutor {
 
 第一阶段使用 LangChain4j 最新稳定 BOM 的低层 `ChatModel`、`ToolSpecification`、结构化输出和消息类型作为模型适配器实现基础，不使用仍标记为实验性的 `langchain4j-agentic` 模块，也不让 LangChain4j 类型进入领域模型。
 
-工具循环由平台状态机控制，而不是直接使用自动执行工具的黑盒高层 API。这样才能在工具执行前完成租户权限、风险审批、幂等和检查点持久化。`ModelProviderPort` 隔离 LangChain4j，后续可以替换为 Spring AI 或直接厂商 SDK。
+当前原生工具循环由平台状态机控制，不使用自动执行工具的黑盒高层 API。目标循环迁至 LangGraph，但工具仍必须经过 Java Registry 的授权、Schema、稳定幂等、回执和风险门禁；不能从 Python 直接绕过治理调用 MCP。`ModelProviderPort` 继续隔离 LangChain4j，图内恢复不由该模型适配器负责。
 
 ### 8.2 凭据来源
 
@@ -1065,11 +1069,15 @@ SSE 仅作为实时传输，不作为状态存储。最终消息、运行状态�
 
 ## 11. 可靠性设计
 
+2026-11-11 决策：[LangGraph 接入设计](langgraph-runtime-adoption-design.md)明确内部恢复唯一权威及跨服务命令/结果交接。下文原生按 Run 领取仅描述已实现路径；新图普通挂起/resume 不创建失败 Attempt。Java 不维护同一图的任务/nextStep，RUNNING 业务数量也不等于实际调用并发。
+
 ### 11.1 Outbox/Inbox
 
 跨限界上下文的完成事件与业务数据在同一数据库事务中写入 Outbox。事务提交后只发送本机唤醒信号，Dispatcher 仍必须从数据库原子领取事件；进程在提交与唤醒之间宕机时，由本地定时扫描或 XXL-Job 调用恢复入口重新发现。消费者使用 Inbox 去重，事件至少投递一次，业务处理保证幂等。
 
 当前模块化单体中，`agent_run` 表本身就是 Agent 执行的持久命令队列，Worker 直接按租约领取，因此不再重复写入没有消费者的 `AgentRunRequested.v1`。只有真正跨上下文恢复 Flowable 的完成事件进入 Outbox；未来拆分独立 Agent 服务时，可在保持应用端口不变的前提下重新引入请求事件或消息中间件。
+
+LangGraph 作为独立服务后，Java 在 Run 创建事务保存实际有消费者的执行命令，稳定标识投递/查询/对账；不是给每个内部 Step 再复制 Outbox。图 checkpoint 与 Java Run 不假定跨库原子，图持久输出经平台验证后才写业务终态及完成 Outbox。丢回调以状态查询补偿，Flowable 输出映射契约保持不变。
 
 核心事件：
 
@@ -1085,7 +1093,7 @@ AgentHumanInputRequired.v1
 ### 11.2 幂等与并发
 
 - AgentRun 以 `idempotencyKey` 建立唯一约束。
-- Worker 通过带过期时间的租约领取 AgentRun，并定期续约；租约过期后其他 Worker 可以从检查点接管。
+- 当前原生 Worker 通过租约领取 AgentRun 并续约；目标图的内部租约/接管由 runtime 负责。Java 命令租约到期只允许重投/对账，不能另建竞争图；旧 Worker 写图 checkpoint 的隔离由 G2 单独验证。
 - 同一 Conversation 同时只允许一个会改变会话状态的 AgentRun，避免消息顺序分叉。
 - 回调先检查运行状态和 Flowable 当前 Activity，再修改流程。
 - 恢复流程时使用现有流程实例锁，但必须在独立事务中获取，不得重入原流程事务。
@@ -1445,21 +1453,21 @@ CollaborativeProcessDraft
 
 ## 19. 现有项目验证与价值判断
 
-调研时间：2026-08-03。以下项目用于验证架构方向，不代表直接复制其实现。
+最初调研时间：2026-08-03；2026-11-11 更新 LangGraph/LangChain4j 职责取舍，来源及部署限制见接入设计。以下参考不代表项目已实现对应能力。
 
 | 项目 | 已验证能力 | 对本方案的结论 |
 | --- | --- | --- |
 | Flowable Enterprise Agent Engine | 独立 Agent Engine、BPMN AI Agent Task、结构化输入输出、设计期测试、审计以及非事务模型调用 | “Flowable 编排人和 Agent，Agent 作为流程参与者”的方向已被原厂产品验证；开源 Flowable Engine 中没有对应的完整 Agent 平台能力，本项目仍有开源实现价值 |
 | Camunda AI Agent Connector | BPMN Agent Task、多 Provider、结构化响应、工具调用、人工反馈循环和 BPMN 显式治理 | 验证 BPMN 应作为外层权威编排，审批、补偿和工具边界应由流程结构表达，而不是只写在 Prompt 中 |
 | Dify | Provider 插件、工作区凭据、发布流程、Human Input 节点、持久暂停恢复、Worker 执行和 Redis 实时事件 | 验证租户自助 Provider、草稿发布、异步运行和人机暂停恢复是成熟产品的必要能力 |
-| LangGraph | 持久 Checkpoint、Interrupt、人工批准/编辑/拒绝以及故障恢复 | 证明长时 Agent 不能只保存最终结果；本方案因此增加 `AgentCheckpoint` 和可恢复状态机 |
+| LangGraph | 持久 Checkpoint、Interrupt 和内部恢复 | 目标直接承接内部编排/恢复，不再以借鉴为名重复自研图引擎；外部回执和业务验收仍由平台持有 |
 | CIB seven AI Agent Connector | Java、LangChain4j、BPMN Service Task、OpenAI Compatible、工具、记忆和审计 | 直接验证 Java BPM 引擎接入 LangChain4j 的工程可行性；其密钥可来自流程变量、调用可处于引擎事务，本方案采用凭据引用和事务外执行以提高多租户安全性与可靠性 |
-| LangChain4j | Java Provider 抽象、低层工具调用、持久化 Memory 扩展、结构化输出和 OpenAI Compatible | 适合作为模型协议和工具 Schema 库；平台仍需自行负责租户治理、持久状态机、审批、幂等和流程关联 |
+| LangChain4j | Java Provider、工具 Schema、结构化输出、MCP/Embedding 适配及 Agentic 扩展 | 复用 Java 基础设施，Agentic 不与选定的 LangGraph 重复编排；平台保留业务状态、审批、幂等和治理 |
 | n8n | AI Agent 工具调用、敏感工具人工审批、流式交互和多种凭据 | 作为可自托管 fair-code 产品，验证工具分级审批的产品价值，但不作为本项目开源许可或 BPMN 架构基线 |
 
 ### 19.1 可实现性结论
 
-方案可实现，且不存在必须自行研发模型推理协议的技术障碍。Flowable 原生异步可触发 Service Task 提供流程等待态，LangChain4j 提供 Java 模型和工具协议，PostgreSQL 可以承载 AgentRun、Checkpoint 与 Outbox，现有 Redis 用于流程锁和实时事件加速。
+Flowable 提供业务等待态，LangChain4j 提供 Java 模型和工具协议，平台 PostgreSQL 承载业务 Run/回执/Outbox。目标采用开源 LangGraph + 官方 PostgreSQL saver，不采用商业 Agent Server。独立图契约模块已通过本地回归，平台持久命令/认证网关/取消/容量尚未接通；不能把现有单体或库级测试当作新部署已经验证，完整边界见 G0–G3。
 
 主要工程难点不在“调用一次 LLM”，而在以下边界：
 
@@ -1469,7 +1477,7 @@ CollaborativeProcessDraft
 4. 多租户凭据、工具权限、数据范围和费用隔离。
 5. 工具写操作的审批、幂等和补偿。
 
-这些难点均有成熟项目中的可参考模式，且可以在当前 Maven 多模块架构内分阶段实现。
+这些边界可借鉴成熟模式；目标涉及 Java 模块与独立 Python 服务，跨服务幂等、版本和恢复必须按 G0–G3 实证，不再假定全部在 Maven 模块的同库事务内完成。
 
 ### 19.2 方案优势
 

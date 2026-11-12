@@ -1,6 +1,6 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-09。[采购四格式试点](fixtures/knowledge/pilots/procurement-approval-v1/README.md)保留 Markdown 单块、三格式原生关键词、金额区间与关联块三次实验，并单独验证 Word B09 条件分支与 Excel 单位干扰项。PDF 仅收件。以下为研发进度，不代表生产发布门禁通过。
+文档更新时间：2026-11-11。本轮完成 LangGraph 单次 MODEL/确定性 VALIDATE 与原响应持久回执（V66），真实图/HTTP/JDBC 链路通过候选和校验回复丢失恢复；联合回归 52 项、内嵌 Java 60 项通过，另复测原生链路等 66 项。模型仍是确定性替身；生产 Worker/HTTP、路由/压缩/修复图节点及 Flowable 等价尚未完成，业务链路未切换。[采购四格式试点](fixtures/knowledge/pilots/procurement-approval-v1/README.md)保留 Markdown 单块、三格式原生关键词、金额区间与关联块三次实验，并单独验证 Word B09 条件分支与 Excel 单位干扰项。PDF 仅收件。以下为研发进度，不代表生产发布门禁通过。
 
 本文是“下一步计划”唯一入口。长期原则见[长期设计总览](architecture/long-term-design.md)，具体缺陷见[待修复问题](quality/known-issues.md)。
 
@@ -62,7 +62,7 @@
 | P0 | 流程操作审计 | 租户隔离查询 API 支持事件、实例、Trace、时间范围和分页；人工流程操作及 Agent 节点成功、人工复核、空结果继续、运维保持决策均进入同一审计账本 | 通过容器化环境验证全链路可追溯，继续补齐派单规则命中/兜底决策证据 |
 | P1 | 租户纵深隔离 | 平台业务表及迁移时已存在且带租户字段的 Flowable 表已有强制 RLS；最小权限部署模板未完成 | 先补独立迁移/运行账号模板，在非超级用户下完成真实 Flowable 表评估、系统 Worker 授权和跨租户负面测试 |
 | P1 | API 契约治理 | 路由覆盖、成功响应模型和 Agent 运行接口错误响应已继续收敛 | 全部认证接口错误响应、DTO、分页模型和客户端类型生成完整 |
-| P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；[Checkpoint v5](architecture/agent-collaboration-design.md) 增量合并工作摘要，按当前权限回读不可变工具记录，核验声明的决策字段。同租户两单、连续两次压缩、成功工具回执缺失、终态事务回滚、预算调小、JSON 修复与 Flowable 分支已纳入 PostgreSQL 回归 | Docker 恢复后完成真实强杀、租约过期、运行中外部调用边界暂停和跨实例压力；将 RAG Evidence/超大对象外置并扩展恢复等价评测，再推进集中式批量续租、公平调度、Guardrail 和高风险写工具确认 |
+| P1 | Agent Runtime 生产可靠性 | Heartbeat 已改为实例级固定共享调度池并限制活动注册总量，具备调度延迟、续租耗时、队列、活动数和容量指标；[Checkpoint v5](architecture/agent-collaboration-design.md) 增量合并工作摘要，按当前权限回读不可变工具记录，核验声明的决策字段。同租户两单、连续两次压缩、成功工具回执缺失、终态事务回滚、预算调小、JSON 修复与 Flowable 分支已纳入 PostgreSQL 回归 | 按 LangGraph G0–G3 验证接入、跨实例故障与容量，迁移双采购恢复基线并排空旧运行；外置大对象、配额/Guardrail 等治理继续保留，不为新图另建 Java 内部 Recovery |
 | P1 | Agent 交互扩展 | 输入契约和流程实例运行查询已完成首个切片 | 版本化表单、复杂对象/数组控件、外部幂等提交和待补录任务完成 |
 | P1 | 结构化意图与能力路由 | `PLATFORM_AGENT` 已将原自然语言 `PLAN` 升级为版本化 `RouteDecision`，支持 `DIRECT/RAG/MCP/RAG_MCP/ABSTAIN`；工具目录持久化 `DIRECT/RAG/MCP` 能力、风险和副作用元数据，路由不依赖工具命名；LangChain4j 优先发送冻结 JSON Schema，仅在 Provider 明确不支持时于同一总预算内降级 JSON mode；工具交集和路由冻结到 Checkpoint | 增加离线路由评测集和主体权限/风险策略的显式路由投影；用真实 DeepSeek 分别回归 DIRECT、RAG、MCP、RAG_MCP、ABSTAIN，确认降级、失败策略与流程分支 |
 | P1 | LangChain4j 基础设施复用 | Chat Completions、Responses API 与 MCP 协议处理已默认切换到 LangChain4j，原适配器保留为显式回滚开关；平台端口、治理和可靠执行语义未变 | 继续验证文档解析、Embedding、向量存储和 Rerank 适配；扩充真实 Provider 与 MCP Server 兼容矩阵 |
@@ -77,12 +77,35 @@
 
 问题清单现按“待实现 / 已修复待验收 / 部署风险”分类。原 P1-10 合并到 P1-2a；P1-2d/P1-13 的代码与本地回归已完成，不再列为同名开放缺陷。跨实例配额、非超级用户 RLS、生产告警、Grounding/评测门禁和容器故障验收仍需继续，不能据此将整个平台标记为生产闭环。
 
-2026-11-02 用户选型后，研发主线调整为 RAG 结构化摄取设计与后续实现；当时只交付设计，2026-11-04 已进一步落实四项前置治理代码及回归，但 MinerU 仍未接入。以下是开发顺序，不是生产风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放，不能因先做 RAG 而豁免上线验收。
+2026-11-02 主线转向 RAG 结构化摄取，2026-11-04 已落实前置治理代码，MinerU 仍未接入。2026-11-11 根据平台并发与避免重复造轮子的要求，当前优先项调整为下述运行时架构接入，RAG 路线及现有基线保留。开发顺序不是风险排序：P0、非超级用户 RLS、Runtime 和容器门禁继续开放。
 
-1. 研发主线为[四格式原生证据摄取](architecture/rag-four-format-evidence-design.md)。原生金额表已改为先匹配业务范围、后匹配金额，H02/H08/H10 纳入[三格式固定 K 回归](fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)。已用另一份[样品流转制度与规模实验](fixtures/knowledge/pilots/specimen-transfer-v1/README.md)复核：固定 Top5 取全 6/8；扩大原生块数后并发延迟显著上升。范围目录扫描已完成[V63 性能与排序复测](fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)。[V64 比较双方证据复测](fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已收口 S05/H10。[S06 受控术语复测](fixtures/knowledge/pilots/specimen-transfer-v1/controlled-terms-v1/README.md)已补齐两个规模的固定 Top5，缺触发原文时知识工具拒绝。下一步是在符合出站策略的环境复跑真实模型的有证据作答与缺证拒答；不能用工具层结果替代。PDF 的 MinerU D0 可并行。
+### 当前优先项：LangGraph 内部运行时与平台治理
+
+目标已明确为 [LangGraph 接入设计](architecture/langgraph-runtime-adoption-design.md)，不是继续开发自研 ExecutionTask/Continuation。现有 Java 原生执行器仍在运行，P-17 原生 7/7 不能记为框架接入成绩。
+
+1. **G0：补完部署和恢复契约。** 图内恢复、检查点所有权、JDBC 授权/引用/整图命令、MODEL/TOOL/VALIDATE 已有测试。下一步显式迁移路由、压缩、回读和有限修复节点，再接生产 Worker/HTTP、命令自动对账与 artifact 发布路由；不能用原生整 Run 执行器包一层代替，也不因基本链路跑通提前切换。
+2. **G1：复用既有治理跑 P-17。** Java 保留模型/工具/知识 Gateway、回执、授权和 Flowable 最终验收；框架接管内部游标。用同七场景和双采购压缩/恢复基线验收。本机脚本模型先行，方舟真实模型继续暂缓，不绕过出站保护。
+3. **G2：补跨实例配额、公平性及故障容量报告。** 验证慢供应商不拖垮独立资源、挂起不占执行槽、重试预算不叠加；成功工具/候选恢复不依赖模型重答，旧 Worker 不能污染图状态。
+4. **G3：新版本切换、旧运行排空并删除重复代码。** AgentVersion 固定 backend/artifact/state schema；禁止把运行中 v5 改为图状态、双执行或修改已发布版本。只有验收通过才移除原生内部循环/Recovery。
+
+本轮完成 G0 的可执行契约切片，G0–G3 整体均未完成；不新增通用图画布、写工具或第二套节点调度引擎。
+
+2026-11-11 用户已确认开源路线，商业 Agent Server 授权不再作为阻碍。新增 [agent-runtime-langgraph](../agent-runtime-langgraph/README.md)：框架图控制流、同步意图检查点、引用信封、持久等待、同会话 advisory lock + 官方 saver；未接生产 Gateway、未改现有 AgentVersion/Worker。通过脚本 `scripts/test-langgraph-runtime.ps1 -PostgresBin 'C:/Program Files/PostgreSQL/18/bin'` 跑 **27 项测试（21 图逻辑 + 6 PostgreSQL），0 skipped**，包括同租户两 Run、两次等待、拒绝不重答、进程强杀回执/候选复用和旧数据库会话不能写入。测试使用独立临时集群，不依赖 Docker/方舟，也不冒充 P-17 Java/Flowable 联调；容量/网络分区仍待验收。依据与边界见[接入设计](architecture/langgraph-runtime-adoption-design.md#10-已实现切片与回归证据2026-11-11)。
+
+同日继续接入：新增 [治理 Gateway 契约](architecture/langgraph-governed-gateway-contract.md)、Java 工具桥接和 Python 有界 HTTP 客户端。加 `-IncludeJava` 联合脚本实测 **52 passed / 0 skipped**（原有 27 + HTTP 24 + Java 启动 1）；Java 启动测试实际跑 19 Gateway、12 Registry、1 PostgreSQL/跨语言联调、4 架构约束，均通过，不重复相加计数。覆盖丢 ACK 后重放、同租户三 Run 独立能力/参数、6 请求原子抢占、撤权、慢响应头/正文和暂态失败分类。当前接口仅测试服务器暴露，权威授权/引用存储仍使用夹具，未接 Flowable，MODEL/VALIDATE 明确拒绝；没有启用新业务版本、改业务库或调用付费模型。另复测原生 Executor/Worker 与 Registry/Gateway 共 60 项，通过；不把重叠测试重复计数。
+
+同日后续（替代上一段“权威/引用存储仍缺实现”的状态）：新增 V65 和 JDBC 执行会话/不可变引用/整图命令仓储，非自动注册生产 Bean。原生只领取 NATIVE；reserve 不接管有 Attempt 的运行，事务内同时冻结绑定和登记命令。能力仅存哈希，重领换代；等待释放执行权，旧代次不能续租/提交；观察结果不直接完成业务 Run。新增 **13 项真实 PostgreSQL 集成**（含实际 V65、非 owner RLS、八并发单赢家、故障回滚），联合脚本仍为 52 项，内嵌 Java 增至 **49 项**，零失败/跳过。交叉审查修复与尚未启用部分见 [Gateway 契约](architecture/langgraph-governed-gateway-contract.md#持久交接与交叉审查)。下一步是 MODEL/VALIDATE、可信模型结果提交及生产准入/命令对账，不是扩展 Java 图内调度。
+
+同日 V66 进展（当前状态）：`GraphCognitionGateway` 通过已有 Provider 端口执行一次模型调用；原响应先落库，工具参数与模型回执原子发布。VALIDATE 共用原生拒绝/Schema/证据门禁，不调用模型；拒绝、撤权、串单均不能靠重答绕过。新增真实 Python 图 → HTTP → JDBC 权威/回执 → Registry 联调，丢 model:2 与 validate:1 回复后重新打开 PostgreSQL 图恢复，模型始终 2 次、工具 1 次。累计 **52 项外层 / 60 项内嵌 Java**，另复测原生 Executor/Worker/结果策略/Registry/Gateway **66 项**，均通过且不相加计总。交叉审查补了重复 JSON 字段拒绝、响应落库可回读、模型迟到结果拒绝等。没有启用业务版本、访问付费模型或推进 Flowable；剩余边界见 [MODEL/VALIDATE 契约](architecture/langgraph-governed-gateway-contract.md#model-与-validate-的持久边界v66)。
+
+### 保留的 RAG 与发布路线
+
+1. RAG 专项继续按[四格式原生证据摄取](architecture/rag-four-format-evidence-design.md)。原生金额表已改为先匹配业务范围、后匹配金额，H02/H08/H10 纳入[三格式固定 K 回归](fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)。已用另一份[样品流转制度与规模实验](fixtures/knowledge/pilots/specimen-transfer-v1/README.md)复核：固定 Top5 取全 6/8；扩大原生块数后并发延迟显著上升。范围目录扫描已完成[V63 性能与排序复测](fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)。[V64 比较双方证据复测](fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已收口 S05/H10。[S06 受控术语复测](fixtures/knowledge/pilots/specimen-transfer-v1/controlled-terms-v1/README.md)已补齐两个规模的固定 Top5，缺触发原文时知识工具拒绝。真实模型有证据作答与缺证拒答仍待在合规出站环境验收，当前按用户要求暂缓；不能用工具层结果替代。PDF 的 MinerU D0 可并行。
+   - P-17 [联合验收](fixtures/knowledge/pilots/p17-joint-v1/README.md)已将同 Run 的检索回读、工具审计与 Flowable 去向接入评分器。2026-11-10 本机七个 DEV 变体三项均为 7/7：真实 PostgreSQL/Worker/Flowable、脚本模型、进程内只读订单服务。实测跨 Run 互换任一证据段均不可判定，嵌入其他 Run 的工具回执判失败。MCP 快照重复绑定、解绑、重绑再发布已回归。本轮未调用方舟；后续真实模型重复试验与独立复核另行验收。
+
 2. 按[评测与路由专项](architecture/rag-evaluation-and-routing-delivery-plan.md)在固定身份与快照下分别验收四种格式。各格式 E1 依赖其自身结构质量与可追溯索引；收口 Grounding/Citation、历史时效/金标复核和发布门禁后，再依据基线决定是否启动加权融合、重排或查询路由。
 3. 在生产发布前完成 P0 运维闭环：重新检查 Docker/通知接线，补齐派单规则命中/兜底审计，真实触发 Prometheus/Alertmanager 告警并回放通知、前端处置和流程审计；完成独立迁移/运行账号模板与非超级用户 RLS 验证。
-4. 完成 Agent Runtime 和知识摄取真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；外置 RAG Evidence/超大对象并建立恢复等价评测，再评估集中式批量续租。遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。同阶段完成结构化意图路由五种模式、一次修复、越权、降级、失败策略和 ABSTAIN 的真实 Provider 及评测验收，补主体权限/风险显式投影。
+4. 完成 Agent Runtime 和知识摄取真实故障验收：Worker 强杀、租约过期、外部调用边界暂停和跨实例压力；外置 RAG Evidence/超大对象并建立恢复等价评测，原生与目标图分别按各自租约权威验收，不重复建设图内恢复。遵循 V55/V56 停旧 Worker、V57 工具快照和 V58 来源快照/Profile 计数器手册，不重写历史版本。同阶段完成结构化意图路由五种模式、一次修复、越权、降级、失败策略和 ABSTAIN 的真实 Provider 及评测验收，补主体权限/风险显式投影。
 5. MCP 进入生产强化而非重新开发协议：LangChain4j 已接管 initialize、工具目录、JSON-RPC 关联和 tools/call；HTTPS 连接地址防护已有实现，下一步完成生产代理/网关边界、真实 Secret Provider、确定性 MCP Server 容器故障注入和多实例租户治理压力测试。人工确认与未知结果处置完成后再实施 MCP-4 写工具。
 6. 完善 Agent Runtime 业务门禁：版本化 Guardrail、成本预算、租户业务规则、公平调度和高风险写工具人工确认。
 7. 组织关系解析作为独立并行路线，使用 `organization-engine` 和 `OrganizationGraphQueryPort`，不得并入 RAG 检索编排，也不得由模型决定审批参与人。
@@ -90,7 +113,7 @@
 
 ### LangChain4j 采用边界
 
-引入 LangChain4j 的目标是减少通用 AI 基础设施重复建设，不是替换 Workflow Agent 的领域模型和可靠运行时。
+LangChain4j 用于减少通用 AI 基础设施重复建设，不替换业务领域和治理。内部图运行时目标由 LangGraph 接管，二者不竞争编排/恢复权威；独立模块已开始实施，但业务接入门禁通过前原生执行器仍是当前路径。
 
 优先复用：
 
@@ -103,8 +126,8 @@
 平台继续拥有：
 
 - `AgentDefinition`、不可变 `AgentVersion` 及租户权限；
-- `AgentRun / Attempt / Step / Checkpoint` 运行账本；
-- Lease、Heartbeat、Recovery、Outbox/Inbox、幂等和迟到结果隔离；
+- AgentRun/业务 Attempt、Step 审计投影和框架执行/Checkpoint 关联；内部恢复位置由选定 backend 持有；
+- 业务命令、Outbox/Inbox、调用幂等和最终迟到结果拒绝；原生 Lease/Heartbeat/Recovery 仅保护原生后端，目标图内租约与恢复由 runtime 负责；
 - Tool Registry、MCP 目录审核、版本冻结、凭据、配额和执行审计；
 - RetrievalProfile、知识范围授权、Evidence/Citation/Trace 和 Grounding 门禁；
 - Flowable 恢复、人工确认、人工接管和证据驱动自治。
@@ -114,7 +137,7 @@
 1. LangChain4j 只能通过现有或新增的应用层端口接入，不得让领域和应用层依赖其类型。
 2. 优先建立 `LangChain4jMcpClientAdapter`、模型适配器及 Embedding/Rerank 适配器，不一次性重写 Agent Runtime。
 3. LangChain4j `AI Services`、`ChatMemory` 和实验性 Agentic 能力不得成为流程状态、运行账本或恢复语义的权威来源。
-4. 替换必须保持已有租户、版本、权限、审计、Checkpoint 和 Flowable 结果契约不变。
+4. 替换保持租户、版本、权限、审计和 Flowable 结果契约；内部 Checkpoint 按 backend 单一权威管理，不要求跨框架共用原生 v5。版本绑定与旧运行排空遵循 G3。
 5. 适配验证至少比较协议兼容、故障分类、恢复行为、可观测性、依赖稳定性和删除的自研代码量；不能只因框架存在就迁移。
 6. 新增模型协议、MCP 传输、Embedding、向量库或 Rerank 能力时，应先评估 LangChain4j；无明确缺口不得继续手写同类通用组件。
 7. 结构化 PDF 采用 MinerU 专业解析适配，不要求 LangChain4j 自身完成 OCR/表格识别。通用切分、RRF 与重排优先验证 LangChain4j 复用；结构/资产归一化、富结构切分、版本/权限与发布治理仍由平台持有。当前通用组件不因方案确认就视为已替换。

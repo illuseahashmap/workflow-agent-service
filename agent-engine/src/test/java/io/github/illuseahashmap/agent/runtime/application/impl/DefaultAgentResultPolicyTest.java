@@ -45,6 +45,19 @@ class DefaultAgentResultPolicyTest {
                 .status()).isEqualTo(ResultStatus.REJECTED);
     }
 
+    @Test
+    void duplicateFieldsCannotOverrideARefusalBeforeJsonRepair() {
+        assertThat(policy.responseSignal(response("{\"resultStatus\":\"REJECTED\",\"resultStatus\":\"SUCCESS\"}", "stop"))
+                .reasonCode()).isEqualTo("AGENT_RESULT_STATUS_INVALID");
+        assertThat(policy.responseSignal(response("{\"items\":[{\"code\":1},{\"code\":2}]}", "stop")).accepted()).isTrue();
+    }
+
+    @Test
+    void ordinaryMalformedJsonCanStillReachExistingSchemaRepair() {
+        assertThat(policy.responseSignal(response("{\"count\":", "stop")).accepted()).isTrue();
+        assertThat(policy.responseSignal(response("plain text", "stop")).accepted()).isTrue();
+    }
+
     private ModelProviderResponse response(String content, String finishReason) {
         return new ModelProviderResponse(content, "model", "request", finishReason, 1, 1, 0, 10);
     }

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "allMet": {"subject":"P-17","facts":{"approval":"MET","budget":"MET","quoteValidity":"MET","admission":"MET","signingAuthority":"MET"}},
+  "lowBudget": {"subject":"P-17","facts":{"approval":"MET","budget":"INSUFFICIENT","quoteValidity":"MET","admission":"MET","signingAuthority":"MET"}},
+  "otherOrder": {"subject":"P-18","facts":{"approval":"MET","budget":"MET","quoteValidity":"MET","admission":"MET","signingAuthority":"MET"}}
+}

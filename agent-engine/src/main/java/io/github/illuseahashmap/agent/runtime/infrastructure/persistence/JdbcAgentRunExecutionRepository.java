@@ -88,6 +88,7 @@ public class JdbcAgentRunExecutionRepository implements AgentRunExecutionReposit
                         SELECT *
                         FROM agent_run
                         WHERE status = 'QUEUED'
+                          AND execution_backend = 'NATIVE'
                           AND available_at <= :now
                           AND deadline_at > :now
                           AND (

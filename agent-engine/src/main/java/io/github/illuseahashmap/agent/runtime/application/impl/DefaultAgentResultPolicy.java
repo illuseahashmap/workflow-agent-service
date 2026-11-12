@@ -29,13 +29,16 @@ public class DefaultAgentResultPolicy implements AgentResultPolicy {
     @Override
     public Decision evaluate(AgentDefinitionVersion version, ModelProviderResponse response) {
         Decision signal = responseSignal(response);
-        if (!signal.accepted()) return signal;
+        if (!signal.accepted()) { return signal; }
         return StringUtils.hasText(response.content()) ? Decision.accept()
                 : Decision.rejected(ResultStatus.EMPTY, "AGENT_RESULT_EMPTY");
     }
 
     /** Check before interpreting any model message, including native tool calls and repair attempts. */
-    Decision responseSignal(ModelProviderResponse response) {
+    public Decision responseSignal(ModelProviderResponse response) {
+        if (duplicateFields(response.content())) {
+            return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_STATUS_INVALID");
+        }
         String finishReason = response.finishReason();
         if ("content_filter".equalsIgnoreCase(finishReason)) {
             return Decision.rejected(ResultStatus.REJECTED, "AGENT_RESULT_CONTENT_FILTERED");
@@ -55,6 +58,24 @@ public class DefaultAgentResultPolicy implements AgentResultPolicy {
             return declared;
         }
         return Decision.accept();
+    }
+
+    /** Ambiguous JSON must not hide a refusal behind a later duplicate field, including during repair. */
+    private boolean duplicateFields(String content) {
+        if (!StringUtils.hasText(content)) { return false; }
+        var objects = new java.util.ArrayDeque<java.util.Set<String>>();
+        try (var parser = objectMapper.getFactory().copy()
+                .disable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION).createParser(content)) {
+            com.fasterxml.jackson.core.JsonToken token;
+            while ((token = parser.nextToken()) != null) {
+                if (token == com.fasterxml.jackson.core.JsonToken.START_OBJECT) { objects.push(new java.util.HashSet<>()); }
+                else if (token == com.fasterxml.jackson.core.JsonToken.END_OBJECT) { objects.pop(); }
+                else if (token == com.fasterxml.jackson.core.JsonToken.FIELD_NAME && !objects.peek().add(parser.currentName())) { return true; }
+            }
+        } catch (IOException ignored) {
+            // Non-JSON text and ordinary syntax failures retain the existing bounded JSON-repair path.
+        }
+        return false;
     }
 
     /**

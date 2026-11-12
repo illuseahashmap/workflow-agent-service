@@ -283,7 +283,7 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
         int versionRows = jdbc.update("""
                 UPDATE agent_definition_version version
                 SET tool_set_json = (
-                    SELECT CASE WHEN version.tool_set_json ? snapshot.registry_code
+                    SELECT CASE WHEN jsonb_exists(version.tool_set_json, snapshot.registry_code)
                                 THEN version.tool_set_json
                                 ELSE version.tool_set_json || to_jsonb(snapshot.registry_code)
                            END
@@ -339,7 +339,7 @@ public class JdbcMcpCatalogRepository implements McpCatalogRepository {
         }
         jdbc.update("""
                 UPDATE agent_definition_version version
-                SET tool_set_json = version.tool_set_json - snapshot.registry_code
+                SET tool_set_json = version.tool_set_json - ('mcp:' || snapshot.id || ':' || snapshot.tool_name)
                 FROM mcp_tool_snapshot snapshot
                 WHERE version.tenant_code = :tenantCode AND version.id = :agentVersionId
                   AND version.status = 'DRAFT' AND snapshot.tenant_code = :tenantCode

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:flowable="http://flowable.org/bpmn" xmlns:workflow="http://workflow-agent.local/bpmn" targetNamespace="urn:workflow:eval:p17:v1">
+  <process id="p17_order_readiness_v1" name="采购单下单条件核验（只读试点）" isExecutable="true">
+    <startEvent id="start"/>
+    <sequenceFlow id="start_review" sourceRef="start" targetRef="check_order"/>
+    <receiveTask id="check_order" name="核验制度与该单记录">
+      <extensionElements>
+        <!-- Offline fixture version. E1 must bind a published test-tenant version before deployment. -->
+        <workflow:agentTask agentVersionId="1" inputMapping='{"orderId":"orderId","question":"question"}'
+          outputMapping='{"action":"checkAction","decision":"checkDecision"}' processFailurePolicy="MANUAL_REVIEW" processWaitTimeoutSeconds="120"/>
+        <flowable:executionListener event="start" delegateExpression="${agentTaskExecutionListener}"/>
+      </extensionElements>
+    </receiveTask>
+    <sequenceFlow id="to_gate" sourceRef="check_order" targetRef="gate"/>
+    <exclusiveGateway id="gate" default="fallback_review"/>
+    <sequenceFlow id="requires_review" sourceRef="gate" targetRef="MANUAL_REVIEW">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable('agentReviewRequired') == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="ready" sourceRef="gate" targetRef="READY_CHECK">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable('agentReviewRequired') == false and execution.getVariable('checkAction') == 'ANSWER' and execution.getVariable('checkDecision') == 'ORDER_READY'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="missing" sourceRef="gate" targetRef="NEED_RECORDS">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable('agentReviewRequired') == false and ((execution.getVariable('checkAction') == 'ABSTAIN' and execution.getVariable('checkDecision') == 'MISSING_LIVE_RECORDS') or (execution.getVariable('checkAction') == 'ANSWER' and execution.getVariable('checkDecision') == 'ORDER_NOT_READY'))}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="fallback_review" sourceRef="gate" targetRef="MANUAL_REVIEW"/>
+    <userTask id="READY_CHECK" name="具备条件，待人工确认"/>
+    <userTask id="NEED_RECORDS" name="待补材料"/>
+    <userTask id="MANUAL_REVIEW" name="人工复核"/>
+    <sequenceFlow id="a_end" sourceRef="READY_CHECK" targetRef="end"/>
+    <sequenceFlow id="b_end" sourceRef="NEED_RECORDS" targetRef="end"/>
+    <sequenceFlow id="c_end" sourceRef="MANUAL_REVIEW" targetRef="end"/>
+    <endEvent id="end"/>
+  </process>
+</definitions>

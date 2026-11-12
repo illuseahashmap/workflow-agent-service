@@ -3,5 +3,5 @@
   "private": true,
   "version": "0.0.0",
   "devDependencies": { "@redocly/cli": "1.34.5", "ajv": "8.20.0" },
-  "scripts": { "api:lint": "redocly lint docs/api/openapi.yaml", "test:rag-contract": "node --test scripts/test-rag-evidence-contract.mjs" }
+  "scripts": { "api:lint": "redocly lint docs/api/openapi.yaml", "test:rag-contract": "node --test scripts/test-rag-evidence-contract.mjs scripts/test-p17-evaluation.mjs" }
 }

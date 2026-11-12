@@ -22,6 +22,9 @@ import java.util.function.Function;
 
 /** Per-run working memory. The summary is non-authoritative; receipts and decision facts are not summarized. */
 public final class TaskMemory {
+    /** Execution-framework-neutral identity for authoritative facts and working memory. */
+    public record Context(String tenantCode, long runId, String processInstanceId,
+                          io.github.illuseahashmap.agent.definition.domain.AgentDefinitionVersion version, String input) { }
     public record Receipt(String reference, String callId, String tool, String argumentsJson, String outputDigest) {}
     public record PendingTool(String name, String callId, String argumentsJson) {}
     public record Candidate(long providerId, String requestedModel, ModelProviderResponse response) {}
@@ -42,6 +45,10 @@ public final class TaskMemory {
     private final List<Fold> folds = new ArrayList<>();
 
     public TaskMemory(Command c, ObjectMapper json, CheckpointContextPolicy policy) {
+        this(new Context(c.tenantCode(), c.runId(), c.processInstanceId(), c.version(), c.input()), json, policy);
+    }
+
+    public TaskMemory(Context c, ObjectMapper json, CheckpointContextPolicy policy) {
         this.json = json;
         this.policy = policy;
         this.input = c.input();

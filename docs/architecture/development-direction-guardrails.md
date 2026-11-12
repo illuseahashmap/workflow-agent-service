@@ -1,6 +1,6 @@
 # Workflow Agent 开发方向与防偏离门禁
 
-更新时间：2026-10-06
+更新时间：2026-11-11
 状态：长期技术方向约束
 
 本文不重复定义跨仓库产品定位。产品定位、目标用户和阶段目标以聚合仓库的
@@ -93,16 +93,16 @@ BLOCKED        阻断流程
 
 ## 3. Agent Runtime 的稳定扩展边界
 
-所有 Agent 执行模式必须复用同一套运行账本和可靠性语义：
+所有 Agent 执行模式复用平台业务账本和治理语义；内部恢复由每个 Run 冻结的 backend 单一持有：
 
 - `AgentDefinition` 与不可变 `AgentVersion`；
-- `AgentRun / Attempt / Step / Checkpoint`；
-- Lease、Heartbeat、Recovery、幂等和迟到结果隔离；
+- AgentRun、业务 Attempt、Step 审计以及 backend/thread/checkpoint 关联；
+- 平台业务幂等与完成保护、治理网关回执；原生后端租约/Recovery 在切换后只保护旧运行，目标图 Checkpoint/推进由 LangGraph 负责，外围同数据库会话所有权保护不能冒充库自带分布式租约；
 - Outbox/Inbox、失败重试、死信和人工恢复；
 - Schema、结果策略、证据、预算、审计和指标。
 
 `MODEL_ONLY`、`PLATFORM_AGENT` 和未来 `REMOTE_AGENT` 只能扩展执行器和能力端口，不能各自
-建立独立状态机、任务表或 Flowable 恢复协议。
+建立独立的业务 Run 状态机或 Flowable 恢复协议。LangGraph 自有内部图状态不是第二套业务账本；选定的 OSS 图库不附送商业服务队列，平台持久业务命令不得扩张为内部 nextStep 任务。接入与旧路径退出详见[LangGraph 设计](langgraph-runtime-adoption-design.md)。
 
 ## 4. RAG、MCP、知识库与新技术的位置
 
@@ -125,12 +125,11 @@ Agent Capability
 Function Calling、MCP Client、文档解析、Embedding、向量存储和 Rerank 等通用基础能力，
 LangChain4j 是 Java 技术栈的优先复用候选；没有经过验证的项目特有约束时，不得继续手写同类
 基础设施。LangChain4j 必须位于基础设施适配层，不能让其类型进入领域契约，也不能接管
-`AgentRun / Attempt / Step / Checkpoint`、Flowable 恢复、租户治理和人工责任边界。不得为了展示
-新技术破坏现有领域模型、事件协议和恢复语义。
+业务 Run、Flowable 恢复、租户治理和人工责任边界。目标由 LangGraph 专门承担内部图编排与恢复，不叠加 LangChain4j Agentic；验收必须证明减少原生内部循环/恢复代码，同时保留回执、证据和业务完成约束。
 
 ## 5. 明确不进入核心路线的内容
 
-- 自研流程执行引擎或复制 Flowable 已成熟的底层能力；
+- 自研流程执行引擎、通用 Agent 图引擎，或复制 Flowable/LangGraph 已承担的执行底层能力；
 - Dify 类通用 AI 应用画布和插件市场；
 - 无约束的多 Agent 自主协商；
 - 租户上传任意 Java、脚本或可执行插件；
