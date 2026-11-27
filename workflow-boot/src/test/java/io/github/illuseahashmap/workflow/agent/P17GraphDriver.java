@@ -53,7 +53,7 @@ final class P17GraphDriver {
             throws Exception {
         var codec = new GraphGatewayCodec();
         var executions = new JdbcGraphExecutionStore(jdbc, codec);
-        executions.reserve(TENANT, runId, "a".repeat(64), 30, 8, 2);
+        executions.reserve(TENANT, runId, "a".repeat(64), p.live ? 10 : 30, 8, 2);
         var claim = executions.claim(TENANT, "p17-graph", 120).orElseThrow();
         assertThat(claim.binding().runId()).isEqualTo(runId);
         var budget = new CheckpointContextPolicy(40000);
@@ -63,6 +63,52 @@ final class P17GraphDriver {
                         new JdbcGraphReferenceStore(jdbc, executions, codec),
                         p.registry,
                         codec);
+        ModelProviderPort delegate =
+                p.live
+                        ? new io.github.illuseahashmap.agent.provider.infrastructure.openai
+                                .LangChain4jOpenAiModelProviderAdapter(
+                                JSON,
+                                new io.github.illuseahashmap.agent.provider.infrastructure.openai
+                                        .ProviderEndpointValidator(false, false),
+                                1048576)
+                        : new Scripted(p, joint);
+        var modelCalls = new java.util.concurrent.atomic.AtomicInteger();
+        ModelProviderPort observedModel =
+                new ModelProviderPort() {
+                    public AgentProviderType providerType() {
+                        return delegate.providerType();
+                    }
+
+                    public io.github.illuseahashmap.agent.provider.application.port
+                                    .ModelProviderCapabilities
+                            capabilities(String url) {
+                        return delegate.capabilities(url);
+                    }
+
+                    public ModelProviderResponse invoke(ModelProviderRequest request) {
+                        assertThat(p.revokedLocators)
+                                .as("No live model after revocation")
+                                .isEmpty();
+                        var response = delegate.invoke(request);
+                        if (p.live) {
+                            try {
+                                JSON.writerWithDefaultPrettyPrinter()
+                                        .writeValue(
+                                                result.resolveSibling(
+                                                                result.getFileName()
+                                                                        + ".model-"
+                                                                        + modelCalls
+                                                                                .incrementAndGet()
+                                                                        + ".json")
+                                                        .toFile(),
+                                                response);
+                            } catch (java.io.IOException failure) {
+                                throw new java.io.UncheckedIOException(failure);
+                            }
+                        }
+                        return response;
+                    }
+                };
         var cognition =
                 new GraphCognitionGateway(
                         tools,
@@ -71,7 +117,7 @@ final class P17GraphDriver {
                         p.versions,
                         p.providers,
                         p.credentials,
-                        new ModelProviderRegistry(List.of(new Scripted(p, joint))),
+                        new ModelProviderRegistry(List.of(observedModel)),
                         p.registry,
                         p.validator,
                         budget,
@@ -79,7 +125,7 @@ final class P17GraphDriver {
                         codec);
         jdbc.update(
                 "INSERT INTO agent_graph_call_resource VALUES('p17:fixture',16) ON CONFLICT DO"
-                    + " NOTHING",
+                        + " NOTHING",
                 Map.of());
         var governed =
                 new io.github.illuseahashmap.agent.runtime.application.graph.GraphCapacityGateway(
@@ -200,7 +246,7 @@ final class P17GraphDriver {
                 assertThat(
                                 jdbc.queryForObject(
                                         "SELECT count(*) FROM agent_graph_run_stop WHERE"
-                                            + " tenant_code=:tenant AND run_id=:run",
+                                                + " tenant_code=:tenant AND run_id=:run",
                                         Map.of("tenant", TENANT, "run", runId),
                                         Integer.class))
                         .isEqualTo(1);

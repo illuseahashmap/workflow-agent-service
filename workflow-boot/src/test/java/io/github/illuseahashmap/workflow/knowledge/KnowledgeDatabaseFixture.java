@@ -9,6 +9,8 @@ abstract class KnowledgeDatabaseFixture {
     protected static String databaseUrl;
     protected static String databaseUser;
     protected static String databasePassword;
+    private static String adminUrl;
+    private static String isolatedDatabase;
 
     @org.junit.jupiter.api.BeforeAll
     static void database() {
@@ -16,6 +18,16 @@ abstract class KnowledgeDatabaseFixture {
         if (databaseUrl != null && !databaseUrl.isBlank()) {
             databaseUser = System.getenv("WORKFLOW_TEST_DATABASE_USER");
             databasePassword = System.getenv("WORKFLOW_TEST_DATABASE_PASSWORD");
+            adminUrl = databaseUrl;
+            isolatedDatabase =
+                    "knowledge_" + java.util.UUID.randomUUID().toString().replace("-", "");
+            new JdbcTemplate(new DriverManagerDataSource(adminUrl, databaseUser, databasePassword))
+                    .execute("CREATE DATABASE " + isolatedDatabase);
+            databaseUrl =
+                    "jdbc:postgresql://"
+                            + java.net.URI.create(adminUrl.substring(5)).getRawAuthority()
+                            + "/"
+                            + isolatedDatabase;
         } else {
             org.junit.jupiter.api.Assumptions.assumeTrue(
                     org.testcontainers.DockerClientFactory.instance().isDockerAvailable(),
@@ -34,8 +46,20 @@ abstract class KnowledgeDatabaseFixture {
 
     @org.junit.jupiter.api.AfterAll
     static void closeDatabase() {
-        if (postgres != null) {
-            postgres.stop();
+        try {
+            if (isolatedDatabase != null) {
+                new JdbcTemplate(
+                                new DriverManagerDataSource(
+                                        adminUrl, databaseUser, databasePassword))
+                        .execute("DROP DATABASE " + isolatedDatabase);
+            }
+        } finally {
+            isolatedDatabase = null;
+            adminUrl = null;
+            if (postgres != null) {
+                postgres.stop();
+                postgres = null;
+            }
         }
     }
 

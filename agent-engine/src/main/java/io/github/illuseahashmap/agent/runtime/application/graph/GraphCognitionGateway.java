@@ -446,6 +446,13 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
                         + " invent citations.\n"
                         + "Available tools: "
                         + text(definitions);
+        if (org.springframework.util.StringUtils.hasText(version.outputSchema())) {
+            prompt +=
+                    "\n"
+                        + "Final business answers must match this JSON Schema exactly (tool"
+                        + " decisions use their separate envelope):\n"
+                            + version.outputSchema();
+        }
         if (run.binding().stateSchemaVersion() == 2) {
             prompt +=
                     "\n"
@@ -562,14 +569,11 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
         }
         if (history.route() != null && request.request().operationId().startsWith("route:")) {
             prompt =
-                    version.systemPrompt()
-                            + "\nChoose a route using only the authorized tool capabilities: "
-                            + text(definitions)
-                            + "\n"
-                            + "Return only the versioned route decision JSON. DIRECT may select"
-                            + " direct tools; ABSTAIN selects no tools. Schema: "
-                            + io.github.illuseahashmap.agent.runtime.application.routing
-                                    .AgentRouteDecisionParser.JSON_SCHEMA;
+                    io.github.illuseahashmap.agent.runtime.application.routing.AgentRoutingPrompt
+                            .render(
+                                    version.systemPrompt(),
+                                    definitions,
+                                    new com.fasterxml.jackson.databind.ObjectMapper());
             if (request.request().operationId().startsWith("route:repair:")) {
                 prompt +=
                         "\n"

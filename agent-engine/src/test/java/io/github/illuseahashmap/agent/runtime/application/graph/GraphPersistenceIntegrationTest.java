@@ -225,6 +225,13 @@ class GraphPersistenceIntegrationTest {
                         Path.of(
                                 "../platform-migrations/src/main/resources/db/migration/platform/V79__add_graph_route_projection.sql")));
         db.execute(
+                "CREATE TABLE IF NOT EXISTS workflow_tenant(tenant_code VARCHAR(64) PRIMARY KEY)");
+        db.execute("INSERT INTO workflow_tenant VALUES('alpha'),('beta') ON CONFLICT DO NOTHING");
+        db.execute(
+                Files.readString(
+                        Path.of(
+                                "../platform-migrations/src/main/resources/db/migration/platform/V80__add_tenant_capacity_configuration.sql")));
+        db.execute(
                 Files.readString(
                         Path.of(
                                 "../platform-migrations/src/main/resources/db/migration/platform/V81__add_graph_tool_failure_policy.sql")));
@@ -2005,14 +2012,14 @@ class GraphPersistenceIntegrationTest {
                 assertThat(
                                 db.queryForObject(
                                         "SELECT count(*) FROM agent_graph_budget_call WHERE"
-                                            + " run_id=?",
+                                                + " run_id=?",
                                         Integer.class,
                                         run))
                         .isEqualTo(9);
                 assertThat(
                                 db.queryForObject(
                                         "SELECT count(*) FROM agent_run_attempt WHERE"
-                                            + " agent_run_id=?",
+                                                + " agent_run_id=?",
                                         Integer.class,
                                         run))
                         .isEqualTo(1);
@@ -2338,6 +2345,173 @@ class GraphPersistenceIntegrationTest {
             assertThat(executions.claimNext("third", 60).orElseThrow().binding().tenantCode())
                     .isNotEqualTo(winner.binding().tenantCode());
         }
+    }
+
+    @Test
+    void capacityConfigurationPreservesUsageAndRejectsStaleChanges() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read("alpha");
+        var changed =
+                config.updateTenant(
+                        "alpha",
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.TenantUpdate(
+                                original.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        1, 1, 1)),
+                        "admin");
+        assertThat(changed.usage().outstanding()).isEqualTo(original.usage().outstanding());
+        assertThat(changed.effective().calls()).isEqualTo(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                        + " scope='TENANT:alpha'",
+                                Integer.class))
+                .isEqualTo(1);
+        assertThatThrownBy(
+                        () ->
+                                config.updateTenant(
+                                        "alpha",
+                                        new io.github.illuseahashmap.agent.runtime.infrastructure
+                                                .persistence.JdbcGraphCapacityConfiguration
+                                                .TenantUpdate(
+                                                original.revision(), original.overrides()),
+                                        "other-admin"))
+                .isInstanceOf(
+                        io.github.illuseahashmap.workflow.shared.exception.BusinessException.class);
+        db.update("UPDATE agent_run SET status='SUCCEEDED' WHERE id=2");
+        assertThatThrownBy(() -> db.update("UPDATE agent_run SET status='QUEUED' WHERE id=2"))
+                .isInstanceOf(DataAccessException.class);
+        var inherited =
+                config.updateTenant(
+                        "alpha",
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.TenantUpdate(
+                                changed.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        null, null, null)),
+                        "admin");
+        assertThat(inherited.effective()).isEqualTo(inherited.defaults());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT count(*) FROM agent_graph_resource_audit", Integer.class))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void capacityTenantOverridesControlDispatchAndPhysicalCalls() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read("alpha");
+        config.updateTenant(
+                "alpha",
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration.TenantUpdate(
+                        original.revision(),
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.Limits(null, 1, 1)),
+                "admin");
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        executions.reserve("alpha", 2, "a".repeat(64), 10, 20);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        var first = executions.claimNext("first", 60).orElseThrow();
+        var second = executions.claimNext("second", 60).orElseThrow();
+        assertThat(first.binding().tenantCode()).isEqualTo("alpha");
+        assertThat(second.binding().tenantCode()).isEqualTo("beta");
+        assertThat(executions.claimNext("third", 60)).isEmpty();
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:quota',32)");
+        var capacity =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCallCapacityStore(named, executions, codec);
+        var run = executions.authorize(first.capability(), first.binding(), first.generation());
+        var request =
+                new Invocation("MODEL", "model:one", List.of(first.binding().inputRef()), null);
+        var token = capacity.acquire(run, request, List.of("account:quota")).orElseThrow();
+        assertThat(config.read("alpha").usage().calls()).isEqualTo(1);
+        assertThat(
+                        capacity.acquire(
+                                run,
+                                new Invocation(
+                                        "MODEL",
+                                        "model:two",
+                                        List.of(first.binding().inputRef()),
+                                        null),
+                                List.of("account:quota")))
+                .isEmpty();
+        capacity.completed(token);
+        assertThat(
+                        capacity.acquire(
+                                run,
+                                new Invocation(
+                                        "MODEL",
+                                        "model:two",
+                                        List.of(first.binding().inputRef()),
+                                        null),
+                                List.of("account:quota")))
+                .isPresent();
+    }
+
+    @Test
+    void capacityPlatformChangesClampOverridesAndUpdateInheritedAdmission() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read(null);
+        config.updateTenant(
+                "alpha",
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration.TenantUpdate(
+                        original.revision(),
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.Limits(200, 10, 20)),
+                "admin");
+        var current = config.read(null);
+        var changed =
+                config.updatePlatform(
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.PlatformUpdate(
+                                current.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        100, 8, 16),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        50, 2, 4)),
+                        "admin");
+        assertThat(config.read("alpha").effective()).isEqualTo(changed.platform());
+        assertThat(config.read("beta").effective()).isEqualTo(changed.defaults());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                        + " scope='TENANT:alpha'",
+                                Integer.class))
+                .isEqualTo(100);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                        + " scope='TENANT:beta'",
+                                Integer.class))
+                .isEqualTo(50);
+        assertThatThrownBy(
+                        () ->
+                                config.updateTenant(
+                                        "missing",
+                                        new io.github.illuseahashmap.agent.runtime.infrastructure
+                                                .persistence.JdbcGraphCapacityConfiguration
+                                                .TenantUpdate(
+                                                changed.revision(),
+                                                new io.github.illuseahashmap.agent.runtime
+                                                        .infrastructure.persistence
+                                                        .JdbcGraphCapacityConfiguration.Limits(
+                                                        null, null, null)),
+                                        "admin"))
+                .isInstanceOf(
+                        io.github.illuseahashmap.workflow.shared.exception.BusinessException.class);
     }
 
     @Test

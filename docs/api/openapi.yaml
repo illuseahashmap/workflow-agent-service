@@ -26,6 +26,307 @@ tags:
   - name: Knowledge
     description: Tenant-scoped knowledge profiles, ingestion, and scope authorization.
 paths:
+  /agent-runtime/resources:
+    get:
+      tags: [Agent]
+      operationId: getGraphResources
+      summary: Read physical resource limits and bindings (platform admin)
+      responses:
+        '200':
+          description: Resource configuration
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GraphResources' }
+        '403': { description: Platform administrator required }
+    put:
+      tags: [Agent]
+      operationId: configureGraphResources
+      summary: Atomically replace resource configuration when no calls are outstanding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GraphResources' }
+      responses:
+        '200': { description: Configuration committed }
+        '400': { description: Invalid configuration }
+        '403': { description: Platform administrator required }
+        '409': { description: Resources still have outstanding calls }
+  /internal/agent-runtime/v1/{action}:
+    post:
+      tags: [Agent]
+      operationId: graphGatewayV1
+      summary: Legacy worker capability protocol
+      description: Internal protocol; request and response variants are defined by GraphGatewayContract and GraphGatewayProtocol. Requires TLS or explicitly configured loopback transport.
+      security: [{ graphCapability: [] }]
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Action-specific graph receipt }
+        '400': { description: Invalid action or payload }
+        '403': { description: Rejected capability or transport }
+        '409': { description: Fenced generation or conflicting intent }
+        '413': { description: Payload exceeds the wire limit }
+  /internal/agent-runtime/v2/{action}:
+    post:
+      tags: [Agent]
+      operationId: graphGatewayV2
+      summary: Budgeted worker capability protocol
+      description: Action-specific v2 contracts are defined by GraphGatewayContract; immutable intents and physical call identifiers are required by their respective operations.
+      security: [{ graphCapability: [] }]
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Action-specific graph receipt }
+        '400': { description: Invalid action or payload }
+        '403': { description: Rejected capability or transport }
+        '409': { description: Fenced generation or conflicting intent }
+        '413': { description: Payload exceeds the wire limit }
+  /internal/agent-dispatch/v1/{action}:
+    post:
+      tags: [Agent]
+      operationId: graphDispatchV1
+      summary: Worker claim and lease lifecycle protocol
+      description: Authenticates the registered worker token and artifact. Action-specific payloads and receipts are defined by GraphHostController.
+      security: [{ graphCapability: [] }]
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Action-specific dispatch receipt }
+        '400': { description: Invalid action or payload }
+        '403': { description: Rejected worker token or transport }
+        '409': { description: Fenced lease or unavailable capacity }
+        '413': { description: Payload exceeds the wire limit }
+  /agent-runtime/call-reconciliations:
+    get:
+      tags: [Agent]
+      operationId: listQuarantinedGraphCalls
+      summary: List up to 200 quarantined calls and immutable evidence proposals (platform admin)
+      responses:
+        '200':
+          description: External outcomes remain unknown until independently verified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/QuarantinedGraphCall' }
+        '403': { description: Platform administrator required }
+    post:
+      tags: [Agent]
+      operationId: proposeGraphCallReconciliation
+      summary: Attest a remote terminal receipt; does not release capacity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GraphCallEvidence' }
+      responses:
+        '200':
+          description: Immutable proposal identifier
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StringApiResponse' }
+        '400': { description: Invalid receipt or evidence digest }
+        '403': { description: Platform administrator and CSRF token required }
+        '404': { description: Call does not exist }
+        '409': { description: Call is not quarantined }
+  /agent-runtime/call-reconciliations/{id}/approve:
+    post:
+      tags: [Agent]
+      operationId: approveGraphCallReconciliation
+      summary: A distinct platform operator confirms evidence and releases only that call permit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [evidenceSha256]
+              properties:
+                evidenceSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          description: True on first atomic release; false on an already approved proposal. No Run restart.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BooleanApiResponse' }
+        '403': { description: Platform administrator and CSRF token required }
+        '404': { description: Proposal does not exist }
+        '409': { description: 'Same operator, digest mismatch, or changed call state' }
+  /agents/versions/{versionId}/runtime:
+    parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [Agent]
+      operationId: getAgentRuntimeBinding
+      summary: Read the version execution backend and budget
+      responses:
+        '200':
+          description: Missing historical bindings resolve to native execution
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentRuntimeBindingApiResponse' }
+        '403': { description: Agent management permission required }
+        '404': { description: Version unavailable in the current tenant }
+    put:
+      tags: [Agent]
+      operationId: configureAgentRuntimeBinding
+      summary: Configure a draft version runtime; published versions are immutable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentRuntimeBinding' }
+      responses:
+        '200':
+          description: Configuration and audit committed together
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentRuntimeBindingApiResponse' }
+        '400': { description: Invalid runtime or budget }
+        '403': { description: Agent management permission required }
+        '404': { description: Version unavailable in the current tenant }
+        '409': { description: Published version or unavailable graph artifact }
+  /agent-runtime/capacity:
+    get:
+      tags: [Tenant]
+      operationId: getPlatformCapacity
+      summary: Read platform resource capacity (platform administrators only)
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+    put:
+      tags: [Tenant]
+      operationId: putPlatformCapacity
+      summary: Update platform resource capacity (platform administrators only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityPlatformUpdate'
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+  /agent-runtime/capacity/tenants/{tenantCode}:
+    parameters:
+      - in: path
+        name: tenantCode
+        required: true
+        schema: { type: string, maxLength: 64 }
+    get:
+      tags: [Tenant]
+      operationId: getTenantCapacity
+      summary: Read tenant resource capacity (platform administrators only)
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+    put:
+      tags: [Tenant]
+      operationId: putTenantCapacity
+      summary: Update tenant resource capacity (platform administrators only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityTenantUpdate'
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
   /auth/login:
     post:
       tags: [Authentication]
@@ -1277,11 +1578,121 @@ components:
       required: true
       schema: { type: string }
   securitySchemes:
+    graphCapability:
+      type: http
+      scheme: bearer
+      description: Generation-bound capability or registered dispatcher token; never a browser session.
     cookieAuth:
       type: apiKey
       in: cookie
       name: WORKFLOW_ACCESS_TOKEN
   schemas:
+    CapacityLimits:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+        active:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+        calls:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+    CapacityOverrides:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+        active:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+        calls:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+    CapacityUsage:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 0
+        active:
+          type: integer
+          format: int64
+          minimum: 0
+        calls:
+          type: integer
+          format: int64
+          minimum: 0
+    CapacityView:
+      type: object
+      required: [revision, platform, defaults, overrides, effective, usage]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        platform:
+          $ref: '#/components/schemas/CapacityLimits'
+        defaults:
+          $ref: '#/components/schemas/CapacityLimits'
+        overrides:
+          $ref: '#/components/schemas/CapacityOverrides'
+        effective:
+          $ref: '#/components/schemas/CapacityLimits'
+        usage:
+          $ref: '#/components/schemas/CapacityUsage'
+    CapacityPlatformUpdate:
+      type: object
+      required: [revision, platform, defaults]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        platform:
+          $ref: '#/components/schemas/CapacityLimits'
+        defaults:
+          $ref: '#/components/schemas/CapacityLimits'
+    CapacityTenantUpdate:
+      type: object
+      required: [revision, overrides]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        overrides:
+          $ref: '#/components/schemas/CapacityOverrides'
+    CapacityViewApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        traceId: { type: string, nullable: true }
+        data:
+          $ref: '#/components/schemas/CapacityView'
     IgnoreAgentCompletionEventCommand:
       type: object
       required: [reason]
@@ -1470,6 +1881,72 @@ components:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties: { data: { $ref: '#/components/schemas/AgentDefinitionPage' } }
+    GraphResources:
+      type: object
+      required: [resources, bindings]
+      properties:
+        resources:
+          type: array
+          items:
+            type: object
+            required: [key, maxCalls]
+            properties:
+              key: { type: string }
+              maxCalls: { type: integer, minimum: 1 }
+        bindings:
+          type: array
+          items:
+            type: object
+            required: [tenant, kind, target, resource]
+            properties:
+              tenant: { type: string }
+              kind: { type: string }
+              target: { type: string }
+              resource: { type: string }
+    GraphCallEvidence:
+      type: object
+      required: [token, externalRequestId, outcome, evidenceUri, evidenceSha256]
+      properties:
+        token: { type: string, format: uuid }
+        externalRequestId: { type: string, minLength: 1, maxLength: 256 }
+        outcome: { type: string, enum: [COMPLETED, CANCELLED, NOT_ACCEPTED] }
+        evidenceUri: { type: string, format: uri, maxLength: 2048, description: HTTPS evidence location; never fetched by the server }
+        evidenceSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+    QuarantinedGraphCall:
+      type: object
+      properties:
+        token: { type: string, format: uuid }
+        tenant_code: { type: string }
+        run_id: { type: integer, format: int64 }
+        operation_id: { type: string }
+        request_digest: { type: string }
+        generation: { type: integer, format: int64 }
+        claimed_at: { type: string, format: date-time }
+        reconciliation_id: { type: string, format: uuid, nullable: true }
+        external_request_id: { type: string, nullable: true }
+        outcome: { type: string, nullable: true }
+        evidence_uri: { type: string, nullable: true }
+        evidence_sha256: { type: string, nullable: true }
+        proposed_by: { type: string, nullable: true }
+    AgentRuntimeBinding:
+      type: object
+      required: [backend, stateSchemaVersion, maxModelCalls, maxToolCalls]
+      properties:
+        backend: { type: string, enum: [NATIVE, LANGGRAPH] }
+        artifactDigest:
+          type: string
+          nullable: true
+          pattern: '^[a-f0-9]{64}$'
+          description: Required for LANGGRAPH; null for NATIVE
+        stateSchemaVersion: { type: integer, enum: [2] }
+        maxModelCalls: { type: integer, minimum: 1, maximum: 100 }
+        maxToolCalls: { type: integer, minimum: 0, maximum: 200 }
+    AgentRuntimeBindingApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/AgentRuntimeBinding' }
     AgentVersionApiResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'

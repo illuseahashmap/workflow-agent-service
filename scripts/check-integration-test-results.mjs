@@ -6,6 +6,8 @@ const expectedSuites = [
   'AgentCompletionEventStoreIntegrationTest',
   'AgentCompletionFlowableTransactionIntegrationTest',
   'AuthenticationHttpIntegrationTest',
+  'AgentBusinessHttpIntegrationTest',
+  'AgentRuntimeBindingIntegrationTest',
   'PlatformMigrationIntegrationTest',
   'RedisProcessInstanceLockIntegrationTest',
   'KnowledgeDocumentImmutabilityIntegrationTest',

@@ -1,0 +1,68 @@
+{
+  "source": "LIVE_MODEL",
+  "model": "deepseek-v4-flash-ga-260731",
+  "productionReady": false,
+  "runs": [
+    {
+      "stage": "native_initial",
+      "run": "32c67eec-f5b3-4886-a86f-04dd7c77cbb1",
+      "result": {
+        "backend": "NATIVE",
+        "total": 7,
+        "failures": [
+          "B08: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-OK: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"READY_CHECK\"]\r\nbut some elements were not found:\r\n  [\"READY_CHECK\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-BUDGET: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-EMPTY: \r\nexpected: \"FAILED\"\r\n but was: \"TIMED_OUT\"",
+          "P17-FOREIGN: \r\nexpected: \"FAILED\"\r\n but was: \"TIMED_OUT\"",
+          "P17-TIMEOUT: No value present",
+          "P17-REVOKED: No value present"
+        ]
+      }
+    },
+    {
+      "stage": "native_route_fix",
+      "run": "63616931-6359-46c5-b0ba-cccb37a24fb5",
+      "result": {
+        "total": 1,
+        "failures": [
+          "P17-OK: \r\nexpected: \"FAILED\"\r\n but was: \"TIMED_OUT\""
+        ],
+        "backend": "NATIVE"
+      }
+    },
+    {
+      "stage": "graph_before_schema_fix",
+      "run": "213036c6-3243-45dd-9dc7-7ff4ead0b905",
+      "result": {
+        "backend": "LANGGRAPH",
+        "total": 1,
+        "failures": [
+          "P17-OK: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"READY_CHECK\"]\r\nbut some elements were not found:\r\n  [\"READY_CHECK\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n"
+        ]
+      }
+    },
+    {
+      "stage": "graph_after_schema_fix",
+      "run": "1a12e125-9110-4534-b6f5-3736b8e77b36",
+      "result": {
+        "total": 1,
+        "failures": [
+          "P17-OK: \r\nExpecting ArrayList:\r\n  [\"mcp:1:order_records_read\"]\r\nto contain:\r\n  [\"knowledge_search\"]\r\nbut could not find the following element(s):\r\n  [\"knowledge_search\"]\r\n"
+        ],
+        "backend": "LANGGRAPH"
+      }
+    },
+    {
+      "stage": "native_after_schema_fix",
+      "run": "553a3a8a-09cc-4cc7-8831-04d9255900f5",
+      "result": {
+        "total": 1,
+        "failures": [
+          "P17-OK: Incorrect result size: expected 1, actual 0"
+        ],
+        "backend": "NATIVE"
+      }
+    }
+  ]
+}

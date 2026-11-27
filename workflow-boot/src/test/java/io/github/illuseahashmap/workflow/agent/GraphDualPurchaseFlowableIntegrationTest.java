@@ -94,6 +94,9 @@ class GraphDualPurchaseFlowableIntegrationTest {
     private P17Pilot p;
     private JdbcGraphExecutionStore executions;
     private GraphCompletionService completion;
+    private io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                    .JdbcAgentRuntimeBindingStore
+            bindings;
     private AgentFlowableCompletionProcessor processor;
     private AgentCompletionEventStore outbox;
     private AgentRunEventPublisherAdapter publisher;
@@ -134,6 +137,9 @@ class GraphDualPurchaseFlowableIntegrationTest {
         publisher =
                 new AgentRunEventPublisherAdapter(
                         new JdbcReliableEventPublisher(named, List.of()), json);
+        bindings =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcAgentRuntimeBindingStore(named, true, "a".repeat(64));
         var submission =
                 new AgentRunSubmissionServiceImpl(
                         p.definitions,
@@ -143,7 +149,8 @@ class GraphDualPurchaseFlowableIntegrationTest {
                         p.tenant,
                         p.buyer,
                         json,
-                        publisher);
+                        publisher,
+                        bindings);
         var cfg = new SpringProcessEngineConfiguration();
         cfg.setTransactionManager(manager);
         cfg.setDataSource(ds).setDatabaseSchemaUpdate("true").setAsyncExecutorActivate(false);
@@ -254,6 +261,13 @@ class GraphDualPurchaseFlowableIntegrationTest {
                                             schema,
                                             List.of("lookup"),
                                             null));
+                            bindings.configure(
+                                    TENANT,
+                                    id,
+                                    new io.github.illuseahashmap.agent.runtime.application.port
+                                            .AgentRuntimeBinding.Configuration(
+                                            "LANGGRAPH", "a".repeat(64), 2, 16, 8),
+                                    "test-publisher");
                             return service.publish(def.id(), id).id();
                         });
         deploy(version);
@@ -566,7 +580,12 @@ class GraphDualPurchaseFlowableIntegrationTest {
             runs[runIndex++] = run;
         }
         for (long run : runs) {
-            executions.reserve(TENANT, run, "a".repeat(64), 16, 8, 2);
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT execution_backend FROM agent_run WHERE id=?",
+                                    String.class,
+                                    run))
+                    .isEqualTo("LANGGRAPH");
         }
         var protocol =
                 new io.github.illuseahashmap.agent.runtime.interfaces.rest.GraphGatewayProtocol(
@@ -633,6 +652,7 @@ class GraphDualPurchaseFlowableIntegrationTest {
                         exchange.getResponseBody().write(response.getBody());
                     }
                 });
+        var takeoverFailure = new java.util.concurrent.atomic.AtomicReference<Throwable>();
         server.createContext(
                 "/fixture/takeover",
                 exchange -> {
@@ -650,18 +670,81 @@ class GraphDualPurchaseFlowableIntegrationTest {
                                                 Long.class,
                                                 run))
                                 .isEqualTo(request.path("generation").asLong());
-                        assertThat(
-                                        db.update(
-                                                "UPDATE agent_graph_execution SET"
-                                                    + " lease_expires_at=clock_timestamp()-interval"
-                                                    + " '1 second' WHERE tenant_code=? AND"
-                                                    + " run_id=?",
-                                                TENANT,
-                                                run))
-                                .isOne();
+                        if (request.path("generation").asLong() == 1) {
+                            var operations =
+                                    new io.github.illuseahashmap.agent.runtime.infrastructure
+                                            .persistence.JdbcAgentRunOperationsRepository(named);
+                            var deadline =
+                                    db.queryForObject(
+                                            "SELECT deadline_at::text FROM agent_run WHERE id=?",
+                                            String.class,
+                                            run);
+                            assertThat(
+                                            tx
+                                                    .<io.github.illuseahashmap.agent.runtime
+                                                                    .application.port
+                                                                    .AgentRunOperationsRepository
+                                                                    .OperationResult>
+                                                            execute(
+                                                                    status ->
+                                                                            operations.requestPause(
+                                                                                    TENANT,
+                                                                                    run,
+                                                                                    "operator",
+                                                                                    "pause-trace",
+                                                                                    "acceptance")))
+                                    .isEqualTo(
+                                            io.github.illuseahashmap.agent.runtime.application.port
+                                                    .AgentRunOperationsRepository.OperationResult
+                                                    .APPLIED);
+                            assertThat(
+                                            db.queryForObject(
+                                                    "SELECT status FROM agent_run WHERE id=?",
+                                                    String.class,
+                                                    run))
+                                    .isEqualTo("PAUSED");
+                            assertThat(
+                                            tx
+                                                    .<io.github.illuseahashmap.agent.runtime
+                                                                    .application.port
+                                                                    .AgentRunOperationsRepository
+                                                                    .OperationResult>
+                                                            execute(
+                                                                    status ->
+                                                                            operations.resumePaused(
+                                                                                    TENANT,
+                                                                                    run,
+                                                                                    "operator",
+                                                                                    "resume-trace",
+                                                                                    "acceptance",
+                                                                                    3600)))
+                                    .isEqualTo(
+                                            io.github.illuseahashmap.agent.runtime.application.port
+                                                    .AgentRunOperationsRepository.OperationResult
+                                                    .APPLIED);
+                            assertThat(
+                                            db.queryForObject(
+                                                    "SELECT deadline_at::text FROM agent_run WHERE"
+                                                            + " id=?",
+                                                    String.class,
+                                                    run))
+                                    .isEqualTo(deadline);
+                        } else {
+                            assertThat(
+                                            db.update(
+                                                    "UPDATE agent_graph_execution SET"
+                                                        + " lease_expires_at=clock_timestamp()-interval"
+                                                        + " '1 second' WHERE tenant_code=? AND"
+                                                        + " run_id=?",
+                                                    TENANT,
+                                                    run))
+                                    .isOne();
+                        }
                         var body = codec.write(Map.of("expired", true));
                         exchange.sendResponseHeaders(200, body.length);
                         exchange.getResponseBody().write(body);
+                    } catch (Exception | AssertionError failure) {
+                        takeoverFailure.compareAndSet(null, failure);
                     }
                 });
         server.start();
@@ -688,6 +771,9 @@ class GraphDualPurchaseFlowableIntegrationTest {
                 assertThat(process.waitFor(120, TimeUnit.SECONDS))
                         .as("dual purchase probe deadline")
                         .isTrue();
+                if (takeoverFailure.get() != null) {
+                    throw new AssertionError("Takeover endpoint failed", takeoverFailure.get());
+                }
                 assertThat(process.exitValue()).withFailMessage(Files.readString(log)).isZero();
             } finally {
                 if (process.isAlive()) {

@@ -2,14 +2,17 @@ package io.github.illuseahashmap.agent.runtime.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailure;
 import io.github.illuseahashmap.agent.runtime.domain.AgentFailureCategory;
 import io.github.illuseahashmap.agent.runtime.domain.ResultStatus;
+
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /** Validates the small, portable JSON Schema subset supported by the first runtime. */
 @Component
@@ -42,7 +45,13 @@ public class AgentOutputSchemaValidator {
         }
         try {
             JsonNode schemaNode = objectMapper.readTree(schema);
-            JsonNode output = objectMapper.readTree(content);
+            JsonNode output =
+                    objectMapper
+                            .reader()
+                            .with(
+                                    com.fasterxml.jackson.databind.DeserializationFeature
+                                            .FAIL_ON_TRAILING_TOKENS)
+                            .readTree(content);
             if (!matches(schemaNode, output)) {
                 throw invalidOutput("AGENT_OUTPUT_SCHEMA_INVALID");
             }
@@ -57,21 +66,46 @@ public class AgentOutputSchemaValidator {
         }
         try {
             JsonNode schemaNode = objectMapper.readTree(schema);
-            JsonNode input = objectMapper.readTree(content);
+            JsonNode input =
+                    objectMapper
+                            .reader()
+                            .with(
+                                    com.fasterxml.jackson.databind.DeserializationFeature
+                                            .FAIL_ON_TRAILING_TOKENS)
+                            .readTree(content);
             if (!matches(schemaNode, input)) {
-                throw new AgentExecutionException(new AgentFailure(
-                        "AGENT_INPUT_SCHEMA_INVALID", AgentFailureCategory.INPUT_CONTRACT,
-                        false, ResultStatus.FAILED, "Agent input did not satisfy the configured input contract"));
+                throw new AgentExecutionException(
+                        new AgentFailure(
+                                "AGENT_INPUT_SCHEMA_INVALID",
+                                AgentFailureCategory.INPUT_CONTRACT,
+                                false,
+                                ResultStatus.FAILED,
+                                "Agent input did not satisfy the configured input contract"));
             }
         } catch (IOException exception) {
-            throw new AgentExecutionException(new AgentFailure(
-                    "AGENT_INPUT_NOT_JSON", AgentFailureCategory.INPUT_CONTRACT,
-                    false, ResultStatus.FAILED, "Agent input must be valid JSON when an input schema is configured"),
+            throw new AgentExecutionException(
+                    new AgentFailure(
+                            "AGENT_INPUT_NOT_JSON",
+                            AgentFailureCategory.INPUT_CONTRACT,
+                            false,
+                            ResultStatus.FAILED,
+                            "Agent input must be valid JSON when an input schema is configured"),
                     exception);
         }
     }
 
     private void validateSchemaNode(JsonNode schema) {
+        if (!schema.isObject()) {
+            throw invalid("Schema node must be an object");
+        }
+        JsonNode choices = schema.get("enum");
+        if (choices != null && (!choices.isArray() || choices.isEmpty())) {
+            throw invalid("Schema enum must be a nonempty array");
+        }
+        JsonNode additional = schema.get("additionalProperties");
+        if (additional != null && !additional.isBoolean()) {
+            validateSchemaNode(additional);
+        }
         JsonNode type = schema.get("type");
         if (type != null && !type.isTextual()) {
             throw invalid("Output Schema type must be a string");
@@ -97,6 +131,35 @@ public class AgentOutputSchemaValidator {
     }
 
     private boolean matches(JsonNode schema, JsonNode value) {
+        if (value == null || value.isMissingNode()) {
+            return false;
+        }
+        JsonNode choices = schema.get("enum");
+        if (choices != null) {
+            boolean found = false;
+            for (JsonNode choice : choices) {
+                found |= equivalent(choice, value);
+            }
+            if (!found) {
+                return false;
+            }
+        }
+        if (schema.has("const") && !equivalent(schema.get("const"), value)) {
+            return false;
+        }
+        JsonNode additional = schema.get("additionalProperties");
+        if (additional != null && value.isObject()) {
+            var fields = value.fields();
+            while (fields.hasNext()) {
+                var field = fields.next();
+                if (!schema.path("properties").has(field.getKey())
+                        && (additional.isBoolean()
+                                ? !additional.booleanValue()
+                                : !matches(additional, field.getValue()))) {
+                    return false;
+                }
+            }
+        }
         JsonNode type = schema.get("type");
         if (type != null && !matchesType(type.asText(), value)) {
             return false;
@@ -114,7 +177,8 @@ public class AgentOutputSchemaValidator {
             Iterator<Map.Entry<String, JsonNode>> fields = properties.fields();
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> field = fields.next();
-                if (value.has(field.getKey()) && !matches(field.getValue(), value.get(field.getKey()))) {
+                if (value.has(field.getKey())
+                        && !matches(field.getValue(), value.get(field.getKey()))) {
                     return false;
                 }
             }
@@ -128,6 +192,32 @@ public class AgentOutputSchemaValidator {
             }
         }
         return true;
+    }
+
+    private boolean equivalent(JsonNode expected, JsonNode actual) {
+        if (expected.isNumber() && actual.isNumber()) {
+            return expected.decimalValue().compareTo(actual.decimalValue()) == 0;
+        }
+        if (expected.isArray() && actual.isArray() && expected.size() == actual.size()) {
+            for (int i = 0; i < expected.size(); i++) {
+                if (!equivalent(expected.get(i), actual.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (expected.isObject() && actual.isObject() && expected.size() == actual.size()) {
+            var fields = expected.fields();
+            while (fields.hasNext()) {
+                var field = fields.next();
+                if (!actual.has(field.getKey())
+                        || !equivalent(field.getValue(), actual.get(field.getKey()))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return expected.equals(actual);
     }
 
     private boolean matchesType(String type, JsonNode value) {
@@ -144,14 +234,22 @@ public class AgentOutputSchemaValidator {
     }
 
     private AgentExecutionException invalid(String message) {
-        return new AgentExecutionException(new AgentFailure(
-                "AGENT_OUTPUT_SCHEMA_INVALID", AgentFailureCategory.OUTPUT_CONTRACT,
-                false, ResultStatus.FAILED, message));
+        return new AgentExecutionException(
+                new AgentFailure(
+                        "AGENT_OUTPUT_SCHEMA_INVALID",
+                        AgentFailureCategory.OUTPUT_CONTRACT,
+                        false,
+                        ResultStatus.FAILED,
+                        message));
     }
 
     private AgentExecutionException invalidOutput(String code) {
-        return new AgentExecutionException(new AgentFailure(
-                code, AgentFailureCategory.OUTPUT_CONTRACT,
-                false, ResultStatus.FAILED, "Agent output did not satisfy the configured result policy"));
+        return new AgentExecutionException(
+                new AgentFailure(
+                        code,
+                        AgentFailureCategory.OUTPUT_CONTRACT,
+                        false,
+                        ResultStatus.FAILED,
+                        "Agent output did not satisfy the configured result policy"));
     }
 }

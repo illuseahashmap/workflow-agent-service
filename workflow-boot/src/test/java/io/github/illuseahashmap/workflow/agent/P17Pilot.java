@@ -102,6 +102,7 @@ final class P17Pilot {
     P17ScoreTrace observation;
     final List<String> revokedLocators = new ArrayList<>();
     final String model;
+    final boolean live;
     final String toolCode;
     final long profile;
     final long index;
@@ -117,6 +118,7 @@ final class P17Pilot {
 
     P17Pilot(NamedParameterJdbcTemplate db, TransactionTemplate tx, boolean live, boolean graph)
             throws Exception {
+        this.live = live;
         gold = JSON.readTree(DIR.resolve("cases.json").toFile());
         var sql = db.getJdbcTemplate();
         sql.update(

@@ -187,6 +187,7 @@
                                     <includes>
                                         <include>io.github.illuseahashmap.agent.runtime.application.graph.GraphCognitionGateway</include>
                                         <include>io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphExecutionStore</include>
+                                        <include>io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphReservationStore</include>
                                         <include>io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCallCapacityStore</include>
                                         <include>io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphCompletionStore</include>
                                     </includes>

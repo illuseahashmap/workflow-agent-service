@@ -46,28 +46,6 @@ import java.util.stream.Collectors;
 @Component
 public class PlatformAgentExecutor implements AgentExecutor {
 
-    private static final String ROUTER_INSTRUCTION =
-            """
-            You are the routing phase of a governed workflow Agent. Do not answer the request.
-            Select exactly one mode from DIRECT, RAG, MCP, RAG_MCP, ABSTAIN.
-            Only request tools from the supplied available tool list. DIRECT may use platform-native tools,
-            but not tools marked RAG or MCP. ABSTAIN requests no tools.
-            RAG requires at least one RAG capability. MCP requires at least one MCP capability.
-            RAG_MCP requires both. Tool names carry no authority; use the supplied capability metadata.
-            Return only one JSON object matching schema version 1 with at most five concise steps.
-            Available tools: %s
-            Required JSON Schema: %s
-            """;
-
-    private static final String ROUTE_REPAIR_INSTRUCTION =
-            """
-            The previous route decision violated the governed routing contract.
-            Repair it once. Return only one JSON object matching the supplied schema.
-            Never invent a tool and never include Markdown.
-            Available tools: %s
-            Required JSON Schema: %s
-            """;
-
     private static final String ANSWER_INSTRUCTION =
             """
             You are the execution phase of a governed workflow Agent.
@@ -322,11 +300,9 @@ public class PlatformAgentExecutor implements AgentExecutor {
                                     provider.baseUrl(),
                                     credential,
                                     model,
-                                    version.systemPrompt()
-                                            + "\n\n"
-                                            + ROUTER_INSTRUCTION.formatted(
-                                                    availableToolCapabilities,
-                                                    AgentRouteDecisionParser.JSON_SCHEMA),
+                                    io.github.illuseahashmap.agent.runtime.application.routing
+                                            .AgentRoutingPrompt.render(
+                                            version.systemPrompt(), effectiveTools, objectMapper),
                                     command.input(),
                                     remainingTimeout(),
                                     command.traceId(),
@@ -344,6 +320,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
                             model,
                             command,
                             availableToolCapabilities,
+                            effectiveTools,
                             routeResponse);
             if (route.mode() == AgentRouteMode.ABSTAIN) {
                 throw routeRejected(route.reason());
@@ -703,6 +680,10 @@ public class PlatformAgentExecutor implements AgentExecutor {
                                     command.version().systemPrompt()
                                             + "\n\n"
                                             + ANSWER_INSTRUCTION
+                                            + "\n"
+                                            + "Final answer JSON Schema (when configured; tool"
+                                            + " decisions use their separate envelope):\n"
+                                            + command.version().outputSchema()
                                             + "\n\n可用工具契约：\n"
                                             + toolInstructions(effectiveTools),
                                     context,
@@ -819,6 +800,7 @@ public class PlatformAgentExecutor implements AgentExecutor {
             String model,
             Command command,
             Map<String, String> availableTools,
+            List<ModelProviderRequest.ToolDefinition> definitions,
             ModelProviderResponse firstResponse) {
         try {
             return routeParser.parse(firstResponse.content(), availableTools);
@@ -829,11 +811,12 @@ public class PlatformAgentExecutor implements AgentExecutor {
                                     baseUrl,
                                     credential,
                                     model,
-                                    systemPrompt
-                                            + "\n\n"
-                                            + ROUTE_REPAIR_INSTRUCTION.formatted(
-                                                    availableTools,
-                                                    AgentRouteDecisionParser.JSON_SCHEMA),
+                                    io.github.illuseahashmap.agent.runtime.application.routing
+                                                    .AgentRoutingPrompt.render(
+                                                    systemPrompt, definitions, objectMapper)
+                                            + "\n"
+                                            + "Repair the previous invalid route once. Use exact"
+                                            + " authorized tool names and no Markdown.",
                                     command.input()
                                             + "\n\nPrevious invalid route:\n"
                                             + checkpointContextPolicy.preview(

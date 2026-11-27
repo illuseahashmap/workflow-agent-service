@@ -1,5 +1,7 @@
 # 开源 LangGraph 运行模块
 
+业务版本现在可通过冻结的运行引擎配置选择 LANGGRAPH；未配置的旧版本仍为 NATIVE。配置与图部署指纹必须匹配，发布后不可原地切换。操作与未知调用核销见[版本运行引擎和对账手册](../docs/operations/version-runtime-and-call-reconciliation.md)。这表示接入路径已实现，不表示生产业务已切换或完整 G0–G3 验收完成。
+
 选择 **LangGraph 开源库 + 官方 PostgreSQL checkpointer**，不依赖商业 Agent Server、LangSmith 账号或许可。锁定依赖见 `pyproject.toml` / `uv.lock`。
 
 当前是 G0/G2 的可执行组件，**不是已经替换 Java 执行器的服务**。MODEL/TOOL/VALIDATE、V65/V66 持久层已有联调；V67 增加跨实例领取上限/等份轮转/调用隔离。认证 dispatch 客户端/Java 宿主、Worker CLI、artifact 领取、V68 全平台准入和账户配置/审计已接通。图宿主默认关闭，现有 AgentVersion 和业务运行没有切换。最新证据见[并发治理回归](../docs/quality/graph-capacity-regression.md)，环境变量和启动方式见[部署手册](../docs/operations/graph-dispatch-host.md)。

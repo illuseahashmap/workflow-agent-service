@@ -154,7 +154,14 @@ class P17JointRunTest {
                                     .deploy();
                         }
                         var failures = new ArrayList<String>();
+                        String selectedCase = System.getProperty("workflow.p17.case", "");
+                        int executed = 0;
                         for (var c : p.gold.path("cases")) {
+                            if (!selectedCase.isBlank()
+                                    && !selectedCase.equals(c.path("id").asText())) {
+                                continue;
+                            }
+                            executed++;
                             p.observation = null;
                             try {
                                 String id = c.path("id").asText();
@@ -205,6 +212,8 @@ class P17JointRunTest {
                                                                     false, false),
                                                             1048576)
                                                     : new Scripted(p, joint);
+                                    var modelCalls =
+                                            new java.util.concurrent.atomic.AtomicInteger();
                                     var observedModel =
                                             new ModelProviderPort() {
                                                 public AgentProviderType providerType() {
@@ -224,7 +233,34 @@ class P17JointRunTest {
                                                                         + " summarization, after"
                                                                         + " revocation")
                                                             .isEmpty();
-                                                    return model.invoke(request);
+                                                    var response = model.invoke(request);
+                                                    if (live) {
+                                                        try {
+                                                            JSON.writerWithDefaultPrettyPrinter()
+                                                                    .writeValue(
+                                                                            dir.resolve(
+                                                                                            id
+                                                                                                    + "-model-"
+                                                                                                    + modelCalls
+                                                                                                            .incrementAndGet()
+                                                                                                    + ".json")
+                                                                                    .toFile(),
+                                                                            Map.of(
+                                                                                    "response",
+                                                                                    response,
+                                                                                    "phase",
+                                                                                    request
+                                                                                                            .structuredOutput()
+                                                                                                    == null
+                                                                                            ? "execution"
+                                                                                            : request.structuredOutput()
+                                                                                                    .name()));
+                                                        } catch (java.io.IOException failure) {
+                                                            throw new java.io.UncheckedIOException(
+                                                                    failure);
+                                                        }
+                                                    }
+                                                    return response;
                                                 }
                                             };
                                     var executor =
@@ -585,10 +621,13 @@ class P17JointRunTest {
                                                 "backend",
                                                 graph ? "LANGGRAPH" : "NATIVE",
                                                 "total",
-                                                7,
+                                                executed,
                                                 "failures",
                                                 failures));
-                        assertThat(failures).as("All seven cases must pass; see " + dir).isEmpty();
+                        assertThat(executed).as("Selected case must exist").isPositive();
+                        assertThat(failures)
+                                .as("All selected cases must pass; see " + dir)
+                                .isEmpty();
                     } finally {
                         engine.close();
                     }

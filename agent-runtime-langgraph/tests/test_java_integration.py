@@ -82,6 +82,7 @@ def test_java_tool_gateway_postgres_and_python_http(postgres_dsn, tmp_path):
     required = {
         "GraphCognitionGateway",
         "JdbcGraphExecutionStore",
+        "JdbcGraphReservationStore",
         "JdbcGraphCallCapacityStore",
         "JdbcGraphCompletionStore",
     }

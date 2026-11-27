@@ -1,30 +1,20 @@
 package io.github.illuseahashmap.workflow.agent;
 
-import java.util.Random;
-import static org.mockito.Mockito.nullable;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyInt;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.nullable;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThat;
-import java.time.OffsetDateTime;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.UUID;
-import java.util.Optional;
-import java.util.Set;
-import java.util.Map;
-import java.util.List;
-import static org.mockito.ArgumentMatchers.any;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -73,8 +63,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -108,170 +107,149 @@ class ProcurementTaskMemoryIntegrationTest {
     @Test
     void coldRecoveryPreservesBothBranchesAndRejectsForeignReceiptsEvenAfterJsonRepair()
             throws Exception {
-        PostgreSQLContainer<?> container = null;
-        String url = System.getenv("WORKFLOW_TEST_DATABASE_URL");
-        String user = System.getenv("WORKFLOW_TEST_DATABASE_USER");
-        String password = System.getenv("WORKFLOW_TEST_DATABASE_PASSWORD");
-        if (url == null || url.isBlank()) {
-            org.junit.jupiter.api.Assumptions.assumeTrue(
-                    org.testcontainers.DockerClientFactory.instance().isDockerAvailable(),
-                    "An isolated PostgreSQL or Docker is required");
-            container = new PostgreSQLContainer<>("postgres:17-alpine");
-            container.start();
-            url = container.getJdbcUrl();
-            user = container.getUsername();
-            password = container.getPassword();
-        }
+        P17RoutingFixtureTest.withDatabase(this::exercise);
+    }
+
+    private void exercise(String url, String user, String password) throws Exception {
+        Flyway.configure()
+                .dataSource(url, user, password)
+                .locations("classpath:db/migration/platform")
+                .load()
+                .migrate();
+        var ds = new DriverManagerDataSource(url, user, password);
+        db = new JdbcTemplate(ds);
+        named = new NamedParameterJdbcTemplate(ds);
+        var manager = new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds);
+        tx = new TransactionTemplate(manager);
+        var cfg = new org.flowable.spring.SpringProcessEngineConfiguration();
+        cfg.setTransactionManager(manager);
+        cfg.setDataSource(ds).setDatabaseSchemaUpdate("true").setAsyncExecutorActivate(false);
+        var engine = cfg.buildProcessEngine();
         try {
-            Flyway.configure()
-                    .dataSource(url, user, password)
-                    .locations("classpath:db/migration/platform")
-                    .load()
-                    .migrate();
-            var ds = new DriverManagerDataSource(url, user, password);
-            db = new JdbcTemplate(ds);
-            named = new NamedParameterJdbcTemplate(ds);
-            var manager = new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds);
-            tx = new TransactionTemplate(manager);
-            var cfg = new org.flowable.spring.SpringProcessEngineConfiguration();
-            cfg.setTransactionManager(manager);
-            cfg.setDataSource(ds).setDatabaseSchemaUpdate("true").setAsyncExecutorActivate(false);
-            var engine = cfg.buildProcessEngine();
-            try {
-                seed();
-                String key = "purchase_" + UUID.randomUUID().toString().replace("-", "");
-                engine.getRepositoryService()
-                        .createDeployment()
-                        .addString(key + ".bpmn20.xml", BPMN.formatted(key))
-                        .deploy();
-                var runtime = engine.getRuntimeService();
-                var a =
-                        order(
-                                "A",
-                                "UNKNOWN",
-                                "VERIFY",
-                                runtime.startProcessInstanceByKey(key).getId());
-                var b =
-                        order(
-                                "B",
-                                "UNADMITTED",
-                                "COMMITTEE",
-                                runtime.startProcessInstanceByKey(key).getId());
-                String first = interrupt(a);
-                String second = interrupt(b);
-                assertThat(calls.get()).isEqualTo(4);
+            seed();
+            String key = "purchase_" + UUID.randomUUID().toString().replace("-", "");
+            engine.getRepositoryService()
+                    .createDeployment()
+                    .addString(key + ".bpmn20.xml", BPMN.formatted(key))
+                    .deploy();
+            var runtime = engine.getRuntimeService();
+            var a = order("A", "UNKNOWN", "VERIFY", runtime.startProcessInstanceByKey(key).getId());
+            var b =
+                    order(
+                            "B",
+                            "UNADMITTED",
+                            "COMMITTEE",
+                            runtime.startProcessInstanceByKey(key).getId());
+            String first = interrupt(a);
+            String second = interrupt(b);
+            assertThat(calls.get()).isEqualTo(4);
 
-                var audits = new JdbcAgentToolGovernanceRepository(named);
-                var cached = audits.findSucceededByRun(TENANT, a.run, Set.of(a.ref(1), a.ref(2)));
-                assertThat(cached).hasSize(2).allMatch(row -> row.output() == null);
+            var audits = new JdbcAgentToolGovernanceRepository(named);
+            var cached = audits.findSucceededByRun(TENANT, a.run, Set.of(a.ref(1), a.ref(2)));
+            assertThat(cached).hasSize(2).allMatch(row -> row.output() == null);
 
-                var revoked = model();
-                when(revoked.invoke(any()))
-                        .thenAnswer(
-                                inv -> {
-                                    db.update(
-                                            "UPDATE agent_tool_tenant_grant SET enabled=false WHERE"
+            var revoked = model();
+            when(revoked.invoke(any()))
+                    .thenAnswer(
+                            inv -> {
+                                db.update(
+                                        "UPDATE agent_tool_tenant_grant SET enabled=false WHERE"
                                                 + " tenant_code=? AND tool_code=?",
-                                            TENANT,
-                                            TOOL);
-                                    return response("invalid JSON");
-                                });
-                try {
-                    assertThatThrownBy(() -> run(revoked, a, first, null))
-                            .hasMessageContaining("no longer authorized");
-                    verify(revoked).invoke(any());
-                } finally {
-                    db.update(
-                            "UPDATE agent_tool_tenant_grant SET enabled=true WHERE tenant_code=?"
-                                + " AND tool_code=?",
-                            TENANT,
-                            TOOL);
-                }
-
-                var blocked = model();
-                assertThatThrownBy(() -> run(blocked, a, second, null))
-                        .hasMessageContaining("ownership");
-                ObjectNode damaged = (ObjectNode) json.readTree(first);
-                ObjectNode state = (ObjectNode) json.readTree(damaged.path("context").asText());
-                ((ObjectNode) state.path("receipts").get(0)).put("reference", b.ref(1));
-                damaged.put("context", state.toString())
-                        .put(
-                                "contextDigest",
-                                new CheckpointContextPolicy(40000).digest(state.toString()));
-                assertThatThrownBy(() -> run(blocked, a, damaged.toString(), null))
-                        .hasMessageContaining("does not belong");
-                verify(blocked, never()).invoke(any());
-
-                var badRead = model();
-                when(badRead.invoke(any()))
-                        .thenReturn(
-                                response(
-                                        json.writeValueAsString(
-                                                Map.of(
-                                                        "action",
-                                                        "READ_RESULT",
-                                                        "reference",
-                                                        b.ref(1),
-                                                        "pointer",
-                                                        "/delayed"))));
-                assertThatThrownBy(() -> run(badRead, a, first, null))
-                        .hasMessageContaining("Unknown result reference");
-                verify(badRead).invoke(any());
-
-                for (var order : List.of(a, b)) {
-                    String saved = order == a ? first : second;
-                    // The repair must not launder either the wrong branch or a same-tenant foreign
-                    // citation.
-                    assertThatThrownBy(
-                                    () ->
-                                            finish(
-                                                    order,
-                                                    saved,
-                                                    order == a ? b.branch : a.branch,
-                                                    order.ref(2)))
-                            .hasMessageContaining("authoritative");
-                    assertThatThrownBy(
-                                    () ->
-                                            finish(
-                                                    order,
-                                                    saved,
-                                                    order.branch,
-                                                    order == a ? b.ref(2) : a.ref(2)))
-                            .hasMessageContaining("authoritative");
-                    var result = finish(order, saved, order.branch, order.ref(2));
-                    assertThat(result.steps())
-                            .extracting(AgentExecutor.StepResult::stepType)
-                            .containsExactly("OUTPUT_REPAIR", "VALIDATION");
-                    var wait =
-                            runtime.createExecutionQuery()
-                                    .processInstanceId(order.process)
-                                    .activityId("awaitResult")
-                                    .singleResult();
-                    runtime.trigger(
-                            wait.getId(),
-                            Map.of(
-                                    "decision",
-                                    json.readTree(result.modelResponse().content())
-                                            .get("decision")
-                                            .asText()));
-                    assertThat(
-                                    engine.getTaskService()
-                                            .createTaskQuery()
-                                            .processInstanceId(order.process)
-                                            .singleResult()
-                                            .getTaskDefinitionKey())
-                            .isEqualTo(order.branch);
-                }
-                assertThat(calls.get()).isEqualTo(4);
-                workerFaults(engine, key, "A", "VERIFY");
-                workerFaults(engine, key, "B", "COMMITTEE");
+                                        TENANT,
+                                        TOOL);
+                                return response("invalid JSON");
+                            });
+            try {
+                assertThatThrownBy(() -> run(revoked, a, first, null))
+                        .hasMessageContaining("no longer authorized");
+                verify(revoked).invoke(any());
             } finally {
-                engine.close();
+                db.update(
+                        "UPDATE agent_tool_tenant_grant SET enabled=true WHERE tenant_code=?"
+                                + " AND tool_code=?",
+                        TENANT,
+                        TOOL);
             }
+
+            var blocked = model();
+            assertThatThrownBy(() -> run(blocked, a, second, null))
+                    .hasMessageContaining("ownership");
+            ObjectNode damaged = (ObjectNode) json.readTree(first);
+            ObjectNode state = (ObjectNode) json.readTree(damaged.path("context").asText());
+            ((ObjectNode) state.path("receipts").get(0)).put("reference", b.ref(1));
+            damaged.put("context", state.toString())
+                    .put(
+                            "contextDigest",
+                            new CheckpointContextPolicy(40000).digest(state.toString()));
+            assertThatThrownBy(() -> run(blocked, a, damaged.toString(), null))
+                    .hasMessageContaining("does not belong");
+            verify(blocked, never()).invoke(any());
+
+            var badRead = model();
+            when(badRead.invoke(any()))
+                    .thenReturn(
+                            response(
+                                    json.writeValueAsString(
+                                            Map.of(
+                                                    "action",
+                                                    "READ_RESULT",
+                                                    "reference",
+                                                    b.ref(1),
+                                                    "pointer",
+                                                    "/delayed"))));
+            assertThatThrownBy(() -> run(badRead, a, first, null))
+                    .hasMessageContaining("Unknown result reference");
+            verify(badRead).invoke(any());
+
+            for (var order : List.of(a, b)) {
+                String saved = order == a ? first : second;
+                // The repair must not launder either the wrong branch or a same-tenant foreign
+                // citation.
+                assertThatThrownBy(
+                                () ->
+                                        finish(
+                                                order,
+                                                saved,
+                                                order == a ? b.branch : a.branch,
+                                                order.ref(2)))
+                        .hasMessageContaining("authoritative");
+                assertThatThrownBy(
+                                () ->
+                                        finish(
+                                                order,
+                                                saved,
+                                                order.branch,
+                                                order == a ? b.ref(2) : a.ref(2)))
+                        .hasMessageContaining("authoritative");
+                var result = finish(order, saved, order.branch, order.ref(2));
+                assertThat(result.steps())
+                        .extracting(AgentExecutor.StepResult::stepType)
+                        .containsExactly("OUTPUT_REPAIR", "VALIDATION");
+                var wait =
+                        runtime.createExecutionQuery()
+                                .processInstanceId(order.process)
+                                .activityId("awaitResult")
+                                .singleResult();
+                runtime.trigger(
+                        wait.getId(),
+                        Map.of(
+                                "decision",
+                                json.readTree(result.modelResponse().content())
+                                        .get("decision")
+                                        .asText()));
+                assertThat(
+                                engine.getTaskService()
+                                        .createTaskQuery()
+                                        .processInstanceId(order.process)
+                                        .singleResult()
+                                        .getTaskDefinitionKey())
+                        .isEqualTo(order.branch);
+            }
+            assertThat(calls.get()).isEqualTo(4);
+            workerFaults(engine, key, "A", "VERIFY");
+            workerFaults(engine, key, "B", "COMMITTEE");
         } finally {
-            if (container != null) {
-                container.stop();
-            }
+            engine.close();
         }
     }
 
@@ -326,7 +304,7 @@ class ProcurementTaskMemoryIntegrationTest {
                                     case 1 ->
                                             response(
                                                     "{\"schemaVersion\":\"1\",\"mode\":\"DIRECT\",\"reason\":\"verify\""
- + ",\"requestedTools\":[\"purchase_lookup\"],\"steps\":[\"lookup\"]}");
+                                                        + ",\"requestedTools\":[\"purchase_lookup\"],\"steps\":[\"lookup\"]}");
                                     case 2, 4 ->
                                             response(
                                                     json.writeValueAsString(
@@ -403,7 +381,7 @@ class ProcurementTaskMemoryIntegrationTest {
                                 default ->
                                         throw new AssertionError(
                                                 "Model was asked to replan, repeat a tool or repeat"
-                                                    + " an answer");
+                                                        + " an answer");
                             };
                         });
         // Lose the worker after validation, inside the Run + Outbox transaction, before commit.
@@ -470,7 +448,7 @@ class ProcurementTaskMemoryIntegrationTest {
         assertThat(
                         db.queryForObject(
                                 "SELECT count(*) FROM platform_outbox_event WHERE aggregate_id=?"
-                                    + " AND event_type=?",
+                                        + " AND event_type=?",
                                 Integer.class,
                                 Long.toString(runId),
                                 AgentCompletionEventStore.EVENT_TYPE))
@@ -481,7 +459,7 @@ class ProcurementTaskMemoryIntegrationTest {
         // grants.
         db.update(
                 "UPDATE agent_tool_tenant_grant SET enabled=false WHERE tenant_code=? AND"
-                    + " tool_code=?",
+                        + " tool_code=?",
                 TENANT,
                 TOOL);
         try {
@@ -491,7 +469,7 @@ class ProcurementTaskMemoryIntegrationTest {
         } finally {
             db.update(
                     "UPDATE agent_tool_tenant_grant SET enabled=true WHERE tenant_code=? AND"
-                        + " tool_code=?",
+                            + " tool_code=?",
                     TENANT,
                     TOOL);
         }
@@ -507,7 +485,7 @@ class ProcurementTaskMemoryIntegrationTest {
         assertThat(
                         db.queryForObject(
                                 "SELECT output_snapshot_json::jsonb->>'content' FROM agent_run"
-                                    + " WHERE id=?",
+                                        + " WHERE id=?",
                                 String.class,
                                 runId))
                 .isEqualTo(delivered.content());
@@ -601,7 +579,7 @@ class ProcurementTaskMemoryIntegrationTest {
         long def =
                 db.queryForObject(
                         "INSERT INTO agent_definition(tenant_code,agent_code,agent_name)"
-                            + " VALUES(?,?,'Purchase') RETURNING id",
+                                + " VALUES(?,?,'Purchase') RETURNING id",
                         Long.class,
                         TENANT,
                         UUID.randomUUID().toString());
@@ -637,12 +615,12 @@ class ProcurementTaskMemoryIntegrationTest {
                         "[\"purchase_lookup\"]");
         db.update(
                 "INSERT INTO agent_tool_definition(tool_code,tool_name,input_schema)"
-                    + " VALUES(?,?,'{\"type\":\"object\"}') ON CONFLICT DO NOTHING",
+                        + " VALUES(?,?,'{\"type\":\"object\"}') ON CONFLICT DO NOTHING",
                 TOOL,
                 TOOL);
         db.update(
                 "INSERT INTO agent_tool_tenant_grant(tenant_code,tool_code) VALUES(?,?) ON CONFLICT"
-                    + " DO NOTHING",
+                        + " DO NOTHING",
                 TENANT,
                 TOOL);
     }
@@ -661,7 +639,7 @@ class ProcurementTaskMemoryIntegrationTest {
         long attempt =
                 db.queryForObject(
                         "INSERT INTO agent_run_attempt(tenant_code,agent_run_id,attempt_no,status)"
-                            + " VALUES(?,?,1,'RUNNING') RETURNING id",
+                                + " VALUES(?,?,1,'RUNNING') RETURNING id",
                         Long.class,
                         TENANT,
                         run);
@@ -689,7 +667,7 @@ class ProcurementTaskMemoryIntegrationTest {
                                 case 1 ->
                                         response(
                                                 "{\"schemaVersion\":\"1\",\"mode\":\"DIRECT\",\"reason\":\"verify\""
- + ",\"requestedTools\":[\"purchase_lookup\"],\"steps\":[\"lookup\"]}");
+                                                    + ",\"requestedTools\":[\"purchase_lookup\"],\"steps\":[\"lookup\"]}");
                                 case 2, 4 ->
                                         response(
                                                 "{\"action\":\"TOOL_CALL\",\"tool\":\"purchase_lookup\",\"arguments\":{\"orderId\":\""

@@ -1,5 +1,7 @@
 # 下一步计划与当前状态
 
+2026-11-27 集成修复：本集成分支已合并 main 的 V80 与图分支 V81，并增加 V82 版本运行引擎冻结、V83 双人外部终态核销。手动提交/Flowable 使用同一原子路由，暂停/恢复/取消保持 Run 截止时间与单一 Attempt；原生默认兼容。新增真实 TCP 登录—发布—提交—查询验收及非超级用户 RLS 回归。此前“本分支不含 V80”的表述仅适用于历史图分支记录。真实 Provider 已恢复少量验收，曾暴露输出枚举未执行与正常生成未提供 Schema，已修复并增加回归；不能把确定性 P-17 通过等同真实模型通过。当前证据与剩余验收见[集成加固记录](quality/integration-hardening-20261127.md)。
+
 2026-11-27 P-17 收尾修复：图端与原生七场景均 7/7。V81 冻结稳定工具 intent 的物理尝试上限，持久化类型化失败和撤权停止，复用无模型终态/Outbox/Flowable 人工交接；旧版兼容保留。本分支未包含另一项工作的 V80。完整范围与证据见[持久收尾回归](quality/graph-tool-stop-regression.md)。同租户双采购、连续两次压缩与换代恢复已通过确定性模型/JDBC 组合验收，见[组合记录](quality/graph-dual-purchase-recovery-regression.md)。该组合已进一步接入真实 Flowable 提交、认证图派发及生产 Outbox/Inbox，并修复流程变量小数精度损失，见[Flowable 组合记录](quality/graph-dual-purchase-flowable-regression.md)。103 Python/257 Java 联合回归和 31 项兼容回归通过，均无跳过。下一步补齐未知调用对账、多实例故障/负载及真实 Provider/MCP 证据；完整 G1/G2 及业务版本切换仍未完成。
 
 文档更新时间：2026-11-27。V79 显式路由投影已实现，五种模式沿用原生能力契约，详见[路由专项](quality/graph-route-projection-regression.md)。当前拆分进展：V70 新契约与稳定工具意图、V71 Run 次数预算/持久停止/无模型收尾、V72 重复检测、V73 必要事实清单与循环触发的一次纠偏均已实现。旧版兼容保留，业务版本未切换，完整 G0–G3 仍未完成。随后完成 V74 PLANNED revision 1：显式规划/验收节点和工具条目绑定；V76 随后为显式策略 v2 增加一次安全计划切换，详见[修订记录](quality/graph-plan-revision-regression.md)。V74 实现范围与验证见[Plan 记录](quality/graph-v2-plan-regression.md)。
@@ -241,3 +243,7 @@ RAG 向量纵向验证记录（2026-10-17）：方舟 `doubao-embedding-vision-2
 - Agent Worker 领取查询支持租户级并发上限，避免单一租户占满所有执行槽位；上限通过 `WORKFLOW_AGENT_WORKER_MAX_RUNNING_PER_TENANT` 配置。
 - 人工重试除状态历史外，写入独立的 `agent_run_operation` 操作账本；V31 同时为 Agent 操作和已存在的 Flowable 租户表补充纵深隔离策略。
 - 结果策略支持显式 `resultStatus` 业务结果封套，只有 `SUCCESS` 才允许恢复流程；空结果、部分结果和业务拒绝均保持终止语义。
+
+### 2026-11-26 租户资源配额
+
+已补充平台总上限、默认租户上限与逐字段租户覆盖的管理接口和前端入口，并接入准入、图调度与外呼许可。权限、继承、生效、升级和验证边界见[资源配额运维说明](operations/tenant-capacity-configuration.md)。本地验收不代表业务环境已升级。

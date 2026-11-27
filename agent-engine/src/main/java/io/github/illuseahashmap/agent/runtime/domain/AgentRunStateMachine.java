@@ -2,24 +2,34 @@ package io.github.illuseahashmap.agent.runtime.domain;
 
 import java.util.Objects;
 
-/**
- * The only domain service allowed to advance an {@link AgentRun} lifecycle.
- */
+/** The only domain service allowed to advance an {@link AgentRun} lifecycle. */
 public final class AgentRunStateMachine {
 
     /** A platform stop does not need a live worker, lease, or fabricated business attempt. */
-    public AgentRun stopDelegated(AgentRun run, boolean deadlineExceeded, AgentRunTransitionContext context) {
+    public AgentRun stopDelegated(
+            AgentRun run, boolean deadlineExceeded, AgentRunTransitionContext context) {
         requireInputs(run, context);
-        if (run.status().isTerminal()) { return run; }
-        if (run.status() != AgentRunStatus.RUNNING && run.status() != AgentRunStatus.QUEUED
-                && run.status() != AgentRunStatus.PAUSED) { throw new AgentRunTransitionException("Invalid delegated stop state"); }
+        if (run.status().isTerminal()) {
+            return run;
+        }
+        if (run.status() != AgentRunStatus.RUNNING
+                && run.status() != AgentRunStatus.QUEUED
+                && run.status() != AgentRunStatus.PAUSED) {
+            throw new AgentRunTransitionException("Invalid delegated stop state");
+        }
         if (!Objects.equals(context.attemptId(), run.currentAttemptId())) {
             throw new AgentRunTransitionException("Stop attempt mismatch");
         }
         if (deadlineExceeded && context.occurredAt().isBefore(run.deadlineAt())) {
             throw new AgentRunTransitionException("Deadline has not been exceeded");
         }
-        run.finish(deadlineExceeded ? AgentRunStatus.TIMED_OUT : AgentRunStatus.FAILED, context);
+        run.finish(
+                deadlineExceeded
+                        ? AgentRunStatus.TIMED_OUT
+                        : "OPERATOR_CANCELLED".equals(context.reasonCode())
+                                ? AgentRunStatus.CANCELLED
+                                : AgentRunStatus.FAILED,
+                context);
         return run;
     }
 
@@ -27,7 +37,8 @@ public final class AgentRunStateMachine {
     public AgentRun startDelegated(AgentRun run, AgentRunTransitionContext context) {
         requireInputs(run, context);
         requireStatus(run, AgentRunStatus.QUEUED, "startDelegated");
-        if (run.currentAttemptId() != null || context.attemptId() == null
+        if (run.currentAttemptId() != null
+                || context.attemptId() == null
                 || !context.occurredAt().isBefore(run.deadlineAt())) {
             throw new AgentRunTransitionException("Invalid delegated attempt");
         }
@@ -36,18 +47,17 @@ public final class AgentRunStateMachine {
     }
 
     public AgentRun startLease(
-            AgentRun run,
-            AgentRunLease lease,
-            AgentRunTransitionContext context
-    ) {
+            AgentRun run, AgentRunLease lease, AgentRunTransitionContext context) {
         requireInputs(run, context);
         Objects.requireNonNull(lease, "lease must not be null");
         requireStatus(run, AgentRunStatus.QUEUED, "startLease");
         if (context.attemptId() == null || context.attemptId() != lease.attemptId()) {
-            throw new AgentRunTransitionException("Transition attempt must match the leased attempt");
+            throw new AgentRunTransitionException(
+                    "Transition attempt must match the leased attempt");
         }
         if (!lease.expiresAt().isAfter(context.occurredAt())) {
-            throw new AgentRunTransitionException("Lease must still be valid when execution starts");
+            throw new AgentRunTransitionException(
+                    "Lease must still be valid when execution starts");
         }
         if (lease.expiresAt().isAfter(run.deadlineAt())) {
             throw new AgentRunTransitionException("Lease must not exceed the Agent run deadline");
@@ -63,28 +73,26 @@ public final class AgentRunStateMachine {
             AgentRun run,
             boolean requiredStepsSucceeded,
             boolean resultPolicyAccepted,
-            AgentRunTransitionContext context
-    ) {
+            AgentRunTransitionContext context) {
         requireInputs(run, context);
         if (run.status().isTerminal()) {
             return run;
         }
         requireRunningAttempt(run, context, "markSucceeded");
         if (!requiredStepsSucceeded) {
-            throw new AgentRunTransitionException("Required Agent steps must succeed before completion");
+            throw new AgentRunTransitionException(
+                    "Required Agent steps must succeed before completion");
         }
         if (!resultPolicyAccepted) {
-            throw new AgentRunTransitionException("Agent result policy must accept the result before completion");
+            throw new AgentRunTransitionException(
+                    "Agent result policy must accept the result before completion");
         }
         run.finish(AgentRunStatus.SUCCEEDED, context);
         return run;
     }
 
     public AgentRun markFailed(
-            AgentRun run,
-            AgentFailureDisposition disposition,
-            AgentRunTransitionContext context
-    ) {
+            AgentRun run, AgentFailureDisposition disposition, AgentRunTransitionContext context) {
         requireInputs(run, context);
         Objects.requireNonNull(disposition, "disposition must not be null");
         if (run.status().isTerminal()) {
@@ -92,17 +100,15 @@ public final class AgentRunStateMachine {
         }
         requireRunningAttempt(run, context, "markFailed");
         if (disposition == AgentFailureDisposition.RETRYABLE) {
-            throw new AgentRunTransitionException("A retryable failure must be retried or exhausted before failure");
+            throw new AgentRunTransitionException(
+                    "A retryable failure must be retried or exhausted before failure");
         }
         run.finish(AgentRunStatus.FAILED, context);
         return run;
     }
 
     public AgentRun markTimedOut(
-            AgentRun run,
-            AgentTimeoutType timeoutType,
-            AgentRunTransitionContext context
-    ) {
+            AgentRun run, AgentTimeoutType timeoutType, AgentRunTransitionContext context) {
         requireInputs(run, context);
         Objects.requireNonNull(timeoutType, "timeoutType must not be null");
         if (run.status().isTerminal()) {
@@ -135,13 +141,13 @@ public final class AgentRunStateMachine {
             AgentRun run,
             AgentFailureDisposition disposition,
             boolean retriesRemaining,
-            AgentRunTransitionContext context
-    ) {
+            AgentRunTransitionContext context) {
         requireInputs(run, context);
         Objects.requireNonNull(disposition, "disposition must not be null");
         requireRunningAttempt(run, context, "retry");
         if (disposition != AgentFailureDisposition.RETRYABLE) {
-            throw new AgentRunTransitionException("Only a retryable failure can schedule another attempt");
+            throw new AgentRunTransitionException(
+                    "Only a retryable failure can schedule another attempt");
         }
         if (!retriesRemaining) {
             throw new AgentRunTransitionException("Retry policy has no remaining attempts");
@@ -154,22 +160,21 @@ public final class AgentRunStateMachine {
         Objects.requireNonNull(run, "run must not be null");
         Objects.requireNonNull(context, "context must not be null");
         if (context.occurredAt().isBefore(run.updatedAt())) {
-            throw new AgentRunTransitionException("Transition time must not precede the current Agent run state");
+            throw new AgentRunTransitionException(
+                    "Transition time must not precede the current Agent run state");
         }
     }
 
     private void requireRunningAttempt(
-            AgentRun run,
-            AgentRunTransitionContext context,
-            String command
-    ) {
+            AgentRun run, AgentRunTransitionContext context, String command) {
         requireStatus(run, AgentRunStatus.RUNNING, command);
         requireAttemptMatches(run, context);
     }
 
     private void requireAttemptMatches(AgentRun run, AgentRunTransitionContext context) {
         if (context.attemptId() == null || !context.attemptId().equals(run.currentAttemptId())) {
-            throw new AgentRunTransitionException("Transition attempt must match the current Agent run attempt");
+            throw new AgentRunTransitionException(
+                    "Transition attempt must match the current Agent run attempt");
         }
     }
 

@@ -6,6 +6,15 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 /** Explicit acceptance job: the same seven gold cases, a real Python graph and Java/Flowable. */
 class P17GraphJointRunTest {
     @Test
+    @EnabledIfSystemProperty(named = "workflow.rag.live-p17-graph", matches = "true")
+    void liveGraphRunsUseThePublishedFixture() throws Exception {
+        new io.github.illuseahashmap.agent.provider.infrastructure.openai.ProviderEndpointValidator(
+                        false, false)
+                .validate(java.net.URI.create(P17Pilot.ARK));
+        new P17JointRunTest().run(true, true);
+    }
+
+    @Test
     @EnabledIfSystemProperty(named = "workflow.p17.graph", matches = "true")
     void graphRunsExercisePublishedBindingsAndOutbox() throws Exception {
         org.assertj.core.api.Assertions.assertThat(
