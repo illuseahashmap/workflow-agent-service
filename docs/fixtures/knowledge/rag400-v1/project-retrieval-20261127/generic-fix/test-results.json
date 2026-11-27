@@ -1,0 +1,34 @@
+[
+  {
+    "name": "io.github.illuseahashmap.workflow.knowledge.KnowledgeDocumentImmutabilityIntegrationTest",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "14.066"
+  },
+  {
+    "name": "io.github.illuseahashmap.workflow.knowledge.PostgresKeywordChunkSearchAdapterTest",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "0.009"
+  },
+  {
+    "name": "io.github.illuseahashmap.workflow.knowledge.Rag400ProjectRetrievalTest",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "27.918"
+  },
+  {
+    "name": "io.github.illuseahashmap.workflow.knowledge.SectionKeywordSearchIntegrationTest",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "3.243"
+  }
+]

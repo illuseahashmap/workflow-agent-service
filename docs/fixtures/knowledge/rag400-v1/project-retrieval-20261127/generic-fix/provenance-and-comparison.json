@@ -1,0 +1,41 @@
+{
+  "inputHashes": {
+    "dev.cases.jsonl": "f690cdebd65a8c147f56bf9849f40fd50931b087a1ef126767f7b7fd3f164e33",
+    "dev.queries.jsonl": "2ef8f3ab7022a3ae7c91079f8a5cb8f885bdf35fe40c609a582bcee88da2a356",
+    "dev.manifest.json": "0313a61cfa5d89143cd550fbcf67b5d19c6bd3ef196a8e24d0eb9803f05bac07"
+  },
+  "productionSourceSha256": {
+    "workflow-boot/src/main/java/io/github/illuseahashmap/workflow/knowledge/PostgresKeywordChunkSearchAdapter.java": "7a8e7dc6e2101faef173c6ff5e9fd42ecd3e43a65ad873d7a80d4f3e53f06dcb",
+    "workflow-boot/src/main/java/io/github/illuseahashmap/workflow/knowledge/SectionKeywordSearch.java": "afea2006220fb3f03795e12072472a9caea9e517dd6a2a47dff5e74398e3ab14"
+  },
+  "baseCommit": "5a502a384c73b164a8ca6c0c4d7bed6609867888",
+  "holdoutRead": false,
+  "casesOrGoldChanged": false,
+  "comparison": {
+    "3": {
+      "improved": 89,
+      "regressed": 1,
+      "regressedCaseIds": [
+        "R400-ADM-349736b13a-1"
+      ]
+    },
+    "5": {
+      "improved": 83,
+      "regressed": 3,
+      "regressedCaseIds": [
+        "R400-ADM-349736b13a-1",
+        "R400-ADM-7d2cc9f2e2-1",
+        "R400-OPS-d9a5f697ea-2"
+      ]
+    },
+    "10": {
+      "improved": 70,
+      "regressed": 3,
+      "regressedCaseIds": [
+        "R400-ADM-7d2cc9f2e2-1",
+        "R400-SUP-02a1cc249c-1",
+        "R400-OPS-b8ef9bf122-1"
+      ]
+    }
+  }
+}

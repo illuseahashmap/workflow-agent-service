@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /** PostgreSQL adapter for the provider-neutral keyword search port. */
 @Component
 public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort {
-    private static final int MAX_FALLBACK_TERMS = 16;
+    private static final int MAX_FALLBACK_TERMS = 128;
     private static final Pattern QUERY_TOKEN =
             Pattern.compile("[\\p{IsHan}]+|[\\p{L}\\p{N}]+(?:[-_.][\\p{L}\\p{N}]+)*");
     // Both lexical seeds and structural companions pass through exactly the same security and
@@ -113,7 +113,13 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                     AND (l.member IS NULL OR EXISTS (SELECT 1 FROM best WHERE doc=l.doc AND ix=l.ix AND hdr=l.member)
                          OR (CAST(:point AS numeric) IS NULL AND (SELECT n FROM decision)=0))
             )
-            SELECT c.*, %s AS ts_rank %s FROM (SELECT id,max(p) p FROM candidates GROUP BY id) a JOIN eligible c ON c.id=a.id
+            %s
+            SELECT c.*, %s AS ts_rank %s FROM (
+                SELECT id,max(p) p FROM (
+                    SELECT id,p FROM candidates WHERE (SELECT n FROM decision)>0
+                    UNION ALL SELECT id,p FROM prose_bodies
+                ) ranked GROUP BY id
+            ) a JOIN eligible c ON c.id=a.id
             ORDER BY a.p DESC,ts_rank DESC,c.ordinal,c.source_code COLLATE "C",c.index_version_id,c.chunk_id COLLATE "C" LIMIT :limit
             """;
 
@@ -142,6 +148,8 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                                         ? List.of(-1L)
                                         : request.frozenIndexIds())
                         .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
+        parameters.addValue("seedLimit", Math.min(200, Math.max(32, request.maxResults() * 8)))
+                .addValue("sectionBodyLimit", 4);
         List<String> lexicalScores = new ArrayList<>();
         List<String> lexicalPredicates = new ArrayList<>();
         for (int index = 0; index < fallbackTerms.size(); index++) {
@@ -207,7 +215,8 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                 ELIGIBLE
                         + (comparison.isPresent()
                                 ? ApplicabilitySearch.SQL.formatted(rank)
-                                : SCOPED.formatted(rank, lexicalPredicate, action, rank, role));
+                                : SCOPED.formatted(rank, lexicalPredicate, action,
+                                        SectionKeywordSearch.SQL.formatted(rank, lexicalPredicate), rank, role));
         return jdbcTemplate.query(
                 sql,
                 parameters,
@@ -252,14 +261,14 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
         }
         Set<String> terms = new LinkedHashSet<>();
         Matcher matcher = QUERY_TOKEN.matcher(query);
-        while (matcher.find() && terms.size() < MAX_FALLBACK_TERMS) {
+        while (matcher.find()) {
             String token = matcher.group();
             if (isHan(token)) {
                 if (token.length() == 1) {
                     terms.add(token);
                 } else {
                     for (int index = 0;
-                            index < token.length() - 1 && terms.size() < MAX_FALLBACK_TERMS;
+                            index < token.length() - 1;
                             index++) {
                         terms.add(token.substring(index, index + 2));
                     }
@@ -268,7 +277,17 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                 terms.add(token.toLowerCase(Locale.ROOT));
             }
         }
-        return List.copyOf(terms);
+        var all = List.copyOf(terms);
+        if (all.size() <= MAX_FALLBACK_TERMS) {
+            return all;
+        }
+        // Sample the entire query deterministically, including both ends. A long introduction
+        // cannot consume every slot before the actual entity or question is encountered.
+        var selected = new ArrayList<String>(MAX_FALLBACK_TERMS);
+        for (int i = 0; i < MAX_FALLBACK_TERMS; i++) {
+            selected.add(all.get((int) ((long) i * (all.size() - 1) / (MAX_FALLBACK_TERMS - 1))));
+        }
+        return List.copyOf(selected);
     }
 
     private static boolean isHan(String value) {

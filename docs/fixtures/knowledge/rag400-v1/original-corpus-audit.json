@@ -1,0 +1,413 @@
+{
+  "documents": [
+    {
+      "path": "docs/fixtures/knowledge/domains/administration/ADM-CHG-01.md",
+      "sha256": "8f0cf051e72b579d386b9e8cfa8157d1abf36d50eecd239312127d73bb520575",
+      "characters": 993,
+      "headings": 4,
+      "kind": "CHG",
+      "domain": "administration",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/administration/ADM-FAQ-01.md",
+      "sha256": "2bec601e8b530edea4b4da439c2c53c005bb34e6ebc89620d60ebbefc6170b5d",
+      "characters": 1466,
+      "headings": 11,
+      "kind": "FAQ",
+      "domain": "administration",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/administration/ADM-POL-01.md",
+      "sha256": "eaaaa2a4a015166287becab28965ec7c4ff6f6f1a3f1429bd7e0d34edd04c7db",
+      "characters": 1596,
+      "headings": 9,
+      "kind": "POL",
+      "domain": "administration",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/administration/ADM-SOP-01.md",
+      "sha256": "cc1319a98a33cfedb5228f7ec5b0aeaa6d82a3ae6de34bac2d3a9787f12247a9",
+      "characters": 1157,
+      "headings": 4,
+      "kind": "SOP",
+      "domain": "administration",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/customer-support/SUP-CHG-01.md",
+      "sha256": "3e76cca9376cf868819b46be342a37d489b657dafe017426aeb75f0618c71675",
+      "characters": 853,
+      "headings": 3,
+      "kind": "CHG",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/customer-support/SUP-FAQ-01.md",
+      "sha256": "0d1d5e861c929fb448d40d2c81a84134c7c457f61b91306e88643188277826c7",
+      "characters": 1433,
+      "headings": 10,
+      "kind": "FAQ",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/customer-support/SUP-POL-01.md",
+      "sha256": "c010947473cdb8f21fffcea42a247ccf6e31338acb61b3d1b16aeeb8ae8a9c25",
+      "characters": 1743,
+      "headings": 9,
+      "kind": "POL",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/customer-support/SUP-SOP-01.md",
+      "sha256": "b7b891819a5ae06709bb7aa743f1935e834e1157fabfaf4b46aa846ae04972d8",
+      "characters": 1254,
+      "headings": 4,
+      "kind": "SOP",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/finance/FIN-CHG-01.md",
+      "sha256": "31797e75d01a51ce6cccb4bb543c9ca1832e51e14ba7cb7702f2f870d99237d6",
+      "characters": 1224,
+      "headings": 4,
+      "kind": "CHG",
+      "domain": "finance",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/finance/FIN-FAQ-01.md",
+      "sha256": "0d65c690366c66a4f5ac939c4b045d24b6c4edd58d6ded06458afbfa1a328285",
+      "characters": 2096,
+      "headings": 13,
+      "kind": "FAQ",
+      "domain": "finance",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/finance/FIN-POL-01.md",
+      "sha256": "a69ed4eb88a13003e956c6fcad835b4acd31b2409d0ddc8ced0099bcc60ed481",
+      "characters": 2695,
+      "headings": 16,
+      "kind": "POL",
+      "domain": "finance",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/finance/FIN-SOP-01.md",
+      "sha256": "523075cb36702a867abd9087b69c89828234eb29aee05b8a4fc2672c6e63c8ad",
+      "characters": 2008,
+      "headings": 9,
+      "kind": "SOP",
+      "domain": "finance",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/hr/HR-CHG-01.md",
+      "sha256": "97fa256ae1246555966dee58cc488c408382e9b6ad40889b62f48dfb40eb8453",
+      "characters": 1019,
+      "headings": 4,
+      "kind": "CHG",
+      "domain": "hr",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/hr/HR-FAQ-01.md",
+      "sha256": "ca4cd65f9eb5a244f392b642798a1632df6a86acad2b67b77bd125d51ab09091",
+      "characters": 1637,
+      "headings": 11,
+      "kind": "FAQ",
+      "domain": "hr",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/hr/HR-POL-01.md",
+      "sha256": "ad33ecd39bc2a22c84dfe1494699d6c31970256c8275707551ceec0666423aba",
+      "characters": 1994,
+      "headings": 12,
+      "kind": "POL",
+      "domain": "hr",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/hr/HR-SOP-01.md",
+      "sha256": "9c83d8ce1f265535866fd37c6fb957e3ef717f24afaca4a4c023e07f374e790a",
+      "characters": 1428,
+      "headings": 5,
+      "kind": "SOP",
+      "domain": "hr",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/information-security/SEC-CHG-01.md",
+      "sha256": "14c60cfe0b33f36aeac525f66e674be87a5684dae83f93775841020d22a29d2a",
+      "characters": 1040,
+      "headings": 4,
+      "kind": "CHG",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/information-security/SEC-FAQ-01.md",
+      "sha256": "2a5ee4a05d04708764eabc706583a48f7036b4c2674aaa8a8ba934e888784957",
+      "characters": 1603,
+      "headings": 10,
+      "kind": "FAQ",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/information-security/SEC-POL-01.md",
+      "sha256": "beb0cf120aa6732e4514f00119ec7a063eba0d0abd23156d3a2c998f9cbb9591",
+      "characters": 1792,
+      "headings": 10,
+      "kind": "POL",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/information-security/SEC-SOP-01.md",
+      "sha256": "25701c9c0a9ff55259dbd7916d0c69158c65569bd0ed1d5ce62db4ab9fdfbffa",
+      "characters": 1327,
+      "headings": 5,
+      "kind": "SOP",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/it-operations/OPS-CHG-01.md",
+      "sha256": "34f5708eb003c09f8b8408719ae78cf3104b9bf4995b9bbe6b82f62e40b59650",
+      "characters": 894,
+      "headings": 3,
+      "kind": "CHG",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/it-operations/OPS-FAQ-01.md",
+      "sha256": "cd7dacce2e3bf36c8fd5471f37a13e78c1e237561565a66086774a1bde8f7aa7",
+      "characters": 1489,
+      "headings": 10,
+      "kind": "FAQ",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/it-operations/OPS-POL-01.md",
+      "sha256": "9831aa27c1f71705b0384336eb2739ddbf62c30237db6113da644d487a962de4",
+      "characters": 1703,
+      "headings": 10,
+      "kind": "POL",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/it-operations/OPS-SOP-01.md",
+      "sha256": "53ecdce6a828c8ae9cba2d95df5c9e2067927a92c4b8ac943cf84a6fba535966",
+      "characters": 1247,
+      "headings": 5,
+      "kind": "SOP",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/legal/LEG-CHG-01.md",
+      "sha256": "6cf110124fe701f55b8470bf0a46bd6547994aa92c71dfee11d5bc7a0ddd55ae",
+      "characters": 903,
+      "headings": 4,
+      "kind": "CHG",
+      "domain": "legal",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/legal/LEG-FAQ-01.md",
+      "sha256": "973e922b4c0717df0035c86efcf9c86d2b6df85a3a4bfd81ec872c25623daec4",
+      "characters": 1465,
+      "headings": 10,
+      "kind": "FAQ",
+      "domain": "legal",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/legal/LEG-POL-01.md",
+      "sha256": "9eebc8f04e2f178ddbfde32499d78c11399c2e7eadbd9b32be610f94243bc1d5",
+      "characters": 1736,
+      "headings": 10,
+      "kind": "POL",
+      "domain": "legal",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/legal/LEG-SOP-01.md",
+      "sha256": "70700396a79709bcd0f8a43b1d58678f5180b9ce06322a49fcde78c7a1a08239",
+      "characters": 1370,
+      "headings": 5,
+      "kind": "SOP",
+      "domain": "legal",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/procurement/PROC-CHG-01.md",
+      "sha256": "4a5b053c39d2a359b6738b6f8c0642155a894bd3da358f322e8e52d2e0a24b54",
+      "characters": 1792,
+      "headings": 5,
+      "kind": "CHG",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/procurement/PROC-FAQ-01.md",
+      "sha256": "da047ea38676dd641c9901a9c1e412002a5f12a65dab191316fe824c803f17e2",
+      "characters": 5696,
+      "headings": 25,
+      "kind": "FAQ",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/procurement/PROC-POL-01.md",
+      "sha256": "1d86824a66c230541fb0f8cf1bc673df61c69c6f3ebf41f61ab74ab967d34407",
+      "characters": 6322,
+      "headings": 22,
+      "kind": "POL",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/procurement/PROC-SOP-01.md",
+      "sha256": "f031092bcd1713e5f6120b11f25496c7c97877b471c496e330dd1985b2ab14d4",
+      "characters": 4344,
+      "headings": 16,
+      "kind": "SOP",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/project-delivery/DEL-CHG-01.md",
+      "sha256": "6ff51d8cc52e25b0edc69a8dcb38de6e61f5dee35bc049b96e9aee299e985089",
+      "characters": 884,
+      "headings": 3,
+      "kind": "CHG",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/project-delivery/DEL-FAQ-01.md",
+      "sha256": "d5125b1289b77347200f27dae5a02e6b2900adb9ff6bc54996c48f11f583d27b",
+      "characters": 1322,
+      "headings": 9,
+      "kind": "FAQ",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/project-delivery/DEL-POL-01.md",
+      "sha256": "029f9890a5cbb9379834981a32921f3337abb717ce4d912ebaecb463532c4086",
+      "characters": 1714,
+      "headings": 11,
+      "kind": "POL",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/project-delivery/DEL-SOP-01.md",
+      "sha256": "a7cae922ff7fd39ae78aee183a7cc2a08339f586cc931e17fb986e022801ca84",
+      "characters": 1278,
+      "headings": 4,
+      "kind": "SOP",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/sales/SAL-CHG-01.md",
+      "sha256": "0463b9ed470ff93d7e614861d6e8cbcbcb4e9e039fd3c6acc1354c832e7fec4e",
+      "characters": 871,
+      "headings": 3,
+      "kind": "CHG",
+      "domain": "sales",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/sales/SAL-FAQ-01.md",
+      "sha256": "3632cae2540f421a9430dfb44a2f7835243d412d76fe500f242e7fc47d056ad9",
+      "characters": 1507,
+      "headings": 10,
+      "kind": "FAQ",
+      "domain": "sales",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/sales/SAL-POL-01.md",
+      "sha256": "114749073cc0750b75ae14b98a4cc6357ce14a80e37b7895b4a1ad8f5f6a8b8a",
+      "characters": 1946,
+      "headings": 12,
+      "kind": "POL",
+      "domain": "sales",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    },
+    {
+      "path": "docs/fixtures/knowledge/domains/sales/SAL-SOP-01.md",
+      "sha256": "170fe7cd748fea8a15765b49220bf5728d652db16c20ccd65f55670e78429bd3",
+      "characters": 1209,
+      "headings": 4,
+      "kind": "SOP",
+      "domain": "sales",
+      "status": "DRAFT",
+      "assessment": "候选说明不作独立规则；正文与FAQ存在重述，不能按段落数推导独立题数。"
+    }
+  ],
+  "count": 40,
+  "conclusion": "原40篇可支持小型回归，但不足以直接认证200个互不泄漏且有充分金标的场景组。保留旧材料，新补30份独立命名的合成语料。",
+  "basis": [
+    "10份CHG为候选/发布审查说明，不是10套独立现行规则。",
+    "POL与FAQ多次解释同一事实，规则家族应归并。",
+    "多数没有独立冲突材料、权限夹具及完整多跳证据。",
+    "已有试点被反复用于修复，不能再充作新盲测。"
+  ],
+  "notClaimed": "没有声称已证明原材料最多只能编多少题；本次为覆盖与可复核性审查，不是生产检索评测。"
+}
