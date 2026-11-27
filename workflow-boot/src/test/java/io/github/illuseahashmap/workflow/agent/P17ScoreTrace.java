@@ -1,16 +1,9 @@
 package io.github.illuseahashmap.workflow.agent;
 
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.BUYER;
-import static io.github.illuseahashmap.workflow.agent.P17Pilot.TENANT;
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.DIR;
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.JSON;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.List;
+import static io.github.illuseahashmap.workflow.agent.P17Pilot.TENANT;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,6 +15,14 @@ import io.github.illuseahashmap.agent.runtime.application.port.AgentToolExecutio
 import io.github.illuseahashmap.workflow.knowledge.NativeEvidenceStore;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /** A synchronous, per-trial observer. Never consult the case's expected decision or task. */
 final class P17ScoreTrace {
@@ -41,6 +42,11 @@ final class P17ScoreTrace {
 
     P17ScoreTrace(JdbcTemplate db, Path batch, String id, long run, String process)
             throws Exception {
+        this(db, batch, id, run, process, false);
+    }
+
+    P17ScoreTrace(JdbcTemplate db, Path batch, String id, long run, String process, boolean graph)
+            throws Exception {
         this.db = db;
         this.run = run;
         this.process = process;
@@ -53,6 +59,9 @@ final class P17ScoreTrace {
                         .put("processInstanceId", process)
                         .put("tenant", TENANT)
                         .put("principal", BUYER);
+        if (graph) {
+            binding.put("executionBackend", "LANGGRAPH");
+        }
         for (String row :
                 Files.readAllLines(DIR.resolve("../procurement-approval-v1/anchors.tsv")).stream()
                         .skip(1)
@@ -97,6 +106,19 @@ final class P17ScoreTrace {
                         .put("reauthorized", false)
                         .put("late", false)
                         .put("used", true);
+        if ("LANGGRAPH".equals(binding.path("executionBackend").asText())) {
+            String physical =
+                    db.queryForObject(
+                            "SELECT call_attempt_id::text FROM agent_graph_budget_call WHERE"
+                                + " tenant_code=? AND run_id=? AND operation_id=? ORDER BY"
+                                + " created_at DESC LIMIT 1",
+                            String.class,
+                            TENANT,
+                            run,
+                            req.logicalStepId());
+            call.put("physicalAttempt", physical)
+                    .put("id", attempt + ":" + key + ":physical:" + physical);
+        }
         if (policy) {
             assertThat(retrieval).as("one policy retrieval per pilot trial").isNull();
             assertThat(audit.status()).isEqualTo("SUCCEEDED");

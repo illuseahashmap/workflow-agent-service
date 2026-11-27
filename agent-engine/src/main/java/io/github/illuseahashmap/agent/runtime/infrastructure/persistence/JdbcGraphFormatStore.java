@@ -50,21 +50,7 @@ final class JdbcGraphFormatStore {
                         != 0) {
             return;
         }
-        boolean room =
-                Boolean.TRUE.equals(
-                        jdbc.queryForObject(
-                                """
-                                SELECT (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run AND kind<>'VALIDATE') < b.logical_limit
-                                  AND (SELECT count(*) FROM agent_graph_budget_call WHERE tenant_code=:tenant AND run_id=:run) < b.physical_limit
-                                  AND (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run AND kind='MODEL') < :models
-                                  AND (SELECT COALESCE(sum(physical_calls),0) FROM agent_graph_v2_model_call WHERE tenant_code=:tenant AND run_id=:run) < :models
-                                  AND (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run
-                                    AND kind IN ('VALIDATE','READ_RESULT')) < b.validation_limit
-                                FROM agent_graph_run_budget b WHERE tenant_code=:tenant AND run_id=:run
-                                """,
-                                params.addValue("models", run.binding().maxModelCalls()),
-                                Boolean.class));
-        if (!room) {
+        if (!new JdbcGraphCorrectionStore(jdbc, codec).hasBudget(run)) {
             return;
         }
         int ordinal =

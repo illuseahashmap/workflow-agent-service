@@ -1,0 +1,181 @@
+{
+  "date": "2026-11-27",
+  "base_commit": "4955126",
+  "branch": "codex/v79-route-p17",
+  "v80_included": false,
+  "scope": "real Flowable listener/submission, published version and tool snapshot, authenticated dispatch controller over local HTTP test bridge, capacity gateway, Java/Python/PostgreSQL, production completion Outbox/Inbox; deterministic model and readonly tool; explicit test reservation, no backend rollout",
+  "result": {
+    "views": [
+      {
+        "thread_id": "cf6924282ee5747620486588a527211ec3c1265a1c1cc9323f29c30e32f83cbb",
+        "checkpoint_id": "1f1ea31a-2e9a-6a44-8032-f124c917d00e",
+        "status": "CANDIDATE_READY",
+        "wait": null,
+        "candidate_ref": "candidate:26206781-ed96-4c5d-bac3-259467f83172",
+        "validation_ref": "validation:00c2c52f-0039-4915-bdcc-305c7bff5e33"
+      },
+      {
+        "thread_id": "43df57bc7a02fee8cece4cd73349391cfacfae2e3d8d2a5f2525873e5582a99a",
+        "checkpoint_id": "1f1ea31a-32a0-6fbd-8032-0dbd424190fa",
+        "status": "REJECTED",
+        "wait": null,
+        "candidate_ref": "candidate:688f0704-070e-4c7f-8127-1abd6aebdf42",
+        "validation_ref": "validation:c7577e75-f0e7-4ceb-bb57-348c7094db6b"
+      }
+    ],
+    "takeovers": [
+      2,
+      2
+    ],
+    "lost_summary_replies": [
+      1,
+      1
+    ],
+    "rejected_late_writes": 4,
+    "foreign_reference_checks": 4,
+    "cold_opens": 28,
+    "authenticated_dispatch": true,
+    "modelCalls": 14,
+    "toolCalls": 4,
+    "summaries": 4,
+    "originalReads": 4,
+    "originalAmounts": {
+      "DUAL_A": "20000.000000000001",
+      "DUAL_B": "19999.999999999999"
+    },
+    "runs": [
+      {
+        "id": 1,
+        "status": "SUCCEEDED",
+        "error_code": null
+      },
+      {
+        "id": 2,
+        "status": "FAILED",
+        "error_code": "GRAPH_FACT_REJECTED"
+      }
+    ],
+    "flowableOutcomes": [
+      {
+        "processInstanceId": "4",
+        "runId": 1,
+        "task": "READY_CHECK",
+        "mappedAmount": "20000.000000000001"
+      },
+      {
+        "processInstanceId": "11",
+        "runId": 2,
+        "task": "MANUAL_REVIEW",
+        "mappedAmount": "<absent>"
+      }
+    ],
+    "inboxReplays": 2,
+    "flowable": true,
+    "authenticatedDispatch": true,
+    "capacityGateway": true,
+    "processes": [
+      {
+        "id": 1,
+        "process_instance_id": "4",
+        "resumed": true
+      },
+      {
+        "id": 2,
+        "process_instance_id": "11",
+        "resumed": true
+      }
+    ]
+  },
+  "regression": {
+    "python_passed": 103,
+    "java_passed": 257,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "checkstyle": "passed",
+    "governance_jacoco": "passed",
+    "ruff": "passed",
+    "java_suites": [
+      {
+        "class": "io.github.illuseahashmap.agent.architecture.AgentArchitectureTest",
+        "passed": 4
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.AgentToolRegistryTest",
+        "passed": 12
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayIntegrationTest",
+        "passed": 1
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphLoopDetectorTest",
+        "passed": 8
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphPersistenceIntegrationTest",
+        "passed": 152
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphPlanTest",
+        "passed": 14
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphPythonRecoveryIntegrationTest",
+        "passed": 6
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphRouteTest",
+        "passed": 3
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphTaskContractTest",
+        "passed": 9
+      },
+      {
+        "class": "io.github.illuseahashmap.agent.runtime.application.graph.GraphToolGatewayTest",
+        "passed": 19
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.process.application.AgentCompletionRecoveryServiceTest",
+        "passed": 6
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.process.application.AgentOutputMappingResolverTest",
+        "passed": 4
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.agent.graph.GraphCallRecoveryWorkerTest",
+        "passed": 1
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.agent.graph.GraphHostConfigurationTest",
+        "passed": 3
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.agent.graph.GraphHostControllerTest",
+        "passed": 8
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.agent.GraphCompletionFlowableIntegrationTest",
+        "passed": 6
+      },
+      {
+        "class": "io.github.illuseahashmap.workflow.agent.GraphDualPurchaseFlowableIntegrationTest",
+        "passed": 1
+      }
+    ]
+  },
+  "additional_compatibility": {
+    "passed": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "overlap_with_joint": 10
+  },
+  "precision_reproduction": {
+    "before": "20000.0",
+    "expected_and_after": "20000.000000000001",
+    "boundary": "AgentOutputMappingResolver to Flowable variable"
+  }
+}

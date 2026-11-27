@@ -121,8 +121,11 @@ public final class JdbcGraphCallCapacityStore implements GraphCallLifecyclePort 
                     long pending =
                             jdbc.queryForObject(
                                     """
-                                    SELECT count(*) FROM agent_graph_call_permit WHERE tenant_code=:tenant AND run_id=:run
+                                    SELECT count(*) FROM agent_graph_call_permit p WHERE tenant_code=:tenant AND run_id=:run
                                       AND operation_id=:operation AND state<>'RELEASED'
+                                      AND NOT EXISTS(SELECT 1 FROM agent_graph_call_dispatch d
+                                        JOIN agent_graph_tool_failure f ON f.tenant_code=d.tenant_code AND f.run_id=d.run_id AND f.call_attempt_id=d.budget_call_attempt
+                                        WHERE d.token=p.token AND f.retryable=true)
                                     """,
                                     params,
                                     Long.class);

@@ -70,7 +70,8 @@ export function score(manifest, trace) {
   if(ledger && (ledger.submissions || ledger.debits)) blockers.add('WRITE_SIDE_EFFECT');
 
   let validLive=false, policy=false, preFailurePolicy=false, liveAttempts=0, liveResults=0;
-  const timedOutAttempts=new Set();
+  const timedOutAttempts=new Set(), physicalAttempts=new Set();
+  const graph = manifest.executionBackend === 'LANGGRAPH';
   const committed=new Map(), callIds=new Set(), final=manifest.attempt;
   if(audit) {
     let previous=0;
@@ -78,9 +79,14 @@ export function score(manifest, trace) {
       const isPolicy=gold.capabilities.policy.includes(call.name);
       const isLive=gold.capabilities.records.includes(call.name);
       const allowed=isPolicy || (isLive && c.live!=='UNAVAILABLE');
-      if(call.sourceTrial!==undefined && (call.sourceTrial!==manifest.trialId ||
-          !call.id.startsWith(call.attempt+':'+manifest.agentRunId+':tool:'))) {
+      if((graph || call.sourceTrial!==undefined) && (call.sourceTrial!==manifest.trialId ||
+          !call.id.startsWith(call.attempt+':'+manifest.agentRunId+(graph ? ':intent:' : ':tool:')))) {
         fail('tools','FOREIGN_TOOL_OBSERVATION');continue;
+      }
+      if(graph && call.operation==='EXECUTE') {
+        if(!call.physicalAttempt || !call.id.endsWith(':physical:'+call.physicalAttempt) || physicalAttempts.has(call.physicalAttempt))
+          fail('tools','INVALID_PHYSICAL_ATTEMPT');
+        physicalAttempts.add(call.physicalAttempt);
       }
       if(call.at<=previous || call.attempt>final || callIds.has(call.id)) fail('tools','INVALID_CALL_TIMELINE');
       previous=call.at; callIds.add(call.id);
@@ -111,7 +117,7 @@ export function score(manifest, trace) {
       if(platformHold && isPolicy && call.operation==='EXECUTE' && call.receipt.status==='OK' &&
          call.receipt.traceId===r?.traceId && call.at>=r.at && call.at<answer.at &&
          (!revoked || (call.at<r.revokedAt && !call.used))) preFailurePolicy=true;
-      if(isLive && call.operation==='EXECUTE' && call.receipt.status==='TIMEOUT') timedOutAttempts.add(call.attempt);
+      if(isLive && call.operation==='EXECUTE' && call.receipt.status==='TIMEOUT') timedOutAttempts.add(graph ? call.physicalAttempt : call.attempt);
       if(call.attempt!==final || !call.used) continue;
       if(answer && call.at>=answer.at) {fail('tools','RESULT_AFTER_DECISION');continue;}
       if(revoked && isPolicy && r && call.at>=r.revokedAt) blockers.add('USED_REVOKED_RESULT');
@@ -129,7 +135,7 @@ export function score(manifest, trace) {
       }
     }
     if(r && !policy && !preFailurePolicy && trace.audit.complete) fail('tools','NO_POLICY_CALL');
-    if(platformHold && c.live==='TIMEOUT' && (timedOutAttempts.size!==gold.maxLiveAttempts || !timedOutAttempts.has(final)))
+    if(platformHold && c.live==='TIMEOUT' && (timedOutAttempts.size!==gold.maxLiveAttempts || (!graph && !timedOutAttempts.has(final))))
       fail('tools','MISSING_TIMEOUT_ATTEMPTS');
     if(!['UNAVAILABLE','REVOKED'].includes(c.live) && !liveResults && trace.audit.complete) fail('tools','NO_LIVE_OBSERVATION');
     if(liveAttempts>gold.maxLiveAttempts || (trace.audit.complete && c.live==='TIMEOUT' && liveAttempts!==gold.maxLiveAttempts))

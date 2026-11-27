@@ -80,8 +80,11 @@ public final class GraphToolGateway
     }
 
     public Reply invoke(String capability, InvokeRequest submitted) {
+        GraphRunAuthorityPort.AuthorizedRun authorized = null;
+        var callAttempt = new java.util.concurrent.atomic.AtomicReference<String>();
         try (var budget = ExecutionDeadline.open(remaining(submitted.binding()), ticker)) {
             var run = resolve(capability, submitted.binding(), submitted.generation());
+            authorized = run;
             var request = submitted.request();
             if (!"TOOL".equals(request.kind())) {
                 throw new GraphGatewayException(OPERATION_UNSUPPORTED);
@@ -105,7 +108,6 @@ public final class GraphToolGateway
                 }
             }
             runBudget.admit(run, request);
-            var callAttempt = new java.util.concurrent.atomic.AtomicReference<String>();
             var traceId = UUID.randomUUID().toString();
             var toolRequest =
                     new AgentTool.Request(
@@ -183,8 +185,37 @@ public final class GraphToolGateway
             return new Reply(bindingDigest, request.operationId(), requestDigest, receipt, null);
         } catch (ExecutionDeadline.Exceeded failure) {
             throw new GraphGatewayException(DEADLINE_EXPIRED);
+        } catch (io.github.illuseahashmap.agent.mcp.application.port.McpClientException failure) {
+            var typed =
+                    new io.github.illuseahashmap.agent.runtime.application.impl.AgentFailureMapper()
+                            .fromMcp(failure);
+            fail(authorized, submitted, callAttempt.get(), typed.errorCode(), typed.retryable());
+            throw new GraphGatewayException(typed.retryable() ? TOOL_TRANSIENT : TOOL_REJECTED);
         } catch (AgentExecutionException failure) {
-            throw toolFailure(failure);
+            var mapped = toolFailure(failure);
+            if (mapped.code() != TOOL_IN_PROGRESS && mapped.code() != TOOL_OUTCOME_UNKNOWN) {
+                fail(
+                        authorized,
+                        submitted,
+                        callAttempt.get(),
+                        failure.failure().errorCode(),
+                        failure.failure().retryable());
+            }
+            throw mapped;
+        }
+    }
+
+    private void fail(
+            GraphRunAuthorityPort.AuthorizedRun run,
+            InvokeRequest request,
+            String attempt,
+            String code,
+            boolean retryable) {
+        if (run != null
+                && io.github.illuseahashmap.agent.runtime.application.port.GraphRunBudgetPort.from(
+                                authority)
+                        .toolFailed(run, request.request(), attempt, code, retryable)) {
+            throw new GraphGatewayException(GraphGatewayException.Code.RUN_STOPPED);
         }
     }
 
@@ -245,6 +276,12 @@ public final class GraphToolGateway
         } catch (ExecutionDeadline.Exceeded failure) {
             throw new GraphGatewayException(DEADLINE_EXPIRED);
         } catch (AgentExecutionException failure) {
+            fail(
+                    resolve(capability, submitted.binding(), submitted.generation()),
+                    submitted,
+                    null,
+                    failure.failure().errorCode(),
+                    failure.failure().retryable());
             throw toolFailure(failure);
         }
     }

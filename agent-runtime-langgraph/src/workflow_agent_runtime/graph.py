@@ -23,6 +23,8 @@ from .contracts import (
     PlanRequired,
     ReplanRequired,
     ResumeSignal,
+    RouteRepairRequired,
+    RouteRequired,
     RunBinding,
     RuntimeContractError,
     RuntimeStopped,
@@ -43,6 +45,7 @@ class GraphState(TypedDict, total=False):
     waiting: dict[str, Any] | None
     candidate_ref: str | None
     validation_ref: str | None
+    route_receipt_ref: str | None
     plan_receipt_ref: str | None
     plan_revision: int
     memory_ref: str | None
@@ -93,6 +96,9 @@ class GovernedAgentGraph:
         builder.add_node("prepare_context_resume", self._prepare_context_resume)
         builder.add_node("prepare_read", self._prepare_read)
         builder.add_node("prepare_format_repair", self._prepare_format_repair)
+        builder.add_node("prepare_route", self._prepare_route)
+        builder.add_node("prepare_route_validation", self._prepare_route_validation)
+        builder.add_node("prepare_route_repair", self._prepare_correction)
         builder.add_node("prepare_plan", self._prepare_plan)
         builder.add_node("prepare_plan_validation", self._prepare_plan_validation)
         builder.add_node("prepare_correction", self._prepare_correction)
@@ -108,6 +114,9 @@ class GovernedAgentGraph:
             "prepare_read",
             "prepare_format_repair",
             "prepare_model",
+            "prepare_route",
+            "prepare_route_validation",
+            "prepare_route_repair",
             "prepare_plan",
             "prepare_plan_validation",
             "prepare_correction",
@@ -288,6 +297,29 @@ class GovernedAgentGraph:
             "status": "RUNNING",
         }
 
+    def _prepare_route(self, state: GraphState) -> dict[str, Any]:
+        self._guard(state)
+        request = InvocationRequest(
+            kind="MODEL",
+            operation_id="route:" + self.binding.digest,
+            input_refs=self._model_refs(state),
+        )
+        return {
+            "model_calls": state["model_calls"] + 1,
+            "pending": request.model_dump(mode="json"),
+            "status": "RUNNING",
+        }
+
+    def _prepare_route_validation(self, state: GraphState) -> dict[str, Any]:
+        self._guard(state)
+        request = InvocationRequest(
+            kind="VALIDATE",
+            operation_id="route-validate:"
+            + fingerprint([self.binding.digest, state["candidate_ref"]]),
+            input_refs=(state["candidate_ref"], *state["receipt_refs"]),
+        )
+        return {"pending": request.model_dump(mode="json")}
+
     def _prepare_plan(self, state: GraphState) -> dict[str, Any]:
         self._guard(state)
         request = InvocationRequest(
@@ -390,6 +422,28 @@ class GovernedAgentGraph:
                 "model_calls": state["model_calls"] - 1,
                 "waiting": None,
             }
+        except RouteRequired:
+            if self.binding.state_schema_version != 2 or request.kind != "MODEL":
+                raise
+            return {
+                "status": "ROUTE_REQUIRED",
+                "model_calls": state["model_calls"] - 1,
+                "waiting": None,
+            }
+        except RouteRepairRequired:
+            if (
+                self.binding.state_schema_version != 2
+                or request.kind != "VALIDATE"
+                or not request.operation_id.startswith("route-validate:")
+            ):
+                raise
+            return {
+                "status": "ROUTE_REPAIR_REQUIRED",
+                "correction_id": "route:repair:"
+                + fingerprint([self.binding.digest, request.digest]),
+                "tool_queue": [],
+                "waiting": None,
+            }
         except PlanRequired:
             if self.binding.state_schema_version != 2 or request.kind != "MODEL":
                 raise
@@ -470,6 +524,14 @@ class GovernedAgentGraph:
         else:
             if result.accepted is None or result.decision is not None:
                 raise RuntimeContractError("INVALID_VALIDATION_RECEIPT")
+            if request.operation_id.startswith("route-validate:") and result.accepted:
+                return {
+                    "waiting": None,
+                    "route_receipt_ref": result.receipt_ref,
+                    "candidate_ref": None,
+                    "validation_ref": None,
+                    "status": "ROUTE_ACCEPTED",
+                }
             if request.operation_id.startswith("plan-validate:") and result.accepted:
                 return {
                     "waiting": None,
@@ -497,6 +559,12 @@ class GovernedAgentGraph:
             return "prepare_summary"
         if state.get("status") == "MEMORY_READY":
             return "prepare_context_resume"
+        if state.get("status") == "ROUTE_REQUIRED":
+            return "prepare_route"
+        if state.get("status") == "ROUTE_REPAIR_REQUIRED":
+            return "prepare_route_repair"
+        if state.get("status") == "ROUTE_ACCEPTED":
+            return "prepare_model"
         if state.get("status") == "PLAN_REQUIRED":
             return "prepare_plan"
         if state.get("status") == "PLAN_ACCEPTED":
@@ -519,6 +587,8 @@ class GovernedAgentGraph:
         if kind == "TOOL" and state.get("memory_enabled"):
             return "prepare_summary"
         if kind == "MODEL":
+            if state["pending"]["operation_id"].startswith("route:"):
+                return "prepare_route_validation"
             if state["pending"]["operation_id"].startswith("plan:"):
                 return "prepare_plan_validation"
             return "prepare_validation"

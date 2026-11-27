@@ -60,7 +60,8 @@ final class JdbcGraphCorrectionStore {
         }
         if ((request.operationId().startsWith("correction:")
                 || request.operationId().startsWith("plan:correction:")
-                || request.operationId().startsWith("repair:"))) {
+                || request.operationId().startsWith("repair:")
+                || request.operationId().startsWith("route:repair:"))) {
             if (grant == null
                     || !grant.operation().equals(request.operationId())
                     || !"MODEL".equals(request.kind())) {
@@ -87,6 +88,22 @@ final class JdbcGraphCorrectionStore {
                             .anyMatch(f -> f.tool().equals(request.tool().toolCode())));
         }
         return null;
+    }
+
+    boolean hasBudget(AuthorizedRun run) {
+        return Boolean.TRUE.equals(
+                jdbc.queryForObject(
+                        """
+                        SELECT (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run AND kind<>'VALIDATE') < b.logical_limit
+                          AND (SELECT count(*) FROM agent_graph_budget_call WHERE tenant_code=:tenant AND run_id=:run) < b.physical_limit
+                          AND (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run AND kind='MODEL') < :models
+                          AND (SELECT COALESCE(sum(physical_calls),0) FROM agent_graph_v2_model_call WHERE tenant_code=:tenant AND run_id=:run) < :models
+                          AND (SELECT count(*) FROM agent_graph_budget_operation WHERE tenant_code=:tenant AND run_id=:run
+                            AND kind IN ('VALIDATE','READ_RESULT')) < b.validation_limit
+                        FROM agent_graph_run_budget b WHERE tenant_code=:tenant AND run_id=:run
+                        """,
+                        key(run).addValue("models", run.binding().maxModelCalls()),
+                        Boolean.class));
     }
 
     boolean offer(AuthorizedRun run, Invocation trigger) {
@@ -157,6 +174,9 @@ final class JdbcGraphCorrectionStore {
 
     String redirect(AuthorizedRun run) {
         var operation = grant(run).operation();
+        if (operation.startsWith("route:repair:")) {
+            return "ROUTE_REPAIR";
+        }
         return operation.startsWith("repair:")
                 ? "REPAIR"
                 : operation.startsWith("plan:") ? "REPLAN" : "CORRECT";

@@ -134,3 +134,13 @@ READ_RESULT 为新增 invocation kind，要求服务器签发的 graph_read_resu
 只允许最终候选的 `AGENT_OUTPUT_NOT_JSON` / `AGENT_OUTPUT_SCHEMA_INVALID`，且必要事实已满足、Run 尚有模型/物理/逻辑/本地验证预算。拒绝回执与 FORMAT_INVALID 许可同事务提交；提交后返回 `FORMAT_REPAIR_REQUIRED`（409）。图进入显式 `prepare_format_repair` 节点，发出 `repair:` + fingerprint([bindingDigest, validationRequestDigest]) 的 MODEL。原候选与失败原因由 Java 按不可变许可查取，不接受图上传替换正文。
 
 修复和循环纠偏/计划修订共用每 Run 唯一许可，不重置预算或历史。修复只发布新候选，不派发工具/读取；新候选必须重新 VALIDATE，仍由原始证据和当前授权约束。修复再次失败时返回普通拒绝并无模型收尾。计划草稿、业务否决、缺少证据或撤权不触发格式修复。原始响应持久化后发生故障，重放不再次调用模型；未知物理调用仍遵循 V75 隔离规则。详见[验收与运行边界](../quality/graph-format-repair-regression.md)。
+
+## 显式路由投影（V79）
+
+新 v2 Run 可冻结 `x-graph-routing={"version":1,"allow_correction":true}`，复用原生 AgentRouteDecision v1 的五种模式和能力元数据约束。ROUTE_REQUIRED / ROUTE_REPAIR_REQUIRED（409）进入显式图节点；ROUTE_DENIED（403）不可作为传输错误重试。路由接受回执不等于业务成功，ACK 与最终接纳排除中间路由候选。
+
+后续工具目录、实际工具调用及计划均收紧到 accepted requestedTools，缓存和最终接纳仍复核当前权限。ABSTAIN、修复耗尽及越界工具提议持久拒绝并无模型收尾。路由修复沿用 Run 唯一纠偏许可与既有预算。版本兼容、父外键演进、原子授权、能力矩阵及 Provider 降级边界见[路由验收](../quality/graph-route-projection-regression.md)。
+
+### V81 工具失败与持久停止
+
+新 v2 Run 在平台冻结每个稳定工具 intent 两次物理尝试的上限（含首次），同时受原 Run 总预算约束。工具失败以真实 call_attempt_id、operation、请求摘要和 generation 持久化；终止裁决先提交，再发 RUN_STOPPED。授权撤销和不可重试工具失败不交给模型继续决策，沿用无模型 Run/Attempt/Outbox 收尾；重授权不能复活旧 Run。未知物理调用继续隔离计费，可重试只读失败需额外容量和预算才能重发，不能伪造 RETURNED。历史 v2 策略以原物理上限回填，v1/原生保留原恢复路径。细节及七场景验收见[持久收尾记录](../quality/graph-tool-stop-regression.md)。

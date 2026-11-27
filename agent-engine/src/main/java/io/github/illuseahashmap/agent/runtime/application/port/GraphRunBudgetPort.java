@@ -27,6 +27,21 @@ public interface GraphRunBudgetPort {
 
     void stop(AuthorizedRun run, String reason);
 
+    /**
+     * Trusted adapter outcome, never a wire-submitted error. True means a durable stop committed.
+     */
+    default boolean toolFailed(
+            AuthorizedRun run,
+            Invocation request,
+            String callAttempt,
+            String errorCode,
+            boolean retryable) {
+        if (run.binding().stateSchemaVersion() != 1) {
+            throw new GraphGatewayException(GraphGatewayException.Code.AUTHORITY_DENIED);
+        }
+        return false;
+    }
+
     /** Legacy adapters cannot silently admit a v2 Run without a durable budget implementation. */
     static GraphRunBudgetPort from(GraphRunAuthorityPort authority) {
         if (authority instanceof GraphRunBudgetPort budget) {

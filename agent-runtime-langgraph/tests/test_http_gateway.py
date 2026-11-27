@@ -287,3 +287,14 @@ def test_format_repair_redirect_is_not_a_transport_retry(endpoint, binding, sess
     with pytest.raises(FormatRepairRequired):
         client(endpoint).authorize(binding, session)
     assert len(endpoint[1]["requests"]) == 1
+
+
+@pytest.mark.parametrize("code", ["ROUTE_REQUIRED", "ROUTE_REPAIR_REQUIRED"])
+def test_route_redirect_is_typed_and_not_a_transport_retry(endpoint, binding, session, code):
+    from workflow_agent_runtime.contracts import RouteRepairRequired, RouteRequired
+
+    endpoint[1]["status"] = 409
+    endpoint[1]["body"] = ('{"error_code":"' + code + '"}').encode()
+    with pytest.raises(RouteRequired if code == "ROUTE_REQUIRED" else RouteRepairRequired):
+        client(endpoint).authorize(binding, session)
+    assert len(endpoint[1]["requests"]) == 1

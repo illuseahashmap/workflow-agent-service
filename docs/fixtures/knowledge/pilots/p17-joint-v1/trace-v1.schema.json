@@ -148,7 +148,12 @@
                 "HUMAN_REVIEW"
               ]
             },
-            "platformError": {"enum":["MCP_TIMEOUT","KNOWLEDGE_RESULT_ACCESS_REVOKED"]},
+            "platformError": {
+              "enum": [
+                "MCP_TIMEOUT",
+                "KNOWLEDGE_RESULT_ACCESS_REVOKED"
+              ]
+            },
             "decision": {
               "type": "string",
               "minLength": 1
@@ -215,7 +220,10 @@
                 "minLength": 1
               }
             },
-            "enteredAt": {"type":"integer","minimum":1},
+            "enteredAt": {
+              "type": "integer",
+              "minimum": 1
+            },
             "observedMs": {
               "type": "integer",
               "minimum": 0
@@ -301,6 +309,12 @@
         "processInstanceId": {
           "type": "string",
           "minLength": 1
+        },
+        "executionBackend": {
+          "enum": [
+            "NATIVE",
+            "LANGGRAPH"
+          ]
         }
       }
     },
@@ -393,7 +407,10 @@
           "type": "string",
           "minLength": 1
         },
-        "sourceTrial": {"type":"string","minLength":1},
+        "sourceTrial": {
+          "type": "string",
+          "minLength": 1
+        },
         "at": {
           "type": "integer",
           "minimum": 1
@@ -442,6 +459,10 @@
         },
         "receipt": {
           "$ref": "#/$defs/receipt"
+        },
+        "physicalAttempt": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
       }
     }

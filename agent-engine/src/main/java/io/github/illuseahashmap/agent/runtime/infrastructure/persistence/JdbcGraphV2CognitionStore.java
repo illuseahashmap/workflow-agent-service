@@ -365,9 +365,13 @@ final class JdbcGraphV2CognitionStore implements GraphCognitionPort {
                     if (!old.isEmpty()) {
                         require(
                                 old.getFirst().accepted() == accepted
-                                        || request.operationId().startsWith("plan-validate:"));
+                                        || request.operationId().startsWith("plan-validate:")
+                                        || request.operationId().startsWith("route-validate:"));
                         return old.getFirst();
                     }
+                    boolean routing =
+                            request.operationId().startsWith("route-validate:")
+                                    && history.route() != null;
                     boolean planning =
                             request.operationId().startsWith("plan-validate:")
                                     && history.plan() != null;
@@ -416,14 +420,28 @@ final class JdbcGraphV2CognitionStore implements GraphCognitionPort {
                         new JdbcGraphCorrectionStore(jdbc, codec)
                                 .completeReplan(run, request, receipt);
                     }
-                    if (history.taskFacts() != null && !planning) {
+                    if (routing) {
+                        var routes = new JdbcGraphRouteStore(jdbc, codec);
+                        // Gateway already parsed the camelCase native contract against current
+                        // capabilities.
+                        var route =
+                                decision
+                                        ? io.github.illuseahashmap.agent.runtime.application.graph
+                                                .GraphRoute.decoded(history.candidate().content())
+                                        : null;
+                        routes.verdict(run, request, decision, route);
+                        if (!decision) {
+                            routes.offerRepair(run, request, reason);
+                        }
+                    }
+                    if (history.taskFacts() != null && !planning && !routing) {
                         jdbc.update(
                                 "INSERT INTO agent_graph_fact_validation"
                                         + " VALUES(:tenant,:run,:op,:candidate,:report)",
                                 params.addValue("candidate", request.inputRefs().getFirst())
                                         .addValue("report", json(history.taskFacts())));
                     }
-                    if (!decision && !planning) {
+                    if (!decision && !planning && !routing) {
                         new JdbcGraphFormatStore(jdbc, codec).offer(run, request, reason);
                     }
                     return receipt;
@@ -431,6 +449,12 @@ final class JdbcGraphV2CognitionStore implements GraphCognitionPort {
     }
 
     void redirectFormat(AuthorizedRun run, Invocation request) {
+        boolean routeRedirect =
+                executions.withCurrentRun(
+                        run, () -> new JdbcGraphRouteStore(jdbc, codec).redirect(run, request));
+        if (routeRedirect) {
+            throw new GraphGatewayException(GraphGatewayException.Code.ROUTE_REPAIR_REQUIRED);
+        }
         boolean redirect =
                 executions.withCurrentRun(
                         run, () -> new JdbcGraphFormatStore(jdbc, codec).redirect(run, request));
@@ -476,7 +500,10 @@ final class JdbcGraphV2CognitionStore implements GraphCognitionPort {
                         && v.request().operationId().equals(v.receipt().operationId())
                         && (v.receipt().accepted() ? "CANDIDATE_READY" : "REJECTED")
                                 .equals(observation.status()));
-        require(!v.receipt().accepted() || !v.request().operationId().startsWith("plan-validate:"));
+        require(
+                !v.receipt().accepted()
+                        || (!v.request().operationId().startsWith("plan-validate:")
+                                && !v.request().operationId().startsWith("route-validate:")));
         return new GraphCompletionPort.Evidence(
                 run, historyLocked(run, v.request()), v.receipt().accepted(), v.reason());
     }
@@ -582,7 +609,8 @@ final class JdbcGraphV2CognitionStore implements GraphCognitionPort {
                 new JdbcGraphTaskStore(jdbc, codec).report(run, input, facts),
                 new JdbcGraphPlanStore(jdbc, executions, codec).context(run),
                 new JdbcGraphMemoryStore(jdbc, codec).context(run, request, facts),
-                new JdbcGraphFormatStore(jdbc, codec).context(run, request));
+                new JdbcGraphFormatStore(jdbc, codec).context(run, request),
+                new JdbcGraphRouteStore(jdbc, codec).context(run));
     }
 
     ToolFact fact(AuthorizedRun run, ToolIntent tool) {

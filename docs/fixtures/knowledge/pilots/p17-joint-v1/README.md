@@ -53,3 +53,11 @@ node scripts/p17-evaluation.mjs "$pilot/example.manifest.json" "$pilot/example.t
 ```
 
 该命令先执行生产出站校验，失败时不读取凭据、不发模型请求。当前本机回归不选择此入口；脚本驱动的三项成绩不证明真实模型能自行选对工具，也不代替非超级用户 RLS、真实 MCP 传输或生产验收。
+
+### LangGraph 显式验收入口
+
+运行 `scripts/test-p17-graph.ps1`，复用七场景与金标，报告独立写入 `workflow-boot/target/p17-graph-runs/<批次>`。trace v1 的可选 `executionBackend` 区分图端稳定 intent 幂等键；原生旧格式兼容。显式请求图验收时，数据库不可用不得静默跳过，缺件和未通过场景均保留在七项分母中。
+
+2026-11-27 图端初轮 5/7，原生 7/7；超时/撤权收尾仍未通过，完整范围、证据与下一步见[验收记录](../../../../quality/graph-p17-node-acceptance.md)。本入口使用确定性模型和进程内 MCP，不能代替生产派发、容量或真实模型验收。
+
+后续 V81 已修复两项收尾，图端与原生均 7/7，见[最新记录](../../../../quality/graph-tool-stop-regression.md)。图端在真实容量封装下运行，每次物理调用带 `physicalAttempt`，原始报告 `physicalCalls` 与数据库调用/失败账本对应；超时两次物理尝试不增加业务 Attempt。原生旧格式与原有超时两次 Attempt 规则保持兼容。

@@ -1,0 +1,424 @@
+{
+  "date": "2026-11-27",
+  "routingCommit": "7064e9f",
+  "graphBatch": "876c0bc0-0194-4eea-9127-53abf4766ebc",
+  "nativeBatch": "8c8b1032-dc99-4b0f-b0f3-72c77fe9e327",
+  "graphScores": {
+    "batch": "876c0bc0-0194-4eea-9127-53abf4766ebc",
+    "source": "SCRIPTED_TRANSPORT",
+    "total": 7,
+    "passed": 5,
+    "axes": {
+      "retrieval": 5,
+      "tools": 5,
+      "outcome": 5
+    },
+    "rows": [
+      {
+        "caseId": "B08",
+        "run": "1",
+        "process": "7",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-OK",
+        "run": "2",
+        "process": "26",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-BUDGET",
+        "run": "3",
+        "process": "45",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-EMPTY",
+        "run": "4",
+        "process": "64",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-FOREIGN",
+        "run": "5",
+        "process": "83",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-TIMEOUT",
+        "verdict": "INDETERMINATE",
+        "reason": "ENOENT"
+      },
+      {
+        "caseId": "P17-REVOKED",
+        "verdict": "INDETERMINATE",
+        "reason": "ENOENT"
+      }
+    ]
+  },
+  "graphAcceptance": {
+    "failures": [
+      "P17-TIMEOUT: [{\"error\":\"GATEWAY_INTERNAL_FAILURE\",\"retryable\":true,\"failures\":2,\"cold_opens\":6}] \r\nExpecting value to be false but was true",
+      "P17-REVOKED: [{\"error\":\"GATEWAY_TOOL_REJECTED\",\"retryable\":false,\"failures\":1,\"cold_opens\":3}] \r\nExpecting value to be false but was true"
+    ],
+    "total": 7,
+    "backend": "LANGGRAPH"
+  },
+  "failureObservations": {
+    "P17-TIMEOUT": {
+      "stopCount": 0,
+      "runs": [
+        {
+          "id": 1,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 2,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 3,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 4,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 5,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 6,
+          "status": "RUNNING",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        }
+      ],
+      "case": "P17-TIMEOUT",
+      "failure": "org.opentest4j.AssertionFailedError: [{\"error\":\"GATEWAY_INTERNAL_FAILURE\",\"retryable\":true,\"failures\":2,\"cold_opens\":6}] \r\nExpecting value to be false but was true",
+      "externalCalls": [
+        {
+          "receipt": {
+            "status": "TIMEOUT"
+          },
+          "name": "order_records_read",
+          "subject": "P-17"
+        },
+        {
+          "receipt": {
+            "status": "TIMEOUT"
+          },
+          "name": "order_records_read",
+          "subject": "P-17"
+        }
+      ]
+    },
+    "P17-REVOKED": {
+      "stopCount": 0,
+      "runs": [
+        {
+          "id": 1,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 2,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 3,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 4,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 5,
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 6,
+          "status": "RUNNING",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        },
+        {
+          "id": 7,
+          "status": "RUNNING",
+          "error_code": null,
+          "execution_backend": "LANGGRAPH"
+        }
+      ],
+      "case": "P17-REVOKED",
+      "failure": "org.opentest4j.AssertionFailedError: [{\"error\":\"GATEWAY_TOOL_REJECTED\",\"retryable\":false,\"failures\":1,\"cold_opens\":3}] \r\nExpecting value to be false but was true",
+      "externalCalls": []
+    }
+  },
+  "scope": "Deterministic model, in-process read-only MCP, real Java/Python/PostgreSQL/Flowable; no production dispatch/capacity or remote-provider claim.",
+  "nativeScores": {
+    "batch": "8c8b1032-dc99-4b0f-b0f3-72c77fe9e327",
+    "source": "SCRIPTED_TRANSPORT",
+    "total": 7,
+    "passed": 7,
+    "axes": {
+      "retrieval": 7,
+      "tools": 7,
+      "outcome": 7
+    },
+    "rows": [
+      {
+        "caseId": "B08",
+        "run": "1",
+        "process": "7",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-OK",
+        "run": "2",
+        "process": "26",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-BUDGET",
+        "run": "3",
+        "process": "45",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-EMPTY",
+        "run": "4",
+        "process": "64",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-FOREIGN",
+        "run": "5",
+        "process": "83",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-TIMEOUT",
+        "run": "6",
+        "process": "102",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-REVOKED",
+        "run": "7",
+        "process": "120",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      }
+    ]
+  },
+  "verification": {
+    "python": {
+      "passed": 103,
+      "failed": 0,
+      "skipped": 0
+    },
+    "jointJava": {
+      "tests": 245,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "jointJavaSuites": [
+      "io.github.illuseahashmap.agent.architecture.AgentArchitectureTest",
+      "io.github.illuseahashmap.agent.runtime.application.AgentToolRegistryTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayIntegrationTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphLoopDetectorTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphPersistenceIntegrationTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphPlanTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphPythonRecoveryIntegrationTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphRouteTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphTaskContractTest",
+      "io.github.illuseahashmap.agent.runtime.application.graph.GraphToolGatewayTest",
+      "io.github.illuseahashmap.workflow.process.application.AgentCompletionRecoveryServiceTest",
+      "io.github.illuseahashmap.workflow.agent.graph.GraphCallRecoveryWorkerTest",
+      "io.github.illuseahashmap.workflow.agent.graph.GraphHostConfigurationTest",
+      "io.github.illuseahashmap.workflow.agent.graph.GraphHostControllerTest",
+      "io.github.illuseahashmap.workflow.agent.GraphCompletionFlowableIntegrationTest"
+    ],
+    "engineCleanVerify": "PASS (352 tests, 5 environment-gated tests skipped here, all 5 executed in joint suite)",
+    "checkstyleTestCompile": "PASS",
+    "scorerAndRagContractTests": 24,
+    "ruff": "PASS"
+  }
+}

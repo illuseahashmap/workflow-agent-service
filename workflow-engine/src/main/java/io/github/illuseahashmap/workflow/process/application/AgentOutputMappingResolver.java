@@ -1,53 +1,92 @@
 package io.github.illuseahashmap.workflow.process.application;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Component;
 
 /** Applies the portable Agent mapping path contract, including array indexes and projections. */
 @Component
 public class AgentOutputMappingResolver {
 
     private final ObjectMapper objectMapper;
+    private final ObjectReader exactJson;
 
     public AgentOutputMappingResolver(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+        this.exactJson =
+                objectMapper.reader().with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
     }
 
     public Map<String, Object> resolve(String snapshotJson, String mappingJson) {
         try {
-            JsonNode snapshot = objectMapper.readTree(snapshotJson == null ? "{}" : snapshotJson);
+            JsonNode snapshot = exactJson.readTree(snapshotJson == null ? "{}" : snapshotJson);
             JsonNode content = snapshot.path("content");
             if (content.isTextual()) {
-                content = objectMapper.readTree(content.textValue());
+                content = exactJson.readTree(content.textValue());
             }
             JsonNode mapping = objectMapper.readTree(mappingJson == null ? "{}" : mappingJson);
             Map<String, Object> variables = new HashMap<>();
             JsonNode mappedContent = content;
-            mapping.fields().forEachRemaining(entry -> {
-                String variableName = entry.getValue().asText();
-                if (!variableName.matches("[A-Za-z][A-Za-z0-9_]{0,127}")
-                        || ProcessVariablePolicy.isInternalVariable(variableName)) {
-                    throw new AgentCompletionContractException(
-                            "Unsafe Agent output variable: " + variableName);
-                }
-                JsonNode value = resolvePath(mappedContent, entry.getKey());
-                if (value == null || value.isMissingNode()) {
-                    throw new AgentCompletionContractException(
-                            "Agent output mapping path is missing: " + entry.getKey());
-                }
-                variables.put(variableName, objectMapper.convertValue(value, Object.class));
-            });
+            mapping.fields()
+                    .forEachRemaining(
+                            entry -> {
+                                String variableName = entry.getValue().asText();
+                                if (!variableName.matches("[A-Za-z][A-Za-z0-9_]{0,127}")
+                                        || ProcessVariablePolicy.isInternalVariable(variableName)) {
+                                    throw new AgentCompletionContractException(
+                                            "Unsafe Agent output variable: " + variableName);
+                                }
+                                JsonNode value = resolvePath(mappedContent, entry.getKey());
+                                if (value == null || value.isMissingNode()) {
+                                    throw new AgentCompletionContractException(
+                                            "Agent output mapping path is missing: "
+                                                    + entry.getKey());
+                                }
+                                variables.put(variableName, portableValue(value));
+                            });
             return variables;
         } catch (AgentCompletionContractException exception) {
             throw exception;
         } catch (Exception exception) {
-            throw new AgentCompletionContractException("Unable to apply Agent output mapping", exception);
+            throw new AgentCompletionContractException(
+                    "Unable to apply Agent output mapping", exception);
         }
+    }
+
+    /** Preserve legacy scalar types unless a decimal would lose value in a Double. */
+    private Object portableValue(JsonNode value) {
+        if (value.isFloatingPointNumber()) {
+            BigDecimal exact = value.decimalValue();
+            double legacy = value.doubleValue();
+            if (!objectMapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+                    && Double.isFinite(legacy)
+                    && BigDecimal.valueOf(legacy).compareTo(exact) == 0) {
+                return legacy;
+            }
+            return exact;
+        }
+        if (value.isArray()) {
+            var result = new ArrayList<Object>();
+            value.forEach(child -> result.add(portableValue(child)));
+            return result;
+        }
+        if (value.isObject()) {
+            var result = new java.util.LinkedHashMap<String, Object>();
+            value.fields()
+                    .forEachRemaining(
+                            entry -> result.put(entry.getKey(), portableValue(entry.getValue())));
+            return result;
+        }
+        return objectMapper.convertValue(value, Object.class);
     }
 
     private JsonNode resolvePath(JsonNode root, String path) {

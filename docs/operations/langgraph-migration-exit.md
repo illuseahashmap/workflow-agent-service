@@ -1,6 +1,6 @@
 # LangGraph 迁移退出条件
 
-2026-11-26。当前能力状态以 [status.md](../status.md) 为唯一入口；本页只规定迁移验收、切换和退役条件，不宣称已完成切换。
+2026-11-27。当前能力状态以 [status.md](../status.md) 为唯一入口；本页只规定迁移验收、切换和退役条件，不宣称已完成切换。
 
 ## 顺序与交付物
 
@@ -25,4 +25,6 @@
 
 状态表中的“已实现”“已验收”“已发布”“已退役”分别记录，任一项不能推导下一项。阶段完成时更新唯一状态入口及对应证据链接，问题清单只保留未关闭的风险。
 
-V78 已交付最终答案有限格式修复及共享许可，见[专项记录](../quality/graph-format-repair-regression.md)。这只关闭阶段 1 的该实现项；路由投影、完整节点组合与 P-17 等价证据仍须单独交付。
+V78 已交付最终答案有限格式修复及共享许可，见[专项记录](../quality/graph-format-repair-regression.md)。这只关闭阶段 1 的该实现项；V79 路由投影已交付，见[路由专项](../quality/graph-route-projection-regression.md)；完整节点组合与 P-17 等价证据仍须单独交付。
+
+2026-11-27：V81 补齐工具超时/撤权的持久停止和无模型人工交接，图端与原生 P-17 脚本七场景均 7/7，见[回归记录](../quality/graph-tool-stop-regression.md)。阶段 2 的同租户双采购、连续两次压缩/换代恢复已补确定性模型/JDBC 组合证据，见[组合记录](../quality/graph-dual-purchase-recovery-regression.md)；该组合随后已通过真实 Flowable 提交、认证派发和生产完成消息回归，见[派发完成记录](../quality/graph-dual-purchase-flowable-regression.md)；仍待真实 Provider/MCP、多实例故障与负载等证据；此项通过不授权业务后端切换或原生退役。

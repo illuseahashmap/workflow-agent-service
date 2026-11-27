@@ -246,6 +246,9 @@ public final class JdbcGraphExecutionStore
                                         .addValue("physical", budget.physicalCalls())
                                         .addValue("validation", budget.validationCalls()));
                         jdbc.update(
+                                "INSERT INTO agent_graph_tool_retry_policy VALUES(:tenant,:run,2)",
+                                key);
+                        jdbc.update(
                                 "INSERT INTO agent_graph_loop_policy"
                                         + " VALUES(:tenant,:run,1,:policy)",
                                 new org.springframework.jdbc.core.namedparam.MapSqlParameterSource(
@@ -359,6 +362,28 @@ public final class JdbcGraphExecutionStore
                                     new org.springframework.jdbc.core.namedparam
                                                     .MapSqlParameterSource(key)
                                             .addValue("policy", json(formatPolicy)));
+                        }
+                    }
+                    if (schemaVersion == 2
+                            && s.outputSchema() != null
+                            && !s.outputSchema().isBlank()) {
+                        var route =
+                                codec.read(
+                                                s.outputSchema().getBytes(StandardCharsets.UTF_8),
+                                                com.fasterxml.jackson.databind.JsonNode.class)
+                                        .get("x-graph-routing");
+                        if (route != null) {
+                            var routePolicy =
+                                    codec.read(
+                                            codec.write(route),
+                                            io.github.illuseahashmap.agent.runtime.application.graph
+                                                    .GraphRoute.Policy.class);
+                            jdbc.update(
+                                    "INSERT INTO agent_graph_route_policy"
+                                            + " VALUES(:tenant,:run,:policy)",
+                                    new org.springframework.jdbc.core.namedparam
+                                                    .MapSqlParameterSource(key)
+                                            .addValue("policy", json(routePolicy)));
                         }
                     }
                     jdbc.update(
@@ -659,6 +684,8 @@ public final class JdbcGraphExecutionStore
                                     """
                                     SELECT EXISTS(SELECT 1 FROM agent_graph_plan_verdict p JOIN agent_graph_v2_validation v USING(tenant_code,run_id,operation_id)
                                       WHERE p.tenant_code=:tenant AND p.run_id=:run AND p.accepted AND v.receipt_json::jsonb->>'receipt_ref'=:receipt)
+                                    OR EXISTS(SELECT 1 FROM agent_graph_route_verdict p JOIN agent_graph_v2_validation v USING(tenant_code,run_id,operation_id)
+                                      WHERE p.tenant_code=:tenant AND p.run_id=:run AND p.accepted AND v.receipt_json::jsonb->>'receipt_ref'=:receipt)
                                     """,
                                     Map.of(
                                             "tenant",
@@ -853,6 +880,11 @@ public final class JdbcGraphExecutionStore
                             if (redirect != null) {
                                 return redirect;
                             }
+                            String routeRedirect =
+                                    new JdbcGraphRouteStore(jdbc, codec).guard(run, request);
+                            if (routeRedirect != null) {
+                                return routeRedirect;
+                            }
                             String planRedirect =
                                     new JdbcGraphPlanStore(jdbc, this, codec).guard(run, request);
                             if (planRedirect != null) {
@@ -935,6 +967,11 @@ public final class JdbcGraphExecutionStore
                                 recordStop(key, "GRAPH_PHYSICAL_BUDGET_EXHAUSTED");
                                 return "STOP";
                             }
+                            if ("TOOL".equals(request.kind())
+                                    && toolAttempts(key) >= toolAttemptLimit(key)) {
+                                recordStop(key, "GRAPH_TOOL_RETRY_EXHAUSTED");
+                                return "STOP";
+                            }
                             String id = UUID.randomUUID().toString();
                             jdbc.update(
                                     """
@@ -952,6 +989,12 @@ public final class JdbcGraphExecutionStore
         }
         if ("REPLAN".equals(result)) {
             throw new GraphGatewayException(GraphGatewayException.Code.REPLAN_REQUIRED);
+        }
+        if ("ROUTE".equals(result)) {
+            throw new GraphGatewayException(GraphGatewayException.Code.ROUTE_REQUIRED);
+        }
+        if ("ROUTE_REPAIR".equals(result)) {
+            throw new GraphGatewayException(GraphGatewayException.Code.ROUTE_REPAIR_REQUIRED);
         }
         if ("REPAIR".equals(result)) {
             throw new GraphGatewayException(GraphGatewayException.Code.FORMAT_REPAIR_REQUIRED);
@@ -987,13 +1030,105 @@ public final class JdbcGraphExecutionStore
                                         .addValue("output", outputTokens)));
     }
 
+    private int toolAttemptLimit(
+            org.springframework.jdbc.core.namedparam.MapSqlParameterSource key) {
+        return jdbc.queryForObject(
+                "SELECT attempt_limit FROM agent_graph_tool_retry_policy WHERE tenant_code=:tenant"
+                        + " AND run_id=:run",
+                key,
+                Integer.class);
+    }
+
+    private int toolAttempts(org.springframework.jdbc.core.namedparam.MapSqlParameterSource key) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM agent_graph_budget_call WHERE tenant_code=:tenant AND"
+                        + " run_id=:run AND operation_id=:op",
+                key,
+                Integer.class);
+    }
+
+    @Override
+    public boolean toolFailed(
+            AuthorizedRun run,
+            Invocation request,
+            String callAttempt,
+            String errorCode,
+            boolean retryable) {
+        if (run.binding().stateSchemaVersion() == 1) {
+            return false;
+        }
+        require(errorCode != null && errorCode.matches("[A-Z][A-Z0-9_]{0,63}"));
+        return atomic(
+                () -> {
+                    lockRun(run.binding().tenantCode(), run.binding().runId());
+                    // Fenced callers cannot stop a successor, even if their external call failed.
+                    verifyCurrent(run);
+                    var key =
+                            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource(
+                                            "tenant", run.binding().tenantCode())
+                                    .addValue("run", run.binding().runId())
+                                    .addValue("op", request.operationId())
+                                    .addValue("id", callAttempt)
+                                    .addValue("code", errorCode)
+                                    .addValue("retryable", retryable);
+                    if (callAttempt != null) {
+                        require("TOOL".equals(request.kind()));
+                        require(
+                                jdbc.queryForObject(
+                                                """
+                                                SELECT count(*) FROM agent_graph_budget_call c JOIN agent_graph_budget_operation o
+                                                USING(tenant_code,run_id,operation_id) WHERE c.tenant_code=:tenant AND c.run_id=:run AND c.operation_id=:op
+                                                AND c.call_attempt_id=CAST(:id AS uuid) AND c.generation=:generation AND o.request_digest=:digest AND
+                                                o.kind='TOOL'
+                                                """,
+                                                key.addValue("generation", run.generation())
+                                                        .addValue(
+                                                                "digest",
+                                                                codec.fingerprint(request)),
+                                                Integer.class)
+                                        == 1);
+                        int inserted =
+                                jdbc.update(
+                                        """
+                                        INSERT INTO agent_graph_tool_failure(tenant_code,run_id,call_attempt_id,error_code,retryable)
+                                        VALUES(:tenant,:run,CAST(:id AS uuid),:code,:retryable) ON CONFLICT DO NOTHING
+                                        """,
+                                        key);
+                        require(
+                                jdbc.queryForObject(
+                                        """
+                                        SELECT error_code=:code AND retryable=:retryable FROM agent_graph_tool_failure WHERE tenant_code=:tenant AND
+                                        run_id=:run AND call_attempt_id=CAST(:id AS uuid)
+                                        """,
+                                        key,
+                                        Boolean.class));
+                        if (inserted == 0) {
+                            return false;
+                        }
+                    }
+                    if (!retryable
+                            || (callAttempt != null
+                                    && toolAttempts(key) >= toolAttemptLimit(key))) {
+                        recordStop(key, errorCode);
+                        return true;
+                    }
+                    return false;
+                });
+    }
+
     @Override
     public void stop(AuthorizedRun run, String reason) {
         if (run.binding().stateSchemaVersion() == 1) {
             return;
         }
         require(
-                java.util.Set.of("GRAPH_MODEL_BUDGET_EXHAUSTED", "GRAPH_TOOL_BUDGET_EXHAUSTED")
+                java.util.Set.of(
+                                "GRAPH_MODEL_BUDGET_EXHAUSTED",
+                                "GRAPH_TOOL_BUDGET_EXHAUSTED",
+                                "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+                                "AGENT_TOOL_NOT_AUTHORIZED",
+                                "AGENT_TOOL_NOT_BOUND_TO_VERSION",
+                                "AGENT_TOOL_POLICY_INVALID")
                         .contains(reason));
         atomic(
                 () -> {

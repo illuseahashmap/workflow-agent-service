@@ -1,22 +1,14 @@
 package io.github.illuseahashmap.workflow.agent;
 
+import static io.github.illuseahashmap.workflow.agent.P17Pilot.ARK;
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.BUYER;
-import static io.github.illuseahashmap.workflow.agent.P17Pilot.TENANT;
-import static io.github.illuseahashmap.workflow.agent.P17Pilot.hash;
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.DIR;
 import static io.github.illuseahashmap.workflow.agent.P17Pilot.JSON;
-import static io.github.illuseahashmap.workflow.agent.P17Pilot.ARK;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThat;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.UUID;
-import java.util.Map;
-import java.util.List;
+import static io.github.illuseahashmap.workflow.agent.P17Pilot.TENANT;
+import static io.github.illuseahashmap.workflow.agent.P17Pilot.hash;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.illuseahashmap.agent.provider.application.ModelProviderRegistry;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderCapabilities;
@@ -52,23 +44,31 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /** Read-only joint-routing pilot. Scripted runs check instrumentation, never live model quality. */
 class P17JointRunTest {
     @Test
     void scriptedRunsExercisePublishedBindingsAndOutbox() throws Exception {
-        run(false);
+        run(false, false);
     }
 
     @Test
     @EnabledIfSystemProperty(named = "workflow.rag.live-p17", matches = "true")
     void liveRunsUseTheSamePublishedFixture() throws Exception {
         new ProviderEndpointValidator(false, false).validate(URI.create(ARK));
-        run(true);
+        run(true, false);
     }
 
-    private void run(boolean live) throws Exception {
+    void run(boolean live, boolean graph) throws Exception {
         P17RoutingFixtureTest.withDatabase(
                 (url, user, password) -> {
                     Flyway.configure()
@@ -81,7 +81,7 @@ class P17JointRunTest {
                     var tx = new TransactionTemplate(manager);
                     var named = new NamedParameterJdbcTemplate(ds);
                     var db = named.getJdbcTemplate();
-                    var p = new P17Pilot(named, tx, live);
+                    var p = new P17Pilot(named, tx, live, graph);
                     var repo = new JdbcAgentRunExecutionRepository(named);
                     var publisher =
                             new AgentRunEventPublisherAdapter(
@@ -120,7 +120,12 @@ class P17JointRunTest {
                                                 UUID.randomUUID().toString()));
                         var dir =
                                 Files.createDirectory(
-                                        Files.createDirectories(Path.of("target", "p17-runs"))
+                                        Files.createDirectories(
+                                                        Path.of(
+                                                                "target",
+                                                                graph
+                                                                        ? "p17-graph-runs"
+                                                                        : "p17-runs"))
                                                 .resolve(batch.toString()));
                         var processor =
                                 new AgentFlowableCompletionProcessor(
@@ -148,333 +153,442 @@ class P17JointRunTest {
                                     .addString("p17.bpmn20.xml", rendered)
                                     .deploy();
                         }
+                        var failures = new ArrayList<String>();
                         for (var c : p.gold.path("cases")) {
-                            String id = c.path("id").asText();
-                            boolean timeout = id.equals("P17-TIMEOUT");
-                            boolean revoked = id.equals("P17-REVOKED");
-                            boolean joint = !id.equals("B08");
-                            long version = joint ? p.jointVersion : p.policyVersion;
-                            p.records.mode = c.path("live").asText();
-                            p.records.ledger.clear();
-                            String pi =
-                                    runtime.startProcessInstanceByKeyAndTenantId(
-                                                    "p17_" + version,
-                                                    Map.of(
-                                                            "orderId",
-                                                            "P-17",
-                                                            "question",
-                                                            c.path("query")
-                                                                    .asText(
-                                                                            p.gold.path("query")
-                                                                                    .asText())),
-                                                    TENANT)
-                                            .getId();
-                            long runId =
-                                    db.queryForObject(
-                                            "SELECT id FROM agent_run WHERE tenant_code=? AND"
-                                                + " process_instance_id=? AND requested_by=? AND"
-                                                + " agent_version_id=?",
-                                            Long.class,
-                                            TENANT,
-                                            pi,
-                                            BUYER,
-                                            version);
-                            p.observation = new P17ScoreTrace(db, dir, id, runId, pi);
-                            ModelProviderPort model =
-                                    live
-                                            ? new LangChain4jOpenAiModelProviderAdapter(
-                                                    JSON,
-                                                    new ProviderEndpointValidator(false, false),
-                                                    1048576)
-                                            : new Scripted(p, joint);
-                            var observedModel =
-                                    new ModelProviderPort() {
-                                        public AgentProviderType providerType() {
-                                            return model.providerType();
-                                        }
-
-                                        public ModelProviderCapabilities capabilities(String url) {
-                                            return model.capabilities(url);
-                                        }
-
-                                        public ModelProviderResponse invoke(
-                                                ModelProviderRequest request) {
-                                            assertThat(p.revokedLocators)
-                                                    .as(
-                                                            "No model request, including"
-                                                                + " summarization, after"
-                                                                + " revocation")
-                                                    .isEmpty();
-                                            return model.invoke(request);
-                                        }
-                                    };
-                            var executor =
-                                    new PlatformAgentExecutor(
-                                            p.credentials,
-                                            new ModelProviderRegistry(List.of(observedModel)),
-                                            p.validator,
-                                            p.registry,
-                                            JSON,
-                                            6);
-                            var worker =
-                                    new AgentRunWorkerServiceImpl(
-                                            repo,
-                                            p.versions,
-                                            p.providers,
-                                            new AgentExecutorRegistry(List.of(executor)),
-                                            JSON,
-                                            tx,
-                                            "pilot-worker",
-                                            180,
-                                            2,
-                                            1,
+                            p.observation = null;
+                            try {
+                                String id = c.path("id").asText();
+                                boolean timeout = id.equals("P17-TIMEOUT");
+                                boolean revoked = id.equals("P17-REVOKED");
+                                boolean joint = !id.equals("B08");
+                                long version = joint ? p.jointVersion : p.policyVersion;
+                                p.records.mode = c.path("live").asText();
+                                p.records.ledger.clear();
+                                String pi =
+                                        runtime.startProcessInstanceByKeyAndTenantId(
+                                                        "p17_" + version,
+                                                        Map.of(
+                                                                "orderId",
+                                                                "P-17",
+                                                                "question",
+                                                                c.path("query")
+                                                                        .asText(
+                                                                                p.gold.path("query")
+                                                                                        .asText())),
+                                                        TENANT)
+                                                .getId();
+                                long runId =
+                                        db.queryForObject(
+                                                "SELECT id FROM agent_run WHERE tenant_code=? AND"
+                                                    + " process_instance_id=? AND requested_by=?"
+                                                    + " AND agent_version_id=?",
+                                                Long.class,
+                                                TENANT,
+                                                pi,
+                                                BUYER,
+                                                version);
+                                p.observation = new P17ScoreTrace(db, dir, id, runId, pi, graph);
+                                if (graph) {
+                                    P17GraphDriver.execute(
+                                            p,
+                                            named,
                                             publisher,
-                                            AgentRunLeaseHeartbeat.NOOP,
-                                            new DefaultAgentResultPolicy(JSON),
-                                            AgentRuntimeMetrics.NOOP,
-                                            attempt -> Duration.ZERO,
-                                            new AgentRecoveryPolicy(),
-                                            new AgentFailureMapper());
-                            assertThat(worker.executeNext()).isTrue();
-                            // A claimed retry re-enters through the worker and its persisted
-                            // tool-intent checkpoint.
-                            if (timeout) {
-                                worker.executeNext();
-                            }
-                            p.observation.completed();
-                            var outbox = new AgentCompletionEventStore(named, tx);
-                            for (var event :
-                                    outbox.claim("pilot-completion", 1, Duration.ofSeconds(30))) {
-                                tx.executeWithoutResult(
-                                        s -> processor.process(event, "pilot-completion"));
-                            }
-                            Thread.sleep(p.gold.path("observeAfterMs").asLong());
-                            var tasks =
-                                    engine
-                                            .getTaskService()
-                                            .createTaskQuery()
-                                            .processInstanceId(pi)
-                                            .list()
-                                            .stream()
-                                            .map(t -> t.getTaskDefinitionKey())
-                                            .toList();
-                            var activities =
-                                    engine.getHistoryService()
-                                            .createHistoricActivityInstanceQuery()
-                                            .processInstanceId(pi)
-                                            .activityType("userTask")
-                                            .list();
-                            var history = activities.stream().map(h -> h.getActivityId()).toList();
-                            p.observation.finish(
-                                    tasks,
-                                    history,
-                                    p.records.ledger,
-                                    activities.stream()
-                                            .mapToLong(h -> h.getStartTime().getTime())
-                                            .min()
-                                            .orElseThrow(),
-                                    System.currentTimeMillis());
-                            var report = new LinkedHashMap<String, Object>();
-                            report.put("case", id);
-                            report.put("model", p.model);
-                            report.put("source", live ? "LIVE_MODEL" : "SCRIPTED_TRANSPORT");
-                            report.put("tenant", TENANT);
-                            report.put("principal", BUYER);
-                            report.put("process", pi);
-                            report.put("run", runId);
-                            report.put("version", version);
-                            report.put("profile", p.profile);
-                            report.put("index", p.index);
-                            report.put("mcpSnapshot", joint ? p.snapshotId : null);
-                            report.put("bpmnSha256", bpmnDigests.get(version));
-                            report.put("policySha256Lf", p.gold.path("policySha256Lf").asText());
-                            report.put("catalog", joint ? p.catalogId : null);
-                            report.put(
-                                    "promptSha256",
-                                    hash(Files.readAllBytes(DIR.resolve("e1-prompt.txt"))));
-                            var run =
-                                    db.queryForMap(
-                                            "SELECT"
-                                                + " status,error_code,current_attempt_id,workflow_resumed_at"
-                                                + " IS NOT NULL AS"
-                                                + " resumed,output_snapshot_json::jsonb->>'content'"
-                                                + " AS answer FROM agent_run WHERE tenant_code=?"
-                                                + " AND id=?",
-                                            TENANT,
-                                            runId);
-                            report.put("outcome", run);
-                            report.put("tasks", tasks);
-                            report.put("history", history);
-                            report.put("externalCalls", List.copyOf(p.records.ledger));
-                            var audits =
-                                    db.queryForList(
-                                            "SELECT"
-                                                + " tool_code,status,idempotency_key,output_snapshot"
-                                                + " FROM agent_tool_execution_audit WHERE"
-                                                + " tenant_code=? AND idempotency_key LIKE ? ORDER"
-                                                + " BY id",
-                                            TENANT,
-                                            runId + ":tool:%");
-                            report.put(
-                                    "audit",
-                                    audits.stream()
-                                            .map(
-                                                    a ->
-                                                            Map.of(
-                                                                    "tool",
-                                                                    a.get("tool_code"),
-                                                                    "status",
-                                                                    a.get("status"),
-                                                                    "key",
-                                                                    a.get("idempotency_key")))
-                                            .toList());
-                            report.put(
-                                    "steps",
-                                    db.queryForList(
-                                            "SELECT"
-                                                + " attempt_id,sequence_no,step_type,status,error_code"
-                                                + " FROM agent_run_step WHERE tenant_code=? AND"
-                                                + " agent_run_id=? ORDER BY attempt_id,sequence_no",
-                                            TENANT,
-                                            runId));
-                            report.put(
-                                    "checkpoints",
-                                    db.queryForList(
-                                            "SELECT"
-                                                + " attempt_id,sequence_no,snapshot_json::jsonb->>'logicalStepId'"
-                                                + " AS logical_step FROM agent_run_checkpoint WHERE"
-                                                + " tenant_code=? AND agent_run_id=? ORDER BY"
-                                                + " attempt_id,sequence_no",
-                                            TENANT,
-                                            runId));
-                            report.put("preRevocationReadBack", List.copyOf(p.revokedLocators));
-                            JSON.writerWithDefaultPrettyPrinter()
-                                    .writeValue(dir.resolve(id + ".json").toFile(), report);
-                            assertThat(run.get("resumed")).isEqualTo(true);
-                            assertThat(tasks).containsExactly(c.path("task").asText());
-                            assertThat(history).isEqualTo(tasks);
-                            if (timeout || revoked) {
+                                            runId,
+                                            joint,
+                                            dir.resolve(id + "-graph.json"));
+                                } else {
+                                    ModelProviderPort model =
+                                            live
+                                                    ? new LangChain4jOpenAiModelProviderAdapter(
+                                                            JSON,
+                                                            new ProviderEndpointValidator(
+                                                                    false, false),
+                                                            1048576)
+                                                    : new Scripted(p, joint);
+                                    var observedModel =
+                                            new ModelProviderPort() {
+                                                public AgentProviderType providerType() {
+                                                    return model.providerType();
+                                                }
+
+                                                public ModelProviderCapabilities capabilities(
+                                                        String url) {
+                                                    return model.capabilities(url);
+                                                }
+
+                                                public ModelProviderResponse invoke(
+                                                        ModelProviderRequest request) {
+                                                    assertThat(p.revokedLocators)
+                                                            .as(
+                                                                    "No model request, including"
+                                                                        + " summarization, after"
+                                                                        + " revocation")
+                                                            .isEmpty();
+                                                    return model.invoke(request);
+                                                }
+                                            };
+                                    var executor =
+                                            new PlatformAgentExecutor(
+                                                    p.credentials,
+                                                    new ModelProviderRegistry(
+                                                            List.of(observedModel)),
+                                                    p.validator,
+                                                    p.registry,
+                                                    JSON,
+                                                    6);
+                                    var worker =
+                                            new AgentRunWorkerServiceImpl(
+                                                    repo,
+                                                    p.versions,
+                                                    p.providers,
+                                                    new AgentExecutorRegistry(List.of(executor)),
+                                                    JSON,
+                                                    tx,
+                                                    "pilot-worker",
+                                                    180,
+                                                    2,
+                                                    1,
+                                                    publisher,
+                                                    AgentRunLeaseHeartbeat.NOOP,
+                                                    new DefaultAgentResultPolicy(JSON),
+                                                    AgentRuntimeMetrics.NOOP,
+                                                    attempt -> Duration.ZERO,
+                                                    new AgentRecoveryPolicy(),
+                                                    new AgentFailureMapper());
+                                    assertThat(worker.executeNext()).isTrue();
+                                    // A claimed retry re-enters through the worker and its
+                                    // persisted
+                                    // tool-intent checkpoint.
+                                    if (timeout) {
+                                        worker.executeNext();
+                                    }
+                                }
+
+                                p.observation.completed();
+                                var outbox = new AgentCompletionEventStore(named, tx);
+                                for (var event :
+                                        outbox.claim(
+                                                "pilot-completion", 1, Duration.ofSeconds(30))) {
+                                    tx.executeWithoutResult(
+                                            s -> processor.process(event, "pilot-completion"));
+                                }
+                                Thread.sleep(p.gold.path("observeAfterMs").asLong());
+                                var tasks =
+                                        engine
+                                                .getTaskService()
+                                                .createTaskQuery()
+                                                .processInstanceId(pi)
+                                                .list()
+                                                .stream()
+                                                .map(t -> t.getTaskDefinitionKey())
+                                                .toList();
+                                var activities =
+                                        engine.getHistoryService()
+                                                .createHistoricActivityInstanceQuery()
+                                                .processInstanceId(pi)
+                                                .activityType("userTask")
+                                                .list();
+                                var history =
+                                        activities.stream().map(h -> h.getActivityId()).toList();
+                                p.observation.finish(
+                                        tasks,
+                                        history,
+                                        p.records.ledger,
+                                        activities.stream()
+                                                .mapToLong(h -> h.getStartTime().getTime())
+                                                .min()
+                                                .orElseThrow(),
+                                        System.currentTimeMillis());
+                                var report = new LinkedHashMap<String, Object>();
+                                report.put("case", id);
+                                report.put("model", p.model);
+                                report.put("source", live ? "LIVE_MODEL" : "SCRIPTED_TRANSPORT");
+                                report.put("backend", graph ? "LANGGRAPH" : "NATIVE");
+                                if (graph) {
+                                    report.put(
+                                            "physicalCalls",
+                                            db.queryForList(
+                                                    """
+                                                              SELECT c.call_attempt_id::text AS id,
+                                                                c.run_id::text||':'||c.operation_id||':'||r.tool_code AS key,
+                                                                f.error_code AS error, f.retryable
+                                                              FROM agent_graph_budget_call c
+                                                              JOIN agent_graph_reference r ON r.tenant_code=c.tenant_code AND r.run_id=c.run_id
+                                                                AND r.operation_id=c.operation_id AND r.kind='ARGUMENTS'
+                                                              LEFT JOIN agent_graph_tool_failure f ON f.tenant_code=c.tenant_code AND f.run_id=c.run_id
+                                                    AND f.call_attempt_id=c.call_attempt_id
+                                                              WHERE c.tenant_code=? AND c.run_id=? ORDER BY c.created_at
+                                                    """,
+                                                    TENANT,
+                                                    runId));
+                                }
+                                report.put("tenant", TENANT);
+                                report.put("principal", BUYER);
+                                report.put("process", pi);
+                                report.put("run", runId);
+                                report.put("version", version);
+                                report.put("profile", p.profile);
+                                report.put("index", p.index);
+                                report.put("mcpSnapshot", joint ? p.snapshotId : null);
+                                report.put("bpmnSha256", bpmnDigests.get(version));
+                                report.put(
+                                        "policySha256Lf", p.gold.path("policySha256Lf").asText());
+                                report.put("catalog", joint ? p.catalogId : null);
+                                report.put(
+                                        "promptSha256",
+                                        hash(Files.readAllBytes(DIR.resolve("e1-prompt.txt"))));
+                                var run =
+                                        db.queryForMap(
+                                                "SELECT"
+                                                    + " status,error_code,current_attempt_id,workflow_resumed_at"
+                                                    + " IS NOT NULL AS"
+                                                    + " resumed,output_snapshot_json::jsonb->>'content'"
+                                                    + " AS answer FROM agent_run WHERE"
+                                                    + " tenant_code=? AND id=?",
+                                                TENANT,
+                                                runId);
+                                report.put("outcome", run);
+                                report.put("tasks", tasks);
+                                report.put("history", history);
+                                report.put("externalCalls", List.copyOf(p.records.ledger));
+                                var audits =
+                                        graph
+                                                ? db.queryForList(
+                                                        """
+                                                        SELECT a.tool_code,a.status,a.idempotency_key,a.output_snapshot
+                                                        FROM agent_tool_execution_audit a JOIN agent_graph_reference r
+                                                          ON a.tenant_code=r.tenant_code AND a.tool_code=r.tool_code
+                                                          AND a.idempotency_key=r.run_id::text||':'||r.operation_id||':'||r.tool_code
+                                                        WHERE r.tenant_code=? AND r.run_id=? AND r.kind='ARGUMENTS' ORDER BY a.id
+                                                        """,
+                                                        TENANT,
+                                                        runId)
+                                                : db.queryForList(
+                                                        "SELECT"
+                                                            + " tool_code,status,idempotency_key,output_snapshot"
+                                                            + " FROM agent_tool_execution_audit"
+                                                            + " WHERE tenant_code=? AND"
+                                                            + " idempotency_key LIKE ? ORDER BY id",
+                                                        TENANT,
+                                                        runId + ":tool:%");
+                                report.put(
+                                        "audit",
+                                        audits.stream()
+                                                .map(
+                                                        a ->
+                                                                Map.of(
+                                                                        "tool",
+                                                                        a.get("tool_code"),
+                                                                        "status",
+                                                                        a.get("status"),
+                                                                        "key",
+                                                                        a.get("idempotency_key")))
+                                                .toList());
+                                report.put(
+                                        "steps",
+                                        db.queryForList(
+                                                "SELECT"
+                                                    + " attempt_id,sequence_no,step_type,status,error_code"
+                                                    + " FROM agent_run_step WHERE tenant_code=? AND"
+                                                    + " agent_run_id=? ORDER BY"
+                                                    + " attempt_id,sequence_no",
+                                                TENANT,
+                                                runId));
+                                report.put(
+                                        "checkpoints",
+                                        db.queryForList(
+                                                "SELECT"
+                                                    + " attempt_id,sequence_no,snapshot_json::jsonb->>'logicalStepId'"
+                                                    + " AS logical_step FROM agent_run_checkpoint"
+                                                    + " WHERE tenant_code=? AND agent_run_id=?"
+                                                    + " ORDER BY attempt_id,sequence_no",
+                                                TENANT,
+                                                runId));
+                                report.put("preRevocationReadBack", List.copyOf(p.revokedLocators));
+                                JSON.writerWithDefaultPrettyPrinter()
+                                        .writeValue(dir.resolve(id + ".json").toFile(), report);
+                                assertThat(run.get("resumed")).isEqualTo(true);
+                                assertThat(tasks).containsExactly(c.path("task").asText());
+                                assertThat(history).isEqualTo(tasks);
+                                if (timeout || revoked) {
+                                    assertThat(run.get("status"))
+                                            .as("%s %s", id, run)
+                                            .isEqualTo("FAILED");
+                                    assertThat(run.get("answer")).isNull();
+                                    assertThat(run.get("error_code"))
+                                            .isEqualTo(
+                                                    timeout
+                                                            ? "MCP_TIMEOUT"
+                                                            : "KNOWLEDGE_RESULT_ACCESS_REVOKED");
+                                    if (timeout) {
+                                        assertThat(p.records.ledger).hasSize(2);
+                                        assertThat(
+                                                        db.queryForObject(
+                                                                "SELECT count(*) FROM"
+                                                                        + " agent_run_attempt WHERE"
+                                                                        + " tenant_code=? AND"
+                                                                        + " agent_run_id=?",
+                                                                Integer.class,
+                                                                TENANT,
+                                                                runId))
+                                                .isEqualTo(graph ? 1 : 2);
+                                        if (graph) {
+                                            assertThat(
+                                                            db.queryForObject(
+                                                                    "SELECT count(*) FROM"
+                                                                        + " agent_graph_tool_failure"
+                                                                        + " WHERE tenant_code=? AND"
+                                                                        + " run_id=? AND"
+                                                                        + " error_code='MCP_TIMEOUT'",
+                                                                    Integer.class,
+                                                                    TENANT,
+                                                                    runId))
+                                                    .isEqualTo(2);
+                                        }
+                                    } else {
+                                        var receipt =
+                                                JSON.readTree(
+                                                        (String)
+                                                                audits.stream()
+                                                                        .filter(
+                                                                                a ->
+                                                                                        "knowledge_search"
+                                                                                                .equals(
+                                                                                                        a
+                                                                                                                .get(
+                                                                                                                        "tool_code")))
+                                                                        .findFirst()
+                                                                        .orElseThrow()
+                                                                        .get("output_snapshot"));
+                                        assertThat(p.revokedLocators)
+                                                .isNotEmpty()
+                                                .allSatisfy(
+                                                        loc ->
+                                                                assertThatThrownBy(
+                                                                                () ->
+                                                                                        p.originals
+                                                                                                .read(
+                                                                                                        TENANT,
+                                                                                                        BUYER,
+                                                                                                        receipt.path(
+                                                                                                                        "traceId")
+                                                                                                                .asText(),
+                                                                                                        loc))
+                                                                        .hasMessageContaining(
+                                                                                "Citation"
+                                                                                    + " unavailable"));
+                                    }
+                                    continue;
+                                }
                                 assertThat(run.get("status"))
                                         .as("%s %s", id, run)
-                                        .isEqualTo("FAILED");
-                                assertThat(run.get("answer")).isNull();
-                                assertThat(run.get("error_code"))
-                                        .isEqualTo(
-                                                timeout
-                                                        ? "MCP_TIMEOUT"
-                                                        : "KNOWLEDGE_RESULT_ACCESS_REVOKED");
-                                if (timeout) {
-                                    assertThat(p.records.ledger).hasSize(2);
-                                    assertThat(
-                                                    db.queryForObject(
-                                                            "SELECT count(*) FROM agent_run_attempt"
-                                                                + " WHERE tenant_code=? AND"
-                                                                + " agent_run_id=?",
-                                                            Integer.class,
-                                                            TENANT,
-                                                            runId))
-                                            .isEqualTo(2);
-                                } else {
-                                    var receipt =
-                                            JSON.readTree(
-                                                    (String)
-                                                            audits.stream()
-                                                                    .filter(
-                                                                            a ->
-                                                                                    "knowledge_search"
-                                                                                            .equals(
-                                                                                                    a
-                                                                                                            .get(
-                                                                                                                    "tool_code")))
-                                                                    .findFirst()
-                                                                    .orElseThrow()
-                                                                    .get("output_snapshot"));
-                                    assertThat(p.revokedLocators)
-                                            .isNotEmpty()
-                                            .allSatisfy(
-                                                    loc ->
-                                                            assertThatThrownBy(
-                                                                            () ->
-                                                                                    p.originals
-                                                                                            .read(
-                                                                                                    TENANT,
-                                                                                                    BUYER,
-                                                                                                    receipt.path(
-                                                                                                                    "traceId")
-                                                                                                            .asText(),
-                                                                                                    loc))
-                                                                    .hasMessageContaining(
-                                                                            "Citation"
-                                                                                + " unavailable"));
+                                        .isEqualTo("SUCCEEDED");
+                                var answer = JSON.readTree((String) run.get("answer"));
+                                assertThat(answer.path("action").asText())
+                                        .isEqualTo(c.path("action").asText());
+                                assertThat(answer.path("decision").asText())
+                                        .isEqualTo(c.path("decision").asText());
+                                assertThat(audits)
+                                        .extracting(a -> a.get("tool_code"))
+                                        .contains("knowledge_search");
+                                assertThat(p.records.ledger).hasSize(joint ? 1 : 0);
+                                var search =
+                                        audits.stream()
+                                                .filter(
+                                                        a ->
+                                                                "knowledge_search"
+                                                                        .equals(a.get("tool_code")))
+                                                .findFirst()
+                                                .orElseThrow();
+                                var output = JSON.readTree((String) search.get("output_snapshot"));
+                                var trace = output.path("traceId").asText();
+                                boolean found = false;
+                                var readbacks = new ArrayList<Map<String, Object>>();
+                                for (var evidence : output.path("evidence")) {
+                                    String locator =
+                                            evidence.path("reference").path("locator").asText();
+                                    var preview = p.originals.read(TENANT, BUYER, trace, locator);
+                                    readbacks.add(
+                                            Map.of(
+                                                    "trace",
+                                                    trace,
+                                                    "locator",
+                                                    locator,
+                                                    "sha256",
+                                                    preview.originalSha256(),
+                                                    "anchor",
+                                                    preview.anchor()));
+                                    assertThat(preview.originalSha256())
+                                            .isEqualTo(p.gold.path("policySha256Lf").asText());
+                                    if (preview.excerpt().contains("不能断言")) {
+                                        found = true;
+                                    }
+                                    assertThatThrownBy(
+                                                    () ->
+                                                            p.originals.read(
+                                                                    TENANT, "other", trace,
+                                                                    locator))
+                                            .hasMessageContaining("Citation unavailable");
                                 }
-                                continue;
-                            }
-                            assertThat(run.get("status"))
-                                    .as("%s %s", id, run)
-                                    .isEqualTo("SUCCEEDED");
-                            var answer = JSON.readTree((String) run.get("answer"));
-                            assertThat(answer.path("action").asText())
-                                    .isEqualTo(c.path("action").asText());
-                            assertThat(answer.path("decision").asText())
-                                    .isEqualTo(c.path("decision").asText());
-                            assertThat(audits)
-                                    .extracting(a -> a.get("tool_code"))
-                                    .contains("knowledge_search");
-                            assertThat(p.records.ledger).hasSize(joint ? 1 : 0);
-                            var search =
-                                    audits.stream()
-                                            .filter(
-                                                    a ->
-                                                            "knowledge_search"
-                                                                    .equals(a.get("tool_code")))
-                                            .findFirst()
-                                            .orElseThrow();
-                            var output = JSON.readTree((String) search.get("output_snapshot"));
-                            var trace = output.path("traceId").asText();
-                            boolean found = false;
-                            var readbacks = new ArrayList<Map<String, Object>>();
-                            for (var evidence : output.path("evidence")) {
-                                String locator =
-                                        evidence.path("reference").path("locator").asText();
-                                var preview = p.originals.read(TENANT, BUYER, trace, locator);
-                                readbacks.add(
-                                        Map.of(
-                                                "trace",
-                                                trace,
-                                                "locator",
-                                                locator,
-                                                "sha256",
-                                                preview.originalSha256(),
-                                                "anchor",
-                                                preview.anchor()));
-                                assertThat(preview.originalSha256())
-                                        .isEqualTo(p.gold.path("policySha256Lf").asText());
-                                if (preview.excerpt().contains("不能断言")) {
-                                    found = true;
+                                assertThat(found).as("required order clause: " + id).isTrue();
+                                report.put("readBack", readbacks);
+                                JSON.writerWithDefaultPrettyPrinter()
+                                        .writeValue(dir.resolve(id + ".json").toFile(), report);
+                                if (live) {
+                                    assertThat(answer.path("citations").size()).isPositive();
+                                    boolean cited = false;
+                                    for (var ref : answer.path("citations")) {
+                                        cited |=
+                                                p.originals
+                                                        .read(TENANT, BUYER, trace, ref.asText())
+                                                        .excerpt()
+                                                        .contains("不能断言");
+                                    }
+                                    assertThat(cited).isTrue();
                                 }
-                                assertThatThrownBy(
-                                                () ->
-                                                        p.originals.read(
-                                                                TENANT, "other", trace, locator))
-                                        .hasMessageContaining("Citation unavailable");
-                            }
-                            assertThat(found).as("required order clause: " + id).isTrue();
-                            report.put("readBack", readbacks);
-                            JSON.writerWithDefaultPrettyPrinter()
-                                    .writeValue(dir.resolve(id + ".json").toFile(), report);
-                            if (live) {
-                                assertThat(answer.path("citations").size()).isPositive();
-                                boolean cited = false;
-                                for (var ref : answer.path("citations")) {
-                                    cited |=
-                                            p.originals
-                                                    .read(TENANT, BUYER, trace, ref.asText())
-                                                    .excerpt()
-                                                    .contains("不能断言");
-                                }
-                                assertThat(cited).isTrue();
+                            } catch (Exception | AssertionError failure) {
+                                String id = c.path("id").asText();
+                                failures.add(id + ": " + failure.getMessage());
+                                JSON.writerWithDefaultPrettyPrinter()
+                                        .writeValue(
+                                                dir.resolve(id + "-failure.json").toFile(),
+                                                Map.of(
+                                                        "case",
+                                                        id,
+                                                        "failure",
+                                                        failure.toString(),
+                                                        "externalCalls",
+                                                        List.copyOf(p.records.ledger),
+                                                        "stopCount",
+                                                        p.observation == null
+                                                                ? -1
+                                                                : db.queryForObject(
+                                                                        "SELECT count(*) FROM"
+                                                                            + " agent_graph_run_stop"
+                                                                            + " WHERE tenant_code=?"
+                                                                            + " AND run_id=?",
+                                                                        Integer.class,
+                                                                        TENANT,
+                                                                        p.observation.run),
+                                                        "runs",
+                                                        db.queryForList(
+                                                                "SELECT"
+                                                                    + " id,status,error_code,execution_backend"
+                                                                    + " FROM agent_run ORDER BY"
+                                                                    + " id")));
                             }
                         }
+                        JSON.writerWithDefaultPrettyPrinter()
+                                .writeValue(
+                                        dir.resolve("acceptance.json").toFile(),
+                                        Map.of(
+                                                "backend",
+                                                graph ? "LANGGRAPH" : "NATIVE",
+                                                "total",
+                                                7,
+                                                "failures",
+                                                failures));
+                        assertThat(failures).as("All seven cases must pass; see " + dir).isEmpty();
                     } finally {
                         engine.close();
                     }

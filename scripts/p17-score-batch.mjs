@@ -13,17 +13,27 @@ export function scoreBatch(dir) {
       const m=read(id+'/manifest.json'),t=read(id+'/trace.json'),raw=read(id+'.json');
       if(m.trialId!==batch+':'+id || m.caseId!==id || raw.case!==id || raw.source!=='SCRIPTED_TRANSPORT' ||
          String(raw.run)!==m.agentRunId || raw.process!==m.processInstanceId || raw.tenant!==m.tenant ||
-         raw.principal!==m.principal || seenRuns.has(m.agentRunId) || seenProcesses.has(m.processInstanceId))
+         raw.principal!==m.principal || (m.executionBackend && raw.backend!==m.executionBackend) || seenRuns.has(m.agentRunId) || seenProcesses.has(m.processInstanceId))
         throw Error('RUN_IDENTITY_MISMATCH');
       seenRuns.add(m.agentRunId);seenProcesses.add(m.processInstanceId);
       const result=score(m,t);
       const calls=t.audit?.data?.calls??[];
       const keys=new Set(raw.audit?.map(a=>a.key));
-      const projected=new Set(calls.map(c=>c.id.slice(c.id.indexOf(':')+1)));
+      const graph=m.executionBackend==='LANGGRAPH';
+      const keyOf=c=>{
+        const key=c.id.slice(c.id.indexOf(':')+1);
+        return graph?key.replace(/:physical:[0-9a-f-]+$/,''):key;
+      };
+      const projected=new Set(calls.map(keyOf));
+      const physical=raw.physicalCalls??[];
+      const physicalValid=!graph || (physical.length===calls.length &&
+        new Set(physical.map(p=>p.id)).size===physical.length && calls.every(c=>physical.some(p=>
+          p.id===c.physicalAttempt && p.key===keyOf(c) &&
+          (c.receipt?.status!=='TIMEOUT' || (p.error==='MCP_TIMEOUT' && p.retryable===true)))));
       const live=calls.filter(c=>gold.capabilities.records.includes(c.name))
         .map(({name,subject,receipt})=>({name,subject,receipt}));
       const checks={
-        tools:equal(keys,projected) && calls.every(c=>c.sourceTrial===m.trialId) && equal(live,raw.externalCalls),
+        tools:physicalValid && equal(keys,projected) && calls.every(c=>c.sourceTrial===m.trialId) && equal(live,raw.externalCalls),
         outcome:equal(t.flow?.data?.active,raw.tasks) && equal(t.flow?.data?.history,raw.history),
         retrieval:(raw.readBack??[]).every(b=>b.trace===t.retrieval?.data?.traceId && b.sha256===gold.policySha256Lf)
       };

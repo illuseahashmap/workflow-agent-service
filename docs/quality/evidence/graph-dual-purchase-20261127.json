@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-27",
+  "base_commit": "c81c528",
+  "branch": "codex/v79-route-p17",
+  "scope": "deterministic model and readonly tool; interleaved dual Run; Java JDBC and official PostgreSQL saver; minimal business table and completion outbox fixture; excludes production capacity envelope, real Provider/MCP and combined Flowable dispatch",
+  "v80_included": false,
+  "result": {
+    "views": [
+      {
+        "thread_id": "6afb626fe1d9d3b1178d6289a3a2f7b1830ed7dca6cfea0e02435af1ec92980c",
+        "checkpoint_id": "1f1ea2af-b1eb-6ce7-8032-47639487ddf3",
+        "status": "CANDIDATE_READY",
+        "wait": null,
+        "candidate_ref": "candidate:6902a6c3-9dc3-42b4-81a7-6daaa78a1d95",
+        "validation_ref": "validation:dbec729f-7339-4295-9054-697521d7f33e"
+      },
+      {
+        "thread_id": "d1d15bde74e08ea27b85689eee812e66f386e9b325d42ed2e250666609c596f8",
+        "checkpoint_id": "1f1ea2af-b5d9-6b17-8032-a0c79d1616a2",
+        "status": "REJECTED",
+        "wait": null,
+        "candidate_ref": "candidate:2f27ba39-d08d-4572-a00d-c5d73307a913",
+        "validation_ref": "validation:1fde279e-9562-4e80-963e-14f83dc6ea27"
+      }
+    ],
+    "takeovers": [
+      2,
+      2
+    ],
+    "lost_summary_replies": [
+      1,
+      1
+    ],
+    "rejected_late_writes": 4,
+    "foreign_reference_checks": 4,
+    "cold_opens": 28,
+    "modelCalls": 14,
+    "toolCalls": 4,
+    "summaries": 4,
+    "originalReads": 4,
+    "originalAmounts": {
+      "DUAL_A": "20000.000000000001",
+      "DUAL_B": "19999.999999999999"
+    },
+    "runs": [
+      {
+        "id": 51949038356532,
+        "status": "SUCCEEDED",
+        "error_code": null
+      },
+      {
+        "id": 51949038356533,
+        "status": "FAILED",
+        "error_code": "GRAPH_FACT_REJECTED"
+      }
+    ]
+  },
+  "assertions": {
+    "business_attempts_per_run": 1,
+    "completion_outbox_rows": 2,
+    "physical_budget_calls_per_run": 9,
+    "second_summary_sources_per_run": 2,
+    "generation_per_run": 3
+  },
+  "regression": {
+    "python_passed": 103,
+    "java_passed": 252,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cross_language_recovery_tests": 6,
+    "flowable_completion_tests": 6,
+    "checkstyle": "passed",
+    "governance_jacoco": "passed",
+    "probe_ruff": "passed"
+  }
+}

@@ -8,7 +8,7 @@ import io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayCont
 public interface GraphGatewayPort {
     /** True only when every external adapter boundary uses GraphCallScope. */
     default boolean tracksPhysicalCalls() { return false; }
-    /** Read-only context validation before any capacity claim or logical admission. */
+    /** No external I/O: validate context before admission; irrevocable authorization loss may persist a stop. */
     default void preflight(String capability, InvokeRequest request) { }
     Authorized authorize(String capability, AuthorizationRequest request);
     Reply invoke(String capability, InvokeRequest request);

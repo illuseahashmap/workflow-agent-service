@@ -725,3 +725,101 @@ def test_format_repair_uses_stable_grant_and_new_candidate_after_cold_resume(
         assert state["candidate_ref"] == "candidate:good"
         assert "prepare_format_repair" in graph.graph.nodes
     assert gateway.count(binding) == 3
+
+
+@pytest.mark.parametrize("crash_phase", ["proposal", "grant", "repair", "verdict", "answer", None])
+def test_route_projection_recovery_keeps_route_receipt_out_of_business_evidence(
+    tmp_path, binding, session, crash_phase
+):
+    import sqlite3
+
+    from workflow_agent_runtime.contracts import (
+        InvocationReceipt,
+        RouteRepairRequired,
+        RouteRequired,
+        fingerprint,
+    )
+
+    binding = binding.model_copy(update={"state_schema_version": 2})
+
+    class RouteGateway(LedgerGateway):
+        def __init__(self, path):
+            super().__init__(path)
+            self.crashed = False
+            with sqlite3.connect(self.path) as conn:
+                conn.execute("CREATE TABLE grants (operation TEXT PRIMARY KEY)")
+
+        def invoke(self, binding, session, request):
+            self.authorize(binding, session)
+            with sqlite3.connect(self.path) as conn:
+                old = conn.execute(
+                    "SELECT request_hash,body FROM receipts WHERE operation_id=?",
+                    (request.operation_id,),
+                ).fetchone()
+                if old:
+                    assert old[0] == request.digest
+                    return InvocationReceipt.model_validate_json(old[1])
+                op = request.operation_id
+                if request.kind == "VALIDATE" and request.input_refs[0] == "candidate:bad-route":
+                    conn.execute(
+                        "INSERT OR IGNORE INTO grants VALUES (?)",
+                        ("route:repair:" + fingerprint([binding.digest, request.digest]),),
+                    )
+                    conn.commit()
+                    if crash_phase == "grant" and not self.crashed:
+                        self.crashed = True
+                        raise InjectedCrash("route grant committed")
+                    raise RouteRepairRequired("ROUTE_REPAIR_REQUIRED")
+                if op.startswith("route:repair:"):
+                    assert conn.execute("SELECT operation FROM grants").fetchall() == [(op,)]
+                    phase, candidate = "repair", "candidate:good-route"
+                elif op.startswith("route:"):
+                    assert op == "route:" + binding.digest
+                    phase, candidate = "proposal", "candidate:bad-route"
+                elif op.startswith("route-validate:"):
+                    assert request.input_refs[0] == "candidate:good-route"
+                    phase, candidate = "verdict", None
+                elif request.kind == "MODEL":
+                    if not conn.execute(
+                        "SELECT 1 FROM receipts WHERE operation_id LIKE 'route-validate:%'"
+                    ).fetchone():
+                        raise RouteRequired("ROUTE_REQUIRED")
+                    assert not any(
+                        ref.startswith("receipt:route-validate:") for ref in request.input_refs
+                    )
+                    phase, candidate = "answer", "candidate:answer"
+                else:
+                    assert request.input_refs[0] == "candidate:answer"
+                    phase, candidate = "validate", None
+                result = InvocationReceipt(
+                    binding_digest=binding.digest,
+                    operation_id=op,
+                    request_digest=request.digest,
+                    receipt_ref="receipt:" + op,
+                    decision=ModelDecision(candidate_ref=candidate) if candidate else None,
+                    accepted=True if request.kind == "VALIDATE" else None,
+                )
+                conn.execute(
+                    "INSERT INTO receipts VALUES (?,?,?,?)",
+                    (binding.thread_id, op, request.digest, result.model_dump_json()),
+                )
+            if phase == crash_phase and not self.crashed:
+                self.crashed = True
+                raise InjectedCrash("committed before graph checkpoint")
+            return result
+
+    gateway = RouteGateway(tmp_path / "ledger.db")
+    with runtime(tmp_path / "graph.db", binding, session, gateway) as graph:
+        if crash_phase:
+            with pytest.raises(InjectedCrash):
+                graph.advance()
+        else:
+            assert graph.advance().status == "CANDIDATE_READY"
+    with runtime(tmp_path / "graph.db", binding, session, gateway) as graph:
+        assert graph.advance().status == "CANDIDATE_READY"
+        state = graph.graph.get_state(graph.config).values
+        assert state["candidate_ref"] == "candidate:answer"
+        assert state["model_calls"] == 3
+        assert state["route_receipt_ref"] not in state["receipt_refs"]
+        assert "prepare_route" in graph.graph.nodes
+    assert gateway.count(binding) == 5

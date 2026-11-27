@@ -1,17 +1,5 @@
 package io.github.illuseahashmap.workflow.agent;
 
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-import java.util.Base64;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Set;
-import java.util.Map;
-import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -73,7 +61,19 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Published objects are shared across trials; only the external order system is a controlled
@@ -112,6 +112,11 @@ final class P17Pilot {
     final long jointVersion;
 
     P17Pilot(NamedParameterJdbcTemplate db, TransactionTemplate tx, boolean live) throws Exception {
+        this(db, tx, live, false);
+    }
+
+    P17Pilot(NamedParameterJdbcTemplate db, TransactionTemplate tx, boolean live, boolean graph)
+            throws Exception {
         gold = JSON.readTree(DIR.resolve("cases.json").toFile());
         var sql = db.getJdbcTemplate();
         sql.update(
@@ -190,11 +195,21 @@ final class P17Pilot {
                             String versionSet,
                             String nodeSet,
                             String code,
-                            AgentTool.Request request) {
+                            AgentTool.Request request,
+                            Runnable beforeInvocation,
+                            Runnable afterInvocation) {
                         int before = records.ledger.size();
                         AgentTool.Result result;
                         try {
-                            result = super.execute(tenantCode, versionSet, nodeSet, code, request);
+                            result =
+                                    super.execute(
+                                            tenantCode,
+                                            versionSet,
+                                            nodeSet,
+                                            code,
+                                            request,
+                                            beforeInvocation,
+                                            afterInvocation);
                         } catch (McpClientException timeout) {
                             if (timeout.failureKind() == McpFailureKind.TIMEOUT) {
                                 observe(request, code, before);
@@ -327,6 +342,16 @@ final class P17Pilot {
                         new PostgresCitationPublicationAdapter(db));
         String prompt = Files.readString(DIR.resolve("e1-prompt.txt"));
         String schema = Files.readString(DIR.resolve("e1-output.schema.json"));
+        if (graph) {
+            var frozen = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(schema);
+            frozen.putObject("x-graph-routing").put("version", 1).put("allow_correction", true);
+            frozen.putObject("x-graph-memory")
+                    .put("version", 1)
+                    .put("inline_characters", 512)
+                    .put("summary_characters", 512);
+            schema = frozen.toString();
+        }
+
         policyVersion = publish(tx, publish, catalogs, prompt, schema, false);
         jointVersion = publish(tx, publish, catalogs, prompt, schema, true);
     }

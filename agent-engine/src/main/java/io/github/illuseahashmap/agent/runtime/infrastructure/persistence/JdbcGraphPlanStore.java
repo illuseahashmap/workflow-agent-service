@@ -64,6 +64,10 @@ final class JdbcGraphPlanStore {
     }
 
     String guard(AuthorizedRun run, Invocation request) {
+        if (request.operationId().startsWith("route:")
+                || request.operationId().startsWith("route-validate:")) {
+            return null;
+        }
         if (request.operationId().startsWith("summary:") || "READ_RESULT".equals(request.kind())) {
             require(new JdbcGraphMemoryStore(jdbc, codec).policy(run) != null);
             return null;

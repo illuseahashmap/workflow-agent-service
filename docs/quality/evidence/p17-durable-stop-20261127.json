@@ -1,0 +1,807 @@
+{
+  "date": "2026-11-27",
+  "branch": "codex/v79-route-p17",
+  "baseCommit": "7064e9f",
+  "includedMigration": "V81__add_graph_tool_failure_policy.sql",
+  "excludedWork": "V80 tenant capacity administration",
+  "scope": "Deterministic model and in-process read-only MCP; real capacity gateway, Java/Python/PostgreSQL/Flowable. No production dispatch load or remote provider claim.",
+  "graphScores": {
+    "batch": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4",
+    "source": "SCRIPTED_TRANSPORT",
+    "total": 7,
+    "passed": 7,
+    "axes": {
+      "retrieval": 7,
+      "tools": 7,
+      "outcome": 7
+    },
+    "rows": [
+      {
+        "caseId": "B08",
+        "run": "1",
+        "process": "7",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-OK",
+        "run": "2",
+        "process": "26",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-BUDGET",
+        "run": "3",
+        "process": "45",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-EMPTY",
+        "run": "4",
+        "process": "64",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-FOREIGN",
+        "run": "5",
+        "process": "83",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-TIMEOUT",
+        "run": "6",
+        "process": "102",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-REVOKED",
+        "run": "7",
+        "process": "120",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      }
+    ]
+  },
+  "nativeScores": {
+    "batch": "ed370af4-45e1-479b-ab86-2f7423371833",
+    "source": "SCRIPTED_TRANSPORT",
+    "total": 7,
+    "passed": 7,
+    "axes": {
+      "retrieval": 7,
+      "tools": 7,
+      "outcome": 7
+    },
+    "rows": [
+      {
+        "caseId": "B08",
+        "run": "1",
+        "process": "7",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-OK",
+        "run": "2",
+        "process": "26",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-BUDGET",
+        "run": "3",
+        "process": "45",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-EMPTY",
+        "run": "4",
+        "process": "64",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-FOREIGN",
+        "run": "5",
+        "process": "83",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-TIMEOUT",
+        "run": "6",
+        "process": "102",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      },
+      {
+        "caseId": "P17-REVOKED",
+        "run": "7",
+        "process": "120",
+        "scorerVersion": 1,
+        "grades": {
+          "retrieval": "PASS",
+          "tools": "PASS",
+          "outcome": "PASS"
+        },
+        "errors": {
+          "retrieval": [],
+          "tools": [],
+          "outcome": []
+        },
+        "interceptions": [],
+        "blockers": [],
+        "verdict": "PASS"
+      }
+    ]
+  },
+  "graphAcceptance": {
+    "backend": "LANGGRAPH",
+    "failures": [],
+    "total": 7
+  },
+  "graphObservations": [
+    {
+      "case": "B08",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:B08",
+        "caseId": "B08",
+        "agentRunId": "1",
+        "processInstanceId": "7",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "SUCCEEDED",
+        "error_code": null,
+        "current_attempt_id": 1,
+        "resumed": true,
+        "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+      },
+      "physicalCalls": [
+        {
+          "id": "a6d01b73-509f-481a-ac00-ebfbecc8e533",
+          "key": "1:intent:b5058b4a-67a8-4a8a-a264-4f38d61786c7:knowledge_search",
+          "error": null,
+          "retryable": null
+        }
+      ],
+      "externalCalls": [],
+      "tasks": [
+        "NEED_RECORDS"
+      ],
+      "history": [
+        "NEED_RECORDS"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "cf6924282ee5747620486588a527211ec3c1265a1c1cc9323f29c30e32f83cbb",
+          "checkpoint_id": "1f1ea252-8211-653d-801a-a42bca0ee6f2",
+          "status": "CANDIDATE_READY",
+          "wait": null,
+          "candidate_ref": "candidate:015cec4d-8a76-4ebf-aee4-3a9fc41a532d",
+          "validation_ref": "validation:ccf8d55c-5975-4cb3-a1aa-bca312772430"
+        },
+        "cold_opens": 5
+      },
+      "rawReportSha256": "a1fd83fd1eb3f1f0c32f0b1561d005e15597d258a911ec75b48dcca853abea3e"
+    },
+    {
+      "case": "P17-OK",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-OK",
+        "caseId": "P17-OK",
+        "agentRunId": "2",
+        "processInstanceId": "26",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "SUCCEEDED",
+        "error_code": null,
+        "current_attempt_id": 2,
+        "resumed": true,
+        "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+      },
+      "physicalCalls": [
+        {
+          "id": "4ffd51fb-19ba-46dc-b1d0-6d0a84b1a0e9",
+          "key": "2:intent:fa48e93b-8b23-40d7-ac93-40e636dbe047:knowledge_search",
+          "error": null,
+          "retryable": null
+        },
+        {
+          "id": "37515921-589f-4b61-a259-022751fd3b32",
+          "key": "2:intent:e4926bab-61cf-4039-8a37-7726b895dee1:mcp:1:order_records_read",
+          "error": null,
+          "retryable": null
+        }
+      ],
+      "externalCalls": [
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "OK",
+            "subject": "P-17",
+            "facts": {
+              "approval": "MET",
+              "budget": "MET",
+              "quoteValidity": "MET",
+              "admission": "MET",
+              "signingAuthority": "MET"
+            }
+          }
+        }
+      ],
+      "tasks": [
+        "READY_CHECK"
+      ],
+      "history": [
+        "READY_CHECK"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "43df57bc7a02fee8cece4cd73349391cfacfae2e3d8d2a5f2525873e5582a99a",
+          "checkpoint_id": "1f1ea253-2855-648d-8026-ac330091d4f6",
+          "status": "CANDIDATE_READY",
+          "wait": null,
+          "candidate_ref": "candidate:aa24962e-bf5d-4c22-a3b3-7df8775191c7",
+          "validation_ref": "validation:c3a27378-c1a4-490e-9e55-de8dea548a08"
+        },
+        "cold_opens": 7
+      },
+      "rawReportSha256": "1b8c20fdbb6b1eba3faf08f7f65ecbd35b985a4e452ccd39315a76e23cb66507"
+    },
+    {
+      "case": "P17-BUDGET",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-BUDGET",
+        "caseId": "P17-BUDGET",
+        "agentRunId": "3",
+        "processInstanceId": "45",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "SUCCEEDED",
+        "error_code": null,
+        "current_attempt_id": 3,
+        "resumed": true,
+        "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_NOT_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+      },
+      "physicalCalls": [
+        {
+          "id": "ca5a772f-bd37-49a4-8cc8-8a02297f1258",
+          "key": "3:intent:2603cea3-c3c1-4166-a3ef-2b60c5f04913:knowledge_search",
+          "error": null,
+          "retryable": null
+        },
+        {
+          "id": "716fc35b-6a63-4d4c-96e3-41ba71da0b96",
+          "key": "3:intent:1437a064-1071-4256-8fa6-66b8629bd09e:mcp:1:order_records_read",
+          "error": null,
+          "retryable": null
+        }
+      ],
+      "externalCalls": [
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "OK",
+            "subject": "P-17",
+            "facts": {
+              "approval": "MET",
+              "budget": "INSUFFICIENT",
+              "quoteValidity": "MET",
+              "admission": "MET",
+              "signingAuthority": "MET"
+            }
+          }
+        }
+      ],
+      "tasks": [
+        "NEED_RECORDS"
+      ],
+      "history": [
+        "NEED_RECORDS"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "cbe016c9194036894b1ede48d364528d889909d72cafbbd0c20ab85942a57160",
+          "checkpoint_id": "1f1ea253-cada-63e6-8026-99265defb913",
+          "status": "CANDIDATE_READY",
+          "wait": null,
+          "candidate_ref": "candidate:10885e44-bb98-4949-a490-3e11ec390535",
+          "validation_ref": "validation:bd3d3c38-9496-4a2f-a54f-a639864b8b4c"
+        },
+        "cold_opens": 7
+      },
+      "rawReportSha256": "f6f6b3ec9476cad6f3b8c2a8933a2822549c38601688379230869ad80026cb1b"
+    },
+    {
+      "case": "P17-EMPTY",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-EMPTY",
+        "caseId": "P17-EMPTY",
+        "agentRunId": "4",
+        "processInstanceId": "64",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "SUCCEEDED",
+        "error_code": null,
+        "current_attempt_id": 4,
+        "resumed": true,
+        "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+      },
+      "physicalCalls": [
+        {
+          "id": "1a6d7a0d-e845-4d98-92ad-871693b2084e",
+          "key": "4:intent:164eef7d-ab45-43ae-ae94-71473da04cd4:knowledge_search",
+          "error": null,
+          "retryable": null
+        },
+        {
+          "id": "b688040b-f805-4d7f-8989-d9d014e2c3ee",
+          "key": "4:intent:b6ebafe1-d78d-4fe5-b479-4c269bc7110a:mcp:1:order_records_read",
+          "error": null,
+          "retryable": null
+        }
+      ],
+      "externalCalls": [
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "EMPTY"
+          }
+        }
+      ],
+      "tasks": [
+        "NEED_RECORDS"
+      ],
+      "history": [
+        "NEED_RECORDS"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "2ed619f15512e837298f71c7767732f536e9ac9363025df837af3620644430cf",
+          "checkpoint_id": "1f1ea254-6a17-6b80-8026-360c531d37aa",
+          "status": "CANDIDATE_READY",
+          "wait": null,
+          "candidate_ref": "candidate:6e7cca81-15ba-4a68-a7b3-968861e77bc9",
+          "validation_ref": "validation:721b70f6-d916-422e-9327-285a12754f55"
+        },
+        "cold_opens": 7
+      },
+      "rawReportSha256": "b28612b7567d3bf9b1e03456ec7d922c9e99a7e9f510191458cdcbbb6e1aa682"
+    },
+    {
+      "case": "P17-FOREIGN",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-FOREIGN",
+        "caseId": "P17-FOREIGN",
+        "agentRunId": "5",
+        "processInstanceId": "83",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "SUCCEEDED",
+        "error_code": null,
+        "current_attempt_id": 5,
+        "resumed": true,
+        "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+      },
+      "physicalCalls": [
+        {
+          "id": "71e5b871-dc9b-45d1-9306-88a0c381a4d8",
+          "key": "5:intent:7cd33164-8abd-4247-ada8-cc6ab8b7f368:knowledge_search",
+          "error": null,
+          "retryable": null
+        },
+        {
+          "id": "0e99116a-3694-47b7-b850-ad0122109019",
+          "key": "5:intent:e7e9782f-38a3-4b44-89b8-3c74a3991cec:mcp:1:order_records_read",
+          "error": null,
+          "retryable": null
+        }
+      ],
+      "externalCalls": [
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "OK",
+            "subject": "P-18",
+            "facts": {
+              "approval": "MET",
+              "budget": "MET",
+              "quoteValidity": "MET",
+              "admission": "MET",
+              "signingAuthority": "MET"
+            }
+          }
+        }
+      ],
+      "tasks": [
+        "NEED_RECORDS"
+      ],
+      "history": [
+        "NEED_RECORDS"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "8e742adbe022c76b31d8430700a44f60af53e7cb0bb49056d37c09012dcc6f04",
+          "checkpoint_id": "1f1ea255-08c5-6403-8026-8c6ac51dd81c",
+          "status": "CANDIDATE_READY",
+          "wait": null,
+          "candidate_ref": "candidate:375094ed-a854-4a60-aebe-25ce7fa2475d",
+          "validation_ref": "validation:83702976-0811-49c3-9ef8-b3f0ce18fcae"
+        },
+        "cold_opens": 7
+      },
+      "rawReportSha256": "6b9c86f4cf2b5d9331aff59fa4ae3274ea278cc609a0b3115bd1398f3f7b942b"
+    },
+    {
+      "case": "P17-TIMEOUT",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-TIMEOUT",
+        "caseId": "P17-TIMEOUT",
+        "agentRunId": "6",
+        "processInstanceId": "102",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "FAILED",
+        "error_code": "MCP_TIMEOUT",
+        "current_attempt_id": 6,
+        "resumed": true,
+        "answer": null
+      },
+      "physicalCalls": [
+        {
+          "id": "97eca483-7d96-4f06-a5d4-3cf56e3ecc91",
+          "key": "6:intent:32cca439-47ab-47cc-ba54-6c7a5948910b:knowledge_search",
+          "error": null,
+          "retryable": null
+        },
+        {
+          "id": "0a70646a-83b7-402f-8e59-c884630a3ade",
+          "key": "6:intent:c35f2ede-7798-4488-8285-b0d315abef6b:mcp:1:order_records_read",
+          "error": "MCP_TIMEOUT",
+          "retryable": true
+        },
+        {
+          "id": "a669a3e5-bbe5-4089-9d29-26f845495033",
+          "key": "6:intent:c35f2ede-7798-4488-8285-b0d315abef6b:mcp:1:order_records_read",
+          "error": "MCP_TIMEOUT",
+          "retryable": true
+        }
+      ],
+      "externalCalls": [
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "TIMEOUT"
+          }
+        },
+        {
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "TIMEOUT"
+          }
+        }
+      ],
+      "tasks": [
+        "MANUAL_REVIEW"
+      ],
+      "history": [
+        "MANUAL_REVIEW"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "46f158aea21635c29540fda84ff88e11d3dcbcf0ca1e52993de6be277c72679c",
+          "checkpoint_id": "1f1ea255-8dce-6b81-801a-142b7c345a12",
+          "status": "STOPPED",
+          "wait": null,
+          "candidate_ref": null,
+          "validation_ref": null
+        },
+        "cold_opens": 6
+      },
+      "rawReportSha256": "e966ea0a604d8f4afd5014813f0ba72761f46fe2c3edeff52ddd245d5e456e1f"
+    },
+    {
+      "case": "P17-REVOKED",
+      "binding": {
+        "trialId": "fa92d085-cdb9-4a6b-bbac-82c0773bfbe4:P17-REVOKED",
+        "caseId": "P17-REVOKED",
+        "agentRunId": "7",
+        "processInstanceId": "120",
+        "tenant": "pilot",
+        "principal": "buyer",
+        "executionBackend": "LANGGRAPH",
+        "attempt": 1
+      },
+      "outcome": {
+        "status": "FAILED",
+        "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+        "current_attempt_id": 7,
+        "resumed": true,
+        "answer": null
+      },
+      "physicalCalls": [
+        {
+          "id": "63419d3f-b11f-4655-9fdc-faba57d33465",
+          "key": "7:intent:041c4d3e-0016-4d7c-980f-92158dda72aa:knowledge_search",
+          "error": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+          "retryable": false
+        }
+      ],
+      "externalCalls": [],
+      "tasks": [
+        "MANUAL_REVIEW"
+      ],
+      "history": [
+        "MANUAL_REVIEW"
+      ],
+      "graphObservation": {
+        "view": {
+          "thread_id": "4f6b92580ba2ca19bb3b06c3bf19e2702efcbfd4311398c15c4fad9e1b08bd18",
+          "checkpoint_id": "1f1ea255-eaae-6df6-800e-e85db82db9e8",
+          "status": "STOPPED",
+          "wait": null,
+          "candidate_ref": null,
+          "validation_ref": null
+        },
+        "cold_opens": 3
+      },
+      "rawReportSha256": "4301059c91ab639745c66a9c56c33f48ef17c4564f2495659963c500fbd82ba9"
+    }
+  ],
+  "verification": {
+    "python": {
+      "tests": 103,
+      "failures": 0,
+      "skipped": 0
+    },
+    "jointJava": {
+      "tests": 251,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "engineCleanVerify": {
+      "status": "PASS",
+      "tests": 358,
+      "skipped": 5,
+      "note": "All 5 environment-gated tests ran and passed in the joint suite."
+    },
+    "governanceCoverage": {
+      "GraphCognitionGateway": {
+        "BRANCH": {
+          "missed": 50,
+          "covered": 188
+        },
+        "LINE": {
+          "missed": 25,
+          "covered": 424
+        }
+      },
+      "JdbcGraphCallCapacityStore": {
+        "BRANCH": {
+          "missed": 24,
+          "covered": 70
+        },
+        "LINE": {
+          "missed": 1,
+          "covered": 224
+        }
+      },
+      "JdbcGraphCompletionStore": {
+        "BRANCH": {
+          "missed": 9,
+          "covered": 37
+        },
+        "LINE": {
+          "missed": 9,
+          "covered": 108
+        }
+      },
+      "JdbcGraphExecutionStore": {
+        "BRANCH": {
+          "missed": 60,
+          "covered": 217
+        },
+        "LINE": {
+          "missed": 13,
+          "covered": 584
+        }
+      }
+    },
+    "scorerAndRagContractTests": 26,
+    "checkstyleSpotbugs": "PASS",
+    "ruff": "PASS"
+  }
+}
