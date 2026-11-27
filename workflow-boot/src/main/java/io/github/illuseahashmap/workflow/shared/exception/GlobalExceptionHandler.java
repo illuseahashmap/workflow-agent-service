@@ -86,6 +86,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(ErrorCode.FORBIDDEN.code(), "Insufficient permission"));
     }
 
+    @ExceptionHandler({org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMissingEndpoint(Exception exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail(ErrorCode.NOT_FOUND.code(), "Requested endpoint or resource was not found"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception exception) {
         if (capacityExhausted(exception)) { return capacityResponse(); }

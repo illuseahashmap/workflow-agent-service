@@ -22,6 +22,20 @@ class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler exceptionHandler = new GlobalExceptionHandler();
 
+    @Test
+    void missingEndpointAndStaticResourceReturn404WithoutEchoingRequestPath() {
+        var resource = new org.springframework.web.servlet.resource.NoResourceFoundException(
+                org.springframework.http.HttpMethod.GET, "private-path", "/private-path");
+        var handler = new org.springframework.web.servlet.NoHandlerFoundException(
+                "GET", "/private-path", new org.springframework.http.HttpHeaders());
+        for (Exception missing : java.util.List.of(resource, handler)) {
+            var response = exceptionHandler.handleMissingEndpoint(missing);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody().code()).isEqualTo("NOT_FOUND");
+            assertThat(response.getBody().message()).doesNotContain("private-path");
+        }
+    }
+
     @Test void admissionFullIs429EvenWhenWrappedByWorkflowOrBusinessLayer() {
         var sql = new java.sql.SQLException("private SQL detail", "PWA01");
         var wrapped = new org.springframework.dao.DataIntegrityViolationException("private table detail", sql);
