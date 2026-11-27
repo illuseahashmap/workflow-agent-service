@@ -1,0 +1,428 @@
+[
+  {
+    "scenarioGroupId": "R400-ADM-2e922bf74f",
+    "primaryDomain": "administration",
+    "family": "快递代收",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-e23dd2ff393cac"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-20afcfc30d",
+    "primaryDomain": "administration",
+    "family": "共享储物柜",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-02a54f81f63172"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-f3d13723ba",
+    "primaryDomain": "administration",
+    "family": "高管行程安排",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-719cb1a336b5d2",
+      "R400-ADM-RULES:s-444f9074d3310b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-ae92bb7355",
+    "primaryDomain": "administration",
+    "family": "场地缓冲",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-1685a299f72901",
+      "R400-ADM-DETAILS:s-00167509252a0b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-60e18fadf1",
+    "primaryDomain": "customer-support",
+    "family": "处理人转交",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-34a34ecde143f6"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-46412f42bb",
+    "primaryDomain": "customer-support",
+    "family": "升级窗口",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-72def8bd9f9f85",
+      "R400-SUP-RULES:s-170333ceb62960"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-93226653c5",
+    "primaryDomain": "customer-support",
+    "family": "支持目录映射",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-a04e6762bdcda2",
+      "R400-SUP-DETAILS:s-67f9b78656cbd8"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-66eef8a662",
+    "primaryDomain": "customer-support",
+    "family": "保修范围交接",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-b78decf2e869c9",
+      "R400-PROC-DETAILS:s-1ebfee366ac9ac"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-4f31be27a1",
+    "primaryDomain": "finance",
+    "family": "费用拆分",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-06ebced564036d",
+      "R400-FIN-RULES:s-0044bf1417fdf2"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-a8a41cd490",
+    "primaryDomain": "finance",
+    "family": "结算差额",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-0748f598ffdb07",
+      "R400-FIN-RULES:s-51355b8a1f9bb5"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-6bc23f207b",
+    "primaryDomain": "finance",
+    "family": "知识范围边界",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-541edf5f500d03",
+      "R400-FIN-RULES:s-0b044c3039a112"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-24fe677ed9",
+    "primaryDomain": "finance",
+    "family": "资金状态比较",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-0a342422920c76",
+      "R400-FIN-DETAILS:s-60b19642391736"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-b5187ef300",
+    "primaryDomain": "hr",
+    "family": "面试反馈",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-20220b1fc600cf"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-4ecadadde0",
+    "primaryDomain": "hr",
+    "family": "岗位储备名单",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-eebf968bef474a",
+      "R400-HR-RULES:s-ddad240283f293"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-5a34212dc9",
+    "primaryDomain": "hr",
+    "family": "技能目录映射",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-68cb349eae8932",
+      "R400-HR-DETAILS:s-1931c132c5732f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-bccb8e9582",
+    "primaryDomain": "hr",
+    "family": "培训报销交接",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-bd512755c901e9",
+      "R400-FIN-DETAILS:s-4b9f525c89fff1"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-2cf8b7b66e",
+    "primaryDomain": "information-security",
+    "family": "报告脱敏",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-4b76fa476db813"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-e8ab5e9dcb",
+    "primaryDomain": "information-security",
+    "family": "账号停用",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-3f3719a33d7335"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-3811d46399",
+    "primaryDomain": "information-security",
+    "family": "密级标签",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-03ea9d721fbd07"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-de48d3f2a8",
+    "primaryDomain": "information-security",
+    "family": "访问目录核对",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-6f63a668c0150b",
+      "R400-SEC-DETAILS:s-1eadcade0667c7"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-392dba79f9",
+    "primaryDomain": "it-operations",
+    "family": "备份校验",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-01a90d29ee4551"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-cf3e8430f0",
+    "primaryDomain": "it-operations",
+    "family": "消息补偿",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-2b3eeaa7b2e441",
+      "R400-OPS-RULES:s-30bf7886a2c385"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-5ff50a6004",
+    "primaryDomain": "it-operations",
+    "family": "缓存刷新",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-aafa0a32baa414",
+      "R400-OPS-RULES:s-cb0135c7700b27"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-2d9b994ff4",
+    "primaryDomain": "it-operations",
+    "family": "切换比较",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-85dff3601993ae",
+      "R400-OPS-DETAILS:s-630e0386659f9a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-2c944b654a",
+    "primaryDomain": "legal",
+    "family": "翻译文本",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-f23a6d82bb5689"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-893cc8b82f",
+    "primaryDomain": "legal",
+    "family": "审查保留",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-8b94a275d27205"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-d00d85d773",
+    "primaryDomain": "legal",
+    "family": "争议记录",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-710ffd6fd8cc82",
+      "R400-LEG-RULES:s-6c17c3d8c46c8d"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-1f7690d880",
+    "primaryDomain": "legal",
+    "family": "签署权限范围",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-d9580ba4f45170",
+      "R400-LEG-RULES:s-2180ea24240159"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-5a40aa537d",
+    "primaryDomain": "procurement",
+    "family": "供应商更名",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-f1aa2d15a3308d"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-d44cad13b3",
+    "primaryDomain": "procurement",
+    "family": "分批交货",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-a333d339d902e5",
+      "R400-PROC-RULES:s-0abf5d56feff83"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-12d97b6efa",
+    "primaryDomain": "procurement",
+    "family": "交货地点",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-74cdb3f885bc15",
+      "R400-PROC-RULES:s-4ab228a368b640"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-a6c9d17512",
+    "primaryDomain": "procurement",
+    "family": "剩余承诺量",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-a6bad03bc3b4de",
+      "R400-PROC-DETAILS:s-2f00a6894021ac"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-26453c7b04",
+    "primaryDomain": "project-delivery",
+    "family": "缺陷复验",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-92c8955d483931"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-0512c34530",
+    "primaryDomain": "project-delivery",
+    "family": "数据迁移核对",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-0fe3eaaeb56663"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-1442e71866",
+    "primaryDomain": "project-delivery",
+    "family": "监控交接",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-97d556f2056f5b",
+      "R400-OPS-DETAILS:s-ee2ce4c181f61a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-b69c878d10",
+    "primaryDomain": "project-delivery",
+    "family": "接口交付目录",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-c79aaefe546f60",
+      "R400-DEL-DETAILS:s-dc699c2b1f97f3"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-39056e3307",
+    "primaryDomain": "sales",
+    "family": "报价撤回",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-5e0fcd8bd92645"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-787b839ea6",
+    "primaryDomain": "sales",
+    "family": "折扣口径",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-aa330b20efd0c6",
+      "R400-SAL-RULES:s-4fa393da60e597"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-6bc23f207b",
+    "primaryDomain": "sales",
+    "family": "知识范围边界",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-098c3cec6927f6",
+      "R400-SAL-RULES:s-8d1f12afd62366"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-3c1a8d1393",
+    "primaryDomain": "sales",
+    "family": "渠道返利",
+    "split": "CALIBRATION",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-c0a820a3e8fca3",
+      "R400-SAL-DETAILS:s-77c43935e8238f"
+    ]
+  }
+]

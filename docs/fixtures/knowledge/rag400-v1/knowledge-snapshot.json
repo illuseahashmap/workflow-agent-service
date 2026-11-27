@@ -1,0 +1,307 @@
+{
+  "snapshotId": "rag400-synthetic-v1",
+  "documents": [
+    {
+      "documentCode": "R400-ADM-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-ADM-DETAILS.md",
+      "sha256": "fa4005ef3e0420ce1eb86136bee30fd673101c7fef1db000e935ba9dd78d1c82",
+      "scope": "knowledge/administration",
+      "domain": "administration",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-ADM-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-ADM-RESTRICTED.md",
+      "sha256": "6f0bab75fb5f870d6810c9285b90ebce6022a48bf38544c173b271bf641a4397",
+      "scope": "knowledge/administration/restricted",
+      "domain": "administration",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-ADM-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-ADM-RULES.md",
+      "sha256": "06feb4f1e48a9a18fb62a33c179987c957e65d9cc33df7b75cdfd3fb21b2534d",
+      "scope": "knowledge/administration",
+      "domain": "administration",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-DEL-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-DEL-DETAILS.md",
+      "sha256": "b941dfe93c8879b68cd16e72f1b6347760574e62484c6122ee470c0fce273128",
+      "scope": "knowledge/project-delivery",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-DEL-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-DEL-RESTRICTED.md",
+      "sha256": "c8ab5aa828985a64745e72e9e7698cad3803849ae3e741d4f07c6231df0903e1",
+      "scope": "knowledge/project-delivery/restricted",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-DEL-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-DEL-RULES.md",
+      "sha256": "6ac7bc3bd8036d93b98987ccf680a6bce0a225742b031762bd594bdccfecfcde",
+      "scope": "knowledge/project-delivery",
+      "domain": "project-delivery",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-FIN-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-FIN-DETAILS.md",
+      "sha256": "bf2d85fffec92376407603d65c7868e006e3206bd8e069e9290545097b32f59e",
+      "scope": "knowledge/finance",
+      "domain": "finance",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-FIN-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-FIN-RESTRICTED.md",
+      "sha256": "e37f5259bea14ce0292ba951661c098a8530918a6bda4d98297dcfc6f8d46801",
+      "scope": "knowledge/finance/restricted",
+      "domain": "finance",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-FIN-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-FIN-RULES.md",
+      "sha256": "2d68db60c96cda65926b376bb307dca823454bf9f7b131c44bd19793138e085f",
+      "scope": "knowledge/finance",
+      "domain": "finance",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-HR-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-HR-DETAILS.md",
+      "sha256": "9f5eb75ff1a7a6cfe75c44fa8baa2ab6bd9333b7e35da553ff86089a13579a79",
+      "scope": "knowledge/hr",
+      "domain": "hr",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-HR-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-HR-RESTRICTED.md",
+      "sha256": "dcf0d40fd64df134a786c839e7894270f58a0ab96753c10b37eebccdc66c68ce",
+      "scope": "knowledge/hr/restricted",
+      "domain": "hr",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-HR-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-HR-RULES.md",
+      "sha256": "6076e96837e94292734858041072516b876771ba9e300d01afad8ac7c3c4d58f",
+      "scope": "knowledge/hr",
+      "domain": "hr",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-LEG-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-LEG-DETAILS.md",
+      "sha256": "a8f281647ed2201754113577b9189ba240cded6b8c8e3f3639784a70df8a4ff5",
+      "scope": "knowledge/legal",
+      "domain": "legal",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-LEG-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-LEG-RESTRICTED.md",
+      "sha256": "946de07acb16fdb3885de5eba74eab781abf7d69fc4a9dd0a5a9d035313d8c0b",
+      "scope": "knowledge/legal/restricted",
+      "domain": "legal",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-LEG-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-LEG-RULES.md",
+      "sha256": "b8a05bd06604c9e26efe642bb796355f4089c47839d6b5d9cc41f9ed2a540d3e",
+      "scope": "knowledge/legal",
+      "domain": "legal",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-OPS-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-OPS-DETAILS.md",
+      "sha256": "cef7a87bd3b8221d75967cc204cb2ae848aa11c01aec2236f2dbdcdc9c304c94",
+      "scope": "knowledge/it-operations",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-OPS-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-OPS-RESTRICTED.md",
+      "sha256": "a478517e50eedab612e10e2b45fba36aee8ab6f2255098adaa3726745b6c218f",
+      "scope": "knowledge/it-operations/restricted",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-OPS-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-OPS-RULES.md",
+      "sha256": "89d94b824af932a45256e7b0ed9e80ad77268b0bcc9dc504489b150e285650f3",
+      "scope": "knowledge/it-operations",
+      "domain": "it-operations",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-PROC-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-PROC-DETAILS.md",
+      "sha256": "9bc5a5e2d22bb5fefb27234fde760a3df454dcba8a7f0f31350c4d104da48f23",
+      "scope": "knowledge/procurement",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-PROC-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-PROC-RESTRICTED.md",
+      "sha256": "47dce3efc4571d1a20193881796d7a71bfc043a039c5e913d44e07bb9322fcfa",
+      "scope": "knowledge/procurement/restricted",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-PROC-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-PROC-RULES.md",
+      "sha256": "7bc0d5cc119e8add65c78bae4fad31f5f8286c0348e1ef4c9464bbb960214263",
+      "scope": "knowledge/procurement",
+      "domain": "procurement",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SAL-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SAL-DETAILS.md",
+      "sha256": "78180dc7c87ebc1b212ff663300bab47e3a33681dd77f2af2de9459f99b34eff",
+      "scope": "knowledge/sales",
+      "domain": "sales",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SAL-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SAL-RESTRICTED.md",
+      "sha256": "c0dcc2f43c22bdd94747462a061fedb56220220f864ebf09de3dbda2bcdc8183",
+      "scope": "knowledge/sales/restricted",
+      "domain": "sales",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SAL-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SAL-RULES.md",
+      "sha256": "501bfcbaffb6596565210c24a94bb48b98a5ab8ea6dcef308cf5d101e6e9c573",
+      "scope": "knowledge/sales",
+      "domain": "sales",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SEC-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SEC-DETAILS.md",
+      "sha256": "3594035a622a97bc9c722d4c8219732237828d25f9b4774034bc8eb2b3170be8",
+      "scope": "knowledge/information-security",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SEC-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SEC-RESTRICTED.md",
+      "sha256": "9de7cefc86a9a1be76393478f1a705ae34054906456b95e90cbb4f2c531124f8",
+      "scope": "knowledge/information-security/restricted",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SEC-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SEC-RULES.md",
+      "sha256": "daba78acaa82a61f353dd08ba335e816cd8e9adc84a005265a6c3c47f29aa4a8",
+      "scope": "knowledge/information-security",
+      "domain": "information-security",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SUP-DETAILS",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SUP-DETAILS.md",
+      "sha256": "c3a7770a2273a93e09384aa125b3105c4f21c1abb0f3bcfd8a5ef708716d06c8",
+      "scope": "knowledge/customer-support",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SUP-RESTRICTED",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SUP-RESTRICTED.md",
+      "sha256": "1f1e65a62aa06911cf20b548f9fe4d288e5b1d4885b83118edef2566534c4d41",
+      "scope": "knowledge/customer-support/restricted",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    },
+    {
+      "documentCode": "R400-SUP-RULES",
+      "documentVersion": "1-draft",
+      "path": "corpus/R400-SUP-RULES.md",
+      "sha256": "a349c675fa0475f8a5a6677cd00e4dcc8a5d1fb85a503ea49e736629bad7bb96",
+      "scope": "knowledge/customer-support",
+      "domain": "customer-support",
+      "status": "DRAFT",
+      "sandboxOnly": true
+    }
+  ],
+  "buildStatus": "NOT_INDEXED",
+  "oldDomainDocumentsIncluded": false
+}

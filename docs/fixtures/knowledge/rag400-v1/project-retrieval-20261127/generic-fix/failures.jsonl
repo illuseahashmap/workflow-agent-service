@@ -1,0 +1,24 @@
+{"caseId": "R400-ADM-6bc888946a-2", "query": "关于物资借用：借用记录用什么区别两台同型号投影仪？", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-ADM-c28596e5a9-1", "query": "搬到新部门工位后系统权限会自动变吗？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-ADM-6bc23f207b-1", "query": "请告诉我今晚目标酒店实际剩余房数。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-ADM-6bc23f207b-2", "query": "关于知识范围边界：请报告现在机场道路的实时拥堵程度。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-ADM-7d2cc9f2e2-1", "query": "行程已登记，是否能向员工承诺保险已生效？ 请结合两类依据说明区别及判断边界。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SUP-6bc23f207b-1", "query": "请报告寄给客户的备件此刻精确位置。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SUP-02a1cc249c-1", "query": "客户功能恢复就能不走程序直接关单吗？ 请结合两类依据说明区别及判断边界。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SUP-f082e9415c-1", "query": "技术恢复后可停止疑似数据风险评估吗？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SUP-b5b35ec8da-2", "query": "关于回访频率：可以只依据哪个安排更省事来决定频率吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "scenario": "CONFLICT", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-FIN-c3cdb80fed-1", "query": "付款人不是申请人，是否一定属于重复报销？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-HR-b2121edfc2-1", "query": "高管推荐的人是否可以免做岗位筛选？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SEC-6bc23f207b-1", "query": "请给出现网数据库的真实管理员密码。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SEC-6bc23f207b-2", "query": "关于知识范围边界：请确定昨日异常访问者的真实身份。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SEC-9812fb09bb-1", "query": "页面查不到一条记录就等于受控销毁完成吗？ 请结合两类依据说明区别及判断边界。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-OPS-4f6aceba4c-1", "query": "发了交接群消息但无人确认，责任已移交吗？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-OPS-a4670a8450-1", "query": "只有工单创建时间和恢复时间，能精确算业务中断时长吗？ 请同时说明规则与相关限制。", "scenario": "INSUFFICIENT", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-OPS-b8ef9bf122-1", "query": "客户接受某版本，部署同名制品时可以省略摘要核验吗？ 请结合两类依据说明区别及判断边界。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-LEG-6bc23f207b-1", "query": "请直接判定一份未提供文本的真实合同法律效力。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-LEG-c43ae776fb-1", "query": "和解款到账是否足以认定和解全部履行？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-PROC-6bc23f207b-1", "query": "请给出今晚某航线实际剩余舱位。 请同时说明规则与相关限制。", "scenario": "OUT_OF_SCOPE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-DEL-9bbc81754c-1", "query": "客户只接受模块甲能标全项目验收吗？", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-DEL-8c5da7a973-1", "query": "客户把新增功能叫缺陷就一定免费吗？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-DEL-e4ed62e301-2", "query": "关于样本验收量：可以未经裁决直接抽较少的20个结案吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "scenario": "CONFLICT", "completeAtK": {"3": false, "5": false, "10": false}}
+{"caseId": "R400-SAL-cb21f967ca-2", "query": "关于交期预测：向客户给出预测交期时应说明什么？ 请同时说明规则与相关限制。", "scenario": "ANSWERABLE", "completeAtK": {"3": false, "5": false, "10": false}}

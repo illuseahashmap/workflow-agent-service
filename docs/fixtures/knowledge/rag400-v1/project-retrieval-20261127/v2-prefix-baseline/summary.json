@@ -1,0 +1,72 @@
+{
+  "cases": 200,
+  "statusCounts": {
+    "OBSERVED": 200
+  },
+  "completeRequiredGroupsAtK": {
+    "3": 0,
+    "5": 0,
+    "10": 0
+  },
+  "denominatorIncludesMissingAndErrors": 200,
+  "answerQuality": "NOT_SCORED",
+  "authorizationAcceptance": "REQUIRES_TRUSTED_BACKEND_TRACE",
+  "metric": "all nonblank section body lines covered within original chunk TopK",
+  "anyBodyOverlapAtK_upperBoundNotCompleteEvidence": {
+    "3": 1,
+    "5": 1,
+    "10": 1
+  },
+  "unauthorizedScopeHits": [],
+  "retrievalStatuses": {
+    "SUCCESS": 199,
+    "EMPTY": 1
+  },
+  "latencyMs": {
+    "p50": 74.3548,
+    "p95": 80.0103
+  },
+  "latencyProtocol": "single pass, sequential, includes first query cold effects; no production SLA claim",
+  "facets": {
+    "difficulty": {
+      "EASY": {
+        "count": 60,
+        "completeAt10": 0
+      },
+      "MEDIUM": {
+        "count": 80,
+        "completeAt10": 0
+      },
+      "HARD": {
+        "count": 60,
+        "completeAt10": 0
+      }
+    },
+    "scenario": {
+      "ANSWERABLE": {
+        "count": 140,
+        "completeAt10": 0
+      },
+      "INSUFFICIENT": {
+        "count": 30,
+        "completeAt10": 0
+      },
+      "OUT_OF_SCOPE": {
+        "count": 10,
+        "completeAt10": 0
+      },
+      "FORBIDDEN": {
+        "count": 10,
+        "completeAt10": 0
+      },
+      "CONFLICT": {
+        "count": 10,
+        "completeAt10": 0
+      }
+    }
+  },
+  "holdout": "NOT_READ_NOT_MODIFIED",
+  "answerGeneration": "NOT_RUN",
+  "profile": "project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM",
+  "permissionBoundary": "actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised"
+}

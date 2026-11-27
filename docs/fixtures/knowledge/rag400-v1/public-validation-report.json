@@ -1,0 +1,66 @@
+{
+  "status": "STRUCTURAL_AND_REFERENTIAL_PASS",
+  "holdoutRead": false,
+  "cases": 280,
+  "groups": 140,
+  "documents": 30,
+  "sections": 340,
+  "counts": {
+    "DEV": 200,
+    "CALIBRATION": 80
+  },
+  "levels": {
+    "DEV": {
+      "EASY": 60,
+      "MEDIUM": 80,
+      "HARD": 60
+    },
+    "CALIBRATION": {
+      "EASY": 24,
+      "MEDIUM": 32,
+      "HARD": 24
+    }
+  },
+  "scenarios": {
+    "DEV": {
+      "ANSWERABLE": 140,
+      "INSUFFICIENT": 30,
+      "OUT_OF_SCOPE": 10,
+      "FORBIDDEN": 10,
+      "CONFLICT": 10
+    },
+    "CALIBRATION": {
+      "ANSWERABLE": 56,
+      "FORBIDDEN": 4,
+      "CONFLICT": 4,
+      "OUT_OF_SCOPE": 4,
+      "INSUFFICIENT": 12
+    }
+  },
+  "perDomain": {
+    "administration": 28,
+    "customer-support": 28,
+    "finance": 28,
+    "hr": 28,
+    "information-security": 28,
+    "it-operations": 28,
+    "legal": 28,
+    "procurement": 28,
+    "project-delivery": 28,
+    "sales": 28
+  },
+  "multiHopCases": 32,
+  "exactQueryDuplicates": 0,
+  "sharedGoldAnchorsAcrossSplits": 0,
+  "sharedEvidenceTextsAcrossSplits": 0,
+  "independentReview": "NOT_DONE",
+  "semanticBlindness": "NOT_CERTIFIED",
+  "productionRag": "NOT_ASSESSED_BY_VALIDATOR",
+  "limits": [
+    "Self-authored synthetic data; schema success does not certify semantic correctness.",
+    "Common authorization/refusal mechanics and authoring templates occur across splits; not unseen-template evaluation.",
+    "All cases use current-time paraphrased questions; noisy/multi-turn/time-boundary strata remain uncovered.",
+    "Gold qrels cover required evidence only; full-corpus relevance labels are incomplete.",
+    "Declared permission fixture must be enforced by a real retrieval backend before permission scores are valid."
+  ]
+}

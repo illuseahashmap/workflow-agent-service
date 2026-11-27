@@ -1,0 +1,6 @@
+{
+  "status": "CANDIDATE_NOT_BLIND_LOCKED",
+  "count": 120,
+  "caseFileSha256": "cb808d36582b733d6ae9b3702f97039532b6a3f89d281ecc788089f6fe857c13",
+  "note": "当前作者已见金标；工作区外分离存放不等于已实现权限隔离或独立复核。"
+}

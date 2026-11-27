@@ -1,0 +1,78 @@
+{
+  "status": "STRUCTURAL_AND_REFERENTIAL_PASS",
+  "cases": 400,
+  "groups": 200,
+  "documents": 30,
+  "sections": 340,
+  "counts": {
+    "DEV": 200,
+    "CALIBRATION": 80,
+    "LOCKED_TEST": 120
+  },
+  "levels": {
+    "DEV": {
+      "EASY": 60,
+      "MEDIUM": 80,
+      "HARD": 60
+    },
+    "CALIBRATION": {
+      "EASY": 24,
+      "MEDIUM": 32,
+      "HARD": 24
+    },
+    "LOCKED_TEST": {
+      "EASY": 36,
+      "MEDIUM": 48,
+      "HARD": 36
+    }
+  },
+  "scenarios": {
+    "DEV": {
+      "ANSWERABLE": 140,
+      "INSUFFICIENT": 30,
+      "OUT_OF_SCOPE": 10,
+      "FORBIDDEN": 10,
+      "CONFLICT": 10
+    },
+    "CALIBRATION": {
+      "ANSWERABLE": 56,
+      "FORBIDDEN": 4,
+      "CONFLICT": 4,
+      "OUT_OF_SCOPE": 4,
+      "INSUFFICIENT": 12
+    },
+    "LOCKED_TEST": {
+      "ANSWERABLE": 84,
+      "INSUFFICIENT": 18,
+      "FORBIDDEN": 6,
+      "CONFLICT": 6,
+      "OUT_OF_SCOPE": 6
+    }
+  },
+  "perDomain": {
+    "administration": 40,
+    "customer-support": 40,
+    "finance": 40,
+    "hr": 40,
+    "information-security": 40,
+    "it-operations": 40,
+    "legal": 40,
+    "procurement": 40,
+    "project-delivery": 40,
+    "sales": 40
+  },
+  "multiHopCases": 40,
+  "exactQueryDuplicates": 0,
+  "sharedGoldAnchorsAcrossSplits": 0,
+  "sharedEvidenceTextsAcrossSplits": 0,
+  "independentReview": "NOT_DONE",
+  "semanticBlindness": "NOT_CERTIFIED",
+  "productionRag": "NOT_RUN",
+  "limits": [
+    "Self-authored synthetic data; schema success does not certify semantic correctness.",
+    "Common authorization/refusal mechanics and authoring templates occur across splits; not unseen-template evaluation.",
+    "All cases use current-time paraphrased questions; noisy/multi-turn/time-boundary strata remain uncovered.",
+    "Gold qrels cover required evidence only; full-corpus relevance labels are incomplete.",
+    "Declared permission fixture must be enforced by a real retrieval backend before permission scores are valid."
+  ]
+}

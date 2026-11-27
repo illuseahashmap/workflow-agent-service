@@ -1,0 +1,41 @@
+{
+  "status": "LOCAL_LEXICAL_DIAGNOSTIC_ONLY",
+  "split": "DEV",
+  "queries": 200,
+  "retrievableSections": 330,
+  "algorithm": "Chinese bigram + ASCII term BM25; k1=1.2,b=0.75",
+  "chunks": "source sections; not production chunker",
+  "modelCalled": false,
+  "holdoutScored": false,
+  "productionProfile": "NOT_RUN",
+  "permissionEnforcement": "fixture simulation, not backend acceptance",
+  "resultMeaning": "全部必要组被召回；不是答案正确率，不是完整qrels的Recall。",
+  "byK": {
+    "3": {
+      "complete": 177,
+      "total": 200
+    },
+    "5": {
+      "complete": 181,
+      "total": 200
+    },
+    "10": {
+      "complete": 185,
+      "total": 200
+    }
+  },
+  "byDifficulty": {
+    "EASY": {
+      "top5Complete": 60,
+      "total": 60
+    },
+    "MEDIUM": {
+      "top5Complete": 65,
+      "total": 80
+    },
+    "HARD": {
+      "top5Complete": 56,
+      "total": 60
+    }
+  }
+}

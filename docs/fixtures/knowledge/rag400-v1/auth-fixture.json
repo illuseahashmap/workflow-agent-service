@@ -1,0 +1,30 @@
+{
+  "tenantRef": "rag400-sandbox",
+  "principalRef": "rag400-reader",
+  "grantedScopes": [
+    "knowledge/administration",
+    "knowledge/customer-support",
+    "knowledge/finance",
+    "knowledge/hr",
+    "knowledge/information-security",
+    "knowledge/it-operations",
+    "knowledge/legal",
+    "knowledge/procurement",
+    "knowledge/project-delivery",
+    "knowledge/sales"
+  ],
+  "deniedScopes": [
+    "knowledge/administration/restricted",
+    "knowledge/customer-support/restricted",
+    "knowledge/finance/restricted",
+    "knowledge/hr/restricted",
+    "knowledge/information-security/restricted",
+    "knowledge/it-operations/restricted",
+    "knowledge/legal/restricted",
+    "knowledge/procurement/restricted",
+    "knowledge/project-delivery/restricted",
+    "knowledge/sales/restricted"
+  ],
+  "status": "DECLARED_NOT_DEPLOYED",
+  "mustEnforceAtRetrieval": true
+}

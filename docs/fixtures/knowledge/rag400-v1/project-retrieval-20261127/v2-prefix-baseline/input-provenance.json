@@ -1,0 +1,13 @@
+{
+  "inputHashes": {
+    "dev.cases.jsonl": "80d06f455ef3232e4124279bf0ac8c6692121e437ed9c501a81ef67f55b72fea",
+    "dev.queries.jsonl": "959e7c4d29fb27730198f8375be82f5f59edf6417c5c7f8c6c950d37e1beba67",
+    "dev.manifest.json": "a8507011bedb8f8ae47843b13546983de51459c772eb13ad21df5d19c74ad88e"
+  },
+  "snapshotUnchanged": true,
+  "caseRevision": 2,
+  "sourceCommit": "5a502a384c73b164a8ca6c0c4d7bed6609867888",
+  "retrievalTestSourceSha256": "bd4cc212c7b162e39e1787a7f9396295ceba051f8abfaf41dde232e6c1bf205b",
+  "modelsCalled": false,
+  "holdoutRead": false
+}
