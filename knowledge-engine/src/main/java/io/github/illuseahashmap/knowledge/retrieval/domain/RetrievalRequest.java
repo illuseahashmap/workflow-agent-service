@@ -1,0 +1,88 @@
+package io.github.illuseahashmap.knowledge.retrieval.domain;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+
+/** Input contract for retrieval; tenant identity is supplied by trusted context. */
+public record RetrievalRequest(
+        String query,
+        List<String> knowledgeScopes,
+        List<MetadataFilter> filters,
+        Instant asOfTime,
+        int maxResults,
+        StrategyHint strategyHint,
+        int maxHops,
+        List<EvidenceType> requiredEvidenceTypes,
+        long indexVersionId,
+        List<SourceIndexBinding> indexBindings
+) {
+    public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
+            Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
+            List<EvidenceType> requiredEvidenceTypes, long indexVersionId) {
+        this(query, knowledgeScopes, filters, asOfTime, maxResults, strategyHint, maxHops,
+                requiredEvidenceTypes, indexVersionId, List.of());
+    }
+
+    public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
+                            Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
+                            List<EvidenceType> requiredEvidenceTypes) {
+        this(query, knowledgeScopes, filters, asOfTime, maxResults, strategyHint, maxHops,
+                requiredEvidenceTypes, 0);
+    }
+
+    public RetrievalRequest {
+        query = Objects.requireNonNull(query, "query must not be null").trim();
+        if (query.isBlank()) {
+            throw new IllegalArgumentException("query must not be blank");
+        }
+        knowledgeScopes = List.copyOf(Objects.requireNonNullElse(knowledgeScopes, List.of()));
+        filters = List.copyOf(Objects.requireNonNullElse(filters, List.of()));
+        requiredEvidenceTypes = List.copyOf(
+                Objects.requireNonNullElse(requiredEvidenceTypes, List.of()));
+        if (maxResults < 1 || maxResults > 50) {
+            throw new IllegalArgumentException("maxResults must be between 1 and 50");
+        }
+        if (maxHops < 0 || maxHops > 1) {
+            throw new IllegalArgumentException("maxHops must be between 0 and 1 for the first slice");
+        }
+        if (indexVersionId < 0) {
+            throw new IllegalArgumentException("indexVersionId must not be negative");
+        }
+        strategyHint = Objects.requireNonNullElse(strategyHint, StrategyHint.AUTO);
+        indexBindings = List.copyOf(Objects.requireNonNullElse(indexBindings, List.of()));
+        if (indexBindings.size() > 100
+                || indexBindings.stream().map(SourceIndexBinding::sourceCode).distinct().count() != indexBindings.size()) {
+            throw new IllegalArgumentException("Invalid frozen index bindings");
+        }
+    }
+
+    public RetrievalRequest withAuthorizedScopes(List<String> authorizedScopes) {
+        return new RetrievalRequest(query, authorizedScopes, filters, asOfTime, maxResults,
+                strategyHint, maxHops, requiredEvidenceTypes, indexVersionId,
+                indexBindings.stream().filter(binding -> authorizedScopes.contains(binding.sourceCode())).toList());
+    }
+
+    public List<Long> frozenIndexIds() {
+        return indexBindings.isEmpty() ? (indexVersionId > 0 ? List.of(indexVersionId) : List.of())
+                : indexBindings.stream().map(SourceIndexBinding::indexVersionId).toList();
+    }
+
+    public enum StrategyHint {
+        AUTO,
+        KEYWORD,
+        VECTOR,
+        HYBRID,
+        GRAPH
+    }
+
+    public record MetadataFilter(String name, String value) {
+        public MetadataFilter {
+            name = Objects.requireNonNull(name, "filter name must not be null").trim();
+            value = Objects.requireNonNull(value, "filter value must not be null");
+            if (name.isBlank()) {
+                throw new IllegalArgumentException("filter name must not be blank");
+            }
+        }
+    }
+}

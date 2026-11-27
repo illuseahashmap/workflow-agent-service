@@ -1,0 +1,25 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/workflow-agent-alerts.yml:/etc/prometheus/rules/workflow-agent-alerts.yml:ro
+      - ${WORKFLOW_PROMETHEUS_TOKEN_FILE:-../.secrets/workflow-agent-prometheus-token}:/run/secrets/workflow-agent-prometheus-token:ro
+    depends_on:
+      - alertmanager
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro

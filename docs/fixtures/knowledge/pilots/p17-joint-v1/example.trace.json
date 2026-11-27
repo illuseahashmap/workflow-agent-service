@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "binding": {
+    "trialId": "e0-example-001",
+    "caseId": "P17-OK",
+    "tenant": "pilot",
+    "principal": "buyer",
+    "agentRunId": "synthetic-17",
+    "attempt": 1,
+    "processInstanceId": "synthetic-flow-17"
+  },
+  "retrieval": {
+    "binding": {
+      "trialId": "e0-example-001",
+      "caseId": "P17-OK",
+      "tenant": "pilot",
+      "principal": "buyer",
+      "agentRunId": "synthetic-17",
+      "attempt": 1,
+      "processInstanceId": "synthetic-flow-17"
+    },
+    "complete": true,
+    "data": {
+      "snapshot": "procurement-approval-md-v1",
+      "traceId": "synthetic-retrieval-1",
+      "at": 2,
+      "hits": [
+        "order"
+      ],
+      "readBack": [
+        "order"
+      ],
+      "revokedAt": null
+    }
+  },
+  "audit": {
+    "binding": {
+      "trialId": "e0-example-001",
+      "caseId": "P17-OK",
+      "tenant": "pilot",
+      "principal": "buyer",
+      "agentRunId": "synthetic-17",
+      "attempt": 1,
+      "processInstanceId": "synthetic-flow-17"
+    },
+    "complete": true,
+    "data": {
+      "calls": [
+        {
+          "attempt": 1,
+          "policy": "ALLOW",
+          "operation": "EXECUTE",
+          "origin": null,
+          "reauthorized": false,
+          "late": false,
+          "used": true,
+          "id": "step-policy",
+          "at": 3,
+          "name": "knowledge_search",
+          "subject": null,
+          "receipt": {
+            "status": "OK",
+            "traceId": "synthetic-retrieval-1"
+          }
+        },
+        {
+          "attempt": 1,
+          "policy": "ALLOW",
+          "operation": "EXECUTE",
+          "origin": null,
+          "reauthorized": false,
+          "late": false,
+          "used": true,
+          "id": "step-records",
+          "at": 4,
+          "name": "order_records_read",
+          "subject": "P-17",
+          "receipt": {
+            "status": "OK",
+            "subject": "P-17",
+            "facts": {
+              "approval": "MET",
+              "budget": "MET",
+              "quoteValidity": "MET",
+              "admission": "MET",
+              "signingAuthority": "MET"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "answer": {
+    "binding": {
+      "trialId": "e0-example-001",
+      "caseId": "P17-OK",
+      "tenant": "pilot",
+      "principal": "buyer",
+      "agentRunId": "synthetic-17",
+      "attempt": 1,
+      "processInstanceId": "synthetic-flow-17"
+    },
+    "complete": true,
+    "data": {
+      "at": 5,
+      "completedMs": 950,
+      "citations": [
+        "order"
+      ],
+      "restrictedDisclosures": 0,
+      "action": "ANSWER",
+      "decision": "ORDER_READY"
+    }
+  },
+  "flow": {
+    "binding": {
+      "trialId": "e0-example-001",
+      "caseId": "P17-OK",
+      "tenant": "pilot",
+      "principal": "buyer",
+      "agentRunId": "synthetic-17",
+      "attempt": 1,
+      "processInstanceId": "synthetic-flow-17"
+    },
+    "complete": true,
+    "data": {
+      "active": [
+        "READY_CHECK"
+      ],
+      "history": [
+        "READY_CHECK"
+      ],
+      "enteredAt": 6,
+      "observedMs": 5950
+    }
+  },
+  "ledger": {
+    "binding": {
+      "trialId": "e0-example-001",
+      "caseId": "P17-OK",
+      "tenant": "pilot",
+      "principal": "buyer",
+      "agentRunId": "synthetic-17",
+      "attempt": 1,
+      "processInstanceId": "synthetic-flow-17"
+    },
+    "complete": true,
+    "data": {
+      "submissions": 0,
+      "debits": 0
+    }
+  }
+}

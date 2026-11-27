@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:workflow-agent:rag:evaluation-case:v3",
+  "title": "RAG EvaluationCase exchange format v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "schemaVersion", "scenarioGroupId", "domainCodes", "split", "query", "queryTime", "businessAsOfTime", "tenantRef", "principalRef", "allowedKnowledgeScopes", "scenarioType", "riskLevel", "difficulty", "difficultyTags", "factsGiven", "factsMissing", "expectedDisposition", "answerMode", "relevanceJudgments", "requiredEvidenceGroups", "expectedClaims", "forbiddenClaims", "citationExpectations", "annotation"],
+  "properties": {
+    "caseId": {"type": "string", "minLength": 1},
+    "schemaVersion": {"const": 3},
+    "supersedesCaseId": {"type": ["string", "null"]},
+    "scenarioGroupId": {"type": "string", "minLength": 1},
+    "domainCodes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "split": {"enum": ["DEV", "CALIBRATION", "LOCKED_TEST"]},
+    "query": {"type": "string", "minLength": 1},
+    "queryTime": {"type": "string", "format": "date-time"},
+    "businessAsOfTime": {"type": ["string", "null"], "format": "date-time"},
+    "temporalGapReason": {"type": "string", "minLength": 1},
+    "conversationContext": {"type": "array", "items": {"type": "string"}},
+    "tenantRef": {"type": "string", "minLength": 1},
+    "principalRef": {"type": "string", "minLength": 1},
+    "allowedKnowledgeScopes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "scenarioType": {"enum": ["ANSWERABLE", "INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]},
+    "riskLevel": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "retrievalScope", "reasoningType", "queryForm", "temporalDemand"],
+      "properties": {
+        "level": {"enum": ["EASY", "MEDIUM", "HARD"]},
+        "retrievalScope": {"enum": ["SINGLE_SECTION", "MULTI_SECTION_SINGLE_DOCUMENT", "MULTI_DOCUMENT", "CROSS_DOMAIN"]},
+        "reasoningType": {"enum": ["DIRECT", "CONDITIONAL", "COMPARISON", "MULTI_HOP", "CONFLICT_RESOLUTION"]},
+        "queryForm": {"enum": ["EXACT", "PARAPHRASED", "NOISY", "AMBIGUOUS", "MULTI_TURN"]},
+        "temporalDemand": {"enum": ["CURRENT", "BOUNDARY", "HISTORICAL", "CROSS_PERIOD"]}
+      }
+    },
+    "difficultyTags": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}},
+    "ruleTopics": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "applicabilityKeys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "authorityDependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "factsGiven": {"type": "array", "items": {"type": "string"}},
+    "factsMissing": {"type": "array", "items": {"type": "string"}},
+    "expectedDisposition": {
+      "type": "object", "additionalProperties": false, "required": ["action", "reasonCode"],
+      "properties": {"action": {"enum": ["ANSWER", "ABSTAIN", "HUMAN_REVIEW"]}, "reasonCode": {"type": "string", "minLength": 1}}
+    },
+    "answerMode": {"enum": ["STRUCTURED_DECISION", "CLAIM_SET", "FREE_TEXT"]},
+    "outputSchemaRef": {"type": "string", "minLength": 1},
+    "expectedStructuredOutput": {"type": "object"},
+    "answerEvaluationRubric": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "relevanceJudgments": {"type": "array", "items": {"$ref": "#/$defs/judgment"}},
+    "forbiddenEvidence": {"type": "array", "items": {"$ref": "#/$defs/evidenceAnchor"}},
+    "requiredEvidenceGroups": {"type": "array", "items": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}},
+    "absenceOrConflictRationale": {"type": "string", "minLength": 1},
+    "expectedClaims": {"type": "array", "items": {"$ref": "#/$defs/expectedClaim"}},
+    "forbiddenClaims": {"type": "array", "items": {"$ref": "#/$defs/forbiddenClaim"}},
+    "citationExpectations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "expectedAnswer": {"type": "string"},
+    "routeLabel": {
+      "type": "object", "additionalProperties": false, "required": ["queryIntent", "eligibleStrategyIds", "expectedRouteIds", "forbiddenRouteIds", "routeReason"],
+      "properties": {
+        "queryIntent": {"type": "string", "minLength": 1},
+        "eligibleStrategyIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "expectedRouteIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "forbiddenRouteIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "routeReason": {"type": "string", "minLength": 1}
+      }
+    },
+    "annotation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "author", "labeler", "reviewer", "adjudication"],
+      "properties": {
+        "status": {"enum": ["DRAFT", "REVIEWED", "LOCKED"]},
+        "author": {"type": "string", "minLength": 1},
+        "labeler": {"type": ["string", "null"]},
+        "reviewer": {"type": ["string", "null"]},
+        "adjudication": {"type": ["string", "null"]},
+        "labeledAt": {"type": "string", "format": "date-time"},
+        "reviewedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"businessAsOfTime": {"type": "null"}}, "required": ["businessAsOfTime"]}, "then": {"required": ["temporalGapReason"]}},
+    {"if": {"properties": {"scenarioType": {"const": "ANSWERABLE"}}, "required": ["scenarioType"]}, "then": {"properties": {"requiredEvidenceGroups": {"type": "array", "minItems": 1}, "expectedDisposition": {"type": "object", "properties": {"action": {"const": "ANSWER"}}}}}},
+    {"if": {"properties": {"answerMode": {"const": "STRUCTURED_DECISION"}}, "required": ["answerMode"]}, "then": {"required": ["outputSchemaRef", "expectedStructuredOutput"], "properties": {"expectedClaims": {"type": "array", "minItems": 1}}}},
+    {"if": {"properties": {"answerMode": {"const": "CLAIM_SET"}}, "required": ["answerMode"]}, "then": {"properties": {"expectedClaims": {"type": "array", "minItems": 1}}}},
+    {"if": {"properties": {"answerMode": {"const": "FREE_TEXT"}}, "required": ["answerMode"]}, "then": {"required": ["expectedAnswer", "answerEvaluationRubric"]}},
+    {"if": {"properties": {"scenarioType": {"enum": ["INSUFFICIENT", "CONFLICT", "OUT_OF_SCOPE", "FORBIDDEN"]}}, "required": ["scenarioType"]}, "then": {"required": ["absenceOrConflictRationale"], "properties": {"expectedDisposition": {"type": "object", "properties": {"action": {"enum": ["ABSTAIN", "HUMAN_REVIEW"]}}}}}},
+    {"if": {"properties": {"annotation": {"type": "object", "properties": {"status": {"enum": ["REVIEWED", "LOCKED"]}}, "required": ["status"]}}, "required": ["annotation"]}, "then": {"properties": {"annotation": {"type": "object", "properties": {"labeler": {"type": "string", "minLength": 1}, "reviewer": {"type": "string", "minLength": 1}}, "required": ["labeledAt", "reviewedAt"]}}}}
+  ],
+  "$defs": {
+    "claimAttributeScalar": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "number"},
+        {"type": "boolean"}
+      ]
+    },
+    "claimAttributeValue": {
+      "oneOf": [
+        {"$ref": "#/$defs/claimAttributeScalar"},
+        {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/claimAttributeScalar"}}
+      ]
+    },
+    "expectedClaim": {
+      "type": "object", "additionalProperties": false,
+      "required": ["claimCode", "displayText", "attributes", "requiresGroups"],
+      "properties": {
+        "claimCode": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$"},
+        "subject": {"type": "string", "minLength": 1},
+        "displayText": {"type": "string", "minLength": 1},
+        "attributes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/claimAttributeValue"}},
+        "requiresGroups": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "forbiddenClaim": {
+      "type": "object", "additionalProperties": false,
+      "required": ["claimCode", "displayText", "attributes"],
+      "properties": {
+        "claimCode": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,127}$"},
+        "subject": {"type": "string", "minLength": 1},
+        "displayText": {"type": "string", "minLength": 1},
+        "attributes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/claimAttributeValue"}}
+      }
+    },
+    "evidenceAnchor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceId", "documentCode", "documentVersion", "locator", "contentHash"],
+      "properties": {
+        "evidenceId": {"type": "string", "minLength": 1},
+        "documentCode": {"type": "string", "minLength": 1},
+        "documentVersion": {"type": "string", "minLength": 1},
+        "locator": {"$ref": "urn:workflow-agent:rag:evidence-locator:v1"},
+        "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "judgment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceId", "documentCode", "documentVersion", "locator", "contentHash", "grade"],
+      "properties": {
+        "evidenceId": {"type": "string", "minLength": 1},
+        "documentCode": {"type": "string", "minLength": 1},
+        "documentVersion": {"type": "string", "minLength": 1},
+        "locator": {"$ref": "urn:workflow-agent:rag:evidence-locator:v1"},
+        "contentHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "grade": {"type": "integer", "minimum": 0, "maximum": 2}
+      }
+    }
+  }
+}

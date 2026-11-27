@@ -1,0 +1,28 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"urn:workflow-agent:joint-evaluation-case-set:p17:v1",
+  "type":"object","additionalProperties":false,
+  "required":["version","scenarioGroupId","split","tenant","principal","policySnapshot","policySha256Lf","requiredEvidenceGroups","forbiddenEvidence","subject","capabilities","maxLiveAttempts","observeAfterMs","requiredFacts","query","cases"],
+  "properties":{
+    "version":{"const":1},"scenarioGroupId":{"$ref":"#/$defs/text"},"split":{"const":"DEV"},
+    "tenant":{"$ref":"#/$defs/text"},"principal":{"$ref":"#/$defs/text"},"policySnapshot":{"$ref":"#/$defs/text"},
+    "policySha256Lf":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "requiredEvidenceGroups":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/nonEmptySet"}},
+    "forbiddenEvidence":{"type":"array","items":{"$ref":"#/$defs/text"},"uniqueItems":true},
+    "subject":{"$ref":"#/$defs/text"},"query":{"$ref":"#/$defs/text"},
+    "capabilities":{"type":"object","additionalProperties":false,"required":["policy","records"],
+      "properties":{"policy":{"$ref":"#/$defs/nonEmptySet"},"records":{"$ref":"#/$defs/nonEmptySet"}}},
+    "maxLiveAttempts":{"type":"integer","minimum":1},"observeAfterMs":{"type":"integer","minimum":1},
+    "requiredFacts":{"$ref":"#/$defs/nonEmptySet"},
+    "cases":{"type":"array","minItems":1,"items":{
+      "type":"object","additionalProperties":false,"required":["id","live","action","decision","task"],
+      "properties":{"id":{"$ref":"#/$defs/text"},"query":{"$ref":"#/$defs/text"},
+        "live":{"enum":["UNAVAILABLE","ALL_MET","LOW_BUDGET","EMPTY","FOREIGN_RECEIPT","TIMEOUT","REVOKED"]},
+        "action":{"enum":["ANSWER","ABSTAIN","HUMAN_REVIEW"]},
+        "decision":{"enum":["ORDER_READY","ORDER_NOT_READY","MISSING_LIVE_RECORDS","LIVE_TIMEOUT","AUTH_REVOKED"]},
+        "task":{"enum":["READY_CHECK","NEED_RECORDS","MANUAL_REVIEW"]}}
+    }}
+  },
+  "$defs":{"text":{"type":"string","minLength":1},
+    "nonEmptySet":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/text"}}}
+}

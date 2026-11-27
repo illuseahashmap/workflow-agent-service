@@ -1,0 +1,16 @@
+{"forbiddenHits":[],"caseId":"S01","missing":[],"noiseDocs":0,"ranked":["L9","L7","L5","L3"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S02","missing":[],"noiseDocs":0,"ranked":["L10","L7","L12","L5","L3"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S03","missing":[],"noiseDocs":0,"ranked":["L21","L18","L19","L16","L14"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S04","missing":[],"noiseDocs":0,"ranked":["L21","L19","L16","L14"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S05","missing":[[25]],"noiseDocs":0,"ranked":["L3","L5"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S06","missing":[[10],[12]],"noiseDocs":0,"ranked":["L5","L7","L16","L25"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S07","missing":[],"noiseDocs":0,"ranked":["L5","L3","L7","L9","L10"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S08","missing":[],"noiseDocs":0,"ranked":["L21","L10","L18","L19","L3"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S01","missing":[],"noiseDocs":32,"ranked":["L9","L7","L5","L3"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S02","missing":[],"noiseDocs":32,"ranked":["L10","L7","L12","L5","L3"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S03","missing":[],"noiseDocs":32,"ranked":["L21","L18","L19","L16","L14"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S04","missing":[],"noiseDocs":32,"ranked":["L21","L19","L16","L14"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S05","missing":[[25]],"noiseDocs":32,"ranked":["L3","L5"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":["noise-7:2","noise-8:2","noise-9:2"],"caseId":"S06","missing":[[10],[12]],"noiseDocs":32,"ranked":["L5","L7","noise-7:2","noise-8:2","noise-9:2"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S07","missing":[],"noiseDocs":32,"ranked":["L5","L3","L7","L9","L10"],"actualDisposition":"NOT_RUN"}
+{"forbiddenHits":[],"caseId":"S08","missing":[],"noiseDocs":32,"ranked":["L21","L10","L18","L19","L3"],"actualDisposition":"NOT_RUN"}

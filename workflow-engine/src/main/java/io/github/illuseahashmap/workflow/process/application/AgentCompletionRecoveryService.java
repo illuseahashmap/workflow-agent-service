@@ -1,0 +1,105 @@
+package io.github.illuseahashmap.workflow.process.application;
+
+import io.github.illuseahashmap.workflow.process.application.dto.AgentCompletionCommand;
+import io.github.illuseahashmap.workflow.process.application.port.AgentCompletionRunPort;
+import io.github.illuseahashmap.workflow.process.application.port.AgentWorkflowExecutionPort;
+import java.util.HashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/** Workflow application use case for idempotently applying an Agent terminal result. */
+@Service
+public class AgentCompletionRecoveryService {
+
+    private final AgentCompletionRunPort runPort;
+    private final AgentWorkflowExecutionPort executionPort;
+    private final AgentOutputMappingResolver outputMappingResolver;
+    private final WorkflowOperationAuditService auditService;
+
+    @Autowired
+    public AgentCompletionRecoveryService(
+            AgentCompletionRunPort runPort,
+            AgentWorkflowExecutionPort executionPort,
+            AgentOutputMappingResolver outputMappingResolver,
+            WorkflowOperationAuditService auditService
+    ) {
+        this.runPort = runPort;
+        this.executionPort = executionPort;
+        this.outputMappingResolver = outputMappingResolver;
+        this.auditService = auditService;
+    }
+
+    public AgentCompletionRecoveryService(
+            AgentCompletionRunPort runPort,
+            AgentWorkflowExecutionPort executionPort,
+            AgentOutputMappingResolver outputMappingResolver
+    ) {
+        this(runPort, executionPort, outputMappingResolver, null);
+    }
+
+    public void recover(AgentCompletionCommand command) {
+        AgentCompletionRunPort.CompletedAgentRun run = runPort
+                .lockCompletedRun(command.tenantCode(), command.runId()).orElse(null);
+        if (run == null || run.processInstanceId() == null
+                || (run.currentAttemptId() == null
+                    ? command.attemptId() != 0 || !("TIMED_OUT".equals(run.status()) || "FAILED".equals(run.status()))
+                    : run.currentAttemptId() != command.attemptId())
+                || !same(run.activityActivationId(), command.activityActivationId())) {
+            return;
+        }
+        AgentWorkflowExecutionPort.WaitingExecution execution = executionPort.lockWaitingExecution(
+                run.processInstanceId(), run.executionId(), run.activityId()).orElse(null);
+        if (execution == null || !same(execution.activityActivationId(), run.activityActivationId())) {
+            return;
+        }
+        var variables = new HashMap<String, Object>();
+        variables.put(AgentWorkflowVariables.RUN_ID, run.id());
+        variables.put(AgentWorkflowVariables.RUN_STATUS, run.status());
+        variables.put(AgentWorkflowVariables.REVIEW_REQUIRED, false);
+        if (run.resultStatus() != null) {
+            variables.put(AgentWorkflowVariables.RESULT_STATUS, run.resultStatus());
+        }
+        if ("SUCCEEDED".equals(run.status())) {
+            // A failed attempt may have projected an operational error onto the waiting
+            // execution. A later successful recovery supersedes that state, so clear the
+            // stale local projection before the execution leaves the Agent activity.
+            executionPort.removeLocalVariable(run.executionId(), AgentWorkflowVariables.ERROR_CODE);
+            variables.putAll(outputMappingResolver.resolve(
+                    run.outputSnapshotJson(), run.outputMappingJson()));
+            executionPort.trigger(run.executionId(), variables);
+            audit("AGENT_NODE_COMPLETED", run, "WAITING", "COMPLETED", null, command.traceId());
+        } else {
+            variables.put(AgentWorkflowVariables.ERROR_CODE,
+                    run.errorCode() == null ? "AGENT_FAILED" : run.errorCode());
+            if ("MANUAL_REVIEW".equals(run.processFailurePolicy())) {
+                variables.put(AgentWorkflowVariables.REVIEW_REQUIRED, true);
+                executionPort.trigger(run.executionId(), variables);
+                audit("AGENT_NODE_MANUAL_REVIEW", run, "WAITING", "REVIEW_REQUIRED",
+                        run.errorCode(), command.traceId());
+            } else if ("CONTINUE_EMPTY".equals(run.processFailurePolicy())) {
+                executionPort.trigger(run.executionId(), variables);
+                audit("AGENT_NODE_CONTINUED_EMPTY", run, "WAITING", "COMPLETED_EMPTY",
+                        run.errorCode(), command.traceId());
+            } else {
+                executionPort.setLocalVariables(run.executionId(), variables);
+                audit("AGENT_NODE_HELD", run, "WAITING", "HELD_FOR_OPERATIONS",
+                        run.errorCode(), command.traceId());
+            }
+        }
+        runPort.markWorkflowHandled(run.tenantCode(), run.id());
+    }
+
+    private void audit(String eventType, AgentCompletionRunPort.CompletedAgentRun run,
+                       String previousState, String nextState, String reason, String traceId) {
+        if (auditService != null) {
+            auditService.recordSystem(
+                    run.tenantCode(), eventType, run.processInstanceId(), null, null,
+                    "agentRun=" + run.id() + ",activity=" + run.activityId(),
+                    previousState, nextState, reason, traceId);
+        }
+    }
+
+    private boolean same(String left, String right) {
+        return left != null && left.equals(right);
+    }
+}

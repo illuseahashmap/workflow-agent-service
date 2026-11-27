@@ -1,0 +1,9 @@
+{
+  "trialId": "e0-example-001",
+  "caseId": "P17-OK",
+  "tenant": "pilot",
+  "principal": "buyer",
+  "agentRunId": "synthetic-17",
+  "attempt": 1,
+  "processInstanceId": "synthetic-flow-17"
+}

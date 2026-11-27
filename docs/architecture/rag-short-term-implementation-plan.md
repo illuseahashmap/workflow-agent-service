@@ -1,0 +1,559 @@
+# RAG 短期实施方案与长期扩展边界
+
+更新时间：2026-11-08
+状态：既有文本、混合检索及 AgentRun→Flowable 本地链路保留；四格式原件收件与清单已落地，Markdown/XLSX/DOCX 已完成采购 B04 跨块验证；Word B09 和 Excel 近似表负例已加入。PDF 尚未开放解析。
+
+B04 已覆盖真实发布服务、冻结工具快照、Registry 和授权片段回读。知识库界面支持原件上传和按引用读取片段。尚未把浏览器、真实模型和 Flowable 联成一次四格式验收。
+
+本文定义近期 RAG 能力的实现范围，并确保后续扩展混合检索、多跳检索、知识图谱、MCP
+知识源和外部检索服务时，不需要重写 Agent Runtime、Flowable 集成和证据治理模型。
+
+当前完成状态仍以[下一步计划](../status.md)为准，长期原则遵循
+[开发方向与防偏离门禁](development-direction-guardrails.md)和
+[Agent 协作架构设计](agent-collaboration-design.md)。
+
+2026-11-04 前置整改：恢复/缓存结果不再继承历史授权；结构定位 v1、case v3/dataset v2 与源定位评分已有代码；Profile 通过 V59 冻结多个 source→index 及 ScorePolicy，Trace 保存实际索引成员，分数/校准不匹配拒绝、组筛选不拆支持来源。当前仍未安装 MinerU、接通真实结构扩展或最终 Claim/Grounding；详见[实施设计第 13 节](rag-structured-document-implementation-design.md#13-四项交叉评审整改2026-11-04)。
+
+同日二次整改：授权/JDBC 与模型共享单调时钟预算，调用前重算剩余时间；定位解析拒绝缺失/null/隐式类型转换；关键词/向量在 LIMIT 前按固定来源/索引/Chunk 身份形成稳定排序。实施、回归和取消边界见[第 14 节](rag-structured-document-implementation-design.md#14-二次交叉评审整改2026-11-04)。不将这三项修复当作 MinerU、完整评测或生产故障验收。
+
+模型 Provider 与 MCP 的 LangChain4j 第一阶段适配已经完成。后续扩展 Embedding、向量存储、
+文档解析、多 Retriever 聚合和 Rerank 时，继续优先通过现有端口验证 LangChain4j 实现。
+`RetrievalProfile`、授权求交、Evidence/Citation/Trace、Grounding 和评测仍由平台定义；
+LangChain4j 只作为可替换基础设施实现，不得把其 `Document`、`Content`、`TextSegment` 或
+检索分数直接泄漏到领域契约。
+
+2026-11-02 决策：结构化 PDF 采用 **LangChain4j + MinerU**，不引入 RAGFlow、不自研 OCR/版面和表格识别模型。MinerU 通过独立解析服务接入，平台负责结构归一化、结构感知切分、原件/资产/版本与任务治理；LangChain4j 优先复用模型、Embedding、通用切分、聚合和重排基础设施。具体职责、跨页图表边界、D0–D3 顺序和验收见[结构化文档摄取设计](rag-structured-document-ingestion-design.md)。本轮仅更新方案，不表示 PDF 能力已实现，也不替代 Grounding、评测及现有生产门禁。
+
+2026-11-03 补充[实施设计与开源实践评审](rag-structured-document-implementation-design.md)：参考 MinerU、Docling、Unstructured、Haystack、RAGFlow 和 LangChain4j 的官方机制，细化原件/派生/检索三层内容、任务幂等与异步恢复、完整来源 Manifest、结构切分、管理 API、权限和 20 个场景条目的测试矩阵。仅完成设计；MinerU 版本锁定、真实样本/资源试跑和 D1–D3 代码尚未完成。
+
+当前实现边界：已具备文档快照、确定性 Chunk、摄取任务租约与重试、索引版本生命周期、
+PostgreSQL 文档内容/Chunk/全文检索/Trace 适配器、Profile 领域模型以及 AgentVersion 到已发布
+RetrievalProfile 的租户内绑定和可信运行时解析。当前已接通租户边界内的文档入库、摄取任务、
+Profile 管理/发布、主体范围授权 API，且本地 profile 可显式装配摄取 Worker 与关键词检索应用服务。
+知识管理已使用独立权限；本地浏览器已跑通全文检索、Evidence 回注、流程路由和后续审批。
+基础设施 Testcontainers 历史门禁已通过。本轮新增了可选 vector profile、pgvector 存储/精确检索、
+LangChain4j Embedding 适配、显式 VECTOR/HYBRID 策略、RRF 融合、检索结果引用完整性与分数门禁、
+版本/证据引用/耗时 Trace，以及基础离线指标计算。另有火山方舟 `/embeddings/multimodal`
+专用适配，避免把其非 OpenAI 响应格式误送给标准 LangChain4j Embedding 客户端。本机 PostgreSQL 18.1 已安装并启用 pgvector 0.8.7，基础距离查询通过；可选向量迁移已在本机执行，`local,vector` 与回退 `local` 均可启动。`employee-handbook.md` 第 1 版已在真实 Ark 模型下重新摄取并通过 HYBRID 检索；新 Profile 和 AgentVersion 绑定后的 AgentRun→Flowable 也已在本地通过；
+最终答案的逐字段 Citation 核验、评测数据集发布门禁和 RAG 专项故障恢复也尚未完成。因此本文件
+不能作为“RAG 生产闭环已完成”的依据。
+
+### 当前可选向量运行方式
+
+默认 `local` 与生产配置只执行关键词摄取。要启用向量路径，数据库需预装 pgvector 扩展，
+用 `local,vector`（或生产相应 profile）启动，Flyway 才会装载独立的 repeatable 向量迁移。
+生产环境必须配置 `WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL`、`WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL`、`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL_VERSION` 和
+`WORKFLOW_KNOWLEDGE_EMBEDDING_DIMENSION`。本地 profile 为这次验收预设方舟端点、模型和 1024 维，
+优先读取专用 `WORKFLOW_KNOWLEDGE_EMBEDDING_API_KEY`，未设置时复用本机已有的 `ARK_API_KEY` 环境凭证；
+这不读取数据库中的聊天 Provider 凭证，也不向模型或日志回显密钥。缺扩展或缺凭证时启动失败并给出明确诊断。
+Embedding 模型与聊天 Provider 独立配置；当前 DeepSeek 聊天密钥不能假定支持 Embedding API。
+当前本地聊天 Provider 的 Base URL 指向火山方舟 DeepSeek，但 DeepSeek 聊天模型本身不是向量模型。
+如果使用方舟 `doubao-embedding-vision-251215`，设置 `WORKFLOW_KNOWLEDGE_EMBEDDING_PROVIDER=VOLCENGINE_ARK`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`、
+`WORKFLOW_KNOWLEDGE_EMBEDDING_MODEL=doubao-embedding-vision-251215` 和维度 `1024`；
+完整请求地址由适配器追加 `/embeddings/multimodal`。这个 URL 是端点，不是请求体里的模型 ID；
+模型 ID 应与账号控制台的开通项一致。
+API Key 必须从环境/密钥管理提供，不复用数据库中加密的聊天凭证。`MODEL_VERSION` 应固定模型版本、
+维度和 Query/Corpus instructions 版本；任一变化要重建索引，不可在原版本上覆盖。
+方舟适配按官方协议分别使用 Query 与 Corpus instructions，不可直接使用标准 `/embeddings` 适配。
+模型是否有免费额度以该账号「开通管理」为准，不自动开通付费。
+2026-10-17 已在本机 PostgreSQL 18.1 Windows 实例按 pgvector 官方源码构建安装 0.8.7，
+`workflow_agent` 数据库已执行 `CREATE EXTENSION vector`，3 维向量距离查询返回预期值。
+可选 Flyway 向量迁移已随 `vector` profile 在本机数据库执行。非 vector profile 不会在新数据库安装该迁移；
+已安装过向量迁移的数据库可回到关键词模式，自定义 Flyway 只对这一个已知可选 repeatable 的缺席放行；
+2026-10-17 验收时 Docker 引擎不可用；此为历史环境记录，本次未复核，当前容器门禁以状态页为准。2026-10-17 的本地回归中，
+`default/company-handbook` 的 `employee-handbook.md` 第 1 版内容哈希保持不变，摄取任务成功，
+索引第 2 版已激活并写入 3 条 1024 维向量；HYBRID 检索命中采购审批规则，Citation 指向原文版本。
+验证由显式启用的 `LocalRagVectorAcceptanceTest` 完成，默认 CI 不会调用付费外部模型。
+旧索引第 1 版退休但仍可按冻结版本读取；已发布 Profile 没有被原地修改。
+现已创建 `purchase-policy` Profile 第 3 版（ID 4，绑定索引 2）和 `text_rag` Agent 第 4 版（ID 14），
+采购流程第 3 版绑定新 Agent 并启用。显式验收测试 `LocalRagAgentFlowAcceptanceTest` 使用真实模型启动
+1500 元办公采购流程：AgentRun 50 成功，`knowledge_search` 返回带 Citation 的 3 条 Evidence，
+RetrievalTrace 记录 Profile 4 / Index 2 / `HYBRID`，Flowable 进入“直属负责人审批”。
+该测试默认不运行；浏览器 UI 的逐页验收和流程强杀恢复尚未完成。
+Ark 暂时性失败已类型化并在同一调用总预算内最多重试一次；永久认证/协议错误不重试，
+Agent 与摄取 Worker 使用相同的稳定错误码和可重试性分类。
+向量和混合 Profile 只允许绑定已经生成向量的索引。已发布 Profile 绑定的索引版本会传递到
+关键词/向量查询，旧索引退休后仍可按版本读取，模型版本不匹配明确失败。
+历史已发布 `HYBRID` Profile 若绑定 `embedding_model=none` 的旧索引，运行时按其原有关键词语义执行；
+不改写已发布记录，检索 Trace 的实际策略为 `KEYWORD`。新建向量/混合 Profile 均必须绑定向量索引。
+
+## 0. 交付范围与阶段零
+
+本文是 RAG 的分阶段实施规格，不表示所有章节都属于同一个短期迭代。组织关系解析与知识检索
+是两条并行但独立的产品能力线：
+
+```text
+组织关系解析
+→ ParticipantPolicyResolver
+→ 确定性参与人
+→ Flowable 人工任务
+
+知识检索
+→ Evidence / Citation / RetrievalTrace
+→ AgentToolRegistry
+→ Agent Runtime
+```
+
+两条线可以共享租户上下文、版本、审计和证据引用能力，但不得共享一个模糊的检索编排器，
+也不得让模型重新解释权威组织关系来决定审批人。组织关系后续应形成独立的
+`organization-engine` 限界上下文；本方案只定义它与 Evidence 和参与人策略的协作边界。
+
+在 RAG-1 之前必须完成阶段零：
+
+- 确认知识源、文档版本和 Agent 的租户授权模型；
+- 确认删除、禁用、撤权后的检索可见性和派生数据清理语义；
+- 确认原文存储端口、单文档/租户容量、摄取并发和每日配额；
+- 冻结 Embedding 模型、向量维度、检索最大耗时、最大返回字节数和索引兼容策略；
+- 在真实 Retriever、权限求交、Trace 持久化和结果策略完成前，保持 `knowledge_search` 禁用；
+- 明确 pgvector 不可用时的启动和降级策略，不得让部分基础设施能力静默伪装为可用。
+
+## 1. 目标与价值
+
+首版目标不是增加一个“向量搜索接口”，而是建立受治理的知识检索能力：
+
+```text
+流程上下文或用户问题
+→ Agent 请求知识能力
+→ 按租户、知识范围和版本执行检索
+→ 返回可追溯证据与引用
+→ Grounding 和结果策略判定
+→ 自动推进、拒答或人工复核
+```
+
+RAG 在项目中的核心价值是为 Agent 结果提供可验证证据。MCP 负责受治理地访问外部系统和
+工具，Flowable 负责长期流程；三者不能合并成一个不透明的“大模型调用”。
+
+## 2. 评审结论
+
+当前代码已经具备 `PLATFORM_AGENT`、`AgentToolRegistry`、租户工具授权、工具输入 Schema、
+幂等键和执行审计，可以承载首个 `knowledge_search` 工具。现有长期设计也已经定义
+`KnowledgeSource`、`RetrievalTrace` 和 `Citation` 等概念。
+
+但如果首版直接把知识能力实现成 `searchChunks(query, topK)`，会形成以下长期锁定：
+
+- Agent 和接口只能理解文本 Chunk，无法表达关系路径和结构化事实；
+- 向量库类型、相似度分数和 Embedding 字段泄漏到领域契约；
+- 图谱、多跳和 MCP 返回需要建立第二套结果模型；
+- 历史运行无法还原当时使用的文档、索引、切分和模型版本；
+- 召回成功与回答正确混为一个状态，无法建立质量门禁。
+
+因此短期必须先固定中立的模块、证据和版本边界，再实现窄范围检索。
+
+## 3. 模块与依赖方向
+
+新增 Maven 模块 `knowledge-engine`，作为知识摄取、索引、检索、引用和评测的限界上下文：
+
+```text
+knowledge-engine
+├── source          # 知识源、文档和版本
+├── ingestion       # 解析、切分、Embedding、索引任务
+├── retrieval       # 查询编排、Retriever、证据和引用
+└── evaluation      # 评测集、评测运行和质量指标
+```
+
+依赖方向必须保持：
+
+```text
+knowledge-engine → shared-kernel
+agent-engine     → shared-kernel
+workflow-engine  → shared-kernel
+workflow-boot    → 组合三个上下文并提供 AgentTool 适配器
+```
+
+`agent-engine` 不直接依赖 `knowledge-engine`，`knowledge-engine` 也不实现 Agent Runtime 接口。
+`workflow-boot` 中的 `KnowledgeSearchAgentTool` 负责将 AgentTool 请求转换为知识应用服务请求。
+这样未来替换知识实现不会改变 AgentRun 状态机，也不会让知识模块依赖 Flowable。
+
+## 4. 稳定检索契约
+
+### 4.1 RetrievalRequest
+
+公开应用契约不得暴露向量、距离算法或数据库类型。至少支持：
+
+```text
+query                   原始问题
+knowledgeScopes         已授权知识范围
+filters                 受控元数据过滤
+asOfTime                可选的时间点查询
+maxResults              有界返回数量
+strategyHint            AUTO / KEYWORD / VECTOR / HYBRID / GRAPH
+maxHops                 多跳上限，首版只接受 1
+requiredEvidenceTypes   调用方要求的证据类型
+```
+
+`tenantCode`、当前主体和数据权限来自可信服务端上下文，不能信任模型或客户端提交。模型提供的
+`strategyHint` 只能作为建议，最终策略由版本化 RetrievalProfile 和平台策略决定。
+
+### 4.2 RetrievalResult
+
+返回值必须围绕证据建模，而不是固定为 `List<Chunk>`：
+
+```text
+RetrievalResult
+├── resultStatus       SUCCESS / EMPTY / PARTIAL / REJECTED / FAILED
+├── evidence[]
+│   ├── ChunkEvidence
+│   ├── RelationPathEvidence
+│   ├── StructuredRecordEvidence
+│   └── ExternalEvidence
+├── citations[]
+├── retrievalTraceId
+├── qualitySummary
+├── warnings
+└── abstained
+```
+
+首版只生产 `ChunkEvidence`，但序列化契约、数据库 Trace 和 Agent Tool 输出必须允许增加其他
+证据类型。禁止用无约束 `Map<String, Object>` 代替证据类型，也禁止让 Agent 依赖某个
+Retriever 的专有返回。
+
+### 4.3 EvidenceReference 与 Citation
+
+引用不能只绑定 Chunk。统一引用至少包含：
+
+```text
+sourceType
+sourceId
+sourceVersion
+locator
+contentFingerprint
+displayLabel
+```
+
+首版 `locator` 可以定位 `documentId/chunkId`；后续可以定位页码、表格单元格、结构化记录或
+关系边。任何进入流程变量或自治证据的引用都必须能够验证租户权限和源版本仍然存在。
+
+## 5. 领域模型与版本
+
+### 5.1 首版必须实现
+
+| 概念 | 职责 |
+| --- | --- |
+| `KnowledgeSource` | 租户内稳定知识源、类型和访问策略 |
+| `Document` | 文档稳定业务身份 |
+| `DocumentVersion` | 不可变内容版本、哈希、状态和存储引用 |
+| `IngestionJob` | 可恢复的解析、切分、Embedding 和索引任务 |
+| `Chunk` | 与文档版本绑定的规范化文本单元 |
+| `IndexVersion` | 一次可切换、可回滚的完整索引版本 |
+| `RetrievalProfileVersion` | 检索策略、TopK、融合和阈值的不可变版本 |
+| `RetrievalTrace` | 一次检索的查询、过滤、命中、排序、耗时和版本证据 |
+| `Citation` | Agent 结果到检索证据的稳定引用 |
+
+### 5.2 首版只预留语义
+
+以下概念暂不要求建表或提供管理界面，但稳定契约不得排除它们：
+
+```text
+EntityRef
+EntityAlias
+Relation
+RelationEvidence
+GraphIndexVersion
+```
+
+图谱需求出现后再根据真实查询和一致性边界落表，禁止第一阶段建设通用本体编辑器或引入
+没有验收场景的图数据库。
+
+### 5.3 必须记录的版本
+
+一次检索至少关联：
+
+```text
+documentVersion
+parseRecipeVersion / parseArtifactManifest（结构化文档时必填，待实现）
+indexVersion
+retrievalProfileVersion
+chunkingStrategyVersion
+embeddingModelVersion（向量检索时必填）
+rerankerVersion（可空）
+queryRewriteVersion（可空）
+entityResolutionVersion（后续可空）
+```
+
+重新解析、切分、重建索引和切换 Embedding 必须创建新版本，不能原地覆盖历史证据。解析 recipe 冻结包/容器、模型权重、页范围、OCR/后处理配置与归一化版本；PDF 原件、解析产物与派生文本分别记录哈希，不替换现有文本规范化指纹。
+
+## 6. 摄取与索引可靠性
+
+摄取任务必须落库，不能使用只存在于线程池内的任务：
+
+```text
+DocumentVersion 创建
+→ IngestionJob QUEUED
+→ Worker 使用 SKIP LOCKED 领取并获得租约
+→ 解析与规范化
+→ 切分
+→ Embedding
+→ 写入候选 IndexVersion
+→ 校验完成后原子激活索引版本
+```
+
+要求：
+
+- Worker 重启后可以依据租约恢复或重新执行；
+- 每个阶段具有幂等键和确定状态，失败不会产生半激活索引；
+- 文档删除、禁用和权限变化能够使旧结果立即不可检索；
+- 原文通过内容存储端口保存，数据库只保存元数据、受控文本和内容引用；
+- Parser、Chunker、Embedding Provider 和 Index Writer 都通过端口扩展；
+- 文档大小、类型、页数、解析时间和 Chunk 数量必须有租户配额。
+
+旧 JSON 文本入口按原协议运行，不补造历史原件。新 multipart 入口保存四格式字节，Markdown、Excel、受支持的 Word 正文以原生块建索引，PDF 只收件。详见[现行协议与验收边界](rag-four-format-evidence-design.md#5-已实现的原件切片)。
+文档作者现在即按[知识文档编写与多模态扩展规范](rag-document-authoring-standard.md)
+保存简单表格、图示文字等价内容和版本化资产元数据；这属于语料设计，不代表当前摄取链路
+已经支持图像像素理解或结构化表格引用。后续扩展须验证资产打包、同租户授权、表格行列/图像
+定位、派生文本来源及删除传播，不能只增加一个支持上传图片的前端控件。
+
+## 7. 首版检索实现
+
+### 7.1 存储选择
+
+首版采用 PostgreSQL 全文检索与 `pgvector`，理由是部署简单、事务和租户 RLS 可以复用。
+领域模型和应用接口不得暴露 `tsvector`、向量维度、距离函数或 PostgreSQL 行 ID。
+
+### 7.2 检索策略
+
+首版实现：
+
+- 关键词召回；
+- 向量召回；
+- 基于版本化权重的混合融合；
+- 元数据和权限前置过滤；
+- 有界 TopK 和内容长度；
+- 零召回、低质量召回和部分召回的明确语义。
+
+Rerank、查询改写和多查询召回先保留端口，只有离线评测证明收益后进入默认链路。
+
+### 7.3 多跳与图谱兼容验收
+
+首版不实现生产图检索，也不把组织关系查询并入 RAG。只提供测试用 `GraphRetriever` 或 Fake
+Retriever，证明：
+
+```text
+RelationPathEvidence:
+张三 --上级--> 李四 --上级--> 王五
+```
+
+可以经过同一 `RetrievalResult`、Citation、AgentTool 输出和运行审计返回，而无需修改
+`PlatformAgentExecutor`、AgentRun、Flowable 或公开查询接口。
+
+组织关系等权威结构化事实应由独立的 `OrganizationGraphQueryPort` 和参与人策略解析，优先使用
+PostgreSQL 递归查询；只有事实主要来自非结构化文档、并且需要跨文档关系推理时，才考虑多跳
+RAG 或图谱 Retriever。图检索结果不能直接授予审批参与人权限。
+
+## 8. Agent Runtime 集成
+
+首版注册只读工具 `knowledge_search`：
+
+```text
+PlatformAgentExecutor
+→ AgentToolRegistry
+→ KnowledgeSearchAgentTool
+→ KnowledgeRetrievalService
+→ RetrievalOrchestrator
+→ Retriever Adapter
+```
+
+集成要求：
+
+- 工具必须经过平台管理员注册、租户授权和 AgentVersion 选择；
+- Agent 不能提交 tenantCode、索引版本或绕过权限的原始过滤表达式；
+- 每次检索形成 `RETRIEVAL` Step 和 `RetrievalTrace`；
+- 工具输出只包含受控证据摘要和引用，不注入无限原文；
+- Checkpoint 保存恢复游标、逻辑步骤 ID、`RetrievalTrace` ID、受控输入上下文引用和
+  `EvidenceReference`，不复制完整原文、完整模型响应或模型私有思维链；仅保存 Trace ID
+  不足以支持恢复，不能将审计快照称为恢复点；
+- 检索失败、零召回和证据不足不能伪装成普通回答；
+- 必需知识步骤失败时，根据冻结策略执行重试、拒答、转人工或失败路由。
+
+## 9. Grounding 与结果门禁
+
+Agent 最终回答必须能够引用本次运行可访问的 `Citation`。首版 GroundingPolicy 至少支持：
+
+- 是否强制引用；
+- 允许的知识范围；
+- 最少证据数量；
+- 最低检索质量阈值；
+- 关键输出字段是否必须有引用；
+- 证据不足时 `ABSTAIN / FAIL / HUMAN_REVIEW`。
+
+相似度分数不能直接等同于事实正确率，模型自报置信度也不能替代 Grounding。高风险任务即使
+引用完整，仍必须经过业务规则和人工/自治策略门禁。
+
+## 10. 评测与发布门禁
+
+十领域语料的文档类型、权威顺序、跨领域混淆点和编写/标注顺序见
+[RAG 十领域知识语料设计](rag-ten-domain-corpus-design.md)。该文件是设计稿，
+不能据此宣称十领域正文或评测集已经发布。
+
+短期建立版本化最小评测集；字段、标注、权限、分组去重、评分与发布门禁以 [RAG 评测用例与数据集契约](rag-evaluation-case-contract.md) 为准，落地顺序、历史快照和查询级路由边界见[专项实施设计](rag-evaluation-and-routing-delivery-plan.md)。下列结构仅是概览，不可直接当作完整 Schema：
+
+```text
+EvaluationDataset
+└── EvaluationCase
+    ├── query
+    ├── expectedEvidenceReferences
+    ├── answerMode（STRUCTURED_DECISION / CLAIM_SET / FREE_TEXT）
+    ├── expectedStructuredOutput / expectedClaims
+    ├── expectedAnswer（仅为人类可读范例）
+    ├── knowledgeScopes
+    └── tags / riskLevel
+```
+
+召回指标至少包括：
+
+- `Recall@K`、`HitRate@K`；
+- `MRR@K`、`nDCG@K`；
+- 零结果识别率；
+- 权限过滤正确率；
+- 后续多跳场景的实体链接准确率和路径准确率。
+
+回答遵循“结构化决策优先、结构化 Claim 作为统一评测中间层、自然语言用于展示”的契约。回答质量另行评估 Schema 合法率、结构化字段正确率、Claim 完整率/精确率、禁止或额外 Claim、引用准确率、证据覆盖率、无证据回答率、重复运行稳定通过率和人工接受率；仅无法合理结构化的开放任务使用经校准的 LLM Judge。
+索引或 RetrievalProfile 发布前必须与当前基线比较，不能只看线上单次相似度分数。
+目前 `asOfTime` 在应用服务层明确拒绝；历史时间题只可先保存为待执行标注，不能
+混入现有自动评测分母。40 份领域文件仍是未审核草稿，仅可用于沙盒用例试点。
+
+## 11. 安全与多租户边界
+
+- 所有业务表强制租户过滤和 PostgreSQL RLS；
+- 检索前完成权限过滤，禁止先跨范围召回再在内存中过滤；
+- 文档原文、Chunk、Embedding、缓存、Trace 和评测样本全部属于租户数据；
+- 检索结果进入 Prompt 前执行敏感字段过滤和 Prompt Injection 边界标记；
+- 索引、对象存储和日志不得保存 Provider 凭据或模型私有思维链；
+- 外部知识源和 MCP 连接器必须通过出站策略、凭据引用、超时和审计；
+- 删除和保留策略必须覆盖原文、索引、缓存、Trace 和派生证据。
+
+## 12. 分阶段任务
+
+### RAG-0：治理前置与能力开关
+
+- 固定知识源、文档、索引、Embedding、租户授权和删除传播边界；
+- 固定容量、并发、超时、返回字节数和 pgvector capability check；
+- 明确 `knowledge_search` 的启用条件和禁用时的可观测诊断；
+- 建立最小评测数据集版本、阈值配置和发布决策模型。
+
+完成标准：没有真实 Retriever、权限求交、Trace 持久化和故障策略时，工具不会被自动授权或
+进入已发布 AgentVersion。
+
+### RAG-1：模块与中立契约
+
+- 新增 `knowledge-engine` 和 ArchUnit 依赖门禁；
+- 实现 KnowledgeSource、DocumentVersion、IndexVersion 和 RetrievalProfileVersion；
+- 固定 RetrievalRequest、RetrievalResult、Evidence、Citation 和 Retriever SPI；
+- 提供 Fake Retriever 验证 Chunk、RelationPath 和 StructuredRecord 三类证据兼容。
+
+完成标准：替换 Retriever 不修改 Agent Runtime、Flowable 和公开检索契约。
+
+### RAG-2：可靠摄取与 PostgreSQL 检索
+
+- 已实现文本/Markdown 领域摄取、确定性 Chunk、索引版本和 PostgreSQL 全文检索基础设施；
+- 已实现摄取任务租约、重试、幂等、失败恢复和候选索引原子激活；
+- 文档提交、任务调度和关键词检索应用已装配；pgvector 与 Embedding 可选路径及本地真实 Ark/HYBRID 回归已通过，生产容量、容器故障及多版本治理仍待验收；
+- 租户 RLS 已进入迁移，但配额和删除传播仍需结合真实任务入口验收。
+
+阶段完成标准：服务重启、重复摄取和重建索引不会产生丢失、重复激活或跨租户结果；
+`knowledge_search` 已在真实 Retriever、权限求交、Trace、Profile 绑定和失败边界具备后，以只读方式启用；
+Grounding、评测和容器故障验收完成前不得将其标记为生产级 RAG。
+
+### 四格式原生摄取（三格式采购 DEV 基线已实测，PDF 仅收件）
+
+公共契约与采购试点先行，Markdown、XLSX、DOCX 各自纵向交付；详见[设计和质量矩阵](rag-four-format-evidence-design.md)。下列 RAG-2P 是 PDF 子项，不阻塞前三者。
+
+2026-11-09：[采购对照实验](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)按同一金标比较原生关键词与“精确金额区间＋有界关联块”。三格式 B02 在 Top3、B04 在 Top5 已取全；B09 能从条件原文回到对应表行和表头。下一步用独立表格、相邻/重叠区间、多个金额、单位否定及不相关制度扩盲测，单列时延与误关联率，再决定是否扩大支持范围；不能据此宣称完整 Agent 或 PDF 已验收。
+
+**三格式回归已完成**：设备维护制度[原始留出实验](../fixtures/knowledge/pilots/maintenance-holdout-v1/README.md)揭示跨表金额错排；[按业务范围检索的复测](../fixtures/knowledge/pilots/maintenance-holdout-v1/scoped-v2/README.md)保留原金标与 K。H02 验证点值收益，H08 验证冲突行及补录条款，H10 验证不跨业务套用金额档。[新制度固定 K 实验](../fixtures/knowledge/pilots/specimen-transfer-v1/README.md)已在 Markdown 及两个规模档取证；S05/S06 漏证，[V63 范围词索引复测](../fixtures/knowledge/pilots/specimen-transfer-v1/scope-postings-v63/README.md)已验证扩容后的查询成本与排序等价。[V64 固定 Top5 复测](../fixtures/knowledge/pilots/specimen-transfer-v1/comparison-v64/README.md)已覆盖比较双方、只见一方、授权变化和阈值截断。[受控术语与触发条款复测](../fixtures/knowledge/pilots/specimen-transfer-v1/controlled-terms-v1/README.md)已验证 S06 固定 Top5、缺条款拒答；真实 Agent 须在满足出站策略的环境重跑两个对照场景。PDF D0 排期独立。
+
+### RAG-2P：LangChain4j + MinerU 结构化 PDF 摄取（待实现）
+
+- 按[结构化文档摄取设计](rag-structured-document-ingestion-design.md)完成 D0 版本/模型/许可、API 产物、资源试点与困难样本；现阶段只确认选型，未安装或部署；
+- D1 完成二进制原件存储/上传、解析服务适配、结构/资产归一化、租约恢复、有界调用及旧 Attempt 拒绝；
+- D2 完成正文/表格/图题结构感知切分、页/区域/单元格引用、完整来源快照索引、预览及删除传播；
+- D3 与 RAG-3 联合验证最终答案、拒答/人工处置、Flowable 和恢复等价；PDF 正式评测须先通过结构质量门禁，文本 E0 可并行。
+
+完成标准：固定样本的全页覆盖、跨页续表/负例、表头单位、图题来源和资产权限可验证；解析模型变化不影响旧 Profile；不确定结构不静默合并或伪装完整成功。不承诺任意跨页大图拼接、图表精确数值推断或多模态检索。
+
+### RAG-3：Agent、证据与质量闭环
+
+- 已注册并授权只读 `knowledge_search`，并要求 AgentVersion 绑定已发布 RetrievalProfile；
+- 已接入 RetrievalTrace、EvidenceReference 和运行恢复上下文；Trace 新增 Profile/Index 版本、证据引用和耗时；独立 RETRIEVAL Step 与 Citation 展示仍需继续收口；
+- 实现最小 GroundingPolicy、拒答和人工复核路由；
+- 实现版本化输出 Schema、Claim Catalog、评测集、确定性字段/Claim 评分、经校准的自由文本评委、离线指标和发布回归测试；
+- Flowable 只消费通过 Schema 与业务门禁的结构化 `result`，不得从自然语言 `answer` 推断网关条件或自动完成任务。
+
+完成标准：Agent 能使用引用回答问题；证据不足不会正常推进流程；运行详情可以还原检索版本、
+命中证据和最终处置。
+
+### RAG-4：真实场景与扩展验证
+
+- 建立一个制度/手册问答和一个关系型多跳测试场景；
+- 结构化权威关系通过 Tool/MCP 查询，文档关系通过 Fake/实验性 GraphRetriever 验证；
+- 验证外部 Retriever Adapter 可以在不改变核心契约的情况下接入；
+- 完成越权、Prompt Injection、错误引用、零召回和索引回滚测试。
+
+完成标准：同一 Agent 可以消费不同证据类型，且权限、Citation、Grounding 和人工接管语义一致。
+
+组织关系能力作为并行路线推进，不计入 RAG 完成判定：
+
+```text
+组织模型与有效期
+→ OrganizationGraphQueryPort
+→ 有限跳递归查询、环路检测和超时
+→ ParticipantPolicyResolver
+→ 任务激活时冻结参与人和关系路径
+→ Flowable 创建人工任务
+```
+
+首版必须支持直属上级、指定层级上级和部门负责人，并对空结果、多人结果、停用人员和失效关系
+执行显式策略；不得由模型决定参与人。
+
+## 13. 明确暂不实现
+
+- 通用知识图谱、本体编辑器和图数据库集群；
+- 自动从所有文档抽取任意实体与关系；
+- 完整知识库产品、网页爬虫和连接器市场；
+- 音视频索引、任意跨页大图自动重建、无约束图表数值推理与像素级多模态问答；结构化 PDF/OCR/表格已纳入 RAG-2P，不再作为整体排除项；
+- 无评测依据的自动查询改写、Rerank 或多 Agent 检索；
+- 让模型直接选择数据库、索引、租户范围或绕过 RetrievalProfile。
+
+这些能力只有在真实案例和评测证明需要时才进入后续计划，但不得要求重写本方案定义的模块、
+Evidence、Citation、版本和 Agent 集成边界。
+
+## 14. 短期总验收
+
+RAG 短期能力完成时必须同时满足：
+
+1. 文档、切分、索引、Embedding、检索策略和引用全部可版本化追溯；
+2. 摄取和索引任务在重启、重试和并发下可恢复且幂等；
+3. Agent 只能访问当前租户和当前版本明确授权的知识范围；
+4. 零召回、证据不足和检索失败具有确定状态，不会被包装成正常答案；
+5. 回答可以定位到稳定 EvidenceReference，并通过 Citation 权限校验；
+6. RetrievalTrace 能够还原查询、过滤、命中、排序、耗时和所有相关版本；
+7. 离线评测能够比较索引和 RetrievalProfile 版本，防止质量静默回退；
+8. 增加 GraphRetriever、StructuredRetriever 或外部 Retriever 时，不修改 AgentRun、Flowable
+   恢复协议和公开检索契约；
+9. 四格式分别通过真实上传、关键结构、授权检索和原生定位验收；同一采购事实须逐格式评分。PDF 另验全页覆盖、错合并和表头单位，Excel 校验单位/公式/隐藏区域，Word 校验条款/修订/表，Markdown 校验标题/代码/表格；不确定内容不得冒充完整证据。
+
+### 14.1 `knowledge_search` 发布门禁
+
+`knowledge_search` 的只读最小启用门禁为：真实 Retriever、权限范围求交、Trace、Profile 绑定、
+空结果/超时/越权失败边界均已生效。当前已满足该门禁并启用。升级为生产级 RAG 还必须满足：
+
+```text
+独立 RETRIEVAL Step 和恢复游标验收通过
++ Grounding 对零证据、低质量证据和引用不一致执行确定处置
++ Docker 重启、并发、越权和删除传播测试通过
++ 固定评测集达到阈值
+```
+
+评测结果必须形成不可变的：
+
+```text
+EvaluationDatasetVersion
+→ EvaluationRun
+→ EvaluationCaseResult
+→ QualityGateDecision
+→ RetrievalProfileVersion 发布
+```
+
+`QualityGateDecision` 必须记录基线版本、阈值版本、失败样本和发布结论，不能只生成不可追溯的
+报表。

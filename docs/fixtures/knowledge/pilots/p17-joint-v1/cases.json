@@ -1,0 +1,19 @@
+{
+  "version": 1, "scenarioGroupId": "procurement.order-readiness.P-17", "split": "DEV",
+  "tenant": "pilot", "principal": "buyer", "policySnapshot": "procurement-approval-md-v1",
+  "policySha256Lf": "edc5e208a2923d3263187325fb13abe47406d01d4a09fad7d310d7990c44ca6e",
+  "requiredEvidenceGroups": [["order"]], "forbiddenEvidence": [], "subject": "P-17",
+  "capabilities": {"policy": ["knowledge_search"], "records": ["order_records_read", "procurement_records_lookup"]},
+  "maxLiveAttempts": 2, "observeAfterMs": 5000,
+  "requiredFacts": ["approval", "budget", "quoteValidity", "admission", "signingAuthority"],
+  "query": "请核验采购单 P-17 现在能否下单。只核验，不代为下单。",
+  "cases": [
+    {"id":"B08","query":"采购单 P-17 现在可以下单了吗？只有审批政策，没有该单的实际记录。","live":"UNAVAILABLE","action":"ABSTAIN","decision":"MISSING_LIVE_RECORDS","task":"NEED_RECORDS"},
+    {"id":"P17-OK","live":"ALL_MET","action":"ANSWER","decision":"ORDER_READY","task":"READY_CHECK"},
+    {"id":"P17-BUDGET","live":"LOW_BUDGET","action":"ANSWER","decision":"ORDER_NOT_READY","task":"NEED_RECORDS"},
+    {"id":"P17-EMPTY","live":"EMPTY","action":"ABSTAIN","decision":"MISSING_LIVE_RECORDS","task":"NEED_RECORDS"},
+    {"id":"P17-FOREIGN","live":"FOREIGN_RECEIPT","action":"ABSTAIN","decision":"MISSING_LIVE_RECORDS","task":"NEED_RECORDS"},
+    {"id":"P17-TIMEOUT","live":"TIMEOUT","action":"HUMAN_REVIEW","decision":"LIVE_TIMEOUT","task":"MANUAL_REVIEW"},
+    {"id":"P17-REVOKED","live":"REVOKED","action":"HUMAN_REVIEW","decision":"AUTH_REVOKED","task":"MANUAL_REVIEW"}
+  ]
+}

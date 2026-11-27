@@ -1,0 +1,5 @@
+services:
+  alertmanager:
+    volumes:
+      - ./alertmanager/alertmanager.production.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${WORKFLOW_ALERTMANAGER_WEBHOOK_URL_FILE:?set WORKFLOW_ALERTMANAGER_WEBHOOK_URL_FILE}:/run/secrets/workflow-agent-alertmanager-webhook-url:ro

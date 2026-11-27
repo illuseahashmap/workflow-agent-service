@@ -1,0 +1,1 @@
+{"type":"object","additionalProperties":false,"required":["action","decision","citations"],"properties":{"action":{"type":"string","enum":["ANSWER","ABSTAIN","HUMAN_REVIEW"]},"decision":{"type":"string","enum":["ORDER_READY","ORDER_NOT_READY","MISSING_LIVE_RECORDS","LIVE_TIMEOUT","AUTH_REVOKED"]},"citations":{"type":"array","items":{"type":"string"}}}}

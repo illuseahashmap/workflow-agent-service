@@ -1,0 +1,449 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:workflow-agent:joint-evaluation-trace:p17:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "binding"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "binding": {
+      "$ref": "#/$defs/binding"
+    },
+    "retrieval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding",
+        "complete",
+        "data"
+      ],
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "snapshot",
+            "hits",
+            "readBack",
+            "traceId",
+            "at",
+            "revokedAt"
+          ],
+          "properties": {
+            "snapshot": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "readBack": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "traceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "revokedAt": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding",
+        "complete",
+        "data"
+      ],
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "calls"
+          ],
+          "properties": {
+            "calls": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/call"
+              }
+            }
+          }
+        }
+      }
+    },
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding",
+        "complete",
+        "data"
+      ],
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "decision",
+            "at",
+            "completedMs",
+            "citations",
+            "restrictedDisclosures"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "ANSWER",
+                "ABSTAIN",
+                "HUMAN_REVIEW"
+              ]
+            },
+            "platformError": {"enum":["MCP_TIMEOUT","KNOWLEDGE_RESULT_ACCESS_REVOKED"]},
+            "decision": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "completedMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "citations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "restrictedDisclosures": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding",
+        "complete",
+        "data"
+      ],
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active",
+            "history",
+            "enteredAt",
+            "observedMs"
+          ],
+          "properties": {
+            "active": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "history": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "enteredAt": {"type":"integer","minimum":1},
+            "observedMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding",
+        "complete",
+        "data"
+      ],
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "submissions",
+            "debits"
+          ],
+          "properties": {
+            "submissions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "debits": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trialId",
+        "caseId",
+        "tenant",
+        "principal",
+        "agentRunId",
+        "attempt",
+        "processInstanceId"
+      ],
+      "properties": {
+        "trialId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tenant": {
+          "type": "string",
+          "minLength": 1
+        },
+        "principal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agentRunId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "processInstanceId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "receipt": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "TIMEOUT",
+                "EMPTY"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "traceId"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "OK"
+              ]
+            },
+            "traceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "subject",
+            "facts"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "OK"
+              ]
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1
+            },
+            "facts": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "call": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "at",
+        "attempt",
+        "name",
+        "subject",
+        "policy",
+        "operation",
+        "origin",
+        "reauthorized",
+        "late",
+        "used",
+        "receipt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceTrial": {"type":"string","minLength":1},
+        "at": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy": {
+          "enum": [
+            "ALLOW",
+            "DENY"
+          ]
+        },
+        "operation": {
+          "enum": [
+            "NONE",
+            "EXECUTE",
+            "REUSE"
+          ]
+        },
+        "origin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reauthorized": {
+          "type": "boolean"
+        },
+        "late": {
+          "type": "boolean"
+        },
+        "used": {
+          "type": "boolean"
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        }
+      }
+    }
+  }
+}

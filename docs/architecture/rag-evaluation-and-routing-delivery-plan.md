@@ -1,0 +1,137 @@
+# RAG 评测、历史快照与查询级策略路由实施设计
+
+状态：目标方案，非已实现能力；2026-10-28 评审基线。当前可运行边界以[项目状态](../status.md)为准。
+选型修订：2026-11-02，结构化 PDF 摄取采用 [LangChain4j + MinerU](rag-structured-document-ingestion-design.md)，本文件同步解析质量与评测依赖，不表示已接入。
+契约加固：2026-11-04，已落地恢复结果重新授权、用例 Schema v3/定位 v1、数据集清单 v2、Profile 多来源固定索引与有类型评分门禁；完整发布门禁/解析服务仍待实现，不能将局部整改等同全部 E0–E3 完成。
+主契约：[评测用例](rag-evaluation-case-contract.md)；语料：[十领域设计](rag-ten-domain-corpus-design.md)；运行边界：[RAG 短期计划](rag-short-term-implementation-plan.md)。
+
+2026-11-08 观测：[三格式采购 DEV 夹具与结果](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)已在隔离 PostgreSQL 上执行 9 题 × 3 格式 × 3 档 K。组召回、可授权回读的必需引用与最终处置分栏；没有调用模型，最终处置一律 NOT_RUN，并非已交付正式 E1 或查询路由。
+
+## 1. 决策和非目标
+
+优先建立固定检索 Profile 的**可信评测基线**，然后做历史时间检索和自动发布门禁；加权 RRF、Reranker 与查询级路由只有基线表明收益且前置安全条件满足后才实施。动态路由只从 AgentVersion 明确绑定的不可变策略快照选择，绝不产生临时权重、模型、租户、知识范围或索引版本。Agent 只得到已授权检索结果；文档不能决定真实审批参与人。
+
+四格式解析参照[四格式证据设计](rag-four-format-evidence-design.md)分开验收，本专项不重复实现解析器。像素级多模态检索、通用策略市场、任意历史数据库回放、在线自动重标不在本轮。现有 Profile 已冻结多来源索引，但不等于支持历史时间检索或逐结论评分。
+
+## 2. 模型与权威边界
+
+```text
+业务负责人批准 DocumentVersion（生效区间与替代关系）
+ → 不可变 KnowledgeSnapshot/IndexVersion
+ → 标注人按快照制作 EvaluationCase + qrels
+ → 独立复核并锁定 EvaluationDatasetVersion
+ → 候选/基线在同一快照、身份和环境下回放
+ → EvaluationRun + CaseResult + QualityGateDecision
+ → 人工授权发布 RetrievalProfileVersion / AgentVersion
+
+知识/权限变更 → 影响分析 → CaseReview（独立事件）
+ → STILL_VALID / REVISE / RETIRE → 下一版数据集
+```
+
+`KnowledgeSnapshot` 至少含租户、文档版本与哈希、状态、适用对象、生效起止、替代/优先级、授权策略版本、索引版本和嵌入模型版本。比较两种检索策略时**同一**快照、权限、问题、预算和 TopK；需要测试新索引时将“新旧索引差异”作为实验变量，并另行报告数据差异，不把不同知识内容伪装成纯算法对比。历史锁定集按原快照复现；当前集按新快照重标。若历史版本已因合规删除不可读取，应标记 `NOT_REPLAYABLE` 并解释，不得从当前文档臆造旧证据。
+
+在索引构建时建立定位映射：`documentCode/version/contentHash/typed locator` ↔ `sourceId/sourceVersion/locator/chunkId`，文本定位包含 sectionId，PDF/表/图定位使用结构定位 v1。映射随索引版本冻结；评测时校验同租户、同快照、同有效期。Chunk ID 不是业务金标。`KnowledgeSnapshot` 的索引成员采用 sourceCode→indexVersionId 清单；不能用多个 knowledgeScopes 加一个索引 ID 假装跨知识源冻结。当前 Profile 已通过 V59 保存该清单；数据集 manifest v2 同步此模型。
+
+禁止把 `EvaluationCase.allowedKnowledgeScopes` 当成运行授权，评测请求必须由可信测试身份经现有 `KnowledgeAccessPolicy` 重新求交。缓存命中和 Checkpoint 恢复也不继承历史授权：平台在模型请求前校验整个 Run 的已提交工具结果；知识工具核对冻结 Profile、Trace、证据引用和当前主体/文档可见性，不执行第二次检索伪装同一结果。缺少可验证历史来源时失败关闭。
+
+## 3. 用例和数据集生命周期
+
+设计期以 [case JSON Schema](schema/rag-evaluation-case.schema.json) 和 [dataset manifest JSON Schema](schema/rag-evaluation-dataset.schema.json) 约束可交换格式。Schema 负责类型、枚举和条件必填；冻结前的**语义校验**还必须验证证据锚点在快照中存在、哈希/时间/主体/权限一致、`requiredEvidenceGroups` 全部指向允许的 grade 2 或经审核的等价证据、claim 引用的组号有效、跨文档冲突已裁决、同一 `scenarioGroupId` 不跨 split、编题/标注/复核人分离、难度画像可派生字段及等级符合 manifest 冻结的 `difficultyRubricVersion`、数据集哈希与文件一致。JSON Schema 不能代替这些数据库/业务校验。
+
+答案评分按 `answerMode` 分流：`STRUCTURED_DECISION` 先用 AgentVersion 绑定的版本化输出 Schema 校验 `result`，再确定性比较字段和 Claim；`CLAIM_SET` 将自然语言抽取为 `claimCode + attributes` 后与金标比较；`FREE_TEXT` 才允许使用冻结版本的 Rubric 和自动评委。运行输出统一保留 `result + claims + answer`，其中只有通过 Schema、业务规则、Claim 与 Grounding 门禁的 `result` 可以交给 Flowable；自然语言 `answer` 不得被解析为网关条件或自动完成指令。评测运行需保存输出 Schema、Claim Catalog、ClaimExtractor/评委模型及提示词版本，确保结果可重放。
+
+`DRAFT → REVIEWED → LOCKED` 是用例版本状态；变更产生新 `caseId` 与 `supersedesCaseId`，保留稳定 `scenarioGroupId`。`CaseReview` 是独立对象，不覆盖锁定用例：`NEEDS_REVIEW → STILL_VALID/REVISE/RETIRE`，对同一 `caseId + targetSnapshotId + triggerFingerprint` 唯一，以幂等处理重复文档事件。每次裁决保存触发事件、旧/新快照、影响理由、候选证据、复核人和时间。`STILL_VALID` 仅对明确的目标快照与时间区间有效；`REVISE` 进入下一数据集版本；`RETIRE` 必须给出原因和覆盖替代方案。旧集仍可按旧快照复跑，不能原地删题或改分。
+
+数据集 manifest 的 `DRAFT/LOCKED` 是文件创建时状态；已锁定版本退役只写独立登记事件，不将旧 manifest 改成 `RETIRED`。JSON Schema 实现必须开启 `format` 日期时间断言、Draft 2020-12 条件分支校验，并以样例验证 `LOCKED` 的双人复核和哈希，不能仅确认 JSON 可解析。
+
+拆分分配按全局 `scenarioGroupId` 稳定哈希/登记册执行，不只在单一数据集内检查。相同业务事实、模板、工单、FAQ 衍生题和近义改写都进同组。开发、校准与锁定测试集隔离；基线报告记录样本数、未标注候选数、标签覆盖、置信区间及人工复核比例。用例按 `retrievalScope/reasoningType/queryForm/temporalDemand` 形成结构化难度画像，`EASY/MEDIUM/HARD` 只由版本化规则派生；抽样和报告同时展示各维度分布，不能用大量单章节直接题抬高总体指标。持续使用锁定集反复调参会使其失去独立性，必须定期新增经审核的真正盲测集。
+
+## 4. 金标失效影响分析
+
+不能只扫描用例**已引用的** `documentCode + version + sectionHash`。以下变更均触发候选检查：新发布/替换/撤销同主题的更高权威文档；适用对象或有效期变化；相邻政策新增例外、阈值、定义或否定条件；索引可见性、租户/主体权限变化；权威关系、组织事实或数据来源版本变化；标注规范变更。反例是“旧采购 §3.1 原文未变，但新生效财务政策限制了某类支付”——跨域答案仍可能改变。
+
+为此用例除证据锚点，还记录 `ruleTopics`、`applicabilityKeys`、`domainCodes`、`businessAsOfTime`、`requiredEvidenceGroups`、测试身份和 `authorityDependencies`；文档发布事件带相同维度。先做精确引用和主题/范围/时间的保守候选扫描，再由规则/人工确认；低置信度时**扩大待复核集合**，不自动判仍有效。新增文档如果可能覆盖旧答案，不能因为原金标哈希不变而跳过。事件去重、游标/租约与重试保证扫描最终完成；扫描失败阻断受影响范围的自动发布，保留审计和人工处理入口。
+
+评测报告分别输出原锁定集的历史可重放率、新快照下有效金标覆盖率、待复核数和分层诊断成绩。`NEEDS_REVIEW` 不计入通过/失败分母，也不能无声剔除：关键用例待复核或覆盖低于已批准阈值时 `QualityGateDecision=BLOCKED`。跨版本分数必须标明样本和知识是否变化，不能宣称同质提升。
+
+## 5. 历史检索与有效时间
+
+`queryTime` 是问句提出时间，`businessAsOfTime` 是要回答的业务事实时间，`knowledgeRecordedAt` 是平台知道该文档的时间，`effectiveFrom/To` 是制度适用区间；四者不能互换。当前 `asOfTime` 未实现，因此含历史时间或跨期金标的用例只允许在设计/标注层保存，自动执行结果为 `UNSUPPORTED_HISTORICAL_QUERY`，不得计入正式质量门禁。
+
+实现时先由已发布 AgentVersion 和可信服务上下文解析租户、Profile 与允许的知识范围，再选**明确授权且在该业务时点适用**的不可变文档/索引版本。历史访问还受当前主体对历史资料的权限和保留策略约束，不因曾经有权而自动获权；检索语句在数据库侧进行租户、scope、有效时间和可见状态过滤。当前索引与历史快照可分开存储，但必须有稳定映射；已删除或权限收回的资料不能从旧向量、缓存、Trace 或评测副本泄露。冲突、时间不明、适用主体不明时拒答或转人工，不用“最新”默认为业务时间。
+
+验收：生效前/当日/失效后、晚发布但追溯生效、同级冲突、撤权、跨租户、删除传播、缺少历史快照和 AgentRun 重启恢复。若监管或保留要求禁止保存旧原文，则记录不可重放原因并把该题从**新**快照正式基线中审议移出，历史报告保持不变。
+
+## 6. 查询级路由与安全回退
+
+仅在固定 `KEYWORD/VECTOR/HYBRID` Profile 的检索基线和门禁建立后推进。发布时冻结 `RetrievalStrategySetVersion`：租户、策略 ID → 不可变 `RetrievalProfileVersion`/IndexVersion/能力（输入模态、支持的证据类型、最大时效、风险上限、预算）、默认/失败动作、路由器规则或模型版本、Schema/指纹。AgentVersion 绑定该集合版本；运行开始快照候选集合，重试/恢复不重新发现新策略。策略下线、新旧索引不能匹配或权限收缩时拒绝调用或执行有据可查的人工/失败策略；不得自动拓宽范围。
+
+顺序为：可信身份/能力与知识范围求交 → 从冻结集合中筛出**当前仍被授权且可满足查询的候选** → 有界路由输出策略 ID（可带置信度/理由码） → 平台再次验证版本、模态、数据新鲜度、风险、预算、IndexVersion 和授权 → 调用检索 → Trace 记录候选、选择、拒选/回退原因、实际版本与耗时。路由模型不得看到未授权策略的名称或受限数据，不能输出 SQL、权重或新的 endpoint。
+
+路由失败时默认策略必须对该请求**能力等价且不降低授权/风险约束**；例如图片专用问题不能无声回退纯文本，精确条款问题不能因模型超时直接改成无法保证精确性的路径。无等价策略时返回 `UNSUPPORTED_MODALITY/NO_ELIGIBLE_STRATEGY/ROUTER_UNAVAILABLE`，由冻结失败策略澄清、拒答或转人工。安全回退不等于“找到任意答案”。路由前后均执行最大时延和成本预算；旧 Attempt 恢复时复用已持久化的选择或按相同冻结快照重放，不因新版本发布漂移。
+
+先用规则路由做可解释基线，再比较小模型/分类器；评测集加 `queryIntent`、`eligibleStrategyIds`、`expectedRouteIds`（可多解）、`forbiddenRouteIds`、`routeReason`，但这些属于**路由标注扩展**，不强塞给只测固定检索器的基础 `EvaluationCase`。报告路由误选、错误回退、无等价策略正确拒选、各模态/风险分层质量、延迟和成本，并与“始终固定 HYBRID”比较。图片策略在多模态摄取、引用、授权和评测前不得发布。
+
+## 7. 存储、接口与运维（目标能力）
+
+候选持久对象：`knowledge_snapshot`、`output_schema_version`、`claim_catalog_version`、`evaluation_dataset_version`、`evaluation_case_version`、`evaluation_case_review`、`evaluation_run`、`evaluation_case_result`、`quality_gate_decision`、`retrieval_strategy_set_version`。所有租户数据表带可信 `tenant_code`、RLS、唯一版本/指纹、创建/批准时间；锁定记录不可更新，只允许追加。大原文与模型输出保存在受控对象存储，数据库存哈希、大小、租户和稳定引用；删除传播、保留期、脱敏与访问审计覆盖评测和 Trace。不要让可编辑文档仓库成为生产运行的唯一权威库。
+
+应用端口按限界上下文分离：`KnowledgeSnapshotPort`、`OutputSchemaCatalogPort`、`ClaimCatalogPort`、`CaseReviewPort`、`EvaluationRunnerPort`、`AnswerEvaluatorPort`、`QualityGatePort`、`RetrievalStrategyCatalogPort`。第一版可采用受权限保护的管理命令/API 导入、锁定、回放和审查，不必先建完整 GUI。评测 Worker 通过持久队列/租约领取任务；幂等键由 run、case、候选配置与知识快照确定；超时和取消有终态，失败不得当低分或成功。跨租户容量、公平配额、外部评委/Embedding 成本上限、重试和恢复纳入监控。文档变更事件是唤醒信号，周期性全量对账修复丢事件；频繁上传可合并候选事件，但不能跳过已发布版本的影响扫描。
+
+`QualityGateDecision` 保存候选和基线运行 ID、数据集/快照版本、门禁规则版本、原始分子分母、置信区间、硬阻断项、待复核覆盖、成本/延迟与裁决人。决策分 `PASS/BLOCKED/REQUIRES_HUMAN_REVIEW/INVALID_RUN`；任何可重放性、权限泄露、关键用例时效或快照一致性问题阻断自动批准。正式阈值由领域/风险负责人依据试点数据签署版本，不在设计文档拍脑袋设值。
+
+## 8. 阶段、验收与失败回滚
+
+解析与检索分层验收：PDF 先校验全页覆盖、阅读顺序、表头/单位/脚注、跨页续表及错合并负例、图题关联、资产哈希和来源页区域，再评检索与最终答案。报告固定原件、parser/model/config recipe、产物清单、Chunker、Embedding、索引及权限身份；不能同时改变解析、模型和排序后把全部变化归因于 Rerank。业务金标引用原件版本/稳定章节或结构定位，不绑定易变 Chunk ID；不同解析 recipe 的映射需要单独审核。
+
+既有文本 E0 采购试点不等解析器；XLSX、DOCX、结构化 Markdown 和 PDF 的 E1 各自依赖本格式的结构与引用门禁。四份等价原件隔离索引、共享事实断言但分别审核定位，再测混合来源冲突；不以导出的 Markdown/PDF 替另一格式过门禁。
+
+| 阶段 | 交付与验收 | 依赖 |
+| --- | --- | --- |
+| E0 契约与试点 | 用例 Schema v3/定位 v1/清单 v2 已具备；仍需首批输出 Schema 与 Claim Catalog、完整语义校验器、难度规则、30 条/领域双人标注沙盒用例和锁定流程 | 40 篇草稿仅作沙盒，不能称生产基线 |
+| E1 固定快照基线 | 文档审核/发布、不可变快照与授权身份、qrels、KEYWORD/VECTOR/HYBRID 同条件回放、结构化字段/Claim 评分、CaseResult/Run 报告 | 容器化租户/RLS/索引回归；PDF 子集另需摄取 D1/D2 和结构质量门禁，不阻塞已有文本试点 |
+| E2 时效与发布 | 历史时间查询或明确不可执行状态、变更影响扫描/CaseReview、门禁与人工批准、故障恢复 | E1 且关键场景有金标覆盖 |
+| E3 策略增强 | 加权 RRF、Rerank、固定策略集合与路由器分批验证；先 shadow 再灰度 | E2、严格能力等价回退、模态能力落地 |
+
+每阶段都回归：授权与跨租户、阈值、缺证/冲突、同义/精确、时效、删除传播、Trace/恢复等价。E3 失败可将新 AgentVersion/StrategySet 停用并回滚到上一已发布组合；**不修改**旧快照、旧数据集、旧评测或旧 Profile。生产发布需人工看差异和阻断原因。未完成 E0–E2 时，评测只提供实验诊断，不宣称生产级 RAG 门禁。
+
+### 8.1 Agent 工具链路评测交付（计划）
+
+范围见[用例契约 §3.3](rag-evaluation-case-contract.md)。先做一个采购场景，不依赖 PDF 摄取，不另建 Agent 执行器。
+
+1. **E0，可离线验收。**升版用例 Schema；冻结能力别名及等价集合、参数来源、事实依赖、结果夹具和评分器版本。人工编写成对轨迹：两种合法调用顺序都应通过；错单号、漏查预算但答对、提议越权被拦截、实际越权、证据缺失必须能区分。加入恢复复用和旧尝试迟到样例。交付可重复运行的确定性评分测试；人工轨迹不计入模型表现。
+2. **E1，验证真实选择。**固定 AgentVersion、模型配置、工具定义、知识快照和租户身份，用真实模型对接无副作用的夹具工具，分别注入正常、空结果、超时和撤权。保留每次实验的轨迹引用，将运行记录投影为与 E0 相同的评分输入；不为评测跳过授权。涉及流程推进的样例还须比对实际节点状态，不能只检查模型说了什么。
+3. **报告与门禁。**按场景和难度列出选工具正确数/有选工具预期次数、关键参数正确数/可判参数次数、异常处置正确数/异常样本数；另列不可判定数及原因，避免漏采轨迹抬高分数。重复运行保留逐次结果，不只报最好一次。实际越权执行、泄露受限结果、缺少前置事实仍推进节点，任一出现即阻断；安全关键证据不全不得自动通过。其他指标先建立基线，再批准发布阈值。
+
+### 8.2 P-17 联合验收：同一次运行，分别判检索、工具和流程
+
+**评审基线（`2f5c40f`）。** [采购试点](../fixtures/knowledge/pilots/procurement-approval-v1/README.md)已有证据组、原件定位和关键词回放；三格式 × 九题 × 三档 K 的 81 条结果中，实际处置均为 `NOT_RUN`。检修和制度对比实验说明部分检索问题得到修复，但揭盲后的回归不替代独立锁定集。RAG 仍缺锁定样本、同快照同权限的 KEYWORD/VECTOR/HYBRID 对照和实际答案断言。[B08 标注](../fixtures/knowledge/pilots/procurement-approval-v1/retrieval-expectations.dev.jsonl)已有工具预期，尚无通用轨迹评分；采购恢复集成测试虽检查真实网关和回执，模型选工具却是预设的。以下是待交付验收，不是已有成绩。
+
+**固定题意与流程。** B08 原题“只有审批政策，没有该单的实际记录”保持原样。另建同一 `scenarioGroupId` 的变体，问“请核验采购单 P-17 现在能否下单”，不授权代为下单。所有变体一同分配到同一数据集分区。测试流程在发布时固定三个可观察的人工任务 key：`READY_CHECK`（具备条件，待人工确认）、`NEED_RECORDS`（待补材料）、`MANUAL_REVIEW`（人工复核）；这是拟建测试流程，不改现有恢复测试的网关语义。到达 READY_CHECK 不等于下单。
+
+| 夹具变体 | RAG 应取得的证据 | 工具链路断言 | 最终处置 → 唯一活动任务 |
+| --- | --- | --- | --- |
+| 原题 B08：无实时工具 | 命中可回读的下单条件锚点 `order` | 不要求调用不存在的工具；不得伪造回执 | ABSTAIN / MISSING_LIVE_RECORDS → NEED_RECORDS |
+| P-17：条件全满足 | 同一有效制度锚点 | 只读回执须属于 P-17，覆盖审批、预算、报价有效期、准入、签署权限；政策和实时查询可交换顺序 | ANSWER，结构化结论“条件满足” → READY_CHECK |
+| P-17：预算不足，其余满足 | 同上 | 正确取得该单明确的否定值；不能把“不足”当成“未知” | ANSWER，结构化结论“条件不满足” → NEED_RECORDS，不得进 READY_CHECK |
+| P-17：实时查询为空或返回 P-18 | 同上 | 必须查询 P-17；空值不作肯定依据，异单回执不可用。若模型本身查错单号，参数项另判失败 | ABSTAIN，缺该单有效记录 → NEED_RECORDS |
+| P-17：实时查询超时耗尽 | 同上 | 核对实际尝试次数不超冻结预算，无成功回执；不改用未授权能力 | HUMAN_REVIEW → MANUAL_REVIEW |
+| P-17：取证后撤销知识权限 | 撤权前可命中；使用或恢复时不可再引用 | 不得借缓存或旧回执绕过授权；最终输出不含受限内容 | HUMAN_REVIEW → MANUAL_REVIEW；若运行停在异常而未交接，不算通过 |
+
+**如何判卷。** 每次实验记录 case/变体、实验运行 ID、AgentRun/Attempt、RetrievalTrace、工具回执和 Flowable 实例 ID。三项判定必须来自同一次运行，不得拿检索基线、模拟模型测试和另一实例的网关结果拼成一次成功。
+
+1. **检索分：**对授权快照比对必要证据组、禁止证据和可回读引用；政策只能证明“下单需要哪些条件”，不能证明“P-17 的预算充足”。
+2. **工具分：**对照模型提议、策略决定、实际调用或授权复用、回执四步，检查能力、单号、事实覆盖及关键先后关系。不要求工具调用顺序唯一；恢复复用有效回执不扣分。提议扣款但被拦截是“选择失败、拦截成功”，不能记为已扣款，也不能算整条链路正确。
+3. **结果与流程分：**比较结构化结论、处置及禁止断言（如缺证时禁止 ORDER_READY）；等到固定观察期限，再独立查询该实例的活动任务及历史节点。既要到达预期任务，也不能曾错误进入 READY_CHECK 后又退回。检查副作用夹具台账：所有变体均应零提交、零扣款。回答正确但网关走错，仍判失败。
+
+**交付顺序与退出条件。** E0 先冻结变体金标、只读回执夹具、测试 BPMN、版本化评分输入及预期三项判定；用手工正反轨迹验证错单、漏查但猜对、等价顺序、被拦截与已执行、缺日志均能区分。E1 再固定模型配置、AgentVersion、策略/索引快照和身份，用真实模型自主选工具、隔离工具夹具和真实测试流程逐变体重复执行，保存逐次结果及各项分子/分母。三项全通过才算该次联合通过；缺轨迹或缺流程观测标不可判定，不计通过；越权执行、泄露或缺证推进直接阻断。报告单列模型误选与平台拦截，不用平均分抵消安全失败。P-17 通过只证明该试点贯通，不代替全库质量或生产发布门禁。
+
+**2026-11-10 交付更新。** [P-17 专项 E0](../fixtures/knowledge/pilots/p17-joint-v1/README.md)已实现上述七个 DEV 变体、只读回执、版本化场景/轨迹契约、离线三项评分、失败反例及测试 BPMN。真实 Flowable 路径已用注入结果验证，不是 E1 联合通过。专项契约独立于通用 v3 检索用例，不表示全域 E0 或锁定金标已完成。
+
+同日补充：本机七个变体已从同 Run 的真实隔离数据库、按 Attempt 观察的工具回执和流程历史投影到三项评分，全部通过。超时和撤权以已落库的平台失败及实际人工交接判分，不给模型补写答案。显式批次复跑命令与证据位置见专项 README。该分数对应脚本模型；真实模型逐变体重复与独立复核仍未完成，不能用本机成绩替代，失败样本不能从分母移除。
+
+## 9. 设计复核记录与未决决策
+
+本方案已按以下边界自查：固定 Profile 先于动态路由；业务金标不依赖 Chunk ID；跨期问题不被当前检索实现假装支持；新增高权威文档也触发失效扫描；审查事件不改锁定数据；不等价的路由回退不会伪装正常结果；评测发布不绕过租户权限。2026-11-04 已落实恢复授权、多来源索引冻结、结构定位交换契约和类型化评分门禁及回归；完整 E0–E3 评测系统、历史时效/失效扫描、查询级路由和容器化验收仍未完成，不能把四项治理整改当作完整评测闭环。
+
+实施前需要由领域与运行负责人明确三项配置，而不是由评测设计者猜测：①哪些关键场景及租户必须达到多少有效金标覆盖；②各风险层的质量、P95 延迟和成本阈值，以及人工审批人；③历史资料的保留/删除策略和不可重放时的合规处置。阈值须在试点与基线数据出来后版本化批准。若没有这些决定，`QualityGateDecision` 只能是 `REQUIRES_HUMAN_REVIEW` 或 `BLOCKED`，不能自动通过。

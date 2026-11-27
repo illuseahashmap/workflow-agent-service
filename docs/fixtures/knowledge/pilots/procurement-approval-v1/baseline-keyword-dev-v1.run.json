@@ -1,0 +1,18 @@
+{
+  "fixtureTextSha256" : {
+    "anchors.tsv" : "ecf0d1481965891cf6db60d357341e2ed88c4d1323a962cc60c601dab9a27349",
+    "cases.tsv" : "2621be0ffabf70a39c930cd118229dad01d242d41afd52084a5f37d93bcd4047",
+    "retrieval-expectations.dev.jsonl" : "b5258d6ea152b33ef41142d496d19c3300d7e4f1d98fabfa48320b2b12068897"
+  },
+  "sourceByteSha256" : {
+    "DOCX" : "b184db3829ebfe852cf67343914283858594f04c386a0c29078a66e87ff46450",
+    "MD" : "edc5e208a2923d3263187325fb13abe47406d01d4a09fad7d310d7990c44ca6e",
+    "XLSX" : "65959d85060e41b79ff662a0d0ae39bc661104ddc2fa713cc3ef08d0cef85b73"
+  },
+  "dataset" : "procurement-native-retrieval-dev-v1",
+  "modelAndFlowable" : "NOT_RUN",
+  "topK" : [ 3, 5, 10 ],
+  "finishedAt" : "2026-11-08T08:50:03.167073Z",
+  "strategy" : "KEYWORD",
+  "status" : "DRAFT"
+}

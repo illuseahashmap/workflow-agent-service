@@ -1,0 +1,41 @@
+# 项目文档导航
+
+最近权威入口文档核对：2026-11-12（V69 已接通图结果确定性验收、AgentRun/Outbox 原子完成与既有 Flowable 消费，见[结果交接回归](quality/graph-completion-regression.md)。并发治理见[治理记录](quality/graph-capacity-regression.md)，启用/升级边界见[部署手册](operations/graph-dispatch-host.md)。图运行整体运维、业务等价和容量报告仍开放，现有业务未切换）。
+
+项目文档只维护三个权威类别。状态判断不能从历史课程、旧实施记录或代码注释推断，必须以这三个入口为准。
+
+| 类别 | 唯一入口 | 说明 |
+| --- | --- | --- |
+| 长期设计 | [long-term-design.md](architecture/long-term-design.md) | 架构边界、领域模型、扩展方向和不可破坏的工程约束 |
+| 下一步计划 | [status.md](status.md) | 当前基线、当前阶段、下一步验收和明确暂不做的内容 |
+| 待修复问题 | [known-issues.md](quality/known-issues.md) | 仍未关闭的问题、影响、修复方向和验收标准 |
+
+## 支撑资料
+
+- [API 契约](api/README.md)：机器可读接口契约和兼容性规则，不承担产品路线。
+- [学习知识库](learning/)：用于理解已实现设计的课程材料，不承担当前状态判断。
+- [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
+- [开发方向与防偏离门禁](architecture/development-direction-guardrails.md)：参考项目边界、技术主线、功能准入门禁和代表性验收闭环。
+- [RAG 短期实施方案](architecture/rag-short-term-implementation-plan.md)：知识模块、中立检索契约、可靠摄取、Evidence/Citation、评测和图谱扩展边界。
+- [RAG 四格式原生证据设计](architecture/rag-four-format-evidence-design.md)：统一原件、证据与评测，分别定义 Markdown、Excel、Word、PDF 的结构、定位和发布门禁。
+- [RAG PDF 解析适配设计](architecture/rag-structured-document-ingestion-design.md)：LangChain4j + MinerU 选型、PDF/OCR/跨页表；尚未接入。
+- [RAG 结构化 PDF 实施设计](architecture/rag-structured-document-implementation-design.md)：前置恢复授权、引用/快照/评分契约已加固；MinerU 解析、结构扩展和完整业务闭环仍待实施。
+- [RAG 治理 V59 升级](operations/rag-governance-upgrade.md)：恢复授权、多来源索引冻结、ScorePolicy 与交换格式升级边界；不是 MinerU 部署说明。
+- [MCP 短期实施方案](architecture/mcp-short-term-implementation-plan.md)：连接器、工具目录快照、AgentVersion 绑定、协议调用、安全和可靠性闭环。
+- [Agent 资源治理](architecture/agent-resource-governance.md)：长期资源隔离、虚拟线程和公平调度约束。
+- [LangGraph 内部运行时接入](architecture/langgraph-runtime-adoption-design.md)：开源部署、内部状态唯一权威、跨服务命令/结果、图版本、治理网关和 G0–G3 门禁；独立模块已有回归，业务接入待完成。
+- [LangGraph 治理 Gateway 契约](architecture/langgraph-governed-gateway-contract.md)：Python/Java 引用与身份交换、工具账本复用、有界 HTTP、联调证据及尚未开放的生产入口。
+- [证据驱动的 Agent 自治](architecture/evidence-governed-agent-autonomy.md)：后续自治治理方向。
+- [工作流与 Agent 交互契约](architecture/workflow-agent-interaction-contract.md)：当前交互契约和表单扩展边界。
+- [历史交付记录](workflows/README.md)：保留分阶段需求、设计、任务和追踪证据，只用于审计，不承担当前状态判断。
+
+## 文档规则
+
+- 已完成内容只出现在“下一步计划”的当前基线或支撑资料的实现边界中，不重复进入问题清单。
+- 计划项必须有优先级、边界和验收标准；没有验收标准的内容只能放入长期设计。
+- 待修复问题必须说明当前实现、影响和下一步；修复后从问题清单移除，并在当前基线留下简短记录。
+- 未关闭条目按“待实现 / 已修复待验收 / 部署风险”区分；代码缺陷已修复但仍缺生产验收时，标题和剩余工作必须只描述验收缺口，不得继续声称原能力缺失。兼有开发和验收工作的条目须分别列明。
+- 同一问题只保留一个跟踪条目，合并时记录原编号去向；验证结果统一记录在 `status.md`，注明日期、执行环境、通过与跳过数量，不能用文档更新时间冒充测试日期或当前环境状态。
+- 详细设计可以保留，但不得自行维护与三个权威入口冲突的状态结论。
+- `workflows/` 下的交付记录是当时决策的归档快照；与权威入口冲突时，以长期设计、下一步计划和待修复问题为准，不回写历史快照伪造当时状态。
+- 产品定位和跨仓库路线只在聚合仓库维护，后端不复制一套产品路线。

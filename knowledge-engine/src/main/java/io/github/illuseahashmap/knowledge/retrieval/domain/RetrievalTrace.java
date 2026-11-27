@@ -1,0 +1,62 @@
+package io.github.illuseahashmap.knowledge.retrieval.domain;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+
+/** Immutable audit facts for one authorized retrieval, without storing document contents. */
+public record RetrievalTrace(
+        String traceId,
+        String tenantCode,
+        String queryFingerprint,
+        List<String> authorizedScopes,
+        RetrievalStatus status,
+        String strategy,
+        int evidenceCount,
+        Instant createdAt,
+        Long profileVersionId,
+        Long indexVersionId,
+        List<EvidenceReference> evidenceReferences,
+        long elapsedMillis,
+        List<SourceIndexBinding> indexBindings
+) {
+    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
+            List<String> authorizedScopes, RetrievalStatus status, String strategy, int evidenceCount,
+            Instant createdAt, Long profileVersionId, Long indexVersionId,
+            List<EvidenceReference> evidenceReferences, long elapsedMillis) {
+        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy, evidenceCount,
+                createdAt, profileVersionId, indexVersionId, evidenceReferences, elapsedMillis, List.of());
+    }
+    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
+                          List<String> authorizedScopes, RetrievalStatus status, String strategy,
+                          int evidenceCount, Instant createdAt) {
+        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy,
+                evidenceCount, createdAt, null, null, List.of(), 0);
+    }
+
+    public RetrievalTrace {
+        traceId = requireText(traceId, "traceId");
+        tenantCode = requireText(tenantCode, "tenantCode");
+        queryFingerprint = requireText(queryFingerprint, "queryFingerprint");
+        authorizedScopes = List.copyOf(Objects.requireNonNullElse(authorizedScopes, List.of()));
+        status = Objects.requireNonNull(status, "status must not be null");
+        strategy = requireText(strategy, "strategy");
+        if (evidenceCount < 0) {
+            throw new IllegalArgumentException("evidenceCount must not be negative");
+        }
+        evidenceReferences = List.copyOf(Objects.requireNonNullElse(evidenceReferences, List.of()));
+        indexBindings = List.copyOf(Objects.requireNonNullElse(indexBindings, List.of()));
+        if (elapsedMillis < 0) {
+            throw new IllegalArgumentException("elapsedMillis must not be negative");
+        }
+        createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
+    }
+
+    private static String requireText(String value, String name) {
+        value = Objects.requireNonNull(value, name + " must not be null").trim();
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
+    }
+}
