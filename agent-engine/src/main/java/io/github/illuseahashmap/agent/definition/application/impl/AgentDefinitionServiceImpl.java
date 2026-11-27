@@ -344,6 +344,33 @@ public class AgentDefinitionServiceImpl implements AgentDefinitionService {
         validateInputSchema(version.inputSchema());
         validateToolSet(version.toolSetJson(), version.executionMode());
         try {
+            var evidence =
+                    io.github.illuseahashmap.agent.definition.domain.EvidenceContract.parse(
+                            objectMapper, version.outputSchema());
+            if (evidence != null) {
+                var bound = new java.util.HashSet<String>();
+                objectMapper.readTree(version.toolSetJson()).forEach(t -> bound.add(t.asText()));
+                if (version.executionMode() != AgentExecutionMode.PLATFORM_AGENT
+                        || !bound.contains("knowledge_search")
+                        || evidence.decisions().values().stream()
+                                .anyMatch(r -> !bound.contains(r.tool()))
+                        || version.retrievalProfileVersionId() == null
+                        || !citationPublication.containsAll(
+                                tenantCode,
+                                version.retrievalProfileVersionId(),
+                                evidence.requiredCitations())
+                        || !"string"
+                                .equals(
+                                        objectMapper
+                                                .readTree(version.inputSchema())
+                                                .path("properties")
+                                                .path(evidence.subjectField())
+                                                .path("type")
+                                                .asText())) {
+                    throw io.github.illuseahashmap.agent.definition.domain.EvidenceContract
+                            .invalid();
+                }
+            }
             var claim =
                     io.github.illuseahashmap.agent.definition.domain.CitationClaim.parse(
                             objectMapper, version.outputSchema());

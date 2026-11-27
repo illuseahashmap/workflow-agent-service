@@ -4254,6 +4254,183 @@ class GraphPersistenceIntegrationTest {
     }
 
     @Test
+    void v2PermanentProviderRejectionPersistsStopAndCompletesWithoutAnotherModel() {
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n -> {
+                            throw new io.github.illuseahashmap.agent.provider.application.port
+                                    .ModelProviderException(
+                                    "PROVIDER_REQUEST_REJECTED",
+                                    io.github.illuseahashmap.agent.provider.application.port
+                                            .ModelProviderFailureKind.PERMANENT,
+                                    "Synthetic permanent provider rejection");
+                        },
+                        null,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 2, 0, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var operation =
+                new Invocation(
+                        "MODEL", "model:rejected", List.of(claim.binding().inputRef()), null);
+        assertThatThrownBy(() -> invoke(gateway, claim, operation)).hasMessage("RUN_STOPPED");
+        assertThat(db.queryForObject("SELECT reason FROM agent_graph_run_stop", String.class))
+                .isEqualTo("GRAPH_MODEL_REJECTED");
+        assertThatThrownBy(() -> invoke(gateway, claim, operation)).hasMessage("RUN_STOPPED");
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(completion(false).completeNext()).isFalse();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class))
+                .isEqualTo("FAILED");
+        assertThat(db.queryForObject("SELECT count(*) FROM completion_test_outbox", Integer.class))
+                .isEqualTo(1);
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void evidenceProjectionRebuildsFromCommittedOriginalToolsAndCannotInventPolicy() {
+        String schema =
+                """
+                {"properties":{"decision":{"type":"string","enum":["READY","MISSING"]},"citations":{"type":"array","items":{"type":"string"}}},
+                 "x-workflow-evidence":{"version":1,"subjectField":"word","decisionField":"decision","citationsField":"citations",
+                 "requiredCitations":["reviewed-policy"],"abstainDecisions":["MISSING"],"decisions":{"READY":{"tool":"lookup","argumentSubjectField":"word",
+                 "resultSubjectPointer":"/subject","allOf":{"/count":2},"anyOf":{}}}}}
+                """;
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n ->
+                                n == 1
+                                        ? toolResponse()
+                                        : answer(
+                                                "{\"decision\":\"READY\",\"citations\":[\"reviewed-policy\"]}"),
+                        schema,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 2, 1, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var model =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL", "model:first", List.of(claim.binding().inputRef()), null));
+        assertThat(lastModelInput.get()).contains("missingReviewedCitations", "reviewed-policy");
+        var tool =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "TOOL",
+                                model.decision().tools().getFirst().argumentsRef(),
+                                List.of(),
+                                model.decision().tools().getFirst()));
+        var restored =
+                cognition(
+                        calls,
+                        n -> answer("{\"decision\":\"READY\",\"citations\":[\"reviewed-policy\"]}"),
+                        schema,
+                        40000);
+        var candidate =
+                invoke(
+                        restored,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "model:second",
+                                List.of(
+                                        claim.binding().inputRef(),
+                                        model.receiptRef(),
+                                        tool.receiptRef()),
+                                null));
+        assertThat(lastModelInput.get())
+                .contains(
+                        "originalReceiptFields",
+                        "observedFields",
+                        "missingReviewedCitations",
+                        "reviewed-policy");
+        var rejected =
+                invoke(
+                        restored,
+                        claim,
+                        new Invocation(
+                                "VALIDATE",
+                                "validate:first",
+                                List.of(
+                                        candidate.decision().candidateRef(),
+                                        model.receiptRef(),
+                                        tool.receiptRef(),
+                                        candidate.receiptRef()),
+                                null));
+        assertThat(rejected.accepted()).isFalse();
+        assertThat(calls).hasValue(2);
+    }
+
+    @Test
+    void v1PermanentProviderRejectionPreservesLegacyWireBehavior() {
+        var gateway =
+                cognition(
+                        new AtomicInteger(),
+                        n -> {
+                            throw new io.github.illuseahashmap.agent.provider.application.port
+                                    .ModelProviderException(
+                                    "PROVIDER_REQUEST_REJECTED",
+                                    io.github.illuseahashmap.agent.provider.application.port
+                                            .ModelProviderFailureKind.PERMANENT,
+                                    "rejected");
+                        },
+                        null,
+                        40000);
+        var claim = reserveAndClaim(1);
+        assertThatThrownBy(
+                        () ->
+                                invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "MODEL",
+                                                "model:1",
+                                                List.of(claim.binding().inputRef()),
+                                                null)))
+                .hasMessage("MODEL_REJECTED");
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_run_stop", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void v2TransientProviderFailureDoesNotBecomeAPermanentStop() {
+        var gateway =
+                cognition(
+                        new AtomicInteger(),
+                        n -> {
+                            throw new io.github.illuseahashmap.agent.provider.application.port
+                                    .ModelProviderException(
+                                    "PROVIDER_UNAVAILABLE",
+                                    io.github.illuseahashmap.agent.provider.application.port
+                                            .ModelProviderFailureKind.RETRYABLE,
+                                    "Synthetic transient provider failure");
+                        },
+                        null,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 2, 0, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        assertThatThrownBy(
+                        () ->
+                                invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "MODEL",
+                                                "model:transient",
+                                                List.of(claim.binding().inputRef()),
+                                                null)))
+                .hasMessage("MODEL_TRANSIENT");
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_run_stop", Integer.class))
+                .isZero();
+    }
+
+    @Test
     void v2StopOutboxFailureRollsBackCompletionButNeverStopOrPermits() {
         cognition(new AtomicInteger(), n -> answer("ok"), null, 40000);
         executions.reserve("alpha", 1, "b".repeat(64), 2, 0, 2);

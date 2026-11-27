@@ -103,6 +103,10 @@ public class LangChain4jOpenAiModelProviderAdapter implements ModelProviderPort 
             throw failure("PROVIDER_TIMEOUT", ModelProviderFailureKind.TIMEOUT,
                     "Model Provider request timed out", exception);
         } catch (RateLimitException exception) {
+            if (ProviderUsageLimit.exceeded(objectMapper, exception.getMessage())) {
+                throw failure("PROVIDER_USAGE_LIMIT_EXCEEDED", ModelProviderFailureKind.PERMANENT,
+                        "Model Provider usage limit requires operator intervention", exception);
+            }
             throw failure("PROVIDER_RATE_LIMITED", ModelProviderFailureKind.RETRYABLE,
                     "Model Provider rate limit was reached", exception);
         } catch (AuthenticationException exception) {

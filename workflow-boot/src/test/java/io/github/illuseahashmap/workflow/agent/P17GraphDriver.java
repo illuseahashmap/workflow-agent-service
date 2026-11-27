@@ -89,7 +89,25 @@ final class P17GraphDriver {
                         assertThat(p.revokedLocators)
                                 .as("No live model after revocation")
                                 .isEmpty();
-                        var response = delegate.invoke(request);
+                        ModelProviderResponse response;
+                        try {
+                            response = delegate.invoke(request);
+                        } catch (
+                                io.github.illuseahashmap.agent.provider.application.port
+                                                .ModelProviderException
+                                        failure) {
+                            if (p.live) {
+                                P17ProviderFailureEvidence.write(
+                                        result.resolveSibling(
+                                                result.getFileName()
+                                                        + ".model-error-"
+                                                        + modelCalls.incrementAndGet()
+                                                        + ".json"),
+                                        request,
+                                        failure);
+                            }
+                            throw failure;
+                        }
                         if (p.live) {
                             try {
                                 JSON.writerWithDefaultPrettyPrinter()
@@ -220,7 +238,18 @@ final class P17GraphDriver {
                                     ds.getPassword())));
             var process = command.start();
             try {
-                assertThat(process.waitFor(90, TimeUnit.SECONDS))
+                assertThat(
+                                process.waitFor(
+                                        Math.max(
+                                                        1,
+                                                        java.time.Instant.ofEpochMilli(
+                                                                                claim.binding()
+                                                                                        .deadlineEpochMs())
+                                                                        .getEpochSecond()
+                                                                - java.time.Instant.now()
+                                                                        .getEpochSecond())
+                                                + 30,
+                                        TimeUnit.SECONDS))
                         .as("Graph probe deadline")
                         .isTrue();
                 assertThat(process.exitValue()).withFailMessage(Files.readString(log)).isZero();
@@ -259,8 +288,11 @@ final class P17GraphDriver {
                             new GraphCandidateGate(p.validator, JSON, budget),
                             publisher,
                             JSON);
-            assertThat(completion.completeNext()).isTrue();
-            assertThat(completion.completeNext()).isFalse();
+            int completed = 0;
+            while (completion.completeNext()) {
+                assertThat(++completed).isLessThanOrEqualTo(32);
+            }
+            assertThat(completed).isPositive();
         } finally {
             server.stop(0);
             workers.shutdownNow();
@@ -271,7 +303,33 @@ final class P17GraphDriver {
                                             "SELECT status FROM agent_run WHERE id=?",
                                             String.class,
                                             runId))) {
-                executions.revoke(TENANT, runId); // Test cleanup of incomplete observations only.
+                var tx =
+                        new org.springframework.transaction.support.TransactionTemplate(
+                                new org.springframework.jdbc.datasource
+                                        .DataSourceTransactionManager(
+                                        jdbc.getJdbcTemplate().getDataSource()));
+                tx.executeWithoutResult(
+                        status ->
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                                .persistence.JdbcAgentRunOperationsRepository(jdbc)
+                                        .cancelActive(
+                                                TENANT,
+                                                runId,
+                                                "pilot-cleanup",
+                                                "pilot-cleanup",
+                                                "failed acceptance cleanup"));
+                var cleanup =
+                        new GraphCompletionService(
+                                new JdbcGraphCompletionStore(jdbc, executions, codec),
+                                p.versions,
+                                p.registry,
+                                new GraphCandidateGate(p.validator, JSON, budget),
+                                publisher,
+                                JSON);
+                int completed = 0;
+                while (cleanup.completeNext()) {
+                    assertThat(++completed).isLessThanOrEqualTo(32);
+                }
             }
         }
     }

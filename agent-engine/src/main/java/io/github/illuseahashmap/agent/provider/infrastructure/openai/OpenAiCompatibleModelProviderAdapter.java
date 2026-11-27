@@ -309,6 +309,10 @@ public class OpenAiCompatibleModelProviderAdapter implements ModelProviderPort {
     }
 
     private ModelProviderException httpFailure(int statusCode, String responseBody) {
+        if (statusCode == 429 && ProviderUsageLimit.exceeded(objectMapper, responseBody)) {
+            return new ModelProviderException("PROVIDER_USAGE_LIMIT_EXCEEDED", ModelProviderFailureKind.PERMANENT,
+                    "Model Provider usage limit requires operator intervention");
+        }
         ModelProviderFailureKind failureKind = statusCode == 408 || statusCode == 409
                 || statusCode == 429 || statusCode >= 500
                 ? ModelProviderFailureKind.RETRYABLE

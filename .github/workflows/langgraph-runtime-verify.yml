@@ -62,6 +62,14 @@ jobs:
           '-Dtest=AgentRuntimeBindingIntegrationTest,AgentBusinessHttpIntegrationTest,GraphDualPurchaseFlowableIntegrationTest,GraphCallReconciliationControllerTest,P17JointRunTest#scriptedRunsExercisePublishedBindingsAndOutbox,P17GraphJointRunTest#graphRunsExercisePublishedBindingsAndOutbox'
           test
 
+      - name: Verify opt-in evidence contracts on both execution backends
+        working-directory: .
+        run: >-
+          bash ./mvnw --batch-mode --no-transfer-progress -pl workflow-boot -am
+          -Dsurefire.failIfNoSpecifiedTests=false -Dworkflow.p17.graph=true -Dworkflow.p17.evidence=true
+          '-Dtest=P17JointRunTest#scriptedRunsExercisePublishedBindingsAndOutbox,P17GraphJointRunTest#graphRunsExercisePublishedBindingsAndOutbox'
+          test
+
       - name: Archive governance acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,5 +79,7 @@ jobs:
             **/target/site/jacoco/**
             **/target/surefire-reports/**
             **/target/checkstyle-result.xml
+            **/target/p17-runs/**
+            **/target/p17-graph-runs/**
           if-no-files-found: error
           retention-days: 14

@@ -853,6 +853,7 @@ public final class JdbcGraphExecutionStore
         require(
                 java.util.Set.of(
                                 "GRAPH_MODEL_BUDGET_EXHAUSTED",
+                                "GRAPH_MODEL_REJECTED",
                                 "GRAPH_TOOL_BUDGET_EXHAUSTED",
                                 "KNOWLEDGE_RESULT_ACCESS_REVOKED",
                                 "AGENT_TOOL_NOT_AUTHORIZED",

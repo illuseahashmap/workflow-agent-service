@@ -79,4 +79,26 @@ class AgentOutputSchemaValidatorTest {
         assertThatThrownBy(() -> validator.validateDefinition(schema))
                 .isInstanceOf(AgentExecutionException.class);
     }
+
+    @Test
+    void enforcesExactlyOneCoherentBusinessOutcome() {
+        String schema =
+                """
+                {"type":"object","required":["action","decision"],"oneOf":[
+                 {"properties":{"action":{"const":"ANSWER"},"decision":{"enum":["READY","NOT_READY"]}}},
+                 {"properties":{"action":{"const":"ABSTAIN"},"decision":{"const":"MISSING"}}}]}
+                """;
+        validator.validateDefinition(schema);
+        validator.validateOutput(schema, "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING\"}");
+        validator.validateOutput(schema, "{\"action\":\"ANSWER\",\"decision\":\"READY\"}");
+        assertThatThrownBy(
+                        () ->
+                                validator.validateOutput(
+                                        schema, "{\"action\":\"ANSWER\",\"decision\":\"MISSING\"}"))
+                .isInstanceOf(AgentExecutionException.class);
+        assertThatThrownBy(() -> validator.validateOutput("{\"oneOf\":[{},{}]}", "{}"))
+                .isInstanceOf(AgentExecutionException.class);
+        assertThatThrownBy(() -> validator.validateDefinition("{\"oneOf\":[]}"))
+                .isInstanceOf(AgentExecutionException.class);
+    }
 }

@@ -204,6 +204,15 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
         } catch (ExecutionDeadline.Exceeded failure) {
             throw new GraphGatewayException(DEADLINE_EXPIRED);
         } catch (ModelProviderException failure) {
+            if (request.binding().stateSchemaVersion() == 2
+                    && failure.failureKind() == ModelProviderFailureKind.PERMANENT) {
+                var current =
+                        authority.authorize(capability, request.binding(), request.generation());
+                io.github.illuseahashmap.agent.runtime.application.port.GraphRunBudgetPort.from(
+                                authority)
+                        .stop(current, "GRAPH_MODEL_REJECTED");
+                throw new GraphGatewayException(GraphGatewayException.Code.RUN_STOPPED);
+            }
             throw new GraphGatewayException(
                     failure.failureKind() == ModelProviderFailureKind.PERMANENT
                             ? MODEL_REJECTED
@@ -449,8 +458,8 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
         if (org.springframework.util.StringUtils.hasText(version.outputSchema())) {
             prompt +=
                     "\n"
-                        + "Final business answers must match this JSON Schema exactly (tool"
-                        + " decisions use their separate envelope):\n"
+                            + "Final business answers must match this JSON Schema exactly (tool"
+                            + " decisions use their separate envelope):\n"
                             + version.outputSchema();
         }
         if (run.binding().stateSchemaVersion() == 2) {
@@ -554,6 +563,33 @@ public final class GraphCognitionGateway implements GraphGatewayPort {
                         + "Committed tool observations (reference, tool, arguments, original"
                         + " output):\n"
                         + observations;
+        if (io.github.illuseahashmap.agent.definition.domain.EvidenceContract.parse(
+                        json, version.outputSchema())
+                != null) {
+            var evidenceMemory =
+                    new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory(
+                            new io.github.illuseahashmap.agent.runtime.application.checkpoint
+                                    .TaskMemory.Context(
+                                    run.binding().tenantCode(),
+                                    run.binding().runId(),
+                                    run.processInstanceId(),
+                                    version,
+                                    input),
+                            json,
+                            contextBudget);
+            for (var fact : history.tools()) {
+                evidenceMemory.observe(
+                        new io.github.illuseahashmap.agent.runtime.application.checkpoint.TaskMemory
+                                .Receipt(
+                                fact.receiptRef(),
+                                fact.receiptRef(),
+                                fact.toolCode(),
+                                fact.argumentsJson(),
+                                fact.outputDigest()),
+                        fact.output());
+            }
+            context += evidenceMemory.evidenceProjection();
+        }
         if (history.repair() != null) {
             prompt +=
                     "\n"

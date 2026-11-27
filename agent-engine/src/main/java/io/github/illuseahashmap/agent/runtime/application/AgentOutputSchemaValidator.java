@@ -98,6 +98,13 @@ public class AgentOutputSchemaValidator {
         if (!schema.isObject()) {
             throw invalid("Schema node must be an object");
         }
+        JsonNode alternatives = schema.get("oneOf");
+        if (alternatives != null) {
+            if (!alternatives.isArray() || alternatives.isEmpty() || alternatives.size() > 32) {
+                throw invalid("Schema oneOf must contain 1 to 32 alternatives");
+            }
+            alternatives.forEach(this::validateSchemaNode);
+        }
         JsonNode choices = schema.get("enum");
         if (choices != null && (!choices.isArray() || choices.isEmpty())) {
             throw invalid("Schema enum must be a nonempty array");
@@ -133,6 +140,18 @@ public class AgentOutputSchemaValidator {
     private boolean matches(JsonNode schema, JsonNode value) {
         if (value == null || value.isMissingNode()) {
             return false;
+        }
+        JsonNode alternatives = schema.get("oneOf");
+        if (alternatives != null) {
+            int matched = 0;
+            for (var alternative : alternatives) {
+                if (matches(alternative, value)) {
+                    matched++;
+                }
+            }
+            if (matched != 1) {
+                return false;
+            }
         }
         JsonNode choices = schema.get("enum");
         if (choices != null) {

@@ -88,4 +88,57 @@ class TaskMemoryTest {
         assertThatThrownBy(() -> memory.verify("{\"decision\":\"VERIFY\"}"))
                 .hasMessageContaining("authoritative");
     }
+
+    @Test
+    void publishedEvidenceCannotBeInventedBySummaryOrRepairedFinalAnswer() throws Exception {
+        String schema =
+                """
+                {"properties":{"decision":{"type":"string","enum":["READY","MISSING"]},"citations":{"type":"array","items":{"type":"string"}}},
+                "x-workflow-evidence":{"version":1,"subjectField":"orderId","decisionField":"decision","citationsField":"citations",
+                "requiredCitations":["approved"],"abstainDecisions":["MISSING"],"decisions":{"READY":{"tool":"lookup","argumentSubjectField":"orderId",
+                "resultSubjectPointer":"/subject","allOf":{"/status":"OK"},"anyOf":{}}}}}
+                """;
+        String answer = "{\"decision\":\"READY\",\"citations\":[\"approved\"]}";
+        var m = memory(schema);
+        assertThatThrownBy(() -> m.verify(answer)).isInstanceOf(AgentExecutionException.class);
+        String facts = "{\"subject\":\"A\",\"status\":\"OK\"}";
+        var receipt =
+                new TaskMemory.Receipt(
+                        "facts", "f", "lookup", "{\"orderId\":\"A\"}", policy.digest(facts));
+        m.observe(receipt, facts);
+        assertThatThrownBy(() -> m.verify(answer)).isInstanceOf(AgentExecutionException.class);
+        String reference = "{\"sourceType\":\"CHUNK\",\"locator\":\"approved\"}";
+        String policyBody =
+                "{\"status\":\"SUCCESS\",\"citations\":[{\"reference\":"
+                        + reference
+                        + "}],\"evidence\":[{\"reference\":"
+                        + reference
+                        + ",\"text\":\""
+                        + "x".repeat(800)
+                        + "\"}]}";
+        var cited =
+                new TaskMemory.Receipt(
+                        "policy", "p", "knowledge_search", "{}", policy.digest(policyBody));
+        m.observe(cited, policyBody);
+        m.merge(
+                cited,
+                policyBody,
+                "model",
+                ignored -> {
+                    throw new AssertionError("Structured evidence needs no optional model summary");
+                });
+        m.verify(answer);
+        assertThat(m.evidenceProjection())
+                .contains("reviewedCitationsObserved", "approved", "originalReceiptFields");
+        var restored = memory(schema);
+        var state = restored.open(m.snapshot(), 3);
+        assertThatThrownBy(() -> restored.verify(answer))
+                .isInstanceOf(AgentExecutionException.class);
+        for (var r : state.receipts()) {
+            restored.observe(r, r.reference().equals("facts") ? facts : policyBody);
+        }
+        restored.verify(answer);
+        assertThatThrownBy(() -> restored.verify(answer.replace("approved", "invented")))
+                .isInstanceOf(AgentExecutionException.class);
+    }
 }

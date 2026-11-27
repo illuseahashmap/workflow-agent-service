@@ -103,6 +103,8 @@ final class P17Pilot {
     final List<String> revokedLocators = new ArrayList<>();
     final String model;
     final boolean live;
+    final boolean evidenceContract = Boolean.getBoolean("workflow.p17.evidence");
+    final String reviewedCitation;
     final String toolCode;
     final long profile;
     final long index;
@@ -342,7 +344,25 @@ final class P17Pilot {
                         validator,
                         registry,
                         new PostgresCitationPublicationAdapter(db));
+        reviewedCitation =
+                sql.queryForObject(
+                        "SELECT chunk_id FROM knowledge_chunk WHERE tenant_code=? AND"
+                                + " index_version_id=? AND content LIKE ?",
+                        String.class,
+                        TENANT,
+                        index,
+                        "%政策只说明应走的审批路径。没有该采购单%");
         String prompt = Files.readString(DIR.resolve("e1-prompt.txt"));
+        if (evidenceContract) {
+            prompt +=
+                    "\n"
+                        + "本版本启用了 x-workflow-evidence：必须先调用 knowledge_search 取得 requiredCitations"
+                        + " 指定的已审核下单条款，并引用原文 locator。如果存在实时工具，再按输入 orderId 读取记录，核对返回 subject 和五项"
+                        + " facts。全部 MET 才可 ORDER_READY；明确 INSUFFICIENT 才可"
+                        + " ORDER_NOT_READY。没有授权实时工具、EMPTY 或其他单号均为 MISSING_LIVE_RECORDS。"
+                        + "输出只能使用以下配对：ANSWER+ORDER_READY；ANSWER+ORDER_NOT_READY；ABSTAIN+MISSING_LIVE_RECORDS；HUMAN_REVIEW+LIVE_TIMEOUT；HUMAN_REVIEW+AUTH_REVOKED。"
+                        + "证据尚未取得时继续调用授权工具，不要提前给最终答案。该规则不授权代下单。";
+        }
         String schema = Files.readString(DIR.resolve("e1-output.schema.json"));
         if (graph) {
             var frozen = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(schema);
@@ -373,6 +393,80 @@ final class P17Pilot {
                                     new AgentDefinitionCommand(
                                             code, code, "isolated evaluation", true));
                     long id = versions.findLatest(TENANT, def.id()).orElseThrow().id();
+                    String publishedSchema = schema;
+                    if (evidenceContract) {
+                        var root =
+                                (com.fasterxml.jackson.databind.node.ObjectNode)
+                                        new io.github.illuseahashmap.agent.runtime.application.graph
+                                                        .GraphGatewayCodec()
+                                                .read(
+                                                        schema.getBytes(StandardCharsets.UTF_8),
+                                                        com.fasterxml.jackson.databind.node
+                                                                .ObjectNode.class);
+                        var evidence = root.putObject("x-workflow-evidence");
+                        evidence.put("version", 1)
+                                .put("subjectField", "orderId")
+                                .put("decisionField", "decision")
+                                .put("citationsField", "citations");
+                        evidence.putArray("requiredCitations").add(reviewedCitation);
+                        evidence.putArray("abstainDecisions")
+                                .add("MISSING_LIVE_RECORDS")
+                                .add("LIVE_TIMEOUT")
+                                .add("AUTH_REVOKED");
+                        var decisions = evidence.putObject("decisions");
+                        if (joint) {
+                            for (String decision : List.of("ORDER_READY", "ORDER_NOT_READY")) {
+                                var rule = decisions.putObject(decision);
+                                rule.put("tool", toolCode)
+                                        .put("argumentSubjectField", "orderId")
+                                        .put("resultSubjectPointer", "/subject");
+                                var all = rule.putObject("allOf").put("/status", "OK");
+                                var any = rule.putObject("anyOf");
+                                for (String fact :
+                                        List.of(
+                                                "approval",
+                                                "budget",
+                                                "quoteValidity",
+                                                "admission",
+                                                "signingAuthority")) {
+                                    if (decision.equals("ORDER_READY")) {
+                                        all.put("/facts/" + fact, "MET");
+                                    } else {
+                                        any.put("/facts/" + fact, "INSUFFICIENT");
+                                    }
+                                }
+                            }
+                        } else {
+                            ((com.fasterxml.jackson.databind.node.ObjectNode)
+                                            root.path("properties").path("action"))
+                                    .putArray("enum")
+                                    .add("ABSTAIN")
+                                    .add("HUMAN_REVIEW");
+                            ((com.fasterxml.jackson.databind.node.ObjectNode)
+                                            root.path("properties").path("decision"))
+                                    .putArray("enum")
+                                    .add("MISSING_LIVE_RECORDS")
+                                    .add("LIVE_TIMEOUT")
+                                    .add("AUTH_REVOKED");
+                        }
+                        var alternatives = root.putArray("oneOf");
+                        for (var pair :
+                                Map.of(
+                                                "ANSWER",
+                                                List.of("ORDER_READY", "ORDER_NOT_READY"),
+                                                "ABSTAIN",
+                                                List.of("MISSING_LIVE_RECORDS"),
+                                                "HUMAN_REVIEW",
+                                                List.of("LIVE_TIMEOUT", "AUTH_REVOKED"))
+                                        .entrySet()) {
+                            var properties = alternatives.addObject().putObject("properties");
+                            properties.putObject("action").put("const", pair.getKey());
+                            properties
+                                    .putObject("decision")
+                                    .set("enum", JSON.valueToTree(pair.getValue()));
+                        }
+                        publishedSchema = root.toString();
+                    }
                     service.updateDraft(
                             def.id(),
                             id,
@@ -383,8 +477,10 @@ final class P17Pilot {
                                     prompt,
                                     120,
                                     AgentFailurePolicy.FAIL_PROCESS,
-                                    "{\"type\":\"object\"}",
-                                    schema,
+                                    evidenceContract
+                                            ? "{\"type\":\"object\",\"required\":[\"orderId\"],\"properties\":{\"orderId\":{\"type\":\"string\"}}}"
+                                            : "{\"type\":\"object\"}",
+                                    publishedSchema,
                                     List.of("knowledge_search"),
                                     profile));
                     if (joint) {

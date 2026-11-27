@@ -1,0 +1,461 @@
+{
+  "date": "2026-11-27",
+  "source": "LIVE_MODEL",
+  "productionReady": false,
+  "notes": [
+    "All completed batches including failures retained.",
+    "Initial normal evidence trials predate explicit abstention partition and coherent action/decision oneOf.",
+    "No complete seven-case real-model pass is established.",
+    "Model latency totals exclude tool and orchestration time."
+  ],
+  "runs": [
+    {
+      "stage": "normal_evidence",
+      "run": "ec218092-3658-4a50-b96f-7ac5a9159fcb",
+      "sourceDirectory": "workflow-boot/target/p17-graph-runs/ec218092-3658-4a50-b96f-7ac5a9159fcb",
+      "acceptance": {
+        "total": 1,
+        "backend": "LANGGRAPH",
+        "failures": []
+      },
+      "cases": [
+        {
+          "case": "P17-OK",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "promptSha256": "b0ba7aabd880923a0eb5defdc0507d53b68ba3857a4d35a8709d444e1601eb94",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "READY_CHECK"
+          ]
+        }
+      ],
+      "successfulModelCalls": 3,
+      "summedModelLatencyMs": 16222,
+      "inputPlusOutputTokens": 7010
+    },
+    {
+      "stage": "normal_evidence",
+      "run": "ca8eae2d-7def-4a31-982d-30e8ab56251e",
+      "sourceDirectory": "workflow-boot/target/p17-runs/ca8eae2d-7def-4a31-982d-30e8ab56251e",
+      "acceptance": {
+        "total": 1,
+        "backend": "NATIVE",
+        "failures": []
+      },
+      "cases": [
+        {
+          "case": "P17-OK",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "promptSha256": "b0ba7aabd880923a0eb5defdc0507d53b68ba3857a4d35a8709d444e1601eb94",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "READY_CHECK"
+          ]
+        }
+      ],
+      "successfulModelCalls": 4,
+      "summedModelLatencyMs": 0,
+      "inputPlusOutputTokens": 0
+    },
+    {
+      "stage": "first_full_evidence",
+      "run": "8a33c570-7929-40a6-9df0-9d5e6e7d30b9",
+      "sourceDirectory": "workflow-boot/target/p17-graph-runs/8a33c570-7929-40a6-9df0-9d5e6e7d30b9",
+      "acceptance": {
+        "failures": [
+          "B08: [{\"error\":\"GATEWAY_MODEL_REJECTED\",\"retryable\":false,\"failures\":1,\"cold_opens\":1}] \r\nExpecting value to be false but was true",
+          "P17-EMPTY: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-FOREIGN: \r\nExpecting value to be false but was true",
+          "P17-TIMEOUT: No value present",
+          "P17-REVOKED: No value present"
+        ],
+        "backend": "LANGGRAPH",
+        "total": 7
+      },
+      "cases": [
+        {
+          "case": "P17-BUDGET",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "98e5069cf92a3bf1e4ff9484e99b62fff76813714145ad2d681e83d6f88e12d7",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true
+          },
+          "tasks": [
+            "NEED_RECORDS"
+          ]
+        },
+        {
+          "case": "P17-EMPTY",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "98e5069cf92a3bf1e4ff9484e99b62fff76813714145ad2d681e83d6f88e12d7",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        },
+        {
+          "case": "P17-OK",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "98e5069cf92a3bf1e4ff9484e99b62fff76813714145ad2d681e83d6f88e12d7",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true
+          },
+          "tasks": [
+            "READY_CHECK"
+          ]
+        }
+      ],
+      "successfulModelCalls": 21,
+      "summedModelLatencyMs": 107396,
+      "inputPlusOutputTokens": 49692
+    },
+    {
+      "stage": "first_full_evidence",
+      "run": "12b203d3-4260-4775-8b95-e46bb95a4331",
+      "sourceDirectory": "workflow-boot/target/p17-runs/12b203d3-4260-4775-8b95-e46bb95a4331",
+      "acceptance": {
+        "failures": [
+          "B08: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-EMPTY: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n",
+          "P17-FOREIGN: \r\nExpecting actual:\r\n  [\"MANUAL_REVIEW\"]\r\nto contain exactly (and in same order):\r\n  [\"NEED_RECORDS\"]\r\nbut some elements were not found:\r\n  [\"NEED_RECORDS\"]\r\nand others were not expected:\r\n  [\"MANUAL_REVIEW\"]\r\n"
+        ],
+        "backend": "NATIVE",
+        "total": 7
+      },
+      "cases": [
+        {
+          "case": "B08",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "8c70c308b54d8707e15dcc25e18783b9a2d45c6c5c297ff9c19b6bed4a263351",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        },
+        {
+          "case": "P17-BUDGET",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true
+          },
+          "tasks": [
+            "NEED_RECORDS"
+          ]
+        },
+        {
+          "case": "P17-EMPTY",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        },
+        {
+          "case": "P17-FOREIGN",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 5,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        },
+        {
+          "case": "P17-OK",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true
+          },
+          "tasks": [
+            "READY_CHECK"
+          ]
+        },
+        {
+          "case": "P17-REVOKED",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+            "current_attempt_id": 8,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        },
+        {
+          "case": "P17-TIMEOUT",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "a946abccb01608bc91ab3a9c4a091b82e8e10c5709e2fddb93edfc7959c259dd",
+          "outputSchemaSha256": "542302f9b5e738a83ca6b0571d50236c4f4b114d57aa2de9a9e310eefab1c807",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "MCP_TIMEOUT",
+            "current_attempt_id": 7,
+            "resumed": true
+          },
+          "tasks": [
+            "MANUAL_REVIEW"
+          ]
+        }
+      ],
+      "successfulModelCalls": 25,
+      "summedModelLatencyMs": 0,
+      "inputPlusOutputTokens": 0
+    },
+    {
+      "stage": "coherent_outcome_b08",
+      "run": "5ebb7e18-a8a1-4589-8224-01363835fe0c",
+      "sourceDirectory": "workflow-boot/target/p17-graph-runs/5ebb7e18-a8a1-4589-8224-01363835fe0c",
+      "acceptance": {
+        "failures": [],
+        "backend": "LANGGRAPH",
+        "total": 1
+      },
+      "cases": [
+        {
+          "case": "B08",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "7cae0cb5adf6add48ef8d87a21998a02b6c80c6ca9b94c8d84bd9f984ed6d916",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "NEED_RECORDS"
+          ]
+        }
+      ],
+      "successfulModelCalls": 3,
+      "summedModelLatencyMs": 11756,
+      "inputPlusOutputTokens": 6000
+    },
+    {
+      "stage": "coherent_outcome_b08",
+      "run": "28bfa33d-2185-485c-ad77-a13578ed07c7",
+      "sourceDirectory": "workflow-boot/target/p17-runs/28bfa33d-2185-485c-ad77-a13578ed07c7",
+      "acceptance": {
+        "failures": [],
+        "backend": "NATIVE",
+        "total": 1
+      },
+      "cases": [
+        {
+          "case": "B08",
+          "backend": "NATIVE",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "4977c6033073f229a5e166fa9d6276a6de6aa0a6f3b0d7c74c6798c2e20ec8cf",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "NEED_RECORDS"
+          ]
+        }
+      ],
+      "successfulModelCalls": 4,
+      "summedModelLatencyMs": 0,
+      "inputPlusOutputTokens": 0
+    },
+    {
+      "stage": "full_recheck_interrupted",
+      "run": "c2128661-e998-4100-b876-c8964a7939a7",
+      "sourceDirectory": "workflow-boot/target/p17-graph-runs/c2128661-e998-4100-b876-c8964a7939a7",
+      "acceptance": null,
+      "cases": [
+        {
+          "case": "B08",
+          "backend": "LANGGRAPH",
+          "source": "LIVE_MODEL",
+          "model": "deepseek-v4-flash-ga-260731",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "7cae0cb5adf6add48ef8d87a21998a02b6c80c6ca9b94c8d84bd9f984ed6d916",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true
+          },
+          "tasks": [
+            "NEED_RECORDS"
+          ]
+        }
+      ],
+      "successfulModelCalls": 5,
+      "summedModelLatencyMs": 26343,
+      "inputPlusOutputTokens": 9778,
+      "interruption": {
+        "httpStatus": 429,
+        "providerCode": "SetLimitExceeded",
+        "oldClassification": "PROVIDER_RATE_LIMITED",
+        "reason": "Provider suspended model usage; batch cancelled, remaining cases untested. Account limits were not changed."
+      }
+    }
+  ],
+  "regression": {
+    "source": "full regression plus environment initialization correction",
+    "totals": {
+      "tests": 709,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6
+    },
+    "notes": [
+      "GraphPersistenceIntegrationTest: 159/159 passed in initial full run.",
+      "Initial GraphPythonRecoveryIntegrationTest failed because this task created a database without initializing checkpoint tables; all six passed after initialization.",
+      "Remaining modules passed Maven verify and governance coverage; no failed initial run is erased.",
+      "Python: 102 passed, one Java-launcher test deselected; equivalent Java cold recovery and governance suites executed directly.",
+      "Nine required infrastructure suites verified."
+    ],
+    "skipped": [
+      "io.github.illuseahashmap.workflow.agent.P17GraphJointRunTest",
+      "io.github.illuseahashmap.workflow.agent.P17JointRunTest",
+      "io.github.illuseahashmap.workflow.integration.LocalRagAgentFlowAcceptanceTest",
+      "io.github.illuseahashmap.workflow.integration.LocalRagVectorAcceptanceTest",
+      "io.github.illuseahashmap.workflow.knowledge.KnowledgeOptionalAcceptanceTest"
+    ]
+  },
+  "scriptedAcceptance": [
+    {
+      "source": "SCRIPTED_TRANSPORT",
+      "evidenceContractVersion": 0,
+      "run": "ed0d5076-a77e-413c-9ac3-44b7c2e0b08c",
+      "acceptance": {
+        "total": 7,
+        "failures": [],
+        "backend": "NATIVE"
+      }
+    },
+    {
+      "source": "SCRIPTED_TRANSPORT",
+      "evidenceContractVersion": 0,
+      "run": "47e3beab-1f6d-4bf0-b3c1-ec698233efee",
+      "acceptance": {
+        "total": 7,
+        "failures": [],
+        "backend": "LANGGRAPH"
+      }
+    },
+    {
+      "source": "SCRIPTED_TRANSPORT",
+      "evidenceContractVersion": 1,
+      "run": "0614c5da-e35d-464a-ae18-4aea50b312ee",
+      "acceptance": {
+        "failures": [],
+        "backend": "NATIVE",
+        "total": 7
+      }
+    },
+    {
+      "source": "SCRIPTED_TRANSPORT",
+      "evidenceContractVersion": 1,
+      "run": "c0ec36f9-c9a7-4f1e-821c-832f4417cf5f",
+      "acceptance": {
+        "failures": [],
+        "backend": "LANGGRAPH",
+        "total": 7
+      }
+    }
+  ]
+}

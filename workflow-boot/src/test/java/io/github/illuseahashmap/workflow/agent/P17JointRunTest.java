@@ -233,7 +233,27 @@ class P17JointRunTest {
                                                                         + " summarization, after"
                                                                         + " revocation")
                                                             .isEmpty();
-                                                    var response = model.invoke(request);
+                                                    ModelProviderResponse response;
+                                                    try {
+                                                        response = model.invoke(request);
+                                                    } catch (
+                                                            io.github.illuseahashmap.agent.provider
+                                                                            .application.port
+                                                                            .ModelProviderException
+                                                                    failure) {
+                                                        if (live) {
+                                                            P17ProviderFailureEvidence.write(
+                                                                    dir.resolve(
+                                                                            id
+                                                                                    + "-model-error-"
+                                                                                    + modelCalls
+                                                                                            .incrementAndGet()
+                                                                                    + ".json"),
+                                                                    request,
+                                                                    failure);
+                                                        }
+                                                        throw failure;
+                                                    }
                                                     if (live) {
                                                         try {
                                                             JSON.writerWithDefaultPrettyPrinter()
@@ -292,11 +312,16 @@ class P17JointRunTest {
                                                     new AgentRecoveryPolicy(),
                                                     new AgentFailureMapper());
                                     assertThat(worker.executeNext()).isTrue();
-                                    // A claimed retry re-enters through the worker and its
-                                    // persisted
-                                    // tool-intent checkpoint.
-                                    if (timeout) {
-                                        worker.executeNext();
+                                    // Drive the already-authorized persisted retry, not a new Run.
+                                    // The worker retains the original deadline and maxAttempts=2.
+                                    if ("QUEUED"
+                                            .equals(
+                                                    db.queryForObject(
+                                                            "SELECT status FROM agent_run WHERE"
+                                                                    + " id=?",
+                                                            String.class,
+                                                            runId))) {
+                                        assertThat(worker.executeNext()).isTrue();
                                     }
                                 }
 
@@ -304,7 +329,7 @@ class P17JointRunTest {
                                 var outbox = new AgentCompletionEventStore(named, tx);
                                 for (var event :
                                         outbox.claim(
-                                                "pilot-completion", 1, Duration.ofSeconds(30))) {
+                                                "pilot-completion", 32, Duration.ofSeconds(30))) {
                                     tx.executeWithoutResult(
                                             s -> processor.process(event, "pilot-completion"));
                                 }
@@ -370,9 +395,25 @@ class P17JointRunTest {
                                 report.put(
                                         "policySha256Lf", p.gold.path("policySha256Lf").asText());
                                 report.put("catalog", joint ? p.catalogId : null);
+                                var frozenVersion =
+                                        p.versions.findByVersionId(TENANT, version).orElseThrow();
+                                report.put("evidenceContractVersion", p.evidenceContract ? 1 : 0);
                                 report.put(
                                         "promptSha256",
-                                        hash(Files.readAllBytes(DIR.resolve("e1-prompt.txt"))));
+                                        hash(
+                                                frozenVersion
+                                                        .systemPrompt()
+                                                        .getBytes(
+                                                                java.nio.charset.StandardCharsets
+                                                                        .UTF_8)));
+                                report.put(
+                                        "outputSchemaSha256",
+                                        hash(
+                                                frozenVersion
+                                                        .outputSchema()
+                                                        .getBytes(
+                                                                java.nio.charset.StandardCharsets
+                                                                        .UTF_8)));
                                 var run =
                                         db.queryForMap(
                                                 "SELECT"

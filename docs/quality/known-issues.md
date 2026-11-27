@@ -1,5 +1,7 @@
 # 待修复问题与下一步整改
 
+2026-11-27 真实模型补充：已实现可选的发布证据契约、动作/结论组合校验，以及永久 Provider 拒绝的持久无模型收尾。普通采购、仅政策场景分别在原生和图端完成真实成功样本；完整复验被 Provider `SetLimitExceeded` 暂停，完整七场景真实稳定性仍开放。不要把确定性 7/7 当作模型成功率，详见[可靠性修复与保留失败](model-reliability-20261127.md)。
+
 2026-11-27：P-17 超时与撤权的持久收尾已修复，图端和原生七场景均 7/7，详见[回归记录](graph-tool-stop-regression.md)。双采购/连续压缩/换代恢复的确定性模型/JDBC 组合已通过，见[组合记录](graph-dual-purchase-recovery-regression.md)。真实 Flowable 提交/认证派发/生产 Outbox/Inbox 组合也已通过，并修复金额映射精度，见[Flowable 组合记录](graph-dual-purchase-flowable-regression.md)。当前剩余的是真实 Provider/MCP、生产负载与未知调用对账，不再将这两个已修复场景列为开放缺陷。
 
 文档更新时间：2026-11-27；V69 已补图端 ACK 的最终业务接纳、单一业务 Attempt、终态与 Outbox 原子提交，并补齐真实 Flowable 事务回归，见[结果交接记录](graph-completion-regression.md)。此前的“观察无法接回业务终态”不再列为未实现；未知外呼对账、未 ACK 图运行的取消/超时/暂停运维、发布切换及完整 G0–G3 仍开放。图宿主默认关闭，业务后端未切换。操作见[宿主手册](../operations/graph-dispatch-host.md)。
