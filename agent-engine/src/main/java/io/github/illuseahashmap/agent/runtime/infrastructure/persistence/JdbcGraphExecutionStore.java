@@ -168,7 +168,7 @@ public final class JdbcGraphExecutionStore
                     long outstanding = countOutstanding(null);
                     long tenantOutstanding = countOutstanding(tenant);
                     if (outstanding >= policy.outstanding()
-                            || tenantOutstanding >= policy.tenantOutstanding()) {
+                            || tenantOutstanding >= GraphCapacityLock.tenant(jdbc, policy, tenant).tenantOutstanding()) {
                         throw new GraphGatewayException(
                                 GraphGatewayException.Code.CAPACITY_EXHAUSTED);
                     }
@@ -361,6 +361,28 @@ public final class JdbcGraphExecutionStore
                                             .addValue("policy", json(formatPolicy)));
                         }
                     }
+                    if (schemaVersion == 2
+                            && s.outputSchema() != null
+                            && !s.outputSchema().isBlank()) {
+                        var route =
+                                codec.read(
+                                                s.outputSchema().getBytes(StandardCharsets.UTF_8),
+                                                com.fasterxml.jackson.databind.JsonNode.class)
+                                        .get("x-graph-routing");
+                        if (route != null) {
+                            var routePolicy =
+                                    codec.read(
+                                            codec.write(route),
+                                            io.github.illuseahashmap.agent.runtime.application.graph
+                                                    .GraphRoute.Policy.class);
+                            jdbc.update(
+                                    "INSERT INTO agent_graph_route_policy"
+                                            + " VALUES(:tenant,:run,:policy)",
+                                    new org.springframework.jdbc.core.namedparam
+                                                    .MapSqlParameterSource(key)
+                                            .addValue("policy", json(routePolicy)));
+                        }
+                    }
                     jdbc.update(
                             "INSERT INTO agent_graph_dispatch(tenant_code,run_id,command_id,status)"
                                     + " VALUES (:tenant,:run,:command,'READY')",
@@ -422,7 +444,8 @@ public final class JdbcGraphExecutionStore
                                     WHERE (:target IS NULL OR t.tenant_code=:target)
                                       AND (SELECT count(*) FROM agent_graph_execution e JOIN agent_graph_dispatch d USING(tenant_code,run_id)
                                            WHERE e.tenant_code=t.tenant_code AND e.state='ACTIVE' AND d.status='RUNNING'
-                                             AND e.lease_expires_at>clock_timestamp()) < :limit
+                                             AND e.lease_expires_at>clock_timestamp()) < LEAST(:globalActive,COALESCE(
+                                           (SELECT active FROM agent_graph_tenant_capacity c WHERE c.tenant_code=t.tenant_code),:limit))
                                       AND EXISTS (SELECT 1 FROM agent_run r JOIN agent_graph_execution e ON e.tenant_code=r.tenant_code AND e.run_id=r.id
                                           JOIN agent_graph_dispatch d ON d.tenant_code=e.tenant_code AND d.run_id=e.run_id
                                           WHERE r.tenant_code=t.tenant_code AND r.execution_backend='LANGGRAPH' AND r.status IN ('QUEUED','RUNNING')
@@ -439,6 +462,7 @@ public final class JdbcGraphExecutionStore
                                                     requestedTenant,
                                                     java.sql.Types.VARCHAR)
                                             .addValue("limit", policy.tenantActive())
+                                            .addValue("globalActive", policy.active())
                                             .addValue("artifact", artifact, java.sql.Types.VARCHAR),
                                     (rs, n) -> rs.getString(1));
                     if (eligible.isEmpty()) {
@@ -659,6 +683,8 @@ public final class JdbcGraphExecutionStore
                                     """
                                     SELECT EXISTS(SELECT 1 FROM agent_graph_plan_verdict p JOIN agent_graph_v2_validation v USING(tenant_code,run_id,operation_id)
                                       WHERE p.tenant_code=:tenant AND p.run_id=:run AND p.accepted AND v.receipt_json::jsonb->>'receipt_ref'=:receipt)
+                                    OR EXISTS(SELECT 1 FROM agent_graph_route_verdict p JOIN agent_graph_v2_validation v USING(tenant_code,run_id,operation_id)
+                                      WHERE p.tenant_code=:tenant AND p.run_id=:run AND p.accepted AND v.receipt_json::jsonb->>'receipt_ref'=:receipt)
                                     """,
                                     Map.of(
                                             "tenant",
@@ -853,6 +879,11 @@ public final class JdbcGraphExecutionStore
                             if (redirect != null) {
                                 return redirect;
                             }
+                            String routeRedirect =
+                                    new JdbcGraphRouteStore(jdbc, codec).guard(run, request);
+                            if (routeRedirect != null) {
+                                return routeRedirect;
+                            }
                             String planRedirect =
                                     new JdbcGraphPlanStore(jdbc, this, codec).guard(run, request);
                             if (planRedirect != null) {
@@ -952,6 +983,12 @@ public final class JdbcGraphExecutionStore
         }
         if ("REPLAN".equals(result)) {
             throw new GraphGatewayException(GraphGatewayException.Code.REPLAN_REQUIRED);
+        }
+        if ("ROUTE".equals(result)) {
+            throw new GraphGatewayException(GraphGatewayException.Code.ROUTE_REQUIRED);
+        }
+        if ("ROUTE_REPAIR".equals(result)) {
+            throw new GraphGatewayException(GraphGatewayException.Code.ROUTE_REPAIR_REQUIRED);
         }
         if ("REPAIR".equals(result)) {
             throw new GraphGatewayException(GraphGatewayException.Code.FORMAT_REPAIR_REQUIRED);

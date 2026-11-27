@@ -36,14 +36,16 @@ import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGra
 import io.github.illuseahashmap.agent.runtime.infrastructure.persistence.JdbcGraphReferenceStore;
 import io.github.illuseahashmap.agent.runtime.interfaces.rest.GraphGatewayProtocol;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,8 +66,26 @@ import java.util.function.IntFunction;
  * Executes actual V65-V69 on isolated PostgreSQL. Earlier tables are a minimal fixture, not full
  * Flyway upgrade acceptance.
  */
-@EnabledIfEnvironmentVariable(named = "WORKFLOW_LANGGRAPH_JDBC_URL", matches = ".+")
 class GraphPersistenceIntegrationTest {
+    private static PostgreSQLContainer<?> postgres;
+
+    @BeforeAll
+    static void startDatabase() {
+        String configuredUrl = System.getenv("WORKFLOW_LANGGRAPH_JDBC_URL");
+        if (configuredUrl == null || configuredUrl.isBlank()) {
+            postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+            postgres.start();
+        }
+    }
+
+    @AfterAll
+    static void stopDatabase() {
+        if (postgres != null) {
+            postgres.stop();
+            postgres = null;
+        }
+    }
+
     private final GraphGatewayCodec codec = new GraphGatewayCodec();
     private final java.util.concurrent.atomic.AtomicReference<String> lastModelInput =
             new java.util.concurrent.atomic.AtomicReference<>();
@@ -85,16 +105,27 @@ class GraphPersistenceIntegrationTest {
 
     @BeforeEach
     void initialize() throws Exception {
-        url = System.getenv("WORKFLOW_LANGGRAPH_JDBC_URL");
-        user = System.getenv().getOrDefault("WORKFLOW_LANGGRAPH_JDBC_USER", "postgres");
-        password = System.getenv().getOrDefault("WORKFLOW_LANGGRAPH_JDBC_PASSWORD", "");
+        url =
+                postgres == null
+                        ? System.getenv("WORKFLOW_LANGGRAPH_JDBC_URL")
+                        : postgres.getJdbcUrl();
+        user =
+                postgres == null
+                        ? System.getenv().getOrDefault("WORKFLOW_LANGGRAPH_JDBC_USER", "postgres")
+                        : postgres.getUsername();
+        password =
+                postgres == null
+                        ? System.getenv().getOrDefault("WORKFLOW_LANGGRAPH_JDBC_PASSWORD", "")
+                        : postgres.getPassword();
         admin = new JdbcTemplate(new DriverManagerDataSource(url, user, password));
         schema = "graph_store_" + UUID.randomUUID().toString().replace("-", "");
         admin.execute("CREATE SCHEMA " + schema);
         named =
                 new NamedParameterJdbcTemplate(
                         new DriverManagerDataSource(
-                                url + "?currentSchema=" + schema, user, password));
+                                url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
+                                user,
+                                password));
         db = named.getJdbcTemplate();
         db.execute(
                 """
@@ -189,6 +220,14 @@ class GraphPersistenceIntegrationTest {
                 Files.readString(
                         Path.of(
                                 "../platform-migrations/src/main/resources/db/migration/platform/V78__add_graph_format_repair_policy.sql")));
+        db.execute(
+                Files.readString(
+                        Path.of(
+                                "../platform-migrations/src/main/resources/db/migration/platform/V79__add_graph_route_projection.sql")));
+        db.execute("CREATE TABLE IF NOT EXISTS workflow_tenant(tenant_code VARCHAR(64) PRIMARY KEY)");
+        db.execute("INSERT INTO workflow_tenant VALUES('alpha'),('beta') ON CONFLICT DO NOTHING");
+        db.execute(Files.readString(Path.of(
+            "../platform-migrations/src/main/resources/db/migration/platform/V80__add_tenant_capacity_configuration.sql")));
         reconnectStores();
     }
 
@@ -1600,24 +1639,31 @@ class GraphPersistenceIntegrationTest {
         assertThat(calls).hasValue(2);
     }
 
-    @Test
-    void pythonGraphRecoversLostCandidateAndValidationRepliesWithRealJdbcAuthority()
-            throws Exception {
-        pythonGraphRecovery(1);
+    void pythonGraphRecovery(int version) throws Exception {
+        pythonGraphRecovery(version, false, false);
     }
 
-    @Test
-    void pythonV2GraphRecoversLostCandidateAndValidationRepliesWithRealJdbcAuthority()
-            throws Exception {
-        pythonGraphRecovery(2);
-    }
-
-    private void pythonGraphRecovery(int version) throws Exception {
+    void pythonGraphRecovery(int version, boolean routed, boolean repair) throws Exception {
+        long runId = 100 + (UUID.randomUUID().getMostSignificantBits() & 0xFFFFFFFFFFFFL);
+        insertRun(runId, "alpha");
         var calls = new AtomicInteger();
+        int routeCalls = routed ? (repair ? 2 : 1) : 0;
         var gateway =
                 cognition(
-                        calls, n -> n == 1 ? toolResponse() : answer("{\"count\":2}"), null, 40000);
-        executions.reserve("alpha", version, "a".repeat(64), 10, 20, version);
+                        calls,
+                        n -> {
+                            if (routed && n <= routeCalls) {
+                                return answer(
+                                        repair && n == 1
+                                                ? "invalid route"
+                                                : routeBody("DIRECT", "[\"lookup\"]"));
+                            }
+                            return n == routeCalls + 1 ? toolResponse() : answer("{\"count\":2}");
+                        },
+                        routed ? ROUTED : null,
+                        40000);
+        // Checkpoint identity is tenant + Run, so each isolated fixture needs its own Run ID.
+        executions.reserve("alpha", runId, "a".repeat(64), 10, 20, version);
         Claim claim = executions.claim("alpha", "worker", 60).orElseThrow();
         var protocol =
                 new io.github.illuseahashmap.agent.runtime.interfaces.rest.GraphGatewayProtocol(
@@ -1703,7 +1749,7 @@ class GraphPersistenceIntegrationTest {
                     process.destroyForcibly();
                 }
             }
-            assertThat(calls).hasValue(2);
+            assertThat(calls).hasValue(2 + routeCalls);
             assertThat(
                             db.queryForObject(
                                     "SELECT count(*) FROM "
@@ -1711,7 +1757,7 @@ class GraphPersistenceIntegrationTest {
                                                     ? "agent_graph_validation"
                                                     : "agent_graph_v2_validation"),
                                     Integer.class))
-                    .isEqualTo(1);
+                    .isEqualTo(1 + routeCalls);
             assertThat(
                             db.queryForObject(
                                     "SELECT count(*) FROM agent_tool_execution_audit",
@@ -1719,7 +1765,7 @@ class GraphPersistenceIntegrationTest {
                     .isEqualTo(1);
             assertThat(
                             db.queryForObject(
-                                    "SELECT status FROM agent_run WHERE id=" + version,
+                                    "SELECT status FROM agent_run WHERE id=" + runId,
                                     String.class))
                     .isEqualTo("RUNNING");
         } finally {
@@ -1776,6 +1822,172 @@ class GraphPersistenceIntegrationTest {
         }
     }
 
+    @Test
+    void capacityConfigurationPreservesUsageAndRejectsStaleChanges() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read("alpha");
+        var changed =
+                config.updateTenant(
+                        "alpha",
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.TenantUpdate(
+                                original.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        1, 1, 1)),
+                        "admin");
+        assertThat(changed.usage().outstanding()).isEqualTo(original.usage().outstanding());
+        assertThat(changed.effective().calls()).isEqualTo(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                    + " scope='TENANT:alpha'",
+                                Integer.class))
+                .isEqualTo(1);
+        assertThatThrownBy(
+                        () ->
+                                config.updateTenant(
+                                        "alpha",
+                                        new io.github.illuseahashmap.agent.runtime.infrastructure
+                                                .persistence.JdbcGraphCapacityConfiguration
+                                                .TenantUpdate(
+                                                original.revision(), original.overrides()),
+                                        "other-admin"))
+                .isInstanceOf(
+                        io.github.illuseahashmap.workflow.shared.exception.BusinessException.class);
+        db.update("UPDATE agent_run SET status='SUCCEEDED' WHERE id=2");
+        assertThatThrownBy(() -> db.update("UPDATE agent_run SET status='QUEUED' WHERE id=2"))
+                .isInstanceOf(DataAccessException.class);
+        var inherited =
+                config.updateTenant(
+                        "alpha",
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.TenantUpdate(
+                                changed.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        null, null, null)),
+                        "admin");
+        assertThat(inherited.effective()).isEqualTo(inherited.defaults());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT count(*) FROM agent_graph_resource_audit", Integer.class))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void capacityTenantOverridesControlDispatchAndPhysicalCalls() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read("alpha");
+        config.updateTenant(
+                "alpha",
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration.TenantUpdate(
+                        original.revision(),
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.Limits(null, 1, 1)),
+                "admin");
+        executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
+        executions.reserve("alpha", 2, "a".repeat(64), 10, 20);
+        executions.reserve("beta", 3, "a".repeat(64), 10, 20);
+        var first = executions.claimNext("first", 60).orElseThrow();
+        var second = executions.claimNext("second", 60).orElseThrow();
+        assertThat(first.binding().tenantCode()).isEqualTo("alpha");
+        assertThat(second.binding().tenantCode()).isEqualTo("beta");
+        assertThat(executions.claimNext("third", 60)).isEmpty();
+        db.update("INSERT INTO agent_graph_call_resource VALUES('account:quota',32)");
+        var capacity =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCallCapacityStore(named, executions, codec);
+        var run = executions.authorize(first.capability(), first.binding(), first.generation());
+        var request =
+                new Invocation("MODEL", "model:one", List.of(first.binding().inputRef()), null);
+        var token = capacity.acquire(run, request, List.of("account:quota")).orElseThrow();
+        assertThat(config.read("alpha").usage().calls()).isEqualTo(1);
+        assertThat(
+                        capacity.acquire(
+                                run,
+                                new Invocation(
+                                        "MODEL",
+                                        "model:two",
+                                        List.of(first.binding().inputRef()),
+                                        null),
+                                List.of("account:quota")))
+                .isEmpty();
+        capacity.completed(token);
+        assertThat(
+                        capacity.acquire(
+                                run,
+                                new Invocation(
+                                        "MODEL",
+                                        "model:two",
+                                        List.of(first.binding().inputRef()),
+                                        null),
+                                List.of("account:quota")))
+                .isPresent();
+    }
+
+    @Test
+    void capacityPlatformChangesClampOverridesAndUpdateInheritedAdmission() {
+        var config =
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration(named);
+        var original = config.read(null);
+        config.updateTenant(
+                "alpha",
+                new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                        .JdbcGraphCapacityConfiguration.TenantUpdate(
+                        original.revision(),
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.Limits(200, 10, 20)),
+                "admin");
+        var current = config.read(null);
+        var changed =
+                config.updatePlatform(
+                        new io.github.illuseahashmap.agent.runtime.infrastructure.persistence
+                                .JdbcGraphCapacityConfiguration.PlatformUpdate(
+                                current.revision(),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        100, 8, 16),
+                                new io.github.illuseahashmap.agent.runtime.infrastructure
+                                        .persistence.JdbcGraphCapacityConfiguration.Limits(
+                                        50, 2, 4)),
+                        "admin");
+        assertThat(config.read("alpha").effective()).isEqualTo(changed.platform());
+        assertThat(config.read("beta").effective()).isEqualTo(changed.defaults());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                    + " scope='TENANT:alpha'",
+                                Integer.class))
+                .isEqualTo(100);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT hard_limit FROM agent_run_admission WHERE"
+                                    + " scope='TENANT:beta'",
+                                Integer.class))
+                .isEqualTo(50);
+        assertThatThrownBy(
+                        () ->
+                                config.updateTenant(
+                                        "missing",
+                                        new io.github.illuseahashmap.agent.runtime.infrastructure
+                                                .persistence.JdbcGraphCapacityConfiguration
+                                                .TenantUpdate(
+                                                changed.revision(),
+                                                new io.github.illuseahashmap.agent.runtime
+                                                        .infrastructure.persistence
+                                                        .JdbcGraphCapacityConfiguration.Limits(
+                                                        null, null, null)),
+                                        "admin"))
+                .isInstanceOf(
+                        io.github.illuseahashmap.workflow.shared.exception.BusinessException.class);
+    }
     @Test
     void tenantFairnessSurvivesRestartAndSkipsSaturatedTenant() {
         executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
@@ -2631,7 +2843,10 @@ class GraphPersistenceIntegrationTest {
         executions.reserve("alpha", 1, "a".repeat(64), 10, 20);
         executions.reserve("beta", 3, "a".repeat(64), 10, 20);
         try (var connection =
-                DriverManager.getConnection(url + "?currentSchema=" + schema, user, password)) {
+                DriverManager.getConnection(
+                        url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
+                        user,
+                        password)) {
             connection.setAutoCommit(false);
             try (var stmt = connection.createStatement()) {
                 stmt.executeQuery("SELECT id FROM agent_run WHERE id=1 FOR UPDATE");
@@ -3523,6 +3738,692 @@ class GraphPersistenceIntegrationTest {
                                 "UPDATE agent_run SET deadline_at=deadline_at+interval '1 hour'"
                                         + " WHERE id=2"))
                 .isEqualTo(1);
+    }
+
+    private static final String ROUTED =
+            "{\"type\":\"object\",\"x-graph-routing\":{\"version\":1,\"allow_correction\":true}}";
+
+    private String routeBody(String mode, String tools) {
+        return "{\"schemaVersion\":\"1\",\"mode\":\""
+                + mode
+                + "\",\"reason\":\"Choose authorized capabilities\",\"requestedTools\":"
+                + tools
+                + ",\"steps\":[\"answer\"]}";
+    }
+
+    private Invocation routeValidation(Claim claim, Receipt candidate, List<String> refs) {
+        var inputs = new ArrayList<>(refs);
+        inputs.set(0, candidate.decision().candidateRef());
+        return new Invocation(
+                "VALIDATE",
+                "route-validate:"
+                        + codec.fingerprint(
+                                List.of(
+                                        codec.fingerprint(claim.binding()),
+                                        candidate.decision().candidateRef())),
+                List.copyOf(inputs),
+                null);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"DIRECT", "RAG", "MCP", "RAG_MCP"})
+    void routeProjectionUsesNativeCapabilitiesAndReusesFrozenVerdict(String mode) {
+        boolean mixed = "RAG_MCP".equals(mode);
+        var calls = new AtomicInteger();
+        db.update(
+                "UPDATE agent_tool_definition SET capability_type=? WHERE tool_code='lookup'",
+                mixed ? "RAG" : mode);
+        var gateway =
+                cognition(
+                        calls,
+                        n ->
+                                n == 1
+                                        ? answer(
+                                                routeBody(
+                                                        mode,
+                                                        mixed
+                                                                ? "[\"lookup\",\"lookup_extra\"]"
+                                                                : "[\"lookup\"]"))
+                                        : toolResponse(),
+                        ROUTED,
+                        40000,
+                        r -> "{}",
+                        mixed);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var first = new Invocation("MODEL", "model:initial", List.copyOf(refs), null);
+        assertThatThrownBy(() -> invoke(gateway, claim, first)).hasMessage("ROUTE_REQUIRED");
+        assertThat(calls).hasValue(0);
+        var request =
+                new Invocation(
+                        "MODEL",
+                        "route:" + codec.fingerprint(claim.binding()),
+                        List.copyOf(refs),
+                        null);
+        var proposal = invoke(gateway, claim, request);
+        refs.add(proposal.receiptRef());
+        var validation = routeValidation(claim, proposal, refs);
+        var verdict = invoke(gateway, claim, validation);
+        assertThat(verdict.accepted()).isTrue();
+        assertThat(invoke(gateway, claim, validation)).isEqualTo(verdict);
+        assertThat(invoke(gateway, claim, request)).isEqualTo(proposal);
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "CANDIDATE_READY",
+                                        "cp:route",
+                                        proposal.decision().candidateRef(),
+                                        verdict.receiptRef())))
+                .isFalse();
+        var next =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:after-route", List.copyOf(refs), null));
+        assertThat(next.decision().tools()).hasSize(1);
+        var tool = next.decision().tools().getFirst();
+        invoke(gateway, claim, new Invocation("TOOL", tool.argumentsRef(), List.of(), tool));
+        assertThat(calls).hasValue(2);
+        db.update("UPDATE agent_tool_tenant_grant SET enabled=false WHERE tool_code='lookup'");
+        assertThatThrownBy(() -> invoke(gateway, claim, request)).hasMessage("AUTHORITY_DENIED");
+        assertThat(calls).hasValue(2);
+        assertThatThrownBy(() -> db.update("DELETE FROM agent_graph_route_verdict"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void routeProjectionAbstainsWithoutAnotherModelAndCannotMasqueradeAsAnswer() {
+        var calls = new AtomicInteger();
+        var gateway = cognition(calls, n -> answer(routeBody("ABSTAIN", "[]")), ROUTED, 40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        var validation = routeValidation(claim, proposal, refs);
+        var verdict = invoke(gateway, claim, validation);
+        assertThat(verdict.accepted()).isFalse();
+        assertThat(
+                        db.queryForObject(
+                                "SELECT reason_code FROM agent_graph_v2_validation", String.class))
+                .isEqualTo("AGENT_ROUTE_ABSTAIN");
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_correction", Integer.class))
+                .isZero();
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "REJECTED",
+                                        "cp:abstain",
+                                        proposal.decision().candidateRef(),
+                                        verdict.receiptRef())))
+                .isTrue();
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class))
+                .isEqualTo("FAILED");
+        assertThat(calls).hasValue(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void routeProjectionDirectCannotPublishUnselectedTool(boolean batch) {
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n ->
+                                n == 1
+                                        ? answer(routeBody("DIRECT", "[]"))
+                                        : batch
+                                                ? answer(
+                                                        "{\"action\":\"TOOL_CALLS\",\"tools\":[{\"tool\":\"lookup\",\"arguments\":{}}]}")
+                                                : toolResponse(),
+                        ROUTED,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        assertThat(invoke(gateway, claim, routeValidation(claim, proposal, refs)).accepted())
+                .isTrue();
+        var wrong = new ArrayList<>(refs);
+        wrong.set(0, proposal.decision().candidateRef());
+        assertThatThrownBy(
+                        () ->
+                                invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "VALIDATE",
+                                                "validate:bypass",
+                                                List.copyOf(wrong),
+                                                null)))
+                .isInstanceOf(GraphGatewayException.class);
+        var rejected =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:tool", List.copyOf(refs), null));
+        assertThat(rejected.decision().tools()).isEmpty();
+        refs.add(rejected.receiptRef());
+        refs.set(0, rejected.decision().candidateRef());
+        var verdict =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "VALIDATE", "validate:unselected-tool", List.copyOf(refs), null));
+        assertThat(verdict.accepted()).isFalse();
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "REJECTED",
+                                        "cp:unselected",
+                                        rejected.decision().candidateRef(),
+                                        verdict.receiptRef())))
+                .isTrue();
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class))
+                .isEqualTo("FAILED");
+        assertThat(calls).hasValue(2);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT count(*) FROM agent_tool_execution_audit", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void routeProjectionRepairSharesOneGrantAndColdReplayDoesNotResend() throws Exception {
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n -> answer(n == 1 ? "{broken" : routeBody("DIRECT", "[]")),
+                        ROUTED,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        var validation = routeValidation(claim, proposal, refs);
+        db.execute(
+                "CREATE FUNCTION fail_route_grant() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN"
+                        + " RAISE EXCEPTION ''injected''; END'");
+        db.execute(
+                "CREATE TRIGGER fail_route_grant BEFORE INSERT ON agent_graph_correction FOR EACH"
+                        + " ROW EXECUTE FUNCTION fail_route_grant()");
+        assertThatThrownBy(() -> invoke(gateway, claim, validation))
+                .isInstanceOf(DataAccessException.class);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT count(*) FROM agent_graph_route_verdict", Integer.class))
+                .isZero();
+        db.execute("DROP TRIGGER fail_route_grant ON agent_graph_correction");
+        assertThatThrownBy(() -> invoke(gateway, claim, validation))
+                .hasMessage("ROUTE_REPAIR_REQUIRED");
+        assertThatThrownBy(() -> invoke(gateway, claim, validation))
+                .hasMessage("ROUTE_REPAIR_REQUIRED");
+        var repair =
+                new Invocation(
+                        "MODEL",
+                        "route:repair:"
+                                + codec.fingerprint(
+                                        List.of(
+                                                codec.fingerprint(claim.binding()),
+                                                codec.fingerprint(validation))),
+                        List.copyOf(refs),
+                        null);
+        var fixed = invoke(gateway, claim, repair);
+        reconnectStores();
+        db.update(
+                "UPDATE agent_graph_execution SET lease_expires_at=clock_timestamp()-interval '1"
+                        + " second'");
+        var resumed = executions.claim("alpha", "successor", 60).orElseThrow();
+        assertThat(invoke(gateway, resumed, repair)).isEqualTo(fixed);
+        refs.add(fixed.receiptRef());
+        assertThat(invoke(gateway, resumed, routeValidation(resumed, fixed, refs)).accepted())
+                .isTrue();
+        assertThat(calls).hasValue(2);
+        assertThat(lastModelInput.get()).contains("{broken");
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_correction", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(
+            strings = {
+                "null",
+                "{broken",
+                "{\"schemaVersion\":\"1\",\"mode\":\"MCP\",\"reason\":\"invalid"
+                        + " capability\",\"requestedTools\":[\"lookup\"],\"steps\":[]}"
+            })
+    void routeProjectionInvalidRepairTerminatesWithoutAnotherGrant(String content) {
+        var calls = new AtomicInteger();
+        var gateway = cognition(calls, n -> answer(content), ROUTED, 40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        var validation = routeValidation(claim, proposal, refs);
+        assertThatThrownBy(() -> invoke(gateway, claim, validation))
+                .hasMessage("ROUTE_REPAIR_REQUIRED");
+        var repair =
+                new Invocation(
+                        "MODEL",
+                        "route:repair:"
+                                + codec.fingerprint(
+                                        List.of(
+                                                codec.fingerprint(claim.binding()),
+                                                codec.fingerprint(validation))),
+                        List.copyOf(refs),
+                        null);
+        var fixed = invoke(gateway, claim, repair);
+        refs.add(fixed.receiptRef());
+        var rejected = invoke(gateway, claim, routeValidation(claim, fixed, refs));
+        assertThat(rejected.accepted()).isFalse();
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "REJECTED",
+                                        "cp:invalid-route",
+                                        fixed.decision().candidateRef(),
+                                        rejected.receiptRef())))
+                .isTrue();
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(calls).hasValue(2);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_correction", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 8})
+    void routeProjectionBudgetAndExplicitRepairOptOutRejectWithoutExtraModel(int models) {
+        String policy = models == 1 ? ROUTED : ROUTED.replace("true", "false");
+        var calls = new AtomicInteger();
+        var gateway = cognition(calls, n -> answer("{broken"), policy, 40000);
+        executions.reserve("alpha", 1, "b".repeat(64), models, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        assertThat(invoke(gateway, claim, routeValidation(claim, proposal, refs)).accepted())
+                .isFalse();
+        assertThat(calls).hasValue(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM agent_graph_correction", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void routeProjectionAbsentPolicyKeepsLegacyModelFlow() {
+        var calls = new AtomicInteger();
+        var gateway = cognition(calls, n -> answer("{}"), "{}", 40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = List.of(claim.binding().inputRef());
+        assertThatThrownBy(
+                        () ->
+                                invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "MODEL",
+                                                "route:" + codec.fingerprint(claim.binding()),
+                                                refs,
+                                                null)))
+                .hasMessage("ROUTE_DENIED");
+        assertThat(
+                        invoke(gateway, claim, new Invocation("MODEL", "model:legacy", refs, null))
+                                .decision()
+                                .candidateRef())
+                .isNotNull();
+        assertThat(calls).hasValue(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT count(*) FROM agent_graph_route_policy", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void routeProjectionRepairPreventsFinalFormatRepairFromTakingAnotherGrant() {
+        String schema =
+                CHECKLIST.replace(
+                        "\"type\":\"object\"",
+                        "\"type\":\"object\",\"x-graph-routing\":{\"version\":1,\"allow_correction\":true},\"x-graph-format\":{\"version\":1}");
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n ->
+                                n == 2
+                                        ? answer(routeBody("DIRECT", "[\"lookup\"]"))
+                                        : n == 3 ? toolResponse() : answer("{broken"),
+                        schema,
+                        40000,
+                        r -> "{\"word\":\"hi\",\"approved\":true}");
+        executions.reserve("alpha", 1, "b".repeat(64), 10, 10, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        var validation = routeValidation(claim, proposal, refs);
+        assertThatThrownBy(() -> invoke(gateway, claim, validation))
+                .hasMessage("ROUTE_REPAIR_REQUIRED");
+        var repair =
+                new Invocation(
+                        "MODEL",
+                        "route:repair:"
+                                + codec.fingerprint(
+                                        List.of(
+                                                codec.fingerprint(claim.binding()),
+                                                codec.fingerprint(validation))),
+                        List.copyOf(refs),
+                        null);
+        var fixed = invoke(gateway, claim, repair);
+        refs.add(fixed.receiptRef());
+        assertThat(invoke(gateway, claim, routeValidation(claim, fixed, refs)).accepted()).isTrue();
+        var action =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:lookup", List.copyOf(refs), null));
+        refs.add(action.receiptRef());
+        var intent = action.decision().tools().getFirst();
+        refs.add(
+                invoke(
+                                gateway,
+                                claim,
+                                new Invocation("TOOL", intent.argumentsRef(), List.of(), intent))
+                        .receiptRef());
+        var answer =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:answer", List.copyOf(refs), null));
+        refs.add(answer.receiptRef());
+        refs.set(0, answer.decision().candidateRef());
+        assertThat(
+                        invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "VALIDATE",
+                                                "validate:answer",
+                                                List.copyOf(refs),
+                                                null))
+                                .accepted())
+                .isFalse();
+        assertThat(calls).hasValue(4);
+        assertThat(db.queryForObject("SELECT reason FROM agent_graph_correction", String.class))
+                .isEqualTo("ROUTE_INVALID");
+    }
+
+    @Test
+    void routeProjectionPrecedesPlanAndFinalAcceptanceRechecksSelectedAuthority() {
+        String schema =
+                PLANNED.replace(
+                        "\"type\":\"object\"",
+                        "\"type\":\"object\",\"x-graph-routing\":{\"version\":1,\"allow_correction\":true}");
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n ->
+                                answer(
+                                        switch (n) {
+                                            case 1 -> routeBody("DIRECT", "[\"lookup\"]");
+                                            case 2 -> planBody();
+                                            case 3 -> plannedTool();
+                                            default -> "{\"approved\":true}";
+                                        }),
+                        schema,
+                        40000,
+                        r -> "{\"word\":\"hi\",\"approved\":true}");
+        executions.reserve("alpha", 1, "b".repeat(64), 10, 10, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        assertThat(invoke(gateway, claim, routeValidation(claim, proposal, refs)).accepted())
+                .isTrue();
+        assertThatThrownBy(
+                        () ->
+                                invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "MODEL", "model:initial", List.copyOf(refs), null)))
+                .hasMessage("PLAN_REQUIRED");
+        var plan =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "plan:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(plan.receiptRef());
+        var planRefs = new ArrayList<>(refs);
+        planRefs.set(0, plan.decision().candidateRef());
+        assertThat(
+                        invoke(
+                                        gateway,
+                                        claim,
+                                        new Invocation(
+                                                "VALIDATE",
+                                                "plan-validate:"
+                                                        + codec.fingerprint(
+                                                                List.of(
+                                                                        codec.fingerprint(
+                                                                                claim.binding()),
+                                                                        plan.decision()
+                                                                                .candidateRef())),
+                                                List.copyOf(planRefs),
+                                                null))
+                                .accepted())
+                .isTrue();
+        var action =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:lookup", List.copyOf(refs), null));
+        refs.add(action.receiptRef());
+        var intent = action.decision().tools().getFirst();
+        refs.add(
+                invoke(
+                                gateway,
+                                claim,
+                                new Invocation("TOOL", intent.argumentsRef(), List.of(), intent))
+                        .receiptRef());
+        var answer =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:answer", List.copyOf(refs), null));
+        refs.add(answer.receiptRef());
+        refs.set(0, answer.decision().candidateRef());
+        var valid =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("VALIDATE", "validate:answer", List.copyOf(refs), null));
+        assertThat(valid.accepted()).isTrue();
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "CANDIDATE_READY",
+                                        "cp:routed-plan",
+                                        answer.decision().candidateRef(),
+                                        valid.receiptRef())))
+                .isTrue();
+        db.update("UPDATE agent_tool_tenant_grant SET enabled=false");
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class))
+                .isEqualTo("FAILED");
+        assertThat(calls).hasValue(4);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void routeProjectionFinalAcceptanceAndPolicyRls(boolean revoke) throws Exception {
+        var calls = new AtomicInteger();
+        var gateway =
+                cognition(
+                        calls,
+                        n -> answer(n == 1 ? routeBody("DIRECT", "[\"lookup\"]") : "{}"),
+                        ROUTED,
+                        40000);
+        executions.reserve("alpha", 1, "b".repeat(64), 8, 8, 2);
+        var claim = executions.claim("alpha", "worker", 60).orElseThrow();
+        var refs = new ArrayList<String>();
+        refs.add(claim.binding().inputRef());
+        var proposal =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation(
+                                "MODEL",
+                                "route:" + codec.fingerprint(claim.binding()),
+                                List.copyOf(refs),
+                                null));
+        refs.add(proposal.receiptRef());
+        assertThat(invoke(gateway, claim, routeValidation(claim, proposal, refs)).accepted())
+                .isTrue();
+        String role = "route_" + UUID.randomUUID().toString().replace("-", "");
+        admin.execute("CREATE ROLE " + role + " NOLOGIN NOSUPERUSER NOBYPASSRLS");
+        try {
+            admin.execute("GRANT USAGE ON SCHEMA " + schema + " TO " + role);
+            admin.execute("GRANT SELECT ON ALL TABLES IN SCHEMA " + schema + " TO " + role);
+            try (var c = DriverManager.getConnection(url, user, password);
+                    var stmt = c.createStatement()) {
+                stmt.execute("SET ROLE " + role);
+                stmt.execute("SET search_path TO " + schema);
+                stmt.execute("SET app.system_worker='false'");
+                stmt.execute("SET app.tenant_code='beta'");
+                for (var table : List.of("agent_graph_route_policy", "agent_graph_route_verdict")) {
+                    try (var rows = stmt.executeQuery("SELECT count(*) FROM " + table)) {
+                        rows.next();
+                        assertThat(rows.getInt(1)).isZero();
+                    }
+                }
+                stmt.execute("SET app.tenant_code='alpha'");
+                try (var rows =
+                        stmt.executeQuery("SELECT count(*) FROM agent_graph_route_verdict")) {
+                    rows.next();
+                    assertThat(rows.getInt(1)).isEqualTo(1);
+                }
+            }
+        } finally {
+            admin.execute("DROP OWNED BY " + role);
+            admin.execute("DROP ROLE " + role);
+        }
+        var answer =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("MODEL", "model:answer", List.copyOf(refs), null));
+        refs.add(answer.receiptRef());
+        refs.set(0, answer.decision().candidateRef());
+        var validation =
+                invoke(
+                        gateway,
+                        claim,
+                        new Invocation("VALIDATE", "validate:answer", List.copyOf(refs), null));
+        assertThat(validation.accepted()).isTrue();
+        assertThat(
+                        executions.acknowledge(
+                                claim,
+                                new Observation(
+                                        "CANDIDATE_READY",
+                                        "cp:routed-answer",
+                                        answer.decision().candidateRef(),
+                                        validation.receiptRef())))
+                .isTrue();
+        if (revoke) {
+            db.update("UPDATE agent_tool_tenant_grant SET enabled=false");
+        }
+        assertThat(completion(false).completeNext()).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM agent_run WHERE id=1", String.class))
+                .isEqualTo(revoke ? "FAILED" : "SUCCEEDED");
+        if (revoke) {
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT error_code FROM agent_run WHERE id=1", String.class))
+                    .isEqualTo("GRAPH_ROUTE_AUTHORITY_DENIED");
+        }
+        assertThat(calls).hasValue(2);
     }
 
     private static final String CHECKLIST =
@@ -6110,6 +7011,26 @@ class GraphPersistenceIntegrationTest {
             String outputSchema,
             int budget,
             java.util.function.Function<AgentTool.Request, String> toolOutput) {
+        return cognition(calls, responses, outputSchema, budget, toolOutput, false);
+    }
+
+    private GraphCognitionGateway cognition(
+            AtomicInteger calls,
+            IntFunction<ModelProviderResponse> responses,
+            String outputSchema,
+            int budget,
+            java.util.function.Function<AgentTool.Request, String> toolOutput,
+            boolean extra) {
+        if (extra) {
+            db.update(
+                    "INSERT INTO agent_tool_definition"
+                            + " VALUES('lookup_extra','Extra','{}',true,'MCP','LOW',false,true)");
+            db.update("INSERT INTO agent_tool_tenant_grant VALUES('alpha','lookup_extra',true)");
+            db.update(
+                    "UPDATE agent_definition_version SET"
+                            + " tool_set_json='[\"lookup\",\"lookup_extra\"]' WHERE"
+                            + " tenant_code='alpha'");
+        }
         db.update(
                 "UPDATE agent_run SET"
                         + " input_snapshot_json='{\"input\":{\"amount\":20000.01,\"word\":\"hi\"}}'"
@@ -6131,8 +7052,61 @@ class GraphPersistenceIntegrationTest {
                         return new Result(toolOutput.apply(request), request.idempotencyKey());
                     }
                 };
+        AgentTool extraTool =
+                new AgentTool() {
+                    public String name() {
+                        return "lookup_extra";
+                    }
+
+                    public Result execute(Request request) {
+                        return new Result(toolOutput.apply(request), request.idempotencyKey());
+                    }
+                };
         var registry =
-                new AgentToolRegistry(List.of(tool), governance, governance, schemas, mapper);
+                new AgentToolRegistry(
+                        extra ? List.of(tool, extraTool) : List.of(tool),
+                        governance,
+                        governance,
+                        schemas,
+                        mapper);
+        if (outputSchema != null && outputSchema.contains("x-graph-routing")) {
+            var frozen =
+                    List.copyOf(
+                            governance.findAuthorized(
+                                    "alpha",
+                                    extra
+                                            ? java.util.Set.of("lookup", "lookup_extra")
+                                            : java.util.Set.of("lookup")));
+            var snapshots =
+                    new io.github.illuseahashmap.agent.runtime.application.port
+                            .AgentToolSnapshotRepository() {
+                        public void freeze(
+                                String tenant,
+                                long version,
+                                List<
+                                                io.github.illuseahashmap.agent.runtime.application
+                                                        .port.AgentToolDefinition>
+                                        definitions) {
+                            throw new UnsupportedOperationException();
+                        }
+
+                        public List<
+                                        io.github.illuseahashmap.agent.runtime.application.port
+                                                .AgentToolDefinition>
+                                find(String tenant, long version) {
+                            return frozen;
+                        }
+                    };
+            registry =
+                    new AgentToolRegistry(
+                            extra ? List.of(tool, extraTool) : List.of(tool),
+                            governance,
+                            governance,
+                            schemas,
+                            mapper,
+                            List.of(),
+                            snapshots);
+        }
         var versions = mock(AgentDefinitionVersionRepository.class);
         var version =
                 new AgentDefinitionVersion(
@@ -6154,7 +7128,7 @@ class GraphPersistenceIntegrationTest {
                         null,
                         null,
                         null,
-                        "[\"lookup\"]");
+                        extra ? "[\"lookup\",\"lookup_extra\"]" : "[\"lookup\"]");
         when(versions.findByVersionId("alpha", 10)).thenReturn(Optional.of(version));
         completionVersions = versions;
         completionTools = registry;

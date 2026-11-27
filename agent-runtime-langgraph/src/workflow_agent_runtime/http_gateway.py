@@ -23,6 +23,8 @@ from .contracts import (
     PlanRequired,
     Reference,
     ReplanRequired,
+    RouteRepairRequired,
+    RouteRequired,
     RunBinding,
     RuntimeContractError,
     RuntimeStopped,
@@ -91,6 +93,9 @@ class HttpGovernedGateway:
             "RUN_STOPPED",
             "CORRECTION_REQUIRED",
             "FORMAT_REPAIR_REQUIRED",
+            "ROUTE_REQUIRED",
+            "ROUTE_REPAIR_REQUIRED",
+            "ROUTE_DENIED",
             "REPLAN_REQUIRED",
             "PLAN_SWITCH_PENDING",
             "PLAN_REQUIRED",
@@ -280,6 +285,10 @@ class HttpGovernedGateway:
                         raise PlanRequired(safe)
                     if safe == "REPLAN_REQUIRED":
                         raise ReplanRequired(safe)
+                    if safe == "ROUTE_REQUIRED":
+                        raise RouteRequired(safe)
+                    if safe == "ROUTE_REPAIR_REQUIRED":
+                        raise RouteRepairRequired(safe)
                     if safe == "FORMAT_REPAIR_REQUIRED":
                         raise FormatRepairRequired(safe)
                     if safe == "CORRECTION_REQUIRED":

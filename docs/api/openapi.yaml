@@ -26,6 +26,109 @@ tags:
   - name: Knowledge
     description: Tenant-scoped knowledge profiles, ingestion, and scope authorization.
 paths:
+  /agent-runtime/capacity:
+    get:
+      tags: [Tenant]
+      operationId: getPlatformCapacity
+      summary: Read platform resource capacity (platform administrators only)
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+    put:
+      tags: [Tenant]
+      operationId: putPlatformCapacity
+      summary: Update platform resource capacity (platform administrators only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityPlatformUpdate'
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+  /agent-runtime/capacity/tenants/{tenantCode}:
+    parameters:
+      - in: path
+        name: tenantCode
+        required: true
+        schema: { type: string, maxLength: 64 }
+    get:
+      tags: [Tenant]
+      operationId: getTenantCapacity
+      summary: Read tenant resource capacity (platform administrators only)
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
+    put:
+      tags: [Tenant]
+      operationId: putTenantCapacity
+      summary: Update tenant resource capacity (platform administrators only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityTenantUpdate'
+      responses:
+        '200':
+          description: Current capacity configuration and usage snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityViewApiResponse'
+        '400':
+          description: Invalid limits
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator required
+        '404':
+          description: Tenant not found
+        '409':
+          description: Configuration changed; reload before saving
   /auth/login:
     post:
       tags: [Authentication]
@@ -1282,6 +1385,112 @@ components:
       in: cookie
       name: WORKFLOW_ACCESS_TOKEN
   schemas:
+    CapacityLimits:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+        active:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+        calls:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+    CapacityOverrides:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+        active:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+        calls:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1000000
+          nullable: true
+    CapacityUsage:
+      type: object
+      required: [outstanding, active, calls]
+      properties:
+        outstanding:
+          type: integer
+          format: int64
+          minimum: 0
+        active:
+          type: integer
+          format: int64
+          minimum: 0
+        calls:
+          type: integer
+          format: int64
+          minimum: 0
+    CapacityView:
+      type: object
+      required: [revision, platform, defaults, overrides, effective, usage]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        platform:
+          $ref: '#/components/schemas/CapacityLimits'
+        defaults:
+          $ref: '#/components/schemas/CapacityLimits'
+        overrides:
+          $ref: '#/components/schemas/CapacityOverrides'
+        effective:
+          $ref: '#/components/schemas/CapacityLimits'
+        usage:
+          $ref: '#/components/schemas/CapacityUsage'
+    CapacityPlatformUpdate:
+      type: object
+      required: [revision, platform, defaults]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        platform:
+          $ref: '#/components/schemas/CapacityLimits'
+        defaults:
+          $ref: '#/components/schemas/CapacityLimits'
+    CapacityTenantUpdate:
+      type: object
+      required: [revision, overrides]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        overrides:
+          $ref: '#/components/schemas/CapacityOverrides'
+    CapacityViewApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        traceId: { type: string, nullable: true }
+        data:
+          $ref: '#/components/schemas/CapacityView'
     IgnoreAgentCompletionEventCommand:
       type: object
       required: [reason]

@@ -38,7 +38,7 @@ def test_java_tool_gateway_postgres_and_python_http(postgres_dsn, tmp_path):
                 "workflow-boot",
                 "-am",
                 "-Dsurefire.failIfNoSpecifiedTests=false",
-                "-Dtest=GraphToolGatewayTest,GraphLoopDetectorTest,GraphTaskContractTest,GraphPlanTest,GraphGatewayIntegrationTest,GraphPersistenceIntegrationTest,AgentToolRegistryTest,AgentArchitectureTest,GraphCompletionFlowableIntegrationTest,AgentCompletionRecoveryServiceTest,GraphHostConfigurationTest,GraphHostControllerTest,GraphCallRecoveryWorkerTest",
+                "-Dtest=GraphRouteTest,GraphToolGatewayTest,GraphLoopDetectorTest,GraphTaskContractTest,GraphPlanTest,GraphGatewayIntegrationTest,GraphPersistenceIntegrationTest,GraphPythonRecoveryIntegrationTest,AgentToolRegistryTest,AgentArchitectureTest,GraphCompletionFlowableIntegrationTest,AgentCompletionRecoveryServiceTest,GraphHostConfigurationTest,GraphHostControllerTest,GraphCallRecoveryWorkerTest",
                 "org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:check@verify-java-conventions",
                 "test",
                 "org.jacoco:jacoco-maven-plugin:0.8.14:report",
@@ -54,7 +54,11 @@ def test_java_tool_gateway_postgres_and_python_http(postgres_dsn, tmp_path):
     assert completed.returncode == 0, log.read_text(encoding="utf-8", errors="replace")[-14000:]
     import xml.etree.ElementTree as etree
 
-    for test in ("GraphGatewayIntegrationTest", "GraphPersistenceIntegrationTest"):
+    for test in (
+        "GraphGatewayIntegrationTest",
+        "GraphPersistenceIntegrationTest",
+        "GraphPythonRecoveryIntegrationTest",
+    ):
         report = (
             root
             / "agent-engine/target/surefire-reports"

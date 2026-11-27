@@ -15,7 +15,7 @@
 
 编号收口：原 P1-10 合并到 P1-2a，不再维护两套 RAG 缺口；P1-2d 的知识接口输入与错误语义、P1-13 的构建版本固定已完成代码及本地回归，移出开放清单，验证与边界见[当前质量基线](../status.md#五完成判定)。跨接口契约、全新环境及容器门禁仍分别跟踪于 P1-2/P1-8，不因单项实现完成而宣称全部通过。
 
-V70–V77 的已实现能力及专项验收统一见 [当前状态](../status.md#当前优先项langgraph-内部运行时与平台治理)，其中增量摘要和 READ_RESULT 已实现，不能继续列为待实现。迁移发布与原生退役条件见[退出清单](../operations/langgraph-migration-exit.md)。
+V70–V79 的已实现能力及专项验收统一见 [当前状态](../status.md#当前优先项langgraph-内部运行时与平台治理)，其中增量摘要和 READ_RESULT 已实现，不能继续列为待实现。迁移发布与原生退役条件见[退出清单](../operations/langgraph-migration-exit.md)。
 
 ## D-1：开源 LangGraph 契约模块已实现，业务接入与迁移尚未完成
 
@@ -27,7 +27,7 @@ V70–V77 的已实现能力及专项验收统一见 [当前状态](../status.md
 - **下一步 G0**：采用开源 Python LangGraph + 官方 PostgreSQL saver，版本和依赖已锁定。继续生产 Gateway、稳定命令/查询/取消/对账与 artifact 路由；图库不等于分布式服务，同会话检查点保护不直接证明全部网络分区、外呼与业务提交安全。
 - **G1/G2**：沿用 P-17 七场景、同租户双采购及压缩恢复基线。工具成功而 checkpoint 未写、候选已存而 Run 未提交不能要求模型重答；Java 拒绝旧提交之外还须证明图状态不受迟到写污染。图内重试与平台预算统一，正常 resume 不增加失败 Attempt。
 - **G3**：AgentVersion 固定 backend/artifact/state schema；新版本切换、旧运行排空，删除原生内部循环与恢复代码，不长久维护两套竞争权威。租户/工具/知识/Flowable 语义及本地评分不得退化。
-- **已验证切片**：独立图/Python HTTP/Worker/Java MODEL/TOOL/VALIDATE、V65–V69、认证派发、全平台准入和账户审计保持回归；V69 最终验收与真实 Flowable 事务见[结果交接记录](graph-completion-regression.md)，并发机制见[并发回归](graph-capacity-regression.md)。**仍开放**：未知外呼/命令对账、整体图运维和后端发布路由；路由等价及完整节点联合验收（V78 最终答案有限格式修复已实现，见[验收记录](graph-format-repair-regression.md)；计划草稿不自动修复）；真实模型/MCP、完整 P-17 与容量报告。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
+- **已验证切片**：独立图/Python HTTP/Worker/Java MODEL/TOOL/VALIDATE、V65–V69、认证派发、全平台准入和账户审计保持回归；V69 最终验收与真实 Flowable 事务见[结果交接记录](graph-completion-regression.md)，并发机制见[并发回归](graph-capacity-regression.md)。**仍开放**：未知外呼/命令对账、整体图运维和后端发布路由；完整节点与业务场景联合验收（V79 路由投影见[专项记录](graph-route-projection-regression.md)，V78 最终答案格式修复已实现；计划草稿不自动修复）；真实模型/MCP、完整 P-17 与容量报告。基本链路使用确定性模型，不能关闭 P1-3/P1-6。明细见[Gateway 契约](../architecture/langgraph-governed-gateway-contract.md)。
 - **部署决策（2026-11-11）**：用户已明确开源，不再采用商业 Agent Server，许可不再是阻碍。使用本地独立临时 PostgreSQL 可验证持久化，不要求本机 Docker；生产持久命令、Worker 并发上限、连接预算、网络分区和容量仍需交付，不能以新增模块冒充整个平台迁移。
 
 ## P0：发布与生产基线

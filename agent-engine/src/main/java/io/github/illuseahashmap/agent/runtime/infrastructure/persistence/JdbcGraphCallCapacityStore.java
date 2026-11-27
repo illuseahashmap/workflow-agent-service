@@ -126,7 +126,8 @@ public final class JdbcGraphCallCapacityStore implements GraphCallLifecyclePort 
                                     """,
                                     params,
                                     Long.class);
-                    if (pending > 0 || all >= policy.calls() || tenant >= policy.tenantCalls()) {
+                    if (pending > 0 || all >= policy.calls()
+                            || tenant >= GraphCapacityLock.tenant(jdbc, policy, run.binding().tenantCode()).tenantCalls()) {
                         return Optional.empty();
                     }
                     for (String key : keys) {

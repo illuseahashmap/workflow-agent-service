@@ -1,6 +1,8 @@
 # 下一步计划与当前状态
 
-文档更新时间：2026-11-26。当前拆分进展：V70 新契约与稳定工具意图、V71 Run 次数预算/持久停止/无模型收尾、V72 重复检测、V73 必要事实清单与循环触发的一次纠偏均已实现。旧版兼容保留，业务版本未切换，完整 G0–G3 仍未完成。随后完成 V74 PLANNED revision 1：显式规划/验收节点和工具条目绑定；V76 随后为显式策略 v2 增加一次安全计划切换，详见[修订记录](quality/graph-plan-revision-regression.md)。V74 实现范围与验证见[Plan 记录](quality/graph-v2-plan-regression.md)。
+文档更新时间：2026-11-26。V79 显式路由投影已实现，五种模式沿用原生能力契约，详见[路由专项](quality/graph-route-projection-regression.md)。当前拆分进展：V70 新契约与稳定工具意图、V71 Run 次数预算/持久停止/无模型收尾、V72 重复检测、V73 必要事实清单与循环触发的一次纠偏均已实现。旧版兼容保留，业务版本未切换，完整 G0–G3 仍未完成。随后完成 V74 PLANNED revision 1：显式规划/验收节点和工具条目绑定；V76 随后为显式策略 v2 增加一次安全计划切换，详见[修订记录](quality/graph-plan-revision-regression.md)。V74 实现范围与验证见[Plan 记录](quality/graph-v2-plan-regression.md)。
+
+2026-11-26 路由验收：103 项 Python 与 243 项 Java 联合测试通过，零失败、零跳过；后端构建和 7 组必需基础设施套件门禁通过。保留旧版兼容，业务版本未切换，下一步为 P-17 场景和节点组合验收。详见[路由验收记录](quality/graph-route-projection-regression.md)。
 
 V75 根因修复：持久物理发送/返回事实与业务裁决分离，未发送许可通过发送屏障回收，返回后校验拒绝不再泄漏容量；未知调用和历史许可仍保守处理，补齐后台恢复。范围、故障窗口与验收见[物理调用恢复记录](quality/graph-physical-call-recovery-regression.md)。
 
@@ -91,10 +93,10 @@ V75 根因修复：持久物理发送/返回事实与业务裁决分离，未发
 
 目标已明确为 [LangGraph 接入设计](architecture/langgraph-runtime-adoption-design.md)，不是继续开发自研 ExecutionTask/Continuation。现有 Java 原生执行器仍在运行，P-17 原生 7/7 不能记为框架接入成绩。
 
-2026-11-20 当前节点迁移顺序：CHECKLIST、PLANNED revision 1 及 V76 显式策略 v2 的一次计划修订/共享纠偏已实现，见[修订验收](quality/graph-plan-revision-regression.md)。V77 已实现显式增量压缩与按需原文读取，见[压缩与回读验收](quality/graph-memory-regression.md)。V78 已实现最终答案的有限格式修复，见[格式修复验收](quality/graph-format-repair-regression.md)；接下来补齐路由投影与 P-17 等价验收。当前自动修订由循环触发，最多 revision 2；格式修复与循环纠偏/计划修订共享同一 Run 唯一纠偏许可。运行治理与容量门禁继续按下面的 G0/G2 路线收口。
+2026-11-20 当前节点迁移顺序：CHECKLIST、PLANNED revision 1 及 V76 显式策略 v2 的一次计划修订/共享纠偏已实现，见[修订验收](quality/graph-plan-revision-regression.md)。V77 已实现显式增量压缩与按需原文读取，见[压缩与回读验收](quality/graph-memory-regression.md)。V78 已实现最终答案的有限格式修复，见[格式修复验收](quality/graph-format-repair-regression.md)；V79 已实现显式路由投影及共享修复，见[路由验收](quality/graph-route-projection-regression.md)；接下来补齐图端 P-17 与节点组合等价验收。当前自动修订由循环触发，最多 revision 2；路由修复、最终格式修复与循环纠偏/计划修订共享同一 Run 唯一纠偏许可。运行治理与容量门禁继续按下面的 G0/G2 路线收口。
 
 1. **优先 G0/G2：收口运营与容量验收。** 认证派发、全平台准入、账户配置、artifact 领取与 ACK 最终业务接纳已实现；候选/回执不重答、终态与 Outbox 原子提交、Flowable 激活隔离见[结果交接记录](quality/graph-completion-regression.md)。下一步补未知外呼可信对账、未 ACK 图运行的取消/超时/暂停运维闭环、命令查询、拒绝/等待/隔离指标、加权/管理预留和多实例负载报告。原生在途并发及嵌套外呼不冒充图许可覆盖；同步 HTTP 未结束不能释放全部额度，业务版本切换仍受 G1/G3 门禁。
-2. **G1：补节点等价并复用治理跑 P-17。** 压缩和回读节点已实现，最终答案有限格式修复已实现，继续补路由等价及联合验收；Java 保留模型/工具/知识 Gateway、回执、授权和 Flowable 最终验收。用同七场景和双采购压缩/恢复基线验收。本机脚本模型先行，方舟真实模型继续暂缓，不绕过出站保护。
+2. **G1：补节点等价并复用治理跑 P-17。** 压缩和回读节点已实现，最终答案有限格式修复已实现，显式路由投影已实现，继续补完整业务联合验收；Java 保留模型/工具/知识 Gateway、回执、授权和 Flowable 最终验收。用同七场景和双采购压缩/恢复基线验收。本机脚本模型先行，方舟真实模型继续暂缓，不绕过出站保护。
 3. **G2：补完整多实例故障与容量报告。** 硬上限竞争和未知额度保留已有真实 PostgreSQL 回归，仍需加权/预留策略、异步/连接预算、持续负载和故障恢复报告；验证慢供应商不拖垮独立资源、挂起不占执行槽，不能把少量并发单测当吞吐验收。
 4. **G3：新版本切换、旧运行排空并删除重复代码。** AgentVersion 固定 backend/artifact/state schema；禁止把运行中 v5 改为图状态、双执行或修改已发布版本。只有验收通过才移除原生内部循环/Recovery。
 
@@ -237,3 +239,7 @@ RAG 向量纵向验证记录（2026-10-17）：方舟 `doubao-embedding-vision-2
 - Agent Worker 领取查询支持租户级并发上限，避免单一租户占满所有执行槽位；上限通过 `WORKFLOW_AGENT_WORKER_MAX_RUNNING_PER_TENANT` 配置。
 - 人工重试除状态历史外，写入独立的 `agent_run_operation` 操作账本；V31 同时为 Agent 操作和已存在的 Flowable 租户表补充纵深隔离策略。
 - 结果策略支持显式 `resultStatus` 业务结果封套，只有 `SUCCESS` 才允许恢复流程；空结果、部分结果和业务拒绝均保持终止语义。
+
+### 2026-11-26 租户资源配额
+
+已补充平台总上限、默认租户上限与逐字段租户覆盖的管理接口和前端入口，并接入准入、图调度与外呼许可。权限、继承、生效、升级和验证边界见[资源配额运维说明](operations/tenant-capacity-configuration.md)。本地验收不代表业务环境已升级。

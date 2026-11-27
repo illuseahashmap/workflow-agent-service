@@ -60,7 +60,21 @@ public interface GraphCognitionPort {
             io.github.illuseahashmap.agent.runtime.application.graph.GraphPlan.Context plan,
             io.github.illuseahashmap.agent.runtime.application.graph.GraphMemory.Context memory,
             io.github.illuseahashmap.agent.runtime.application.graph.GraphFormatRepair.Context
-                    repair) {
+                    repair,
+            io.github.illuseahashmap.agent.runtime.application.graph.GraphRoute.Context route) {
+        public History(
+                String input,
+                List<ToolFact> tools,
+                ModelProviderResponse candidate,
+                io.github.illuseahashmap.agent.runtime.application.graph.GraphTaskContract.Report
+                        facts,
+                io.github.illuseahashmap.agent.runtime.application.graph.GraphPlan.Context plan,
+                io.github.illuseahashmap.agent.runtime.application.graph.GraphMemory.Context memory,
+                io.github.illuseahashmap.agent.runtime.application.graph.GraphFormatRepair.Context
+                        repair) {
+            this(input, tools, candidate, facts, plan, memory, repair, null);
+        }
+
         public History(
                 String input,
                 List<ToolFact> tools,

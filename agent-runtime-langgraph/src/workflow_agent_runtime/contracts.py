@@ -168,3 +168,11 @@ class RuntimeBusy(RuntimeError):
 
 class FormatRepairRequired(RuntimeContractError):
     """A durable shared correction grant allows one final-answer format repair."""
+
+
+class RouteRequired(RuntimeContractError):
+    pass
+
+
+class RouteRepairRequired(RuntimeContractError):
+    pass

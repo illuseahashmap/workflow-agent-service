@@ -41,7 +41,7 @@ uv run --project agent-runtime-langgraph python -m workflow_agent_runtime
 - 创建、终态重试、终态释放、删除均与业务事务一起提交/回滚。`ON CONFLICT DO NOTHING` 不计数；暂停不释放；图 `defer/ack` 不代表业务终态，不释放 Run 准入。
 - 超额 SQLSTATE `PWA01` 映射 HTTP 429，包括 Flowable/业务异常包装；失败的流程推进事务回滚，不保留“有等待节点却没有 Run”的半成品。
 - SECURITY DEFINER 函数只操作触发器所属 schema 中的配额行，固定 `search_path`；普通运行角色不能读取全平台计数。只授予所需业务表权限，不授予禁用触发器、TRUNCATE、DDL 或超级用户权限。
-- 调低上限不会取消现有任务；现有量超标时停止新增，等待自然释放。`GLOBAL.tenant_limit` 仅决定新租户默认值，已有 `TENANT:<code>.hard_limit` 独立配置。限额调整目前走受控 DBA 变更，无 UI；不能把 `used` 当手工调节旋钮。
+- 调低上限不会取消现有任务；现有量超标时停止新增，等待自然释放。V80 起通过平台管理员的“平台配额 / 资源配额”页面配置，继承默认值的已有租户也会同步更新准入上限；不能把 `used` 当手工调节旋钮。详见[平台与租户资源配额](tenant-capacity-configuration.md)。
 - 全局计数行是短事务串行化点。单元/小并发机制通过不代表高负载容量；多行业务事务仍需既有事务回滚/重试策略，不能持有计数锁进行外部 HTTP。
 
 V67 `max_outstanding` 仍是图接管子额度。V68 覆盖全平台接收，**不将原生 Worker 的活跃并发或所有原生外呼自动纳入图许可**。
