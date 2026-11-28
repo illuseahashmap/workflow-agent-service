@@ -4,7 +4,7 @@
 
 ## 先读金标复核结果
 
-[v2 题库说明](../fixtures/knowledge/rag400-v2/README.md)及 gold-review.json 记录修订：全部 400 题结构/引用校验；重点复核 60 道缺证题、过度要求和冲突前提。两题删去非本问必须的补充事实；29 道缺证边界问题允许有依据的否定解释或缺证拒答，仍必须满足参考语义、禁止无据批准。要求具体数值的题不放宽。原保留题去除评测指令前缀并统一固定权限声明。
+[v2 题库说明](../fixtures/knowledge/rag400-v2/README.md)及 gold-review.json 记录修订：全部 400 题结构/引用校验；全部“关于 XXX：”模板前缀已移除，针对指代不清补全原有上下文；重点复核 60 道缺证题、过度要求和冲突前提。17 题经问题与原文核对后删去非本问必须的补充事实；29 道缺证边界问题允许有依据的否定解释或缺证拒答，仍必须满足参考语义、禁止无据批准。要求具体数值的题不放宽。原保留题去除评测指令前缀并统一固定权限声明。
 
 这是作者复核，不是独立人工裁决；金标争议继续进入 review-queue，不能自动通过。原保留集已随仓库交付，不是未曝光盲测。旧 v1、旧 200 题结果及其哈希保持不变。
 
@@ -64,7 +64,7 @@ provider 可为 OPENAI_COMPATIBLE 或 VOLCENGINE_ARK，复用项目真实适配�
 
 ## 正式执行
 
-默认三组共 400 题、四种模式。先不加 --live 可以完成真实 Embedding、辅助查询和四路检索；这些准备步骤也会产生模型费用。加 --live 才进一步运行回答与评分。
+题库包含三组共 400 题。鉴于远端用户已明确停止原保留集，默认只运行 DEV 200 + CALIBRATION 80，共 280 题、四种模式；不会续跑旧保留集批次。先不加 --live 可以完成真实 Embedding、辅助查询和四路检索；这些准备步骤也会产生模型费用。加 --live 才进一步运行回答与评分。
 
 ```sh
 uv run --project agent-runtime-langgraph python scripts/rag400/run-remote.py --output ../rag400-matrix-001 --embedding-config ../embedding.json --expansion-config ../expansion.json --live --config ../answer.json --judge-config ../judge.json
@@ -72,7 +72,7 @@ uv run --project agent-runtime-langgraph python scripts/rag400/run-remote.py --o
 
 没有独立评分模型时可省略 --judge-config，报告会显示同模型评分的局限。回答/评分默认各 4096 Token，允许分别用 --answer-max-tokens、--judge-max-tokens 设置。4096 是待验证上限，不保证推理模型不会截断；失败留在分母中。
 
-预计最多 1600 次回答、1600 次评分、400 次辅助查询，另加文档与查询 Embedding。可先用 `--splits dev` 验证，再另建批次做完整三组；三组分开报告，CALIBRATION 不用于产品参数调优。仅想复现单路基线用 `--modes keyword`，不要求 Embedding/扩展配置。
+默认最多 1120 次回答、1120 次评分、280 次辅助查询，另加文档与查询 Embedding。可先用 `--splits dev` 验证，再另建批次做正式对照。仅在明确需要重新评测原保留集时，显式增加 `--splits dev calibration holdout-candidate`，此时最多 1600 次回答、1600 次评分、400 次辅助查询；三组分开报告，CALIBRATION 不用于产品参数调优。仅想复现单路基线用 `--modes keyword`，不要求 Embedding/扩展配置。
 
 续跑使用同一个输出目录、相同 modes/splits/配置并加 `--resume`。入口校验源代码、题库、配置身份和原始产物哈希，跳过已记录请求，不重试失败来抬分。预算/模型/提示词改变必须建立新批次。部分检索在登记摘要前中断时，保留失败批次并新建目录；不能用未完整的一组和另一次运行拼成对照。
 
@@ -101,3 +101,18 @@ tar -czf ../rag400-matrix-001.tar.gz -C .. rag400-matrix-001
 远端返回源提交、完整命令与退出码、三组四模式的分母/覆盖/自动通过/语义通过但动作不符/金标争议/预算失败、FUSED 和回退数量，并附完整压缩包。退出码 0 是执行完成，不是每题正确。
 
 这仍是生产检索组件加直接模型的分层对照，不是完整 AgentRun/LangGraph/Flowable/HTTP 授权端到端验收。相同题目成对比较，不混合 v1/v2，也不把合成题通过率说成真实业务正确概率。
+
+
+## 已返回的关键词结果与原生数据库路径
+
+远端提交 `3fb92eb` 的 [关键词基线](../quality/artifacts/rag400-run-001/SUMMARY.md)完整保留：DEV 156/200 自动通过、CALIBRATION 59/80；原保留集仅 41 条回答、无评分，用户中止，不是完整成绩。该批基于 v1；自然问法、金标、证据选择改变后的 v2 必须重跑 keyword，不与旧成绩直接宣称提升。
+
+远端此前没有使用 Docker，而是原生 PostgreSQL 17.5。现在入口原生支持 `--database-config ../evaluation-db.json`，无需改评测脚本。示例：
+
+```json
+{"purpose":"ISOLATED_EVALUATION_SERVER","jdbcUrl":"jdbc:postgresql://127.0.0.1:15432/postgres","username":"postgres","password":"SECRET"}
+```
+
+仅允许显式声明的专用测试服务器、loopback、postgres 管理库；拒绝业务库 URL。账号须能创建并删除随机测试库、在其内创建 vector 扩展。入口只在新建 knowledge_/specimen_ 随机库中执行迁移与摄取，finally 删除本次数据库，不清理既有库。远端须先安装与 PostgreSQL 主版本匹配的 pgvector，`SELECT name FROM pg_available_extensions WHERE name='vector';` 应返回 vector；预检不通过就停止，不先花费扩展模型调用。不要为了测试重置已有服务器。
+
+把上述 `--database-config` 加到正式执行命令即可。若进程被强杀，保留日志并核对本次数据库名称，不通过通配符删除。该选项不启动或停止原生 PostgreSQL 服务。

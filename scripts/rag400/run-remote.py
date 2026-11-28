@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import time
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC = ROOT / 'docs/fixtures/knowledge/rag400-v2'
@@ -29,6 +30,37 @@ def public_config(path):
     if not path: return None
     value = json.loads(path.read_text(encoding='utf-8'))
     return {k:value[k] for k in CONFIG_KEYS if k in value}
+
+
+def validate_config(path, embedding=False):
+    value=json.loads(path.read_text(encoding='utf-8'))
+    for key in ('baseUrl','model','apiKey'):
+        if not isinstance(value.get(key),str) or not value[key].strip():
+            raise ValueError(f'Configuration requires {key}')
+    url=urlsplit(value['baseUrl'])
+    if url.scheme!='https' or not url.hostname or url.username or url.password or url.query or url.fragment:
+        raise ValueError('Configuration requires a clean HTTPS endpoint without credentials/query/fragment')
+    if embedding:
+        if value.get('provider','OPENAI_COMPATIBLE') not in ('OPENAI_COMPATIBLE','VOLCENGINE_ARK'):
+            raise ValueError('Unsupported embedding provider')
+        if not isinstance(value.get('modelVersion'),str) or not value['modelVersion'].strip():
+            raise ValueError('Embedding requires modelVersion')
+        if type(value.get('dimension')) is not int or not 1<=value['dimension']<=4096:
+            raise ValueError('Embedding dimension must be 1..4096')
+
+
+def database_config(path):
+    if not path: return None
+    value=json.loads(path.read_text(encoding='utf-8'))
+    address=value.get('jdbcUrl','')
+    url=urlsplit(address.removeprefix('jdbc:'))
+    if (not address.startswith('jdbc:postgresql://') or url.hostname not in ('127.0.0.1','localhost','::1')
+        or url.path!='/postgres' or url.query or url.fragment or url.username or url.password
+        or value.get('purpose')!='ISOLATED_EVALUATION_SERVER'):
+        raise ValueError('Native database must be an explicitly dedicated loopback evaluation server /postgres')
+    if not value.get('username') or not value.get('password'):
+        raise ValueError('Native database credentials required')
+    return value
 
 
 
@@ -57,9 +89,10 @@ def save(path, value):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, required=True, help='New directory outside checkout')
-    p.add_argument('--splits', nargs='+', choices=SPLITS, default=SPLITS)
+    p.add_argument('--splits', nargs='+', choices=SPLITS, default=['dev','calibration'])
     p.add_argument('--modes', nargs='+', choices=MODES, default=MODES)
     p.add_argument('--embedding-config', type=Path)
+    p.add_argument('--database-config', type=Path, help='Dedicated loopback native PostgreSQL alternative to Docker')
     p.add_argument('--expansion-config', type=Path)
     p.add_argument('--fixture-models', action='store_true', help='Synthetic vectors/topics for wiring tests ONLY')
     p.add_argument('--live', action='store_true', help='Explicitly enable paid model calls')
@@ -84,13 +117,16 @@ def main():
     out = a.output.resolve()
     if out == ROOT or ROOT in out.parents:
         p.error('output must be outside checkout')
-    for config in (a.config, a.judge_config, a.embedding_config, a.expansion_config):
+    for config in (a.config, a.judge_config, a.embedding_config, a.expansion_config, a.database_config):
         if config and (ROOT in config.resolve().parents or out in config.resolve().parents):
             p.error('credentials must be outside checkout AND result directory')
+        if config and config!=a.database_config: validate_config(config, embedding=config==a.embedding_config)
+    native=database_config(a.database_config)
     if run(['git', 'status', '--porcelain'], capture=True).strip():
         raise RuntimeError('Commit or isolate changes before evaluation; source must be clean')
     revision = run(['git', 'rev-parse', 'HEAD'], capture=True).strip()
     frozen = {'sourceCommit': revision, 'splits': a.splits, 'modes':a.modes, 'fixtureOnly':a.fixture_models,
+              'databaseMode':{'mode':'NATIVE','jdbcUrl':native['jdbcUrl'],'username':native['username']} if native else {'mode':'DOCKER'},
               'embeddingConfig':public_config(a.embedding_config), 'expansionConfig':public_config(a.expansion_config),
               'datasetFiles': {str(f.relative_to(PUBLIC)): sha(f) for f in sorted(PUBLIC.rglob('*'))
                                if f.is_file() and (f.name.endswith(('.cases.jsonl', '.queries.jsonl'))
@@ -114,6 +150,17 @@ def main():
                 'WORKFLOW_MIGRATION_DB_USERNAME', 'WORKFLOW_MIGRATION_DB_PASSWORD'):
         env.pop(key, None)
     env['PYTHONUTF8'] = '1'
+    if native:
+        import psycopg
+        address=urlsplit(native['jdbcUrl'][5:])
+        try:
+            with psycopg.connect(host=address.hostname,port=address.port or 5432,dbname='postgres',
+                                  user=native['username'],password=native['password'],connect_timeout=10) as connection:
+                installed=connection.execute("SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name='vector')").fetchone()[0]
+                if any(m!='keyword' for m in a.modes) and not installed:
+                    raise RuntimeError('Install pgvector matching the native PostgreSQL major version before running vector modes')
+        except psycopg.Error as failure:
+            raise RuntimeError(f'Native database preflight failed: {type(failure).__name__}') from None
     if a.embedding_config: env['RAG400_EMBEDDING_CONFIG'] = str(a.embedding_config.resolve())
     if 'hybrid-expansion' in a.modes:
         spec=importlib.util.spec_from_file_location('expansion_inputs',SCRIPTS/'expansion-inputs.py')
@@ -135,19 +182,23 @@ def main():
         if missing:
             if any(t.exists() for t in targets.values()):
                 raise RuntimeError('Temporary test target exists; refusing to overwrite')
-            env.update(POSTGRES_PASSWORD=secrets.token_hex(24))
-            container = run(['docker', 'run', '--detach', '--publish', '127.0.0.1::5432',
-                             '--env', 'POSTGRES_PASSWORD', frozen['retrievalImage']], env, True).strip()
-            print(f'Owned evaluation container: {container}', flush=True)
-            for _ in range(60):
-                ready = subprocess.run(['docker', 'exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'],
-                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-                if ready.returncode == 0: break
-                time.sleep(1)
-            else: raise RuntimeError('Test database not ready')
-            port = run(['docker', 'port', container, '5432/tcp'], capture=True).strip().rsplit(':', 1)[1]
-            env.update(WORKFLOW_TEST_DATABASE_URL=f'jdbc:postgresql://127.0.0.1:{port}/postgres',
-                       WORKFLOW_TEST_DATABASE_USER='postgres', WORKFLOW_TEST_DATABASE_PASSWORD=env['POSTGRES_PASSWORD'])
+            if native:
+                env.update(WORKFLOW_TEST_DATABASE_URL=native['jdbcUrl'],WORKFLOW_TEST_DATABASE_USER=native['username'],
+                           WORKFLOW_TEST_DATABASE_PASSWORD=native['password'])
+            else:
+                env.update(POSTGRES_PASSWORD=secrets.token_hex(24))
+                container = run(['docker', 'run', '--detach', '--publish', '127.0.0.1::5432',
+                                 '--env', 'POSTGRES_PASSWORD', frozen['retrievalImage']], env, True).strip()
+                print(f'Owned evaluation container: {container}', flush=True)
+                for _ in range(60):
+                    ready = subprocess.run(['docker', 'exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                    if ready.returncode == 0: break
+                    time.sleep(1)
+                else: raise RuntimeError('Test database not ready')
+                port = run(['docker', 'port', container, '5432/tcp'], capture=True).strip().rsplit(':', 1)[1]
+                env.update(WORKFLOW_TEST_DATABASE_URL=f'jdbc:postgresql://127.0.0.1:{port}/postgres',
+                           WORKFLOW_TEST_DATABASE_USER='postgres', WORKFLOW_TEST_DATABASE_PASSWORD=env['POSTGRES_PASSWORD'])
             for name, target in targets.items():
                 target.parent.mkdir(parents=True,exist_ok=True)
                 shutil.copyfile(SCRIPTS/name,target)

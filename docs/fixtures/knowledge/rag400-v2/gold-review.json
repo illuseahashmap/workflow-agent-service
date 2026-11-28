@@ -9,9 +9,39 @@
   },
   "snapshotSha256": "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe",
   "caseHashes": {
-    "dev": "b075c2b49a1de837e3c4920b5a23644da204868ca4e0cf7e7deeb8b7d28ebde1",
-    "calibration": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
-    "holdout-candidate": "236220004a7fe87072a728cfc5634a282f0e39ad2857cb56f6bd88880380461a"
+    "dev": "d3848a67350440683c481e95ccccffbdc2258cfc6ed382ecd8370d624d2342ff",
+    "calibration": "81b63235b971f96bc93a73d4fdf034d0c024cdd7ce8c45a46f52429b690fc638",
+    "holdout-candidate": "42567c32ac63954019a15f2881bd3ec1ab4c2b72395413e27f75082590dc739d"
+  },
+  "remoteReview": {
+    "sourceCommit": "3fb92ebe12d2feaeae6d0a98d7de0c583f964d70",
+    "flaggedCases": 20,
+    "narrowedRequiredClaims": [
+      "R400-ADM-e59e2543f7-1",
+      "R400-ADM-eba06c67c3-2",
+      "R400-ADM-6bc888946a-2",
+      "R400-ADM-d6f9b06511-1",
+      "R400-SUP-283d005035-1",
+      "R400-FIN-b85a7a8e3a-2",
+      "R400-OPS-cb402a0bda-1",
+      "R400-OPS-cb402a0bda-2",
+      "R400-PROC-cc2ddf46f5-2",
+      "R400-SAL-1be8d714ce-1",
+      "R400-ADM-20afcfc30d-2",
+      "R400-HR-b5187ef300-1",
+      "R400-HR-b5187ef300-2",
+      "R400-SEC-3811d46399-2",
+      "R400-PROC-5a40aa537d-1",
+      "R400-DEL-26453c7b04-2",
+      "R400-DEL-0512c34530-2"
+    ],
+    "alreadyCoveredByActionClarification": [
+      "R400-SEC-11f87a1347-2",
+      "R400-SAL-098db76d14-2"
+    ],
+    "retained": {
+      "R400-OPS-5ff50a6004-1": "Question explicitly asks related restrictions; sourceSections includes affected-path verification. Missing retrieval is not a reason to erase the gold obligation."
+    }
   },
   "changes": [
     {
@@ -23,12 +53,1782 @@
       "afterSha256": "e925ec237b0d3cc13b7b01c65b766a6820a75ef8ad2bf9e9e7737d8833bc5c33"
     },
     {
+      "caseId": "R400-ADM-e59e2543f7-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5cbb0b6d24b86372ec3369a2325b3888e4afe9257c467dd62adacf966ab42ad6",
+      "afterSha256": "f1f9f208a70b9b61ef3a0dd363b0f43560baf647b583182df5576a5ea684a297"
+    },
+    {
       "caseId": "R400-ADM-eba06c67c3-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9d155409d17c7c78381fc648a6067593981b9c32df8d4271344a4ba6d78c6016",
+      "afterSha256": "5c2b7fbe03301f133950775b1c75d29c2addb846d471acadbc874a5a67f04a95"
+    },
+    {
+      "caseId": "R400-ADM-6bc888946a-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f1066a9b9925da0e77067bcc8ae564053d2f67b47537db04b1a9b84b58633539",
+      "afterSha256": "0d0acba22a0f6f87f079451d8e7654ba693cb71aaffe1da0124c2defd191638c"
+    },
+    {
+      "caseId": "R400-ADM-d6f9b06511-1",
       "reasons": [
         "Only require facts asked by this question; sibling-topic detail remains optional."
       ],
-      "beforeSha256": "9d155409d17c7c78381fc648a6067593981b9c32df8d4271344a4ba6d78c6016",
-      "afterSha256": "8f7b5bba803b4d6170a6ad53c490301f09be9931ec80aa9a70e27bb967a8335a"
+      "beforeSha256": "04e8a5f1db4d05aec7d933c992cefc7bf5a147a8572faf417905513a4ca637c1",
+      "afterSha256": "0daa482b8d7a394490dd7668644cbca4d3495bb5451987f8375653d0b4f41ed5"
+    },
+    {
+      "caseId": "R400-ADM-d6f9b06511-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "24c0c824aabc7e025f0ee84ad74d5a19de24fbad0587c86e3c2994cb1bbc44a2",
+      "afterSha256": "88b195f51fce8d1ff24d534bfe2f017641bdfa4211955e5781683327c70e385d"
+    },
+    {
+      "caseId": "R400-ADM-c28596e5a9-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "bd3fce18843d62a74541e684a0595280ee94e999ace40bea0214d17455b2fc98",
+      "afterSha256": "eed8ddb6cfbcb64dc0e91daa7c7fd8a0a37ddbdde8f05fa0a48adb6c09ca78ef"
+    },
+    {
+      "caseId": "R400-ADM-c28596e5a9-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a6634db1ebe4638eeb920028c41fe744c71a8611a8975ac4dfdeb6c5b522129d",
+      "afterSha256": "800d9073a2b35966ba08ce586fb41a5b49c5cfb4e7d40edcf675b9184b7360e2"
+    },
+    {
+      "caseId": "R400-ADM-7bd79e543f-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f0d45d447f207ba7b62d5da9a613591d3aab00b7d3f4f826efe55c66c62e99ab",
+      "afterSha256": "bc31acc12b24eb9b283808af9f4a3302df5d20cda54ffdfd4a8511b391290bd5"
+    },
+    {
+      "caseId": "R400-ADM-7bd79e543f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "6c9fde1bd9d243985c92259654a11d8ede98c0b41394dc26fab3f510512522ee",
+      "afterSha256": "14f417f0cde811dc74a3ca1f21eca90688110fbe51f066a8a4ebb348cc2a27d5"
+    },
+    {
+      "caseId": "R400-ADM-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d29249d8ee51385fc1e0ef3e5cef751a4512fa46fd468ddcd1e25578ada04109",
+      "afterSha256": "1d7fee4b23c5c9464f379d1043f2666e33482504f4264935e8b1094f7cb979c6"
+    },
+    {
+      "caseId": "R400-ADM-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8cf8c47ee24c6f7e95b7af9b144e3fb1abadd0bcfe60a5374ade2b54fe5bab2b",
+      "afterSha256": "25b2409de369034d441f1bc2fa96fd9779ec220cf73386a420dbc488fb0b71b7"
+    },
+    {
+      "caseId": "R400-ADM-d1d3cd0ba4-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a197bfa09cc983c12e5d3b9cbd39d14e8052419dd61228e761e0246822a6f5f8",
+      "afterSha256": "3bc19c0f7cf8be99862a571c9c4b64483db8cd9003be2aa2e9bb46ee18bdfee3"
+    },
+    {
+      "caseId": "R400-ADM-d1d3cd0ba4-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "2e81b1fcd707603bb4abb0dfbf044a85d0189ebef6dc35af4b337f5c0f9b7237",
+      "afterSha256": "a80418f5256fd589a64caa5dbe69eaaa1f55161e916b4ae51c6bde1b1b742db8"
+    },
+    {
+      "caseId": "R400-ADM-349736b13a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "25141a0ebf09781fd11a9c26c127829ac38ce9c2303f1a4c6b88f0b04b93886d",
+      "afterSha256": "76a8ec0e3380c2f3c9b3d4442a21b31b7118fc902f4d3e8b3d82c1fc1c313aa3"
+    },
+    {
+      "caseId": "R400-ADM-7d2cc9f2e2-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4fa0f65faa117e0064896c56668f7df2f3fd0b67d2d1acf51bf4a0ccb49765d7",
+      "afterSha256": "6313257b201ce6374cda003380e06217a07f7e77a839b878aaaf7f183c083b82"
+    },
+    {
+      "caseId": "R400-SUP-283d005035-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "9afe702b9fcbb303fba158ff5000699ff30a4d2c03740fa17eea738e4996a57d",
+      "afterSha256": "32df962290e7291c4b19bb89b3fcd7619243ed9c58d2e73f3e90e9750e54168d"
+    },
+    {
+      "caseId": "R400-SUP-283d005035-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "bc5b58f6f8ac58d6f4dee3099f7bd1c4d835a31f10e847ff0ad5d36c074685ba",
+      "afterSha256": "216e1899e6ea272b01417c61bb675314286135d613d3bd9ae2b6b98cdc5c6b37"
+    },
+    {
+      "caseId": "R400-SUP-a3d9baf696-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d9104e519aaaa2e2bb6693cdadbded3121a1f970f16bcf74314489b25db4156b",
+      "afterSha256": "2908af1b7faf9ec9dc156ab190badc12188aab38ca1828be814ea03ecb938fcf"
+    },
+    {
+      "caseId": "R400-SUP-a8c0f0323b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "fffbb323d1d3518124e3b5e4d4723c834680a684b57b9addf6cf27b9388fdfe5",
+      "afterSha256": "1a1c0f56877c8cac528e3c9d66393a097bd236f9da5eb8a1ce26265f43569c3e"
+    },
+    {
+      "caseId": "R400-SUP-a8c0f0323b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "29c4a316fea1d79b307d14a9a46ae18ccbfdf1186947a839b83504240414c0ba",
+      "afterSha256": "525fd9aa702f596580b8e949c0e26ad77737546a87f6cad740a5be03dbbaec92"
+    },
+    {
+      "caseId": "R400-SUP-049e8914bd-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5826e3b208742b46f27386bc2c7c25760f5072850eebd1466aa0a64b7a12fe24",
+      "afterSha256": "aa9db290dde7f6ae1aaf3d6c21d8aa029b11e16b73ebe8851041c573b12e0698"
+    },
+    {
+      "caseId": "R400-SUP-049e8914bd-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "806589bb7bc875e3bfd7c59f45d2a6c58ba8fd8446e86d26d72f75693bbe05be",
+      "afterSha256": "c53e7b8a57a77ae47b61554031e4635f516df43ebcf8c9fd9e2e01062afe981d"
+    },
+    {
+      "caseId": "R400-SUP-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "489d220694dbbc00f570d93d97d34e415cb22b35b51c638e323030cd7e5588a7",
+      "afterSha256": "e14a65aed96d640a8b23430a0e19f8f828b795b609ddbf6efa20b8cb6b5aa5c7"
+    },
+    {
+      "caseId": "R400-SUP-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "40ccd6c2990fc792fe0ab5ae3a866ce6fa4e81fa79406f93393704b71a01d6e1",
+      "afterSha256": "71b7ca1b857b9e17329c8c043fa6ad12882d8a6a4d7897816869c321bfbd9428"
+    },
+    {
+      "caseId": "R400-SUP-a38909d2b3-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3c8df82b201bf15489eafe4058d619d2d513a770051c794f8a90d4ee2065e109",
+      "afterSha256": "e6afcc1782f0e26e62ab3b90155fd95f8931bdb3bb1cd313c8bbdee69662ac80"
+    },
+    {
+      "caseId": "R400-SUP-a38909d2b3-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3df26637e979016e1afc9a4f0c699d722f9461a8b98a144e6d07eb7e132fe6c7",
+      "afterSha256": "a0f393634c435408c00850bbbea192c550d8bc877b25042d08aee14c3115c6bf"
+    },
+    {
+      "caseId": "R400-SUP-02a1cc249c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4cbf983441aafdd3bdfe5425ab66856d51bb2f362dda2ae71d36fdb52c2a2c7e",
+      "afterSha256": "e3b48a6dcea558536757b6ce30343799a98306b8da1f6f1a873e46c985debe7e"
+    },
+    {
+      "caseId": "R400-SUP-f082e9415c-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0506e5b37c5a510691230f29b9b54f7598e85b2804e364bf93ad4d165ec75982",
+      "afterSha256": "825d5b10867553a693413a91565746ef8e812abb77faa2818768b2448b04ff6d"
+    },
+    {
+      "caseId": "R400-SUP-f082e9415c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f0603e5261ee23ce6b375311f26f87a17d65429029d16c146313df340ba46675",
+      "afterSha256": "04d1d01b299c391e816e18d4a435fcdf2907f677d378214202ff3aa119a8ff30"
+    },
+    {
+      "caseId": "R400-SUP-ad359c847f-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "76c116cde35ff819efb84f61cd764a7cdd60f04d9e2e625952d4b3bc4e65da94",
+      "afterSha256": "202f254071b1e3d71b1983dca0b71c09b366cfd0129fb3398c5c651a27168270"
+    },
+    {
+      "caseId": "R400-SUP-ad359c847f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cf6879014a1fe0a16d6f9b033a58ee58ecce25630509237d214d04d9e26f8537",
+      "afterSha256": "a1d07253f3eefaca03c73dfa5402a5150e6391361a75926d3f31462ee2bac0be"
+    },
+    {
+      "caseId": "R400-SUP-b5b35ec8da-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "7c8d3e2e05dc54a17199d5c58db03d8c1b9ea0dc8b88eb4a9da8534512109108",
+      "afterSha256": "8e2af55ad23e5de3ebdf5b75a89e584eef60029479b3aa0b2fc271674f728e06"
+    },
+    {
+      "caseId": "R400-SUP-b5b35ec8da-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4b42e259a708620893530be34747a8036cda440efe172063815f0ce32591b401",
+      "afterSha256": "6866940f8fd78c79a19e423833b13aedd645696005907702f49e3d2ed19efdf7"
+    },
+    {
+      "caseId": "R400-FIN-240e306440-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3072a21fa0b725a50ff222e4b87cf925bdfa5d39299d6805d5f65f25c0170b7f",
+      "afterSha256": "10784af2b4fcd036c4c20996d667c4bdbb9c982ad4f880a087da8e7abba1e773"
+    },
+    {
+      "caseId": "R400-FIN-b85a7a8e3a-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d32413215e4e6749b99695f2de2de572332dd73cdf7a510f71c72b9e51eb1552",
+      "afterSha256": "e8ab94baa02dc56395024b087daf00730e3d56f16b5cea9530d3bb27190096e5"
+    },
+    {
+      "caseId": "R400-FIN-ad41c00235-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8c2c2a8bd972425adc6a5f9766f14c40970f863cc99b48d7da6a53efcf2f4f46",
+      "afterSha256": "d53e1441dfd4b697ac251b1200da8ded0026fda59988d4d9fa82f1e9b31c8fce"
+    },
+    {
+      "caseId": "R400-FIN-75b67543a9-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d6c87fe749c8baf323767239180ae287d36fd20ab3a751897afa041c284dd1a7",
+      "afterSha256": "1f30b947d775dd06c6173e38b341fd71efa166d49861116a81d15e9bc2e4f56d"
+    },
+    {
+      "caseId": "R400-FIN-02335c9a40-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "809d1e68520b5ef1fcac3fcdf71e00b48347e5f1f39c40d2e592bcb977a453d6",
+      "afterSha256": "fe8f3b46d09009df37f025b48a85f185bf14c164f8a3ea8229e9e0290902b76f"
+    },
+    {
+      "caseId": "R400-FIN-c3cdb80fed-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a298309084a9f636df4f790a51deadffacfeebc2e699ab3c496e09d9fdb4e78f",
+      "afterSha256": "dd25c190673c96b24b4f4b4a5225e58a072fefb3fd49b6d78dceb893818b968d"
+    },
+    {
+      "caseId": "R400-FIN-c3cdb80fed-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9cd1be7a0df752c509e9e4525649e98cfec0c9c112ee83dcee9fb8215cacbb99",
+      "afterSha256": "483f6850cc052925651c4447f9f6096225903ca008d717b938bc193654e92bee"
+    },
+    {
+      "caseId": "R400-FIN-e21b247981-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a12dd0c21a204f5e3d16829f37f540dbed4e1680e74ef85e57b0dc15df8ac7a3",
+      "afterSha256": "1e7b39a84151f735f41138b6b1b66738d46658c25e00a7841acaf124e8c38651"
+    },
+    {
+      "caseId": "R400-FIN-e21b247981-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "474de5d2c2078b65040b05e611382554c3cb7d53711b8c951658449936936e0b",
+      "afterSha256": "88c51443a2199644e4f66fbd52f6e2f83ef7f08247768d2071bb44296425b7ff"
+    },
+    {
+      "caseId": "R400-FIN-a9e3640a9a-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c03266ab8a91668b4680533cbd7ad7430ddcf3ebabfa0c4abad1c9aba910e7f2",
+      "afterSha256": "c6781c5f9c58a050bff0746ed71ef929e4dff31d487ce48d6ff240d29226c113"
+    },
+    {
+      "caseId": "R400-FIN-a9e3640a9a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "14fca1175967a6ec83197a4e26effae40c0f6a1a4f54e63f6fdefbfaeb94b16a",
+      "afterSha256": "2b0e74b08e584ba445e2844587760f353cb1cf6bd2df2c3956d09a6bfd36dda4"
+    },
+    {
+      "caseId": "R400-FIN-e9fa28876c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f7506a61a5ba3d8cab8c6db13266ee450f055ac4e2ce21705f34248f420f828a",
+      "afterSha256": "e8edc6ccb4c81ebc0584a31e030a1cd14b660bcb9a97ef6bc57c36435e568d88"
+    },
+    {
+      "caseId": "R400-FIN-81ec8f5737-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "34e336eb399ca8cecfce20860106d1e3249e6316ea73ae6038bc3a12ef59f63c",
+      "afterSha256": "40a7d8276f18e3fcbbe22331688090caf8f77fbe206ddcc878136d6d0912a18c"
+    },
+    {
+      "caseId": "R400-FIN-81ec8f5737-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3ac27258a3e2caf0823b133cbe3d6c45c00d126abb3d57ed08f7c0a2427ac5ca",
+      "afterSha256": "3c676ac6f3ba1110a7bbbbbf8d87f1e1250e2f4e67693aa05978e64c3237e1e2"
+    },
+    {
+      "caseId": "R400-HR-b3e448a257-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "26ed613802b6a7dbe2542cc7d0c3bca85a26726c466d9e877c6e4fc933b9f318",
+      "afterSha256": "cd6d7780e278e6f1ee2816abfec9023c7d827d775e230a7c7613269deb412d77"
+    },
+    {
+      "caseId": "R400-HR-e47a09dbff-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "2f22a5423c4911a8c6b4faac31c0e6854622688a5bc36ef5c4213e365c2bf67d",
+      "afterSha256": "e74375bc362946ad14a67793ec6d12c1c8ab7743a86fe6839dde803a92559586"
+    },
+    {
+      "caseId": "R400-HR-d2405567a0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "38f9a72a6211fd503ddb4c035eb108aaa16d35a3e1414db07a69e78b4ea48a4f",
+      "afterSha256": "272eb14e2af705286377f2800c13bc71cff9c2951212e2ffd1f701e81e698ea1"
+    },
+    {
+      "caseId": "R400-HR-699c9ec3e5-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f68fdf1c0b4deddc1e658a48ba66da6c21612a3905cf93ddbbd60c4c314be489",
+      "afterSha256": "ad25da6f082bb1f3f33127c53d40f713cccb4c82584072bd8a5de59a3caedfb4"
+    },
+    {
+      "caseId": "R400-HR-7d9b827925-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4c0a42f397422a3aa0d9305c97e6270eb3b8bdd183b22f1da8bbd1e4b6d8a389",
+      "afterSha256": "1923e5fe8a8a588ac77940b3e343387df454ff7b5410edf0462019dce6b5867e"
+    },
+    {
+      "caseId": "R400-HR-7d9b827925-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d5fd35b37a0e9a94c7ad1eac217dcedc1d134ee56f30152379b6695e2daeb664",
+      "afterSha256": "a7bc181711ec9898bdfa4d07601341356e69e0b535612ece60a232e9beb8b545"
+    },
+    {
+      "caseId": "R400-HR-b2121edfc2-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "547ef9bbe782a6b6f6c6b5aaeedbb30da970cb6544bae70c10248cf07112a384",
+      "afterSha256": "67da7539b5fa0713bfd32e06923c5be42b7fc4c5ccefae07ce095ffc7d66f8bd"
+    },
+    {
+      "caseId": "R400-HR-b2121edfc2-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5c8fe1564458924992a53b5fb87f73422b689c18965753bf37d1765a7cb7b74b",
+      "afterSha256": "cb36bccfa45af88d8bbf21e2dfcb90a67189af7a937a4160cae3e16afc2e086a"
+    },
+    {
+      "caseId": "R400-HR-183842d22e-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "aa41e85a588e0757f6eecdf77b8e5372a66d25cfe84ee95ab9caa826c0e56733",
+      "afterSha256": "ba8fdafcc7328e369577dca5e311a7d8e90da4986bcc903b2c0c577ccc4a4b83"
+    },
+    {
+      "caseId": "R400-HR-183842d22e-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a8206941c958692f79f6a1dee8b40b95bc0e797794aa7a0009de5686585aefef",
+      "afterSha256": "74718c87fda9d09ad5111d08ba3bdeea2ec73c6cbe1306bff7f9f4668e6c9af7"
+    },
+    {
+      "caseId": "R400-HR-8626a60af7-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f274661a435f2e09ecb17f434fbed892bce8cb5b7c7cd5f3afa062bfb50fd290",
+      "afterSha256": "8eb9f14f8c5059c3e4757e32a8a8c7f18f045b8612757f1a3a32ac5aa1b26804"
+    },
+    {
+      "caseId": "R400-HR-8626a60af7-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8cc21781e2d9316f795e536357fbab67cb731b5225051b46dd3cc21d2d7032ba",
+      "afterSha256": "b73d68c3dab28e352af4f6ebdd57919c3d341cf43c683f686291139fea30b668"
+    },
+    {
+      "caseId": "R400-HR-07c0e9b1fa-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e3175e8724d1a7446fcd84c48b955b19925868ec17393d42d4beb33bd47bfefc",
+      "afterSha256": "685cfda84aba4b886d8c28e90d2462d0511f32e0ffb7f3e2c18b8881a3f3e560"
+    },
+    {
+      "caseId": "R400-HR-07c0e9b1fa-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "04e317147dc4da36dd2c0aa0347f06e0a660cfdb823e66f40fe68ab2dcf20153",
+      "afterSha256": "918121d1716cba952d7905d4048bcc5587ab838336acf854f433e10a4f04c3cc"
+    },
+    {
+      "caseId": "R400-HR-0f12e4d5a1-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "bdc732a17a9661d751c89a86185d9e5a53b5719bb309a026b80df7b6b0a62a02",
+      "afterSha256": "3783dc0a838ed5952d446b5a549a0e5c10fea1b26b9af33e398fb9dae033fb03"
+    },
+    {
+      "caseId": "R400-HR-0f12e4d5a1-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d9043da4fb80880ef3151480f09c7667136e1732a000fe90ce7ff9817aafde87",
+      "afterSha256": "9e4600b48e63b7395c08b9377eeef9d5185648a3125ba1f47d7cbcc1d4e0044a"
+    },
+    {
+      "caseId": "R400-SEC-6503c9176a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cd83de494275e756028a6e0b50d41704854fccdbb3a4921327139e462cc17241",
+      "afterSha256": "e6fb15816b7c93d09f8443c1d8dd0c323b5a407bcaf7a55b4b13832f30d42fdd"
+    },
+    {
+      "caseId": "R400-SEC-8a5c44da54-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "06809c4e8054523bb748dbb574638f6eba9da3fca5f39f1bb44e0adeb7c05228",
+      "afterSha256": "63162f75e69a62981ada0132561895e0fc66eed000a7393d8b74d9e4b7baecb2"
+    },
+    {
+      "caseId": "R400-SEC-527e6573d4-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "2bbf4b70e27b6a9b05ec69531eb79ef7b003ebfb8b88727b85735dd82c1c1b46",
+      "afterSha256": "696ee80a24bc66c032e42dd29f737e2676b2704ad8c451818d32c3115bde7491"
+    },
+    {
+      "caseId": "R400-SEC-54b84dc93c-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c2c897d634cd1622cd55838d744aafc8ee6150ec449dd6e410e95ca079399cc4",
+      "afterSha256": "bb9c877a574326891831329126fbb098149b9d7efd4fe640b3a8a26a3fc0eece"
+    },
+    {
+      "caseId": "R400-SEC-54b84dc93c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d789bbd22f6b0fc2e758dd9b66c0dcd560278329e2adbc9831c19b3a4f5d72c1",
+      "afterSha256": "bf6e4c4fda364a38e5d4276e8f0e35994a59ee2108c582e1eb800253d0f00cac"
+    },
+    {
+      "caseId": "R400-SEC-11f87a1347-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f844947c9dbc169c5c4a5afe287bf76088980d3f49817da1e3e73e5332a7c976",
+      "afterSha256": "087bf09d4ff975d2e18dbdcc9cea22da48f6d43de99e21c148540245dd5817cb"
+    },
+    {
+      "caseId": "R400-SEC-11f87a1347-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "748736cfb969a3e0369d605f41de0f2796a5ed734b74604b457bcd24c759e11a",
+      "afterSha256": "e858de6e37f9ce97ac670ca038a5f622bbf2036464149514755f2d5c973a6877"
+    },
+    {
+      "caseId": "R400-SEC-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "7da2ad068923ef9813af74674ee73210cd1b1aa627d33da55d058cdc3dbe62b6",
+      "afterSha256": "6014a7887bcb744aa92c929af32482e5478476166e32227af40612f298dad386"
+    },
+    {
+      "caseId": "R400-SEC-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f8f1d7d8142964b7b6e6c843004ffb66e4b8aac4491f65aed6578d5f95294abf",
+      "afterSha256": "fd5bb7748944b113442e7b6578c04fcf0b56b3b597eec75bd4a11a98cefa2b35"
+    },
+    {
+      "caseId": "R400-SEC-f742bed2c7-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "089636a3e69f6e400ab38e8e845ef6778ff252f0e48f987b893e7bd594dc1d6b",
+      "afterSha256": "39025e61b2aa0b25f7c491408f409e8abac2297cd92c7bfcd2c039e87100f6dc"
+    },
+    {
+      "caseId": "R400-SEC-f742bed2c7-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9f4402b00da5d14b663fb3d6ccf41ea0765bd1177a036e792fddaa35855ff3fc",
+      "afterSha256": "47124777a72c842752fe171059fc0d624f6794df38164c5789fe565a6d1ba75d"
+    },
+    {
+      "caseId": "R400-SEC-a54f1fd7d0-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "479eae20f17787f7cc021fdbb2d9b0d6c74a2b93d5374ea5f3ff98061e7425b0",
+      "afterSha256": "9e8c7df2e8dc9b53618d2a03f5c0943576b8a7bf332df0da735742380c071a1c"
+    },
+    {
+      "caseId": "R400-SEC-a54f1fd7d0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d605c6c30d4dec02fe6e286d5c451f40cc2fe32ea16bf8c0a6c18ae49e3c9b88",
+      "afterSha256": "276027112c64045803ecac772c947faf60a2e974c245cb6bb310bfdd7a4fea07"
+    },
+    {
+      "caseId": "R400-SEC-9812fb09bb-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e7b00c28a1995826fcf85608d9bd47fdcc5153b9bbcdde9a3ab0a09c17f2abc5",
+      "afterSha256": "1be3a3433325f06ac7a89cccd451a6ad1ad15b4eb9c14e87dc3899de8e4c21ef"
+    },
+    {
+      "caseId": "R400-SEC-b08059e482-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e1d9e31d72aaae7cf6f852659b88cb6b9f45d2fa816785aa97aced0ffab3e3e0",
+      "afterSha256": "27633ac689b4a1ae659d452db51545e3a15894165ec379095a6952451fc83ead"
+    },
+    {
+      "caseId": "R400-SEC-b08059e482-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c144041729eb1d11ebb327a98c65ed36ad4a979a0fa71a0b510e7a887c3073a1",
+      "afterSha256": "a370243186af89a00962eed7113bf91f841beb0ef33b9bf3cbaf787297167228"
+    },
+    {
+      "caseId": "R400-OPS-d9a5f697ea-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5a199a433c4ed243b3a6ba124d1512f7a68b93d5c8038701013e5f79ed3d5ee8",
+      "afterSha256": "d1512dfcbfaa4333f6b65838c1624854bdbbbc7b11f177b75528673ee0a015e6"
+    },
+    {
+      "caseId": "R400-OPS-e72ba7b1e6-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8589a40aa71e4baa65cd11bf36046f6f27df9a73da04a0d4a0d5fd75568e7346",
+      "afterSha256": "4a9cc3eab67b4ab5058474d99e97c2976daf183381b3bcd036d2e813567bae3f"
+    },
+    {
+      "caseId": "R400-OPS-5fb3c055ac-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "1124be082cffe73e5bb8794e8a11bd34393e9bfdfff715ed7a190f5a284fef4c",
+      "afterSha256": "b1151ee979bec322c112f29390ac795a657db2033e4ce2409913f5094f986df4"
+    },
+    {
+      "caseId": "R400-OPS-cb402a0bda-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "675cefa3f6158732a1d932647cd60cabe335e0ec1a8b94d530e51f7e05716c7d",
+      "afterSha256": "3bcb0b37df6135a058d1cf53bee35617e4c86362fccab52a405bf48df694988f"
+    },
+    {
+      "caseId": "R400-OPS-cb402a0bda-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0f026d7447fc29f3b499731fb7948a4992daf907def358b25e09499f88c6f3b2",
+      "afterSha256": "13355c46d149b7da64b75f550a714db2ca1b376a81dc8aca62f71d4be3fa7251"
+    },
+    {
+      "caseId": "R400-OPS-4f6aceba4c-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "569e70dfc83567c43dd021f5223589f6942d0dbedef63a0de27a01bd282ac7e7",
+      "afterSha256": "f1101faf6b70ace5b939a400d717d8527ad1b1e436660fdc6d89680975c1a282"
+    },
+    {
+      "caseId": "R400-OPS-4f6aceba4c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "37a494cae67baa07a00146fc85fdd8dd652e065227aeead2fd74b8d4a187e65b",
+      "afterSha256": "6b1d20922654b119f8f0bc1b05ba8337c2a28ba69618726b502d3858b05cef1d"
+    },
+    {
+      "caseId": "R400-OPS-a4670a8450-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4d63a3761a9dc73f0f41cce9fd3c6fc3a8b4de942308269efa03e591ac7bd854",
+      "afterSha256": "8fcf0af69116f6e4182c45ca5e9f76b8d4a4bdc6f512cd8b2d73ff65834a40e2"
+    },
+    {
+      "caseId": "R400-OPS-a4670a8450-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "954d427639b54f6f2a229698acb500488437cd7cefa66366b17f9980ce12fc7d",
+      "afterSha256": "72bd0010dc939f60c4c4d5bdb08bf56197378b882c154ab68172789a730117db"
+    },
+    {
+      "caseId": "R400-OPS-67b1f3c7d0-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "64231ed7cacf409a3a508d29bb3127d0e7b056adbf043f03b506d2c050ee2353",
+      "afterSha256": "4629238b5cc442a220a9fbc2171c9a8108f69f2a58d55be0065a708210db1110"
+    },
+    {
+      "caseId": "R400-OPS-67b1f3c7d0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "b6558c3cfd9621e56a599861af8773f6aff4d37757399fcc30a4eb4f527eb534",
+      "afterSha256": "63dd5c56bb284f43dccc83a4809701f117cdc326163eca7b6442211ad98aba71"
+    },
+    {
+      "caseId": "R400-OPS-72cd0e4cf0-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cffbfa780c310928158d03d1e73a4c1f1181f1c4fce08f68944e22960f18216b",
+      "afterSha256": "66a01f4559ec293863f7ea48dbf020d4109ff72646617e344ba34a08071ab543"
+    },
+    {
+      "caseId": "R400-OPS-72cd0e4cf0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "45de1a1ec6b8aa0b417d8c86a84bde527a11714744e6e89b668043e3e510762e",
+      "afterSha256": "2fe5ea91378dad2c95d3bb945274a1c23c64dd48bc54e4a768b2adf1af148327"
+    },
+    {
+      "caseId": "R400-OPS-6269eaead2-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "6d170789219ddbc0dbeea793c92d01ff27bd31ef6274c83de5e2d951a5a99a2a",
+      "afterSha256": "194ae179265361df11f3b91f306a4ba6750c3bbe53dc53bfb053ead10c42808c"
+    },
+    {
+      "caseId": "R400-OPS-6269eaead2-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "978c72709f295f89eee781a76fa400e67c46d5a246720da16c954310c00b0da0",
+      "afterSha256": "f6f98babd7413f702d0a9c8244f6c01dddd41a49448ec64f802ba7ce87f2083f"
+    },
+    {
+      "caseId": "R400-OPS-b8ef9bf122-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a321e765ad99f976b24b0b75947980b9120d119e35b3df0bf067e114e4af2eef",
+      "afterSha256": "ffc3fb0e817e00a66ebcbebf57e3fc6fa65c72547d0da9c2b57129c86aefdced"
+    },
+    {
+      "caseId": "R400-LEG-9e848093a1-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3ccafa71240cadba7dbc04f3e682f696494257a9b1c10cecc4f8cd378060afa6",
+      "afterSha256": "f78f4699b3c525c2108606a25a82bc59f51e74c4a2c0926ccecc662710f4ffe2"
+    },
+    {
+      "caseId": "R400-LEG-581a31636a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "1025798009c860311a57833dd4bf1bd5e5f65b2347d08698665ce325760fd4ea",
+      "afterSha256": "ff1ba39a2df34e7629957cd5a6aa980367bbea70f2d1f53638f049e8981c035a"
+    },
+    {
+      "caseId": "R400-LEG-ea6a46afec-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f5639629ad39d6e1cf5b5b9afee64a5fd805241f8682ca6f317555ef7334d5ad",
+      "afterSha256": "88b8c4e19a399331cbcaaf36079480b57a0774097b522f593d67801d4d49dfac"
+    },
+    {
+      "caseId": "R400-LEG-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3cf0acd59147955d8ede7fd614c88888a86b69e2e188239b85e567bb7f7e6ea1",
+      "afterSha256": "da276777d7adbd19d78566b2e99a8ce60bb59df9a15107b4fc6434b699cfd456"
+    },
+    {
+      "caseId": "R400-LEG-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a5fdb92b40b75d103f2a6e7c1fdeac9094b8bfd67e0dd06c4fc0a92fdd2903a1",
+      "afterSha256": "760f01a32d991cbf175eac2e2dc46fc8918a3f9136efdf77d23c3aa903b3b964"
+    },
+    {
+      "caseId": "R400-LEG-475993311b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "86c4e0866202ad7d7c25ce89c724fd5a60d3092c54c37532412d0458a7d70d71",
+      "afterSha256": "e3a5995c82abf7771306e03880bd6b2b13a49c466e9cc82ba89e0fff6869b962"
+    },
+    {
+      "caseId": "R400-LEG-475993311b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "db644f5bd659d91175a6580b122f0a5f69afe5a8384009d866ca0fcd5a750ade",
+      "afterSha256": "fbf5a68690250b4fae6e4272ed80f50f7a2234acd920c526b53dec2dd6383836"
+    },
+    {
+      "caseId": "R400-LEG-b642512ab7-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c2fdee2adf6e3f92c214caacff79a25e821b3df4add5f92aca7b6baae53bf4f5",
+      "afterSha256": "3a11cca531c6bc067b366ed7d4584212e9eb91fb7ca6093fd8d6c1862fe9e906"
+    },
+    {
+      "caseId": "R400-LEG-b642512ab7-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "742ee5aa4048e50ef79a876481d23f7943bea2bb671f80fd5611bc5b22926c10",
+      "afterSha256": "0b2ade1f49518e7e8b81594cf315683a3e3b202f0726280588470b90ab9a4ddd"
+    },
+    {
+      "caseId": "R400-LEG-c43ae776fb-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "76e885f69febf6526c1085245d99d05b4a55df26b7d4ea6e46e34b6a76441a2c",
+      "afterSha256": "855b76e2d63d9c2405bce1bcdad28cae10372d7d5a363117904896eacbb0230d"
+    },
+    {
+      "caseId": "R400-LEG-c43ae776fb-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f9122b60c632580365590fcf881aa879080a9656f56ae456978d97d73c76be65",
+      "afterSha256": "e1fd8f5922a5c1f7179f4239e11378482120e656ac870b76fd560c99c31c2c1e"
+    },
+    {
+      "caseId": "R400-LEG-cea80065a6-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "237c5293718108f5fce2c9591f61eecc20625871dc3fc281aa45a6abc49c37a1",
+      "afterSha256": "f6e70c6efb4535e69ef427d3bf3ce1cdd86cdfa5ad0464b5c8be506b2d77209f"
+    },
+    {
+      "caseId": "R400-LEG-435ae483eb-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4ffd1c28b6eccc868c0276ec7481480bc75d2f0c9ca67d8b0023c9a9c56ac740",
+      "afterSha256": "8a2b2461c6e7239d5230c102034b1d784a7c9e442b8f29067fe3641b91f4a4c0"
+    },
+    {
+      "caseId": "R400-LEG-435ae483eb-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "04876ef35afaf4c4581f2878afbdc19ade35d20b3034d313b5084cd82fa64afc",
+      "afterSha256": "2dba290b35fada94cf9768bdc1721e3d8a289f68f65917f9d8bdff168411ae89"
+    },
+    {
+      "caseId": "R400-LEG-661428d939-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3609e5af6a835da5fbf73056715468d7eb0ccb694a22d4598bbe0fd2deeea91b",
+      "afterSha256": "d6b67877269d8d9d6d47696c4a6a9f146b356b344e9ea5f6508630748846956d"
+    },
+    {
+      "caseId": "R400-LEG-661428d939-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "98382375195f86c9ae45bec6770fe7bdf6b16ec0ca0b87746f1aec5de7390704",
+      "afterSha256": "8e82969f90484d7c946d16213083d46b59bde1c0cc41962028f7fb268e7d25d4"
+    },
+    {
+      "caseId": "R400-PROC-31f2ffc124-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f1c32b0258f03951d0437bdbe61b97f073f6486005ed85dc2df8eeb4d772f4bf",
+      "afterSha256": "0283b792904d8e91e2b15807fc02983376be23fe6544d680e29b96991ec5363a"
+    },
+    {
+      "caseId": "R400-PROC-453f4c77e5-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "77917c90e212708710fa1314e98fe792fe5c1ea1c33dc902b79cfcf427e2bde3",
+      "afterSha256": "1337a3e0f20aa477b2824fcb259391af49e903c372fdd08bbb15cda95d56aef9"
+    },
+    {
+      "caseId": "R400-PROC-6cfa312134-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "27a29f50165a7526f078c14431ee0f0f8f21ee1e13183155e48d116e8a59c8be",
+      "afterSha256": "65bd02cfc7717847950a63f7b1587aa43738072608b8514c7a13afa1b5a1fbcd"
+    },
+    {
+      "caseId": "R400-PROC-ab57efea05-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "58e3964632823cb38f020c7fb5a2a9eeab92c1e52cc9cc48689cbb78f1ac28ad",
+      "afterSha256": "f2e721cc6963e9a0df1eeb2ec18413d1d53dc4c05e522577a614b31f874d999e"
+    },
+    {
+      "caseId": "R400-PROC-cc2ddf46f5-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "87e14246d05118229213c743fd2f67dce1cc6e2ac9d137123a7a82ca1b83f0f6",
+      "afterSha256": "73b341f805d6e55b470919c2da492f239862f7cd05d0450b517eb10117eecfee"
+    },
+    {
+      "caseId": "R400-PROC-a67ecc2fda-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cbbd9d3351ecd409d3ffa111d47c74a49629a8eb18e5b66c3f24acfbd74c73a4",
+      "afterSha256": "71a1066fceb90aa9c26b52cf1767aa76d2ab6c33884d50eeac7909f97de41ab0"
+    },
+    {
+      "caseId": "R400-PROC-a67ecc2fda-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4394e5230e05b5c4096b2b9d315268ffcff5786aa66baff4c49cfff769300f02",
+      "afterSha256": "e34c3bb2567df2937a2d5e9687db783e766b461758e67f1121ceee21ee937bb0"
+    },
+    {
+      "caseId": "R400-PROC-e5567edc06-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "36619246d0373bf44ddfa80a717beaa1559d8a7ba43d9ab300ef393842f165ab",
+      "afterSha256": "793bf9ec49424754ba5e214962330d8f7cb60b8973afacec8bff916cf89f82a0"
+    },
+    {
+      "caseId": "R400-PROC-e5567edc06-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "bea2730b5099039c295df7dbce9f607d6b9696fc7cbf5d6aa97d48b73e80c5cc",
+      "afterSha256": "24bbb247c271d5649160afed0a8bcd6ed7b0fe88d6d8e34eefd654276a7a39a2"
+    },
+    {
+      "caseId": "R400-PROC-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8d0f7f9ba7d8dab5a17bc94d79f84f28dcf0247a8c088809b6c04497da192739",
+      "afterSha256": "ea32589b0f3cd18f080699a0065765efbc73da8e4c9609793c57c80445e54ff0"
+    },
+    {
+      "caseId": "R400-PROC-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9f8830d1dcef39907c9d4bb229975355b8a80874fb08709c6e19eac709a8a667",
+      "afterSha256": "92b50d041b2f9e51b9e766a82c4da0db17fca7dd03b6eefeb3db3642dc89b7d7"
+    },
+    {
+      "caseId": "R400-PROC-64ab840127-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "2def8b461f260998875eec63d8b4934eea72ceff150f44be11e6c591126bbe93",
+      "afterSha256": "15881be3e32b8cc70a4b5941bba5a5b85f08e7ccade3fba7b01aa7913964371e"
+    },
+    {
+      "caseId": "R400-PROC-64ab840127-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f96bf8e615ac3c6f2f637e9c3e7839cda40b98b091eb2f10d8154afeb55a2aee",
+      "afterSha256": "332337c670f24ea15a019b378e315bde7bb83270240ce0e48625777b816d11c1"
+    },
+    {
+      "caseId": "R400-PROC-fc6f91dadc-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "738f83d813d18b3d9cfc2707fbde789b486a9386fe70fb212c27fcf34d55c239",
+      "afterSha256": "9841c2e4e3bfdc59d073e61637361a0c5bdc56282c0a0a7a6e1fc08b04c1120e"
+    },
+    {
+      "caseId": "R400-DEL-9daaa05833-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "13fe548f48ac3cff8f2e6e0a1c243c36b40f9356b93921c651540be936fa1bef",
+      "afterSha256": "5bee402470afd72a07ba1b4ad1daf71784bdeb3fd26248a82140f6847459ac02"
+    },
+    {
+      "caseId": "R400-DEL-1930bd839d-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ac9563431b294ad0e0c6643b2752479959591b2dac00190cbfeb50463d708485",
+      "afterSha256": "cd20dd4cc77c4d2f3a6de3ea084f6788b02e36ce10c9f18ab442e06065dca95c"
+    },
+    {
+      "caseId": "R400-DEL-486480521b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "486d8981645c8cede63e88dddafae3e7bcab3f77a36e6c103eaf5ea73d62b33e",
+      "afterSha256": "c54883be87d130f166077bfd5dc748fec18dfb19ce32039a8ec7e4e3ea502bd1"
+    },
+    {
+      "caseId": "R400-DEL-9bbc81754c-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "8709fbe26491b8553cca2cdb22ef357a71f67c4dd8608bfcb97e7bc2ae008aac",
+      "afterSha256": "b244863a68609a0f3ff54fc780a5441eff74411ae8e5718163d48c102175c2d4"
+    },
+    {
+      "caseId": "R400-DEL-8c5da7a973-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d1d79c5a30201b879f67285d4d97fa4581638bd5ee28b30aeedc86b67dc3111d",
+      "afterSha256": "6135bdf42f840cfca57b517989b1c13e03d7d34c4db260a139d285e84993f18d"
+    },
+    {
+      "caseId": "R400-DEL-8c5da7a973-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "bef94ddbd8304294f12d5bb64889d2c4a58bab60c6ff552e529120ebfe4840b0",
+      "afterSha256": "f8c01d6bed58a489fbd015b3158a50827328c5ad3cf99fbfdbab9d6a818436b5"
+    },
+    {
+      "caseId": "R400-DEL-b18b93cd2d-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0a0cf753c7abe06f161698aa69a85a680b33627750543c4efd2e910a1a37a749",
+      "afterSha256": "6d0f229c4e0d8b7707cb6618b7d91e38aee3098972f695c9589ff89e8c08468a"
+    },
+    {
+      "caseId": "R400-DEL-b18b93cd2d-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0f602faeed0b70e0f67bf0bfcb25fd34fe2f5dde527bbb0c6da4cfc714a229c0",
+      "afterSha256": "6171c0a898e7a50d4fc0a85a3e0e26402a9815078d7b8751e202cf8ec1a1b061"
+    },
+    {
+      "caseId": "R400-DEL-29a5c6a485-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "66c800b287392672b1af45b079229230d2fa3fdcad96d0df727b2cc626536c37",
+      "afterSha256": "766a1c1b912b7268fcd3974a033476b0c104d025e967009a635257b70004ec1f"
+    },
+    {
+      "caseId": "R400-DEL-29a5c6a485-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d0a98093050d1a92cf5c16da30761dfd5363bb099a5f52b60d0ce711932cf609",
+      "afterSha256": "2a8a1839f07aa20b2a2c1aa602c89e4cfb942f030b43e1dc634ffd0d5c0d50e4"
+    },
+    {
+      "caseId": "R400-DEL-f09d4e7b5f-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ed8f684976d86b28f607ff41f1d96390c20f8c1d77ecf4553049154432e16bab",
+      "afterSha256": "f1a165912aed0720a8a135e133ca04a9195593ea7cff6f9552d63e8d83117a53"
+    },
+    {
+      "caseId": "R400-DEL-f09d4e7b5f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "99db87827095dfa43784058b2f082f73b3c46bd244c9c8b8bce9367ec2b5dad0",
+      "afterSha256": "7671e7edc6f80a3c296f48f08096eb4be004d5bc2caa2fb4d582a8908969d2bf"
+    },
+    {
+      "caseId": "R400-DEL-a95eb6d057-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "1d3bee701898b26d5ace1279239e8ef66518c82bfe08004a383fcca79a2ae321",
+      "afterSha256": "0a071b92e3a06d97dbb163f4dd4e2882d6e1695258aa3950bd79fb9139f6a996"
+    },
+    {
+      "caseId": "R400-DEL-e4ed62e301-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "d5092186e94e8c87b60d8fcfc969e85bc6ee7143495e003462cb77c57326815c",
+      "afterSha256": "d4ed02955d22ec777c5303caba4d090b5d142ea7bfc27df5db07fdae0e2b3807"
+    },
+    {
+      "caseId": "R400-DEL-e4ed62e301-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "6191fb42d6da93278072817ae35b45b4d2a3ee6f2cc97f11cd69eff657533734",
+      "afterSha256": "4aa36310280e5827500aa4da17b497262e25ab3d68e39ac9413e0e59d2e788f3"
+    },
+    {
+      "caseId": "R400-SAL-2753a45a8f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e8128f3e178f96da55d7b25da6258f5942331eef7ed2bbc84057da6645b06f3b",
+      "afterSha256": "66f17ef3dad83b9df8ec69ac2c5bc24e6a67925872e045b8629457baf29bdf29"
+    },
+    {
+      "caseId": "R400-SAL-1be8d714ce-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "8b6b2085e5b8204c6180e0d1cfee481689dcc4baa530743f52ce4ca0ef12d47e",
+      "afterSha256": "70bd2a0abb56cfc2617fa488db144fd8da0a4cfacf8056bcd020f0a36ce785b8"
+    },
+    {
+      "caseId": "R400-SAL-1be8d714ce-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "726365b1a230b762d0369867ec590946f33ce7670d4d411fe7bbcade711d2e1e",
+      "afterSha256": "daeecdfeb5f0462018a6beccbfdaf043aeb3cd9503f7ba37000d8d3e3f74f158"
+    },
+    {
+      "caseId": "R400-SAL-527e42577b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a0b96c0f3b5758f4a4e4740f6e717af20358026685a417c5ca9c27beda8921e7",
+      "afterSha256": "134d83cff869f3d04fa31d8f68a7069f28fdae845af230072e72842844b16b9d"
+    },
+    {
+      "caseId": "R400-SAL-3d08e9bb51-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "781d15eee5f3cc64c3f8b31a8c00d05d292026b09a93f286bbddb8c200ad3dce",
+      "afterSha256": "c25dfe7ac7a2b6fbe6b062a1260f11817d0d0e9dbcbe823d127acd02a6c63f4a"
+    },
+    {
+      "caseId": "R400-SAL-ac3b93618a-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3db0274b99eaf0418dfef09aea821e6bad5cb9fe6b769dc9104297e20a3ee544",
+      "afterSha256": "9ba4086b6f534c421a661464da150547c915d412eb05b951db9d7c13b686228f"
+    },
+    {
+      "caseId": "R400-SAL-ac3b93618a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cbe636f16ceaa44dac62206db68b9301ada050129b8b95da0f4598474e1c67d9",
+      "afterSha256": "2be50496da7a0e25fd7a76c972f2ec89b2d916dbb36880ed212f12e6ea68f9c2"
+    },
+    {
+      "caseId": "R400-SAL-cb21f967ca-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "3daba380a8b5218dbb83a28d3b41151ec685eb32249615a093fbfaa1e6ad23df",
+      "afterSha256": "d5c338f2143979e97a8e202e2c3b3762dad168d74e3cd7e998f3650206932811"
+    },
+    {
+      "caseId": "R400-SAL-cb21f967ca-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "16249b0e95de7e257a81fc79680d16ccdf78c589f17ba8e76f40f26d2609b53e",
+      "afterSha256": "41d3a6b19b4f2f724acf831110cbed4ce1f2e0462211d861eb66496773dc5983"
+    },
+    {
+      "caseId": "R400-SAL-098db76d14-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e808fa6f7394c73682e4e6d75ce750952c6ebff8c12252d59b02ebd555a44614",
+      "afterSha256": "646afe0e1cd63ede9f6ec1fdfb3fc3bd1d66bfce728b23acb28dd939267b84b0"
+    },
+    {
+      "caseId": "R400-SAL-098db76d14-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a94bb0808e48a70a970d61417535f5411e9f9225c1dd0da703d07b460392e594",
+      "afterSha256": "4056d7ae377c3c3fac996126fa7179cef0f096d6ed7ac61c72c0fa061c580e87"
+    },
+    {
+      "caseId": "R400-SAL-bbfe6b1257-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a9ddcbd4a71deb2da14952e220011864e7128eb183f06787dd08388c27b71f42",
+      "afterSha256": "be65cab8526b3562009d7af28edcf497ed4da20910b32d8158147a7d273b829c"
+    },
+    {
+      "caseId": "R400-SAL-bbfe6b1257-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "da89ebe6997c673a98da9d8e23ea4a4e2876593bf0ee14a077ac90f4d86eebd9",
+      "afterSha256": "455e8f5d9d4e1d379a7db7e84fb23bd7712691cabe6b018758af177178fdf9f6"
+    },
+    {
+      "caseId": "R400-SAL-51698e33f6-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ed87b4d0d19aa0f010bb92982ad4f755b9edff2d3d84736bfe3473c88c0b1ded",
+      "afterSha256": "2101a73181e5928013fc5b69ad0f1878f20255ff495e3503b1fd86f2438f4151"
+    },
+    {
+      "caseId": "R400-SAL-51698e33f6-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "38d08f3b45f753350f39427a4a85523e06380623eb04831df65137fc8b2a3922",
+      "afterSha256": "758d030e2f6bb58ca6ed3ac03d0e2bd16d4c88678599fa3abe22eee3e38ea313"
+    },
+    {
+      "caseId": "R400-SAL-bc6ba12805-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "95d9c9041e3bf0d7ed30e8eb5adb33fff58e518a4154c534913687a466924692",
+      "afterSha256": "3074eedc6894c17f8eb563707f0eda9ffbbbb48a6ae6d6a5e5d66e365ae6eb01"
+    },
+    {
+      "caseId": "R400-ADM-2e922bf74f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4bfd3aa03596f1ae77f3579d54472da8af6879d19c8717510f38e319b3a835e8",
+      "afterSha256": "0b78cebdd735deab1d47b597e08bfdc0321a57c80fabb75c5d372c430eb266ed"
+    },
+    {
+      "caseId": "R400-ADM-20afcfc30d-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "10e9fcb09c025b2cde87dc2583ba5068f82148c0f777962b351d508ef02d4521",
+      "afterSha256": "ce5d5dc40a8f5bdfc3588902c73ff9f015c7a7c897e36511223a505b6d426bb7"
+    },
+    {
+      "caseId": "R400-ADM-f3d13723ba-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cea82e42907a7fbc055d71813cc22a9a5e81474d179379614f96d839be13e3fc",
+      "afterSha256": "03b4d856f951f0b01bd5cbf64df0012a0ed23c66ff967980ea40049bc42aa5b1"
+    },
+    {
+      "caseId": "R400-ADM-f3d13723ba-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a5485453023c23f91bab92d1c8259072a7812bea49461961abc82646df830410",
+      "afterSha256": "08e0b2bdb6f4cd684952f4d3b1a3c3918cd7e480a0c039fffaa4064d7389c33a"
+    },
+    {
+      "caseId": "R400-ADM-ae92bb7355-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4b48524cbd46e9c08c64d24b2de3853de6de38aa956945c6978714a3e51f1e08",
+      "afterSha256": "71c838fecf7e94adc0c6b220c6359ad7f6befe914f14b2f8353efc05bcf96a6f"
+    },
+    {
+      "caseId": "R400-ADM-ae92bb7355-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5411ad72717e399915395378840e5e75f578e2a0cda92392caf567c250de568a",
+      "afterSha256": "d04cb08d70c083a4c48229ed3971a51cde1ee4ff4eab2738ce8cf074f8923345"
+    },
+    {
+      "caseId": "R400-SUP-60e18fadf1-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "64498a4478f7b308088d611a11bab15bb4cf116cf1c4d59df62b1e9f30b098b6",
+      "afterSha256": "66ddee6e6cc8b53bb78a4f0dfd7da508c8759329fe0cea72b0ac12e26af04f80"
+    },
+    {
+      "caseId": "R400-SUP-46412f42bb-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cab82e0db510234beb11dcf47498acbc6d27e1a30503cb68d057353009e24181",
+      "afterSha256": "20af24d478c213c27e63b1a3b1fff8d856564de468e5e24a2198309adf4686fd"
+    },
+    {
+      "caseId": "R400-SUP-46412f42bb-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5d56318afe440aa7febeb50bfaf57bae73e765566b6e15148aac1b33079704ff",
+      "afterSha256": "6b66da99b4784425648eb4356beda0e15e967e0c9f029439cd807025df96f1ed"
+    },
+    {
+      "caseId": "R400-SUP-93226653c5-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a27318541331180a40cfe3800774bdec18761564fdc30822c13d002a42ee367b",
+      "afterSha256": "d48919a23fa3234cd6571203c64b1b4915945c4840e0f006ea0e1d4beaaa3314"
+    },
+    {
+      "caseId": "R400-SUP-93226653c5-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5d5cb528cfa63831cabd533bb8763da67a0e4e4aa21351124703e94ce909c014",
+      "afterSha256": "794ef1f8ac7344737f9c221253dfcb3daad06d2b5e5240877741e61bfb7d54bc"
+    },
+    {
+      "caseId": "R400-SUP-66eef8a662-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c2216b754d731b8f18c08f4958a8e37ef94a60fc70a3f1b8d9a251555805d024",
+      "afterSha256": "6c5adbf3f7d1f3d551f2235fe4eae58fa4177716bb556cbd7ed1fecdef2390a5"
+    },
+    {
+      "caseId": "R400-FIN-4f31be27a1-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "7596a5c8be964c10014b79f23c748fac8cd4c6e9197e8ee2a67cd530c380000d",
+      "afterSha256": "7d662ee8254fb43cedc0e2ea34c7440955dcd00dd46a4c725ab9c0e8e48b02c4"
+    },
+    {
+      "caseId": "R400-FIN-4f31be27a1-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c20eb5b12d0820f49a5a8c6098141cc5f31172e3f8a286d9383725f7b7477524",
+      "afterSha256": "76acebcd3bfe171c3e7eb7b83ab38da0cca387b3f5a1293654e479cf72b716f7"
+    },
+    {
+      "caseId": "R400-FIN-a8a41cd490-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5441718d5c2cd51d892da7ec7e426d8a163e2425a353b93307b4db06f920c560",
+      "afterSha256": "65544944f9a3cfe3738767f7c322cffc9768144f5d7bde2847ae71f688c9b2ec"
+    },
+    {
+      "caseId": "R400-FIN-a8a41cd490-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "574d4bcb4f78e94a2216ce79b05c295d822c4201c8e7cd21b1942c0b39eef844",
+      "afterSha256": "ff2d9e8dcc134f6a42b76158b8d22309a9eba6991ce6f98c05e5c6e91a23ff1a"
+    },
+    {
+      "caseId": "R400-FIN-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "aa9aae2ca120f591fa55ced022b6681a49babbba419bf1cbe47078f40fc10b1f",
+      "afterSha256": "c0df5daac9330cd3ee59bde959f1805caa58729ba355c28aada4756bbf8f0959"
+    },
+    {
+      "caseId": "R400-FIN-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a597fd37309cbe1fd868756da6ee03e26595b8e5d108c0cd90f7e36c86f8fba1",
+      "afterSha256": "0e05d19dfeca143a02169bd32359375b8fac842cd2d8f5ae401d96af31694e90"
+    },
+    {
+      "caseId": "R400-FIN-24fe677ed9-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "2ccb13a666e475dca07a4b176dd370924bdb6c098e2d0abb1909e00fa2e87593",
+      "afterSha256": "25d23f0e07e3aab8905824120f8d0182728bda27c59e75e9abbc514ec28c5b2e"
+    },
+    {
+      "caseId": "R400-HR-b5187ef300-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "8277c2bf89dabb7b0547b2c2a18ba7a03ea27bca98f1b190e8c2b2899ce000d7",
+      "afterSha256": "1d611abca32a19497594f6c722771362693ad386e685748bb8497ef18ac16922"
+    },
+    {
+      "caseId": "R400-HR-b5187ef300-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "aa36d84242f7e1e7ee6b956022d293e3cfbc5cb52418fb3978c57419d4cc45ac",
+      "afterSha256": "0a7e269be6a6c7fadb065420f59201cdd48cc96e8a85cfbd9e42e0d8d8e9d962"
+    },
+    {
+      "caseId": "R400-HR-4ecadadde0-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e40bd97ea1f1bc2783edc7731656d08a2e829d8c75b2f11a56da2ab3284fb783",
+      "afterSha256": "f18575ebff3bb057725615bbab4896c4df17f8beb05b3bb07e2f6c1180b3e575"
+    },
+    {
+      "caseId": "R400-HR-4ecadadde0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "45513e758f345c6aba42acfd46bce5b1378ce2826105cc1b7849d4a2c09cb8c0",
+      "afterSha256": "892f9fb6da822774869b373ec8e1f4bede55d13c6ade6b913676a81ec8ffc9b0"
+    },
+    {
+      "caseId": "R400-HR-5a34212dc9-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "968398f33346c2fa671a63f2149c16d7a77b45d0c8ecddc9d44921668a60139d",
+      "afterSha256": "853afda2dc51605ba6facab69fe04f8dc6d5319650d28237d6875f5ec8120874"
+    },
+    {
+      "caseId": "R400-HR-5a34212dc9-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0e239b1fb095b239ea43f49f30a4a95e6c216aa50c864aa841ce532b20faca9f",
+      "afterSha256": "1d7e414e910c68088d041b14a5196c3b268bb747f72d5c3f9e7f902a386ac9e8"
+    },
+    {
+      "caseId": "R400-HR-bccb8e9582-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "11590803c362600a5be15a290bb9065dd834bb41745aa70bb69f2eca6a02e651",
+      "afterSha256": "69c0056e29f125880dfd2ff20df644622a19c0b230ca7a3e230f16caa0a419f0"
+    },
+    {
+      "caseId": "R400-HR-bccb8e9582-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "049d170bad61d9f6766f8ac98c6cd5eda0bb0de699ab2c0154b9cd8ecb09401c",
+      "afterSha256": "fd724f8fb4724237be5052bab7562dc510b7f1326e4991c83ed594716f1396e4"
+    },
+    {
+      "caseId": "R400-SEC-2cf8b7b66e-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "54a91aec6c39671462894532f73c3127aebf440e4ccc778b3df62de5433e27a9",
+      "afterSha256": "8f83e4691db3a1be10fe312d71973778f73904d3921db96f31389e1e4d363e97"
+    },
+    {
+      "caseId": "R400-SEC-e8ab5e9dcb-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "37f5193aa80f0253607bccf56e8aff0ae7c877e143968aead979a485161ed505",
+      "afterSha256": "033c2197ed09cffc7f46c4c3593d14a8ac522c8323d6fda6690f209314c69964"
+    },
+    {
+      "caseId": "R400-SEC-3811d46399-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c0bfd44886790da6a4288444e452510fc2da126d2f13cbc7e37b72e89bc35e93",
+      "afterSha256": "373fff38e08902e1adef903764bd26cf4ef4e71b0e7b277d6ab9029f94671786"
+    },
+    {
+      "caseId": "R400-SEC-de48d3f2a8-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ca6d4d5babf8c0bed32b1a79308086992ef967c1065a24ebdeaa487724f55157",
+      "afterSha256": "76f4d4f84ffd732ae3a49717904fa3f4b37bea0d350188bca696c5db89985457"
+    },
+    {
+      "caseId": "R400-SEC-de48d3f2a8-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9eb462ba70e0729982859178dc4bdce6926da9c4ccb0862d801ba763fa540b15",
+      "afterSha256": "97eebdaaeb9f9cfd5ddf028560c4843e0a54994ce3c511c6017f1961f8a8d7cd"
+    },
+    {
+      "caseId": "R400-OPS-392dba79f9-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f5c3db6ebda8b77f40f63083793a7228310cde8fff939cd8d4bf6e254d9b2ec3",
+      "afterSha256": "4d158fdf9e929e4d9851cd3226f121c7d15c82235472b30f1b95295f45d29f82"
+    },
+    {
+      "caseId": "R400-OPS-cf3e8430f0-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "db5a932c5099f68324abfbfc6525e6e25d0326d36ffcf28cacd6e9c3957187bc",
+      "afterSha256": "6d3a0143a46b24eae4afad1e911132a037a4a363ca753068fb7a4805915325db"
+    },
+    {
+      "caseId": "R400-OPS-cf3e8430f0-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9227e525307c9dc54a1e6a14b1fbb93e32bc82a4dad8b74849761bcbd5cd9c68",
+      "afterSha256": "344abcdfd616af6aa32c74f9104cef49463539669a1e1b5b1e621c1e07fa2128"
+    },
+    {
+      "caseId": "R400-OPS-5ff50a6004-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4d6535e75c1f981bb26704498ae28a8aee25357f825756709c1c8318b1772594",
+      "afterSha256": "57189bc816a44b9449b744905f8b3879a657f5617e41e0b0fd5dbec996d467de"
+    },
+    {
+      "caseId": "R400-OPS-5ff50a6004-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ccb81c1b58093dd041618bea073ef87991f4ac317e49bd64388d790e3bb406ae",
+      "afterSha256": "c020a63543872d8de436470166bcbb5fa8a8cb28d55ee50bed34fc9a0b468e90"
+    },
+    {
+      "caseId": "R400-OPS-2d9b994ff4-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "794dbae5184604423d89be5f3b40453a21cff971dba99dea7d145a9664a3b2d1",
+      "afterSha256": "f844c8d7c5f47f32fad775e4a303212edc4f7d6d6e3398eb042ee6964fb92eeb"
+    },
+    {
+      "caseId": "R400-LEG-2c944b654a-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "e541dfefd33c20b8a1d37a61dc9b6a0427aae4834612fca8f9def4d88826c1de",
+      "afterSha256": "1dd7272b5ddc33747d9e45eb98006cc485559723fcea6759dc90b20162f7ef3a"
+    },
+    {
+      "caseId": "R400-LEG-893cc8b82f-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "6cafcd2231a868b5a55212ff24eaa880d7853be9001233a75f3b39fbbcbf4296",
+      "afterSha256": "34996625188eae70e1b7b9219b1e325055f550cfb06c52d8d9d12c9f9cc6f5c1"
+    },
+    {
+      "caseId": "R400-LEG-d00d85d773-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ee73a0b6672f43d3197cb38500a855ec181c1885349c945a7706e9972d0bdae3",
+      "afterSha256": "d0446649723cf406b1c2a45cd1e408fc4624943110a223a23c4672ff558ec367"
+    },
+    {
+      "caseId": "R400-LEG-d00d85d773-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "919986b3135e72d5d620c00aa07254a156484851776f97dcaa3f8f9abc7ae768",
+      "afterSha256": "ba53e590462092f35e694306882a0296a27b578a93500f36103126bc04c79a07"
+    },
+    {
+      "caseId": "R400-LEG-1f7690d880-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "4a7199526bc1b9eff40c0f204c3a3cdabf8bd21c9ca7e62f0551332dcb7c6b05",
+      "afterSha256": "6d5df596884f0be9e547b8b39648aca86ea04e81500d19b722ee293f3f81909c"
+    },
+    {
+      "caseId": "R400-LEG-1f7690d880-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "b4f0d2c462acb107ee5141a0068cc8d50b251e988d402edad24eb5314e37c4e9",
+      "afterSha256": "e8353388d3280e00e00f7079bc28d72d040a65ecab7d6fffb9b683e2fca3a68e"
+    },
+    {
+      "caseId": "R400-PROC-5a40aa537d-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "2c07d27f543c2d124c4b4ca2b2410a2506c2726c3b8f4adda921976cd4af073d",
+      "afterSha256": "212dcfd19a7f8bff2c3ef30b98174554b307ac6c88e209e71ddca5160f395e7c"
+    },
+    {
+      "caseId": "R400-PROC-5a40aa537d-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0380c625bcb3e9195c00cbbab933a4be026858ba85f20e47f7ca9a3a92526423",
+      "afterSha256": "12a55d488935ff249ff67e0b31936c5a7a90a3bbfb7bae3dcf6aa07c6002c5c5"
+    },
+    {
+      "caseId": "R400-PROC-d44cad13b3-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f1cb3b862f2f152d34099b0fdcd8b1a5fdedeef60633bec0bd7734b899dd8e66",
+      "afterSha256": "81056631a656e192065333174cf8b41595e1cee8408b18ed2e9d9714b54b235b"
+    },
+    {
+      "caseId": "R400-PROC-d44cad13b3-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "39f5ecc08d7d83844bb53524f49d8212aa71fb8de75a82d1b8439e60ce9d93cd",
+      "afterSha256": "2c57742f15a0b8de314cab7c96ce4b07c949afc6a69e7905a6b85c7a8ccf9a00"
+    },
+    {
+      "caseId": "R400-PROC-12d97b6efa-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "00011051f1f3bdaa1e0feb1bcb5c44e5f2c2822f6d7a9311d5aae8a9f9eddca2",
+      "afterSha256": "0e6fe7b9e5a7ca98cfa394c9cd8f600bc71a15e0448f229a2e2b81bbdac24f5a"
+    },
+    {
+      "caseId": "R400-PROC-12d97b6efa-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "aed10df2afbc971830003e9b6af3bf90a539b14b0e5051ce473be944f49e66fd",
+      "afterSha256": "b44b1e1b936e3825df4282a7e026801b4add5dbb4cbc1cfc4342d52b268c65f7"
+    },
+    {
+      "caseId": "R400-PROC-a6c9d17512-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "f9bb362dd67c1e3e9602e08346cec1ca757ede7a73c9c01e50533546f7e4c7ab",
+      "afterSha256": "ad9cac64d0fedc74ff38df23c826fd1eadbfe9893c07269ebcbbddb7029d3d5e"
+    },
+    {
+      "caseId": "R400-PROC-a6c9d17512-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5dacb4c8e24f4be52c37d00adf7b78ff8195d1d1fedf74ba6b28075306dd956d",
+      "afterSha256": "bb1867e9e948cf5e771e81691684ae4c6e8832b46f173074dcd3c6df6cbaa771"
+    },
+    {
+      "caseId": "R400-DEL-26453c7b04-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "ecc0a16c4b999b4d7212f34d8972aafe5d31fe42c58583838f03e4ae9081101e",
+      "afterSha256": "41e121788fbe3a16372111fc3f6ac792d7ae06ee14e0ec737d1fbd206e2926cb"
+    },
+    {
+      "caseId": "R400-DEL-0512c34530-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "0ba5fc47ffcf182cf515d5457a43bc8fa22a07a3279bba16cae18e485370595c",
+      "afterSha256": "e9e850c43c65142a03119eb052e27411cfbe2f5c16b9ff36b6e5587a2b898a60"
+    },
+    {
+      "caseId": "R400-DEL-1442e71866-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9443802eef16023f31c7fd2b2b900202f3b6af69dfd2af45bb6077cee2283e62",
+      "afterSha256": "2ee2041656fecb61a0a85872d9a62abb6272dda9590bc495d68493ef94e9cacd"
+    },
+    {
+      "caseId": "R400-DEL-1442e71866-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "c9486c43cace690c47045a0e0c5193e1e3a3dca2be453c7fae40457ea7476d5d",
+      "afterSha256": "ff2be3b85ce6f5cfde6dd6be7f598fad4a755fc73636ffa16fd36dda5f7780a9"
+    },
+    {
+      "caseId": "R400-DEL-b69c878d10-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "977903ff609c639a1c79a4ceae008be49247bbde1eaaea53072a5ed7041673ce",
+      "afterSha256": "3c605bedc460bd55de2b36a25244e548cffa0fb20e7d406c77eb013061e71392"
+    },
+    {
+      "caseId": "R400-DEL-b69c878d10-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a031e3c631e546907f0153f5e853dac21a711dcced23a31f49b752e9299a28e1",
+      "afterSha256": "7c53a5a93c2720a86d210b6d59c970a534f5d57c7c546b27d89e3968a17a5321"
+    },
+    {
+      "caseId": "R400-SAL-39056e3307-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "a66e285bd15ba1f81479ab9fdba183bb9bf92b668ff738a485e146309b06b3c1",
+      "afterSha256": "95a8055c5d96ddb430abc4a82c445a1ca8cb76ee3ab2f9128b1a1a966911ea1a"
+    },
+    {
+      "caseId": "R400-SAL-787b839ea6-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "cb3d3f809b1468df67a48c0db859cfa0ed16e4d582dd45111257d1995f77a8e4",
+      "afterSha256": "ea8321162db063bcd154704cc89bbf1c03f8613f21f1c2e57f16f7e68826ab80"
+    },
+    {
+      "caseId": "R400-SAL-787b839ea6-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "409158d8f2734cb6cc708619f9d4090606baab1c8256d7bdb9f5d2d109ba0e99",
+      "afterSha256": "7a2d0d047c8a587c82d4b18c8938d1f2d5e3faab732b52f7282f6364de91a6b9"
+    },
+    {
+      "caseId": "R400-SAL-6bc23f207b-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "5041c615d03d50f04c924ae216d1fbe5bdf3124eaf1eb1b423f3133ebdded229",
+      "afterSha256": "6e1d38e0c5e77b9ce17453d9b17c4b10feb21d19ba33c7792f28004d74230fbd"
+    },
+    {
+      "caseId": "R400-SAL-6bc23f207b-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "6f5ac4fc3b3c8dae1ec8daa309330e8fb304bde0f35d80aa97c23849527e92a0",
+      "afterSha256": "0d905b7b26177fd378759e9fb9f95dbd3d6d1ca48891e86ca8d869d3c3184cd7"
+    },
+    {
+      "caseId": "R400-SAL-3c1a8d1393-1",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "9ca808891f1698f90450bbfe686c666aff62500e114d8c3f65b69ee01e540f31",
+      "afterSha256": "5db010fcfa76f7e23e5a9341421dea377d045ae6e59e0577680376feea86eb09"
+    },
+    {
+      "caseId": "R400-SAL-3c1a8d1393-2",
+      "reasons": [
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
+      ],
+      "beforeSha256": "fd59895b333ac5965ee60c3ce0ba02615cb939651f9bb744e1b964182356a8f6",
+      "afterSha256": "911624eb5fd9af96c92e4551d4e6a1eb2e5223099268e6022a8ff2962fbfdaa3"
     },
     {
       "caseId": "R400-ADM-ab98107cb4-1",
@@ -43,100 +1843,111 @@
       "caseId": "R400-ADM-ab98107cb4-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ac1d70bfeddb255f72adbd3645d3ad69b6a8558271062932ede7953fd1e02196",
-      "afterSha256": "2303afd52fdefc5a989ebf6b6b6d32a9bb9dca1add5c2e60e56954f45eaefe41"
+      "afterSha256": "686b7ac9b11779b267a64bf54d1ce0216873e1be323b6530877a83e092ef6468"
     },
     {
       "caseId": "R400-ADM-e736b92a6b-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "b0a0f3092ae7d391074b67e31ea568b3cd1f537056fb60cb1f3c9c9f6bc60113",
-      "afterSha256": "5608d5ce7499b0ef375c552f86aa29002ff5902bec559dfb63c668c1f5eefd4d"
+      "afterSha256": "065c035854def8609323ad50208cee80c9f7867bc6a6c4f4420b63c93ee05079"
     },
     {
       "caseId": "R400-ADM-e736b92a6b-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "2a31aa2d7dc755ca6e2e38d081f9d21251e6c1f7382f351223dcdc9b5b1e75d7",
-      "afterSha256": "7ff95fd3fba140fea5aa1a180c8e10c5ae9dd0758165e95551a0701b52441c17"
+      "afterSha256": "cc353c4982cfb6f456c381d9e3f71e116865a0c10ab8786486384b4d3dc3cf8d"
     },
     {
       "caseId": "R400-ADM-30693ddbcb-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "be4985be25dbb8e6bd2d6e6db3e8389fd85418619a91169a19eb48257afa4b1f",
-      "afterSha256": "757a089c5279dadcb8de80ed6be113783e28530be37a2b69d93123be8896a7b2"
+      "afterSha256": "47edf9a1af90d598e1db7d3acef9fa8514c46c01a9d3307f8cdf8bf5dfe6ab8c"
     },
     {
       "caseId": "R400-ADM-30693ddbcb-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "39d88f1626576e862a2b12a3cbc5c646f04bb634a14608bc093ad1029ab8a9eb",
-      "afterSha256": "a598a86d2830336e39b9ab4e14f623997cd914cadefbf3547500cb6089dd8bae"
+      "afterSha256": "1db3db33ece556b98eda966cea210520bc9c708021b4b39e504489982f72411c"
     },
     {
       "caseId": "R400-ADM-671b6e0603-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "31080b5f5383bd0c27548d5a3b78097749045950a36da0f1d6b37d7df2eb769a",
-      "afterSha256": "298dee85bb8256ff34aa1e3eb039d512c711a3145ec7df1d1c94dd6e61528ded"
+      "afterSha256": "08b76472de5a2c67afc382f62dc8a2e0742c6da282ce443d731c4ea424682980"
     },
     {
       "caseId": "R400-ADM-671b6e0603-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "75076b89522bc104558bed054ec31ce4003bb4645296f5d0c7c8ec0dab079c99",
-      "afterSha256": "8210c7f6fe9fa2a82414253b424b69da1f58376fe70223c47f90a005a3e87509"
+      "afterSha256": "1e712a325f63ba3fcd0c2c15d1f72b01f4b1136bcb02c01ebc133355e44c543f"
     },
     {
       "caseId": "R400-ADM-2944f35c74-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "e9d60d5f5c9d4aaaa07404bf7f2f8533b8daebb0e260bab70a5e1f8c3dae3d17",
-      "afterSha256": "8f9116c8912fce9c047e51aa027584129b6afa2d275ee8e78f1c79ee02237b2d"
+      "afterSha256": "dcf49e9ab135e81d895a8b0683ec66535b790c97ce4e9eea9447da86b9af9aea"
     },
     {
       "caseId": "R400-ADM-2944f35c74-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "8b49dd2464c5a4eaef1c7f3830142ccee422a96aac10cdfeb56a3f7a2176d784",
-      "afterSha256": "3c56488603305d97b8dd7b781a7f273c6196fe4beaffffe72e8d835eb11f2d5d"
+      "afterSha256": "d3f21c669b826c915ec8abbbba73fabe960e9b36a1255790c79fe8be64d0936e"
     },
     {
       "caseId": "R400-ADM-7835b4c03f-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "25396dfd84863d60da958532e66c24d9b19f27f47b98fa8ff05899f54018355b",
-      "afterSha256": "5d100245babed1c395426868f8a9c0d2704c379be9229db5893958d81511f7ed"
+      "afterSha256": "6f479ab95f3efdb45bca9777282969e46a809c0531065e91093b07a0d9dc2cc0"
     },
     {
       "caseId": "R400-ADM-7835b4c03f-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "1072340ded8da2dada9b76a1e77e05e99f772993b756d2810dd2e96d08dc1173",
-      "afterSha256": "edf39494fdb4ddfe7f71b31dd475565c8bfbffa883afe71ee942eb621944b297"
+      "afterSha256": "d51bcfeaa9d2f19d461cd9be9b294de917a62ebf731e6209522583d235fbfd59"
     },
     {
       "caseId": "R400-SUP-ee54d31611-1",
@@ -151,10 +1962,11 @@
       "caseId": "R400-SUP-ee54d31611-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "c144c3f70a55df7d07e3cdd3982737abf7d5ad017bff509f15a93d3df04f06c4",
-      "afterSha256": "41a997eb782c3f83b87f1c9683013ae698bfa7b62a7ca0f85385d63cfca606bc"
+      "afterSha256": "6885b7ad4e7e81db6da779d9eae51631e251005bdd3e09fef765eab2c1d6d643"
     },
     {
       "caseId": "R400-SUP-2eeb32a5b4-1",
@@ -169,10 +1981,11 @@
       "caseId": "R400-SUP-2eeb32a5b4-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "39cf4eb1e7c615eab3cdea2e527a37aeb61143ceab33827841fd0e580b2dcf27",
-      "afterSha256": "58f3e8274d8e05db6de33912f6883445c7f9290568fa16a2d3aa163426adff76"
+      "afterSha256": "60fbef1c48d82e786b8f93fbd84434878b444d4dc0868b6d7bd3ed50af606be3"
     },
     {
       "caseId": "R400-SUP-d02b4a5605-1",
@@ -187,10 +2000,11 @@
       "caseId": "R400-SUP-d02b4a5605-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ad9553b0009b58ebbf79043192e341d1fbc0e73dbd7400666e6228749aebbd86",
-      "afterSha256": "4e8afd117cc9e1eaaf758fa4162a89950f11214f0c37ebaae243b000b915f3e6"
+      "afterSha256": "48fbe46b8e714bebbe3a31463bb0d66307c14a9cf2fd1cbb6df7230b40e310b2"
     },
     {
       "caseId": "R400-SUP-b5be41cd3e-1",
@@ -205,46 +2019,51 @@
       "caseId": "R400-SUP-b5be41cd3e-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "89456ff282c920235f4bd6b2cbb6efb38aaf56b748dda3d9c5fe6dc4ffd6df3e",
-      "afterSha256": "51a119a1225ce4a1e12d55c3756b3b432038a7d5612de94ef0fb7256f1a789af"
+      "afterSha256": "1ff77f3f6bf30363ac398070f5834e3a2b872ed74a26438b8abb813ff7a20ede"
     },
     {
       "caseId": "R400-SUP-1dbebd914f-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "3ac39b09288bd23aedf76d79809d5976dfa8a20644aad6409434134da8cee2fb",
-      "afterSha256": "5cc3b895b72b6bc31600346e44f5732f8e585381ab517c80e485f8922c031374"
+      "afterSha256": "ef103b96313a209aa99157aa5e00f57d9bf6a8f806fc5f56aa1c0a9a3bd3364f"
     },
     {
       "caseId": "R400-SUP-1dbebd914f-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "f41193eacab178026bb951d411a2fc23016a16c9f739717a1dde833321015b4d",
-      "afterSha256": "548337e4bcda61880dd4111c2e9291f570704b1020088ecc9e8c6a0d892ef41f"
+      "afterSha256": "6d0eadb9d40bacb253292dc74efdc4290adaedc2df4168a548ccd4bd313aade0"
     },
     {
       "caseId": "R400-SUP-f299543a44-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "e0160b62b63c68f5c3acbdfbf4bb2fee28dd64fede0dc133bc5b48f21611ec90",
-      "afterSha256": "7ccc4b3d663ecbe9c5aaf0f68ef201cf55795db2562756fcecfc43e00e94a342"
+      "afterSha256": "c14c66d09aa8e45700f0abf2b6273cc7b7f341cc7b146695219c952af14333d5"
     },
     {
       "caseId": "R400-SUP-f299543a44-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "6699080680cb02d52a51ee697b2d8f63c291fdbc9f18dc46d0bb870815b6bcb0",
-      "afterSha256": "62352a11c80b0ee81ed67c789601c8c83df468a4e913591faecfd88ee4283e67"
+      "afterSha256": "94cb8079f039976616a3ae3f9a6381c0454f3e1ebbb5e58f81f84c47d2703c7b"
     },
     {
       "caseId": "R400-FIN-0372c3b4fe-1",
@@ -259,10 +2078,11 @@
       "caseId": "R400-FIN-0372c3b4fe-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "1ba07056e71a40f7c901579ed8e771203e2204829bdc4c195b1c9bbe0a786ac4",
-      "afterSha256": "c649f28f129108ea190a34e7f691c4f22f8e60f2f16ca1ded985884e37dc2a96"
+      "afterSha256": "9d64e7e57153a97d28c0caa1bfa456288187411c9464939db8889288daa3ee65"
     },
     {
       "caseId": "R400-FIN-c8f2903184-1",
@@ -277,84 +2097,93 @@
       "caseId": "R400-FIN-c8f2903184-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "0baf8cefd90c76495f9a243ae584a07e31e2529e62660d8e375eca234487f1be",
-      "afterSha256": "e9c26870bd14e161eb6dc29af46ba049350f1b804cf2b345019eab7839474b37"
+      "afterSha256": "b695198d1aa6be797bc34b397b25bfdd4737aa43024afa0f946e117fd5825608"
     },
     {
       "caseId": "R400-FIN-2d15c8507c-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "10a3f658bb5a4559273f5a725f070491043d73dfdfbc5d58f6c07716dcb67a8d",
-      "afterSha256": "4ea8a6d866b58b836d43cbe07911113e39514d6a42b67d2e07550ad29433d7d3"
+      "afterSha256": "f1ad1c0be2bac396168eb2bef39dc88d59e23725b519d82ea0bf9af2d7940b27"
     },
     {
       "caseId": "R400-FIN-2d15c8507c-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "6146b8246d974cdfcb2415276f2dca0e93413f473fbffc25fbea96aa68d33dd4",
-      "afterSha256": "b0a1b84e9bb48188bb5082ad96a1d657b1d6cec0261db7451e61347d5d01f3fa"
+      "afterSha256": "1892ff63147fff5ce7ac2b0c448bd13415171abac3687bdb5e6b070095d9c4f6"
     },
     {
       "caseId": "R400-FIN-5e97df3b60-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ee1b682fc18f5bf1cd12b6829b341f1b8dfbb8cf306d3a9dd245a4cb390600c8",
-      "afterSha256": "2225a5b7308f85a0f94d11c88dbbf25cbd0b5eb4201c4587944a93ac9859f896"
+      "afterSha256": "ce45e8d8c44c271a56bed085a9a57707660436a0558466f07881c338633114ca"
     },
     {
       "caseId": "R400-FIN-5e97df3b60-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "221fffc0965d3a01aae695cc6e11727797ddff4487d8db94bdef5b8d0a51a076",
-      "afterSha256": "3852fb62fb443bd80d61a46a7887116daba441f2b0638ffd0a0d07cddb488e0f"
+      "afterSha256": "acb4fdaa006cbccda32dfab77e9011408ca3ef234a0f684c3ed9bbf8641cf7d5"
     },
     {
       "caseId": "R400-FIN-2a0a51a3fb-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "390c7823c226f1733771ab133899a98513a05b3c5834c20956b78f9e75ced693",
-      "afterSha256": "07b236ad77f50932e99e1d90617f41f5c3c98247b377dcca5fd9fe7ab3ccbfcf"
+      "afterSha256": "89169516f4a874094e87d57c4f703a9778e8673a5e30eb9d4530d706de7acd01"
     },
     {
       "caseId": "R400-FIN-2a0a51a3fb-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "c60b5b603fd1eff594c60c31c2af858f7256bed07121b92170f7082f6dfbf7c0",
-      "afterSha256": "90aaea807bf8d74585233512b474c49d7a4ed28ce987d531eedc8af78cb3d175"
+      "afterSha256": "5ac54081650eb8c829da6ce1f1a18afab3082fbbed8761bf9c0f8323c9efab8f"
     },
     {
       "caseId": "R400-FIN-bf24e417be-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "3b34abb01cfed91751ed4ac4c8a56806ef3d6d114667ebe21ee4b3ccd3186f9a",
-      "afterSha256": "a739b086e143646e362e9e7d0e71426a62e62da610004bc660c37d20da138163"
+      "afterSha256": "e9ac1d6138a0bc9770dcef53016b8bdacc7f724b60a9646227f755fdcbb92254"
     },
     {
       "caseId": "R400-FIN-bf24e417be-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "6fb99c02d62f8f895ae5ad57ba1aa8cee7ca1d6d801f8a9055c49142e31e8c72",
-      "afterSha256": "c87e4392f3d1fa017f1580f54324d6528195d690b4544858d55035ae7b7e3671"
+      "afterSha256": "a4717a900d86dab5da7817a33c9f49691a510dd4f2b8bfc22a2cb34f1b3c4571"
     },
     {
       "caseId": "R400-HR-6b791dd237-1",
@@ -369,10 +2198,11 @@
       "caseId": "R400-HR-6b791dd237-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "fb1d131c71a5ca7d0a575ed6248482231b1e7abcfba289922868e0d0abc2b143",
-      "afterSha256": "955f9f24678e5ae6bbeb249b02eebcb1d94a2eaed8f617fa2bbb641dc7496ea9"
+      "afterSha256": "60ae8f7e18e89bcefdd4860e9c24e90c94c1505d62b6ce83076a4cbfeb0be22b"
     },
     {
       "caseId": "R400-HR-8be8f1200e-1",
@@ -387,46 +2217,51 @@
       "caseId": "R400-HR-8be8f1200e-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "f65636ceae823a4938fd216e85626408b1001bac870a605a490e4196d772e38f",
-      "afterSha256": "1da5dda5b423bd6162d0cd069c00168978446e49c4b8eb14bf993dbaa4e06182"
+      "afterSha256": "fee3f03d4716ea9c7e21fb9650f1eeaf601954047bbf6c252b037d87f22c4a3f"
     },
     {
       "caseId": "R400-HR-80e58709b9-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "94bb5f4796354745a311820701a78ab153da9ba89e26e599207ac4f6580390e7",
-      "afterSha256": "f94b0e3aeeaa1c5e4cfa8f1fc0573795a88df2229893ecf6051587c87d0a0eca"
+      "afterSha256": "76c188f7654d490ace07d3789bc51e65e5905527ab6e7ae734021c09ab80a96e"
     },
     {
       "caseId": "R400-HR-80e58709b9-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "3631e500a25a986d5d0a0ff21e463aa6bc4ff029b4e342c08840a607e51dbc1a",
-      "afterSha256": "d8f3d11bfcf671c0a38817e0661c97477cadf9936f55984568187ae10d8806b8"
+      "afterSha256": "2b5c80d9e0c0bece811344864ec9fda867d983bc0499734a2d3a3a9ee2d2f9df"
     },
     {
       "caseId": "R400-HR-6bc23f207b-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "68ac5cb48ad92a75ebaf7b78f03e2baf1ee1f439551bb875a6b3d8f79a8b61aa",
-      "afterSha256": "e3f1a7b4e4a0365024b673e9593e4e69fe532ad17f67400029119cf9436bb0ef"
+      "afterSha256": "6728d67af1c6bc41af5fa66a61843727a90bbc9e51451408b22f292c8364d971"
     },
     {
       "caseId": "R400-HR-6bc23f207b-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "534ce4a1d759e2c95ee315f6a6c677eb728efc2959531de328c22db20ca08914",
-      "afterSha256": "d110ad8d879016b49e72eb2368b75048373236dd935b0c1772494b65b62519ec"
+      "afterSha256": "f943628804e4131afbe0117b5f361bb1be402d1023075e753519a9b9b258a6d1"
     },
     {
       "caseId": "R400-HR-a968f66f1c-1",
@@ -441,10 +2276,11 @@
       "caseId": "R400-HR-a968f66f1c-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ef2e96fcf2677ef1979119983900cddd53a6a56b0ca9ab89fb21011c4cfcfbfe",
-      "afterSha256": "8619e576d4d6796d76c7613e30a41361cb6399cdcdcc380a477021bbbe82c9b0"
+      "afterSha256": "d69dc006403bbaf0dd7e05265d4eac17deb5f856e69d2419a6d1f16e776b4a85"
     },
     {
       "caseId": "R400-HR-991746f129-1",
@@ -459,10 +2295,11 @@
       "caseId": "R400-HR-991746f129-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "36c69cf33af9ecd95800256c900f0761c18bbb2a83cb0893ba92c86311533224",
-      "afterSha256": "f7fcffd6bd59859dba6b993a4923d15a80923d5c3f7eae2e7da148925165b6b1"
+      "afterSha256": "bf140229a6ed4456fec482f6427c73060b4056115c1d50ad0a382c191836c2b3"
     },
     {
       "caseId": "R400-SEC-ff2b5e776a-1",
@@ -477,82 +2314,91 @@
       "caseId": "R400-SEC-ff2b5e776a-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "cea2599f2fd47fe5ae062817b937291c39f447a2783306f00f8b7acb0e8624ac",
-      "afterSha256": "e6371a32ca07655a0cea16c0b20a957751c437c8ee25b4955350ae29f561edee"
+      "afterSha256": "69eb34d9bfaa69980831f1e7c8b7e954e1c9e8fbb780997e1330a4295e06bb5d"
     },
     {
       "caseId": "R400-SEC-91644c3428-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "73da4419fc118936ccab7b9185cfcd2026b1787d49ab828d8d40284ba6783814",
-      "afterSha256": "9c68c049bac4349e28ca5b3b146827df8544f4cba1d17c453ce251c6db7de8aa"
+      "afterSha256": "2df90b22d2a1b6c52605abe70eed1c3485138436dc5e1cb2afc28440c98bdfbd"
     },
     {
       "caseId": "R400-SEC-91644c3428-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "9705c93524adaa5827943329da5438b5dca995c583df5081ea0e5e1e9635cec7",
-      "afterSha256": "0d217daccf8f3d08cfef50f0b2c5852d56296cb7fa7e0bbf7964e3c8667d9a9e"
+      "afterSha256": "09f8b065edcbec9fa8c490a23f7a9a525aade409df2681b222d7108e69d0dd0b"
     },
     {
       "caseId": "R400-SEC-d600e5feaf-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "c9aba674331a5831ddc6ecbf5d41f046a1d79b5ab1088e83d5e21891bd1a3c04",
-      "afterSha256": "d3e9b41575317cff424685de51acfc5713b05423f17b10b1541558d00432e00b"
+      "afterSha256": "43b8b4b20a044a796e702d48e777ab936e57ee2a34b2c58d87c0fdb162814d7b"
     },
     {
       "caseId": "R400-SEC-d600e5feaf-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "9a1b00cfa5d25fb137daab176e2d79378ece0ef407615e251b2bf076dea40faa",
-      "afterSha256": "31195605dcdc02d5d8b8712c82f3131b70c868fcf7616fcb12d32207257f00a2"
+      "afterSha256": "e42dedd153999ce29e326a49ab25f89624f7c87a104cb74b722dc0ed2b31852d"
     },
     {
       "caseId": "R400-SEC-5d22a57f9f-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "81fb3662a1e2571461812642d81975ee5ecd250e1676d7d2572bd71ab1b4c7f4",
-      "afterSha256": "7ad8bc5b73581f3d46dcff686ea7b4eadc323a4bcd07ed7bef37c4cf3c9ec3f1"
+      "afterSha256": "2c5822a8338c0977b84c78813e5b55bb521d46c6b37ffaff0ebe14ab13ac5cc0"
     },
     {
       "caseId": "R400-SEC-5d22a57f9f-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "fbb49318ac3dbfc18640b058f21d69d36bc60d15b6d0dcf1d7d8211564ba3632",
-      "afterSha256": "c855f41eb9fae938aa8ee8fb00784ef4ddf6af09951432580377d30eddd06d46"
+      "afterSha256": "9c9cf8831dc238f65dc9572275b93eab6ceab220d95c166e7a4bdbb6d91c0d6e"
     },
     {
       "caseId": "R400-SEC-07506f6b15-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "d2921605c32e9aa79976fc4249e36de53525f85d1e01ffa79f0ae37126ecb92f",
-      "afterSha256": "d27562f18fffdb4702f5ba37f990485b1eaa1ae115b33054e6d57937ab8fd200"
+      "afterSha256": "c613520f3133fe425b9683c0f47a1d92288bd1125324fe5047ebc4f18fef30c1"
     },
     {
       "caseId": "R400-SEC-07506f6b15-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "57b735f4cf1db27929ff98193710c001429d6bd919c6d68df9a5862fcacfbb09",
-      "afterSha256": "ef28add6895e2fdb1946c681a5ad7237a92d948ecea3c903f735dec81c3a65a7"
+      "afterSha256": "f0fe54c09f6ad79cc20c49b1e223ba18c6c55b6a174a49146a907ef324be2501"
     },
     {
       "caseId": "R400-SEC-6210eadec5-1",
@@ -567,10 +2413,11 @@
       "caseId": "R400-SEC-6210eadec5-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "101326c3dd6c01fb5fed10ba8e806e4ab28679d62fd2cb00edd2294e77f83c96",
-      "afterSha256": "cb0fc4e165c424ba98d70958455b667baf34d21eaab35459c495eeb82d4b9a60"
+      "afterSha256": "0eb93fae03885509a9705d99f03da56dfb699dc80e0cd0cd288f2d4ae5676797"
     },
     {
       "caseId": "R400-OPS-e92e122cae-1",
@@ -585,10 +2432,11 @@
       "caseId": "R400-OPS-e92e122cae-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "1ae6a94938e78354e35e0d956a652d3d6e0495c8bbebb79a33e222ae4bac22b6",
-      "afterSha256": "51345630d27ecd0ef0145298eaa01c742f5e4ecd33e6ae9d525def09a4a3898b"
+      "afterSha256": "6e3ed768bf36e36600fa164329d5633c3ff08ea2791e6b31a421541b8b2e62c6"
     },
     {
       "caseId": "R400-OPS-970cec6344-1",
@@ -603,84 +2451,93 @@
       "caseId": "R400-OPS-970cec6344-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "868366b80a78d38029a48551f23818a8cda011af0c38025987a8147fc62c02a4",
-      "afterSha256": "b385ddc21eeec612735c5786d20087b07440f23f6f944f9452564d33dd76f334"
+      "afterSha256": "68d0db821020f0be9bc2e2cbae26cc4d95f04fe85ca9d33bbbc8e8df27c14668"
     },
     {
       "caseId": "R400-OPS-c5b285443d-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "a2f552c0ed376ed81f05e1ddb2376a005a8ed1c2f6fe4672072b625dc7ef586b",
-      "afterSha256": "824ef2ff84b7953eee8c51db7b114757a797c04b287ba2a9623472fa3e21b1c9"
+      "afterSha256": "c1fc3303271af3bcb9c91b272a0002a1fb1e43665b78d6290ced30aefdc2a336"
     },
     {
       "caseId": "R400-OPS-c5b285443d-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "f606a64c33206fe6a74c7a0d6a1b02ed8cf4602a54017382181118072a520e3e",
-      "afterSha256": "9748d1978d5f2ba75f6de74ac2621c667fd79fd4c4e749a610499ab3e8399cdf"
+      "afterSha256": "8fe85f0d60b9cd5075c743f0ee95160b9c4d8c8bb0298c4734c4bab5e9fa4593"
     },
     {
       "caseId": "R400-OPS-6bc23f207b-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "bcbbfa19b332227c0953b6e0c212810678cf35e5b1d89c9737dce4b1cfc90529",
-      "afterSha256": "9b2eec12d11d2d04378c80459a6c5bead513715193068113bc94d44634e91e85"
+      "afterSha256": "9ed826bfb014d8a9f93d09c74416b0d86ece0927b1118aa75f8ddc0296fa0724"
     },
     {
       "caseId": "R400-OPS-6bc23f207b-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "058fca449cb7d501c4a1bdb6e73e43d5c140358e74fb7434381682942d435bdc",
-      "afterSha256": "eb1c1a47555f7ccd2b328338c15e644c21220efa1dbef8dea7682d80ab77f2c9"
+      "afterSha256": "8e768d4e8c6cfb582980260b8b7765ef67fcb084e944feceeea64027ab126304"
     },
     {
       "caseId": "R400-OPS-3636798744-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "9c863eb194d97d2f5972ae0039f641dcdb6ca1f4029b28a6f26fb549db2c7aea",
-      "afterSha256": "beac86135f10f27d67bd6255973f79fd325cf0ff6f25370a454d24cf08b17bb8"
+      "afterSha256": "1e734e9085a845353fa56c511eaceeece82daa6f79effc9f310a9a5ecd2b7531"
     },
     {
       "caseId": "R400-OPS-3636798744-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "265cc949ae393f4f303fa978b5dbd5ffe05bc78a51c7673b1994ba33f897fda4",
-      "afterSha256": "e4a7715813ae992213b216df6e88365f7a22c554dbaecf9533cabf45dfe26213"
+      "afterSha256": "cc5ca0701e1f69e9e681d7c4dd590a362d93064ce17f73e9172f3bb92bbcac23"
     },
     {
       "caseId": "R400-OPS-1e9fa64d9d-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "09c9b207235c30e1675fe7ea8b4823b1b73064d1e4a858e2f914b5d6d3a4aa25",
-      "afterSha256": "f3274e2537fed646a481fd39613b40799f6f4e70bb2b6d24f9d4bd48e7913210"
+      "afterSha256": "09c681380af72cd878b2fe2360d52e424e892ba92601bcba1e388a91c0412a95"
     },
     {
       "caseId": "R400-OPS-1e9fa64d9d-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ab922e6b3fc8afded0d08fd7008d5ca297f9adea8dc380a3111501eae31c15c5",
-      "afterSha256": "016b0689d6f9ae0db631af40c3f6f6b327d21af464b173a3b2df5a0e5796a916"
+      "afterSha256": "98f4a1a29190d7a7d96cd543abff739a54f5eb9a170df2e59a46489d0393a588"
     },
     {
       "caseId": "R400-LEG-e5f19b4690-1",
@@ -695,10 +2552,11 @@
       "caseId": "R400-LEG-e5f19b4690-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "42c9686cb880cc25263a6133d7a163a8020da6f1764c250783ce8eacb7a9d68c",
-      "afterSha256": "f257652799041444d390706ed3a488ca9610fa8d6b03c5ad31fa02983862ae03"
+      "afterSha256": "b37e0405c8d414e35a6ec93e3e371ac5413ab0f48de9f71fc8975a8e6615de08"
     },
     {
       "caseId": "R400-LEG-fe24f391e1-1",
@@ -713,64 +2571,71 @@
       "caseId": "R400-LEG-fe24f391e1-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "a256909e9b995db696bffe33b62fc5ddd4fbe596dbf94f18b123f0a0a8949a8d",
-      "afterSha256": "280b6de9e3b20121cf93d19e543579f2249e9ae6b26aff2a3e2f8480f49fa561"
+      "afterSha256": "d3d76a1e359f014250ddab08a6cb0de053f785337245eb5d5a9c8868b9e4650b"
     },
     {
       "caseId": "R400-LEG-b1e699753d-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "1a07b707840908e3b62b74605ed3557a52dea9d37252dedf21fca03a84a102ad",
-      "afterSha256": "e1dbd4c91841bca99c93dd5710d6548507904d0ec26fd5a5f8d8d0e9243cc278"
+      "afterSha256": "76145a325b13404360d718afa528007c5ae7793f7bfebe4aa558a5fa4b2de706"
     },
     {
       "caseId": "R400-LEG-b1e699753d-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "b8f4605bc53f4e856883f414365d7b6217e10711a9ca5c52c70ca0be4017050e",
-      "afterSha256": "dd432d2394ba7e767ca869ab37b0bac16c52de66798c10dc9ad8f858d43ea2ad"
+      "afterSha256": "41bcf7502bece5d59af5b1f5450a8ead9cf8a866328a9f38d6ad3315d950115e"
     },
     {
       "caseId": "R400-LEG-341ec6da8f-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "475cbba0c7c9875f1e8dca60d8e4c62c10e4e19b79c10a5bedec678c581427d7",
-      "afterSha256": "ae44091e8332e6faeb02f927d5e2c51b62d43fcae33ebcbc8dcfd68d0a668449"
+      "afterSha256": "6a9ee1fd7ab66b5f2a0294947d409e283520b050fa93f6d26b8a89867dc2089e"
     },
     {
       "caseId": "R400-LEG-341ec6da8f-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "531f98da5d9208f1b00353c9b8d2e8128e2f573a854c54a643cfc47741f3f11b",
-      "afterSha256": "b39724ddb3ef65911094d19f245bfa8e502f8f6a91ebca9d57653f80ec10bb77"
+      "afterSha256": "10c47f2c6b1e1c46d9c41e1265a582107abf9af3e01876b939a388fb0e1566db"
     },
     {
       "caseId": "R400-LEG-c169043ea3-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "9c9645c72150aba1189f3847479631454c7a26ea6e7d1dccb5352d2959813056",
-      "afterSha256": "dc7b479ede8b5a7e9f7d45a27085e75d579a763239a2d01917ef81cf4853bd98"
+      "afterSha256": "3bf54a95e117a4403d4afe8784dbca096c2c47ca7d0c8ff4a200605e793b1847"
     },
     {
       "caseId": "R400-LEG-c169043ea3-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "e61139ea4144093f9cb06eb308fec6d70aa1c71fd8288bc0be510664670eab14",
-      "afterSha256": "a0ed7cceae5c1f8e76728f74b8c6e5bea17d32a2d17235a2d9f8063960de28d1"
+      "afterSha256": "bc27826fb2123b0d00379e4d8a9d94ce18a72e0f8628c7ab7bfc9545b7fd8523"
     },
     {
       "caseId": "R400-LEG-8753861dff-1",
@@ -785,10 +2650,11 @@
       "caseId": "R400-LEG-8753861dff-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "0d680a26179d51f969caae11e74b487229870816585fbe7b8e8ff85c04025082",
-      "afterSha256": "761ea51b3990b6c679bb65b8788b1b74881c81f2ae3257dd790791d77245a3bc"
+      "afterSha256": "6367c15de0843ceeb994ae2738c11329755546839ad88f8a0dd1b83291290937"
     },
     {
       "caseId": "R400-PROC-71747ff012-1",
@@ -803,46 +2669,51 @@
       "caseId": "R400-PROC-71747ff012-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "b71286bd64af38b5190929414e49964d94f0a0d88d71a1428f40c825771d3ddc",
-      "afterSha256": "576f295c36240314de6952279d41b1daada395fd5e0eed50ba74b1ca1d5adfd4"
+      "afterSha256": "7a28b197ca3218b5988dac446e74acb67194d342f50b7720f49d6e9f181c59dd"
     },
     {
       "caseId": "R400-PROC-a7a49f0d78-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "2ff45152ec302a40741c6876039566055990d8571f4099d9f49c1cbf3fcf3cb0",
-      "afterSha256": "b9d732fb4460105ef89a0b1cbd8bd81c869775b68b7fafb67c8a57b9e8030254"
+      "afterSha256": "8842a6f65f937d7fbf5cb9ee0a9dacd06c6aa33e18ebab8ee50342c11b7f8e97"
     },
     {
       "caseId": "R400-PROC-a7a49f0d78-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "d9ae0700cfa0b7181bb328e7e8ddd101e9a3dd7713f5194264626eb8ed8c1a23",
-      "afterSha256": "4830164d238b72ad9a5c170a5fd73edb50d2782c42aa4a619fc59f0916cfa116"
+      "afterSha256": "635c5b38ac784e41a59dd2dd3ad4f90bfff07421bdd93a313ff1a70b76c5ce7f"
     },
     {
       "caseId": "R400-PROC-13b80cfb55-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ed4943d99bfb4d9f83e34ddfe38c8b0a397165c5318bba26295b1d277418dd84",
-      "afterSha256": "4e6a371ad5063ab4d2f3f8109aa1d43cedd5e56b15ef90f3e1a60dfccf67bccb"
+      "afterSha256": "8b212258824a14eb72df592bc50a597251b1a0532d9a06bf8f1c6c56016ccc34"
     },
     {
       "caseId": "R400-PROC-13b80cfb55-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "4f36c124d239a7520c4684744d9f81c3442cbd347adb691eff4e2e5a8aa811dd",
-      "afterSha256": "2d114ada4f74df16302a834f9f060799405ddfe6e561aba3ea1ae76920220ba9"
+      "afterSha256": "2678adf846e82e04fc06efde08ee574b810e875a15a0db440b25fcc62cf1ee0a"
     },
     {
       "caseId": "R400-PROC-19e3bcefce-1",
@@ -857,48 +2728,53 @@
       "caseId": "R400-PROC-19e3bcefce-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "688f03f637d1a1e869d8609f61456a86197fb1ada96ddd03e6f7d2d7822d81d9",
-      "afterSha256": "fd9f161d4a9dc993f7537cd8228dc29d70e18caa58e40939ecee02fc7edc47ef"
+      "afterSha256": "4ee44c01e5ae85413f02f8ac5aa8040f40b7ebe6c425bc8beef078bbb8eb4067"
     },
     {
       "caseId": "R400-PROC-80294cc184-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "4fad444f69a13e93418e1306e71a87984962ee05afc6bd4b54e5414499364587",
-      "afterSha256": "e32cddabfcf61f57780e2a08448960484351c237a34b18c5db30b20b36530f11"
+      "afterSha256": "4619208515bdfca82816ef1dc8ec50154ab6e937c0ff6362b62e37acd8add45e"
     },
     {
       "caseId": "R400-PROC-80294cc184-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "f836433bcaef245e46e8634a71861d16f547ded28a3ead576df6e62304f3e5df",
-      "afterSha256": "e558012d30239e56f0c55fb4c8c7c5a30142e5fde7f83e38d7db300994c739e8"
+      "afterSha256": "07da427cf1da10d1ee8126390b2269236485b61bdf44b72cf79e86f79a6c657e"
     },
     {
       "caseId": "R400-PROC-ab94bb68a1-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "45402245c0f4d291a963f5c1273d485c5403149fea06c6b8eb717469f2da4308",
-      "afterSha256": "1bedeec53b9a5e3a6ede9ca664f17c46644e9eaa1b0baefae7c721d97b23dab0"
+      "afterSha256": "5750bcddfe6138db907f6fa75d01b9607f2d0994b483bbe1451f7ae970c3ef1b"
     },
     {
       "caseId": "R400-PROC-ab94bb68a1-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
         "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
-        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "96fd656b03421b9c6d1fdd93436ef24543f7b28fd86a6ad8b0b6b6385681b34d",
-      "afterSha256": "c68dd97d41a4972bb936053093a9a516ceff05450cfee9345d1bc19ce207d5cd"
+      "afterSha256": "5fa3a5e6133d0c256cab1123309472b0afce4d8ecc18779e34d40ecef8ff3c5f"
     },
     {
       "caseId": "R400-DEL-703de2d2b8-1",
@@ -913,82 +2789,91 @@
       "caseId": "R400-DEL-703de2d2b8-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "dc9753fea4334b71fa501acaca351d7e2f52c206cbcb8535fdb23c3c0fd56ca6",
-      "afterSha256": "81d29ff3bac71f32de1ff2475bc5d41d6ae6b7c95f6734024ec5817bbb77a022"
+      "afterSha256": "3bea196d3f741199cf43caa38a3267fea7072f07a1769eccf22daf5f5b83e8a5"
     },
     {
       "caseId": "R400-DEL-4b5ced5c30-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "24ea112c481e65f830df01b67d374108292c1df46959d6b7bab19bdf2e713b39",
-      "afterSha256": "67f7bedb9823c828c576263b9bfba12905cffde3ab2ae5144b7c78d50b134f9d"
+      "afterSha256": "47bee7e5c7db859643df5f891393cc2018a0198c95ac07aa49d766e3dff3603c"
     },
     {
       "caseId": "R400-DEL-4b5ced5c30-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "4a12a0e8a1c134bb586279b7624284b769f4d739dedfb3c9e590b01e55957d2d",
-      "afterSha256": "603f66682886da14418d762185a8cf29d4623f77f930e6b99b4e1d863432e56e"
+      "afterSha256": "ee1b71b621eeb39a895fd80aff8d82c95a67d2a673ab0197763498c51382fb25"
     },
     {
       "caseId": "R400-DEL-9e7e58a74c-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "95befbb05bffd6b4e9ce57e35b34274fbd9e2c57703280e2a216816c09c2e6c8",
-      "afterSha256": "f2687834818fa19af1b4ff1bf520e52706c46ba718b0f0449dce8b68deb0fb09"
+      "afterSha256": "bab958486199eb504b1cb5ad6bc8a4c988bf1d8a7f44de5c9a86486f40713873"
     },
     {
       "caseId": "R400-DEL-9e7e58a74c-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "2362afa66d3f0297258ec7adb775d2b3f2fae0ee93461333abf8c66cc58dacdd",
-      "afterSha256": "3e4dcca2558501a8726a1a6b02ad40a0efdfe14667773b326439e4d0f330bd77"
+      "afterSha256": "6549daa9fbd4b4b6738475983207e18d8e9796aa5cf6a53aa26d5c5ab367900e"
     },
     {
       "caseId": "R400-DEL-4d0934275c-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "dc4dda4a5ed1061ce711b435c0667524a923c90412eb468bc185be02089637d0",
-      "afterSha256": "6bd5ab48227a0c9c140438e7c54fa8e23809b7284ff7badee77ea779ca39518f"
+      "afterSha256": "6ed31f4394f664b6a58c4e2e570181b1929591d9f01efc5af5cb6cca1a4debd8"
     },
     {
       "caseId": "R400-DEL-4d0934275c-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "b325e7de374445fbc4811ce384bbbb5db7de1f7bc8e02a16ea25c648cdf44d20",
-      "afterSha256": "1c06f4b0fd24f396fb378d66ef4493c83c4b987e2064817fa1357aeb642cf4c9"
+      "afterSha256": "34ed0efc3c043c273ffb2a963ff38d69c449c66cede8c2d08deac8b08b48cda6"
     },
     {
       "caseId": "R400-DEL-6bc23f207b-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "d4983585a2a8190beafe065f6eca91e940984eaef14e77af9c8ca3802a8ae9c6",
-      "afterSha256": "35ddc536b5af16b9f4f311e624cc8155389385ad82fe58f5cd79fdb12c08893c"
+      "afterSha256": "10900bdcf62877fb1b79238f3b13969567bb589fa55e37aa7ef1faeebcb6afe1"
     },
     {
       "caseId": "R400-DEL-6bc23f207b-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "fff187881e3ec25ac1f86b650e8b5a25a293908e9a344cdec883a8a5e4de1a0d",
-      "afterSha256": "d0e6e7fdf88ab5df577f902b523f22d4f19ce576b9614cd302049e1e16e68ef3"
+      "afterSha256": "f95f8c78601bdd7a4a51dc7f51be250f9c26b0612d93a5055622652045e2335b"
     },
     {
       "caseId": "R400-DEL-b3d9be901a-1",
@@ -1003,10 +2888,11 @@
       "caseId": "R400-DEL-b3d9be901a-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "09cf966dad1ddb02c2079c845159cd295d7db3d3dd06856180e49b70f9bc4b79",
-      "afterSha256": "fca44f0a3dcb9c878a3f7cdfd354a999a68ccf9f9ff26ea1ee8c54c43e9af3f6"
+      "afterSha256": "7fe7ec452ee76e307885641ccfc140432161619a21302495b8aa445ad9b39133"
     },
     {
       "caseId": "R400-SAL-526aa6efb1-1",
@@ -1021,10 +2907,11 @@
       "caseId": "R400-SAL-526aa6efb1-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "467040494db8ef0957d84727b1510efa036b8fce22be6c6dcf4a11777e8ef9f1",
-      "afterSha256": "66aa03c1f339950fd36f5f4a853cc1f898d453100266e6b3e1e9c494b522506e"
+      "afterSha256": "2990ad150798202a8a93a97e4367c4954faee1917e4792cc3002af8c24f28d94"
     },
     {
       "caseId": "R400-SAL-c83506c59b-1",
@@ -1039,46 +2926,51 @@
       "caseId": "R400-SAL-c83506c59b-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "209fe64bc4b8a5b024afd9e135084b962f30274a6597960c2618684a56d173d8",
-      "afterSha256": "491dab06f0075f0ed429a828bc11bddc2b8d63ff71360ffb4f7084be6d854c18"
+      "afterSha256": "14bba3f8eda252cf49fbd038f904cbf6aa8d5b1caccc6111ad38d7446b2b5379"
     },
     {
       "caseId": "R400-SAL-b8322e260f-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "04a8d7b9613b3cfb63e6caa8161852fa737454882f85a530e7dcc59aa8206fcc",
-      "afterSha256": "31b5fcbe8c121152c4c53c03f44aab29c11f236bd846293244b3a25d8f911437"
+      "afterSha256": "ee4f729fcad9971f229a557ef0d7edd46c851136418bb77e2a7143fbdc8261d7"
     },
     {
       "caseId": "R400-SAL-b8322e260f-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "d2433e9b08892c009cc156466e22a71f6fc893c20311b80924486920e79d4e8d",
-      "afterSha256": "83f9abe81838b55def69a99ed845cc6fa6580bbdfde37f090cf2d6bbdff90cec"
+      "afterSha256": "77607a89d7e84f3364566a6192bd04e16dfe0e429d35527e4b88992b6157db55"
     },
     {
       "caseId": "R400-SAL-24c1b882a7-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "e0f945f39ff8a540f8b59d1520a9461fff5dc6d101f925410bdfe404c1ea781c",
-      "afterSha256": "d11f75aace91276df46e87312435853ce0b46953bacb4c5437e2a7683679e6a4"
+      "afterSha256": "62efdad798171829a3c77b60c7582570acac0d47289ae48ca6031ea6f1e2ff9a"
     },
     {
       "caseId": "R400-SAL-24c1b882a7-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "20f061e04015e3a2f794b69784e76dd447ea3a36d1e6bd7db3939c7e8c5d3095",
-      "afterSha256": "88bf9feb239d66a534df3d33ec7cff2c35bb2a51bd778f3b29577f88cb8c7f6e"
+      "afterSha256": "a09927fab14e7984a3b5956f46a3515e7356b3b5005422a4aefc4aa74430ab89"
     },
     {
       "caseId": "R400-SAL-c36fc07a54-1",
@@ -1093,28 +2985,31 @@
       "caseId": "R400-SAL-c36fc07a54-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "dfa76181eb6ff89444eeee68bce8a82898c302dc630daa1e961391f7ba91aa63",
-      "afterSha256": "e30cf3e292cd1ddf4bd1c5a19e874da0324cad7b8be862f2387943425004f098"
+      "afterSha256": "54532d09c7e047ba4004b254b38cc6a3a9ef32a480df55dfa1a58e9f15ae92ef"
     },
     {
       "caseId": "R400-SAL-5709d0e3de-1",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "ce8377c301037cf2acdec799c4840f4a61f4508a46026b05d7fd8a9b7635bceb",
-      "afterSha256": "757a91b2b1cbfed45c28ef4335c21ec7741a52f909c1ce88bdc15fadb8f05b64"
+      "afterSha256": "672adb91cdb32a842dddfad99b77cdf53fc47601821ab0bc19f6585fcf525c7d"
     },
     {
       "caseId": "R400-SAL-5709d0e3de-2",
       "reasons": [
         "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
-        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints."
       ],
       "beforeSha256": "d8d761cf2e9cf21b56bb536b32e5f0fbf664deeb2abd3ecebfc4750ba0cb5a13",
-      "afterSha256": "452f332da985244d8d71e31edd6326d8b98e8851aa97550775701a0e74ff8f67"
+      "afterSha256": "82725712873d8db45416bd8ea2d0ee48fa49f0dceaa6fbe079aec707ab7573af"
     }
   ],
   "overrides": {

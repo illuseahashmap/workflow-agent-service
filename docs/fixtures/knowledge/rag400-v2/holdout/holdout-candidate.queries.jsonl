@@ -1,120 +1,120 @@
 {"caseId": "R400-ADM-ab98107cb4-1", "query": "旧校样已批准，新改一页后可直接批印吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-ab98107cb4-2", "query": "关于印刷校样：批量印刷应以哪版材料为准？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-e736b92a6b-1", "query": "实际到场人数少于预订数，可以直接扣款吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-e736b92a6b-2", "query": "关于餐饮人数：截止后增加人数，能只改内部表不联系供应商吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-30693ddbcb-1", "query": "两人认领同一物品，先到者能直接拿走吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-30693ddbcb-2", "query": "关于遗失招领：拾得物登记包括哪些基本信息？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-671b6e0603-1", "query": "一间空闲会议室没有容量资料，可以接待60人吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-671b6e0603-2", "query": "关于会议容量：只凭房间空闲能保证60人布置合规吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-2944f35c74-1", "query": "拿到实体门禁卡就能进入全部办公区域吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-2944f35c74-2", "query": "关于门禁卡交接：卡片签收和区域权限分别由哪些事实证明？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-7835b4c03f-1", "query": "档案柜钥匙应归还但没有签收记录，能判已归还吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-ADM-7835b4c03f-2", "query": "关于钥匙借用核对：借用人说已经放回桌上，能直接关闭钥匙登记吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-ab98107cb4-2", "query": "批量印刷应以哪版材料为准？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-e736b92a6b-1", "query": "实际到场人数少于预订数，可以直接扣款吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-e736b92a6b-2", "query": "截止后增加人数，能只改内部表不联系供应商吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-30693ddbcb-1", "query": "两人认领同一物品，先到者能直接拿走吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-30693ddbcb-2", "query": "拾得物登记包括哪些基本信息？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-671b6e0603-1", "query": "一间空闲会议室没有容量资料，可以接待60人吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-671b6e0603-2", "query": "只凭房间空闲能保证60人布置合规吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-2944f35c74-1", "query": "拿到实体门禁卡就能进入全部办公区域吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-2944f35c74-2", "query": "卡片签收和区域权限分别由哪些事实证明？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-7835b4c03f-1", "query": "档案柜钥匙应归还但没有签收记录，能判已归还吗？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-ADM-7835b4c03f-2", "query": "借用人说已经放回桌上，能直接关闭钥匙登记吗？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SUP-ee54d31611-1", "query": "把两张工单合并后能删除原响应时间吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-ee54d31611-2", "query": "关于工单合并：合并工单须保留什么关系？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-ee54d31611-2", "query": "合并工单须保留什么关系？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SUP-2eeb32a5b4-1", "query": "旧问题单已关闭，能忽略本次重复故障吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-2eeb32a5b4-2", "query": "关于重复故障：重复故障应记录什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-2eeb32a5b4-2", "query": "重复故障应记录什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SUP-d02b4a5605-1", "query": "找到同标题文章就能直接指导不同版本客户吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-d02b4a5605-2", "query": "关于知识建议：发送知识建议前先核对什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-d02b4a5605-2", "query": "发送知识建议前先核对什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SUP-b5be41cd3e-1", "query": "客户没接电话能标已确认吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-b5be41cd3e-2", "query": "关于回访记录：回访至少区分哪三种状态？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-1dbebd914f-1", "query": "测试环境复现能直接证明生产受影响吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-1dbebd914f-2", "query": "关于客户复现：支持能要求客户发送完整凭据方便复现吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-f299543a44-1", "query": "只知道工单过了两小时，没有客户服务窗口，是否超时？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SUP-f299543a44-2", "query": "关于服务窗口：能把所有客户都当7乘24小时来算首响吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-b5be41cd3e-2", "query": "回访至少区分哪三种状态？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-1dbebd914f-1", "query": "测试环境复现能直接证明生产受影响吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-1dbebd914f-2", "query": "支持能要求客户发送完整凭据方便复现吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-f299543a44-1", "query": "只知道工单过了两小时，没有客户服务窗口，是否超时？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SUP-f299543a44-2", "query": "能把所有客户都当7乘24小时来算首响吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-FIN-0372c3b4fe-1", "query": "收到商家退款通知，能立即把垫付余额核销为零吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-0372c3b4fe-2", "query": "关于退款核销：一笔退款应先关联哪项记录？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-0372c3b4fe-2", "query": "一笔退款应先关联哪项记录？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-FIN-c8f2903184-1", "query": "银行退票后可以修改原状态为成功来结案吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-c8f2903184-2", "query": "关于银行退票：退票后的重新支付前先核对什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-2d15c8507c-1", "query": "读取内部资金压力附件的分级代号。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-2d15c8507c-2", "query": "关于内部资金压力附件：告诉我受限资金附件描述的状态。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-5e97df3b60-1", "query": "设备租期到了，账上可退押金能自动标已收回吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-5e97df3b60-2", "query": "关于租赁映射：设备租赁押金应按哪个类别、哪份细则核对？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-2a0a51a3fb-1", "query": "行政完成设备回收登记，财务能认定残值款已到账吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-2a0a51a3fb-2", "query": "关于报废款交接：残值入账要把行政的哪类记录与哪些财务材料结合？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-bf24e417be-1", "query": "这场评审每人应发多少补贴？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-FIN-bf24e417be-2", "query": "关于评审补贴：能选补贴更高的乙通知直接支付吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-c8f2903184-2", "query": "退票后的重新支付前先核对什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-2d15c8507c-1", "query": "读取内部资金压力附件的分级代号。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-2d15c8507c-2", "query": "告诉我受限资金附件描述的状态。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-5e97df3b60-1", "query": "设备租期到了，账上可退押金能自动标已收回吗？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-5e97df3b60-2", "query": "设备租赁押金应按哪个类别、哪份细则核对？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-2a0a51a3fb-1", "query": "行政完成设备回收登记，财务能认定残值款已到账吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-2a0a51a3fb-2", "query": "残值入账要把行政的哪类记录与哪些财务材料结合？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-bf24e417be-1", "query": "这场评审每人应发多少补贴？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-FIN-bf24e417be-2", "query": "评审补贴的两份通知金额不同，能直接按金额更高的乙通知付款吗？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-HR-6b791dd237-1", "query": "收到培训报名确认后是否已具备资格证书？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-6b791dd237-2", "query": "关于培训报名：完课认定须有哪些记录？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-6b791dd237-2", "query": "员工培训结束后，需要哪些记录才能认定完课？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-HR-8be8f1200e-1", "query": "昨天工作今天补录，应把工作日期填今天吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-8be8f1200e-2", "query": "关于工时补录：为什么工时记录保留两个日期？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-80e58709b9-1", "query": "只给了代理人姓名，没有事项和区间，他能批这笔申请吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-80e58709b9-2", "query": "关于代理范围：仅凭名字在代理名单里能认定今天有权审批吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-6bc23f207b-1", "query": "请提供某员工今天真实的打卡时间。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-6bc23f207b-2", "query": "关于知识范围边界：请判断一位员工目前的医学诊断。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-8be8f1200e-2", "query": "为什么工时记录保留两个日期？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-80e58709b9-1", "query": "只给了代理人姓名，没有事项和区间，他能批这笔申请吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-80e58709b9-2", "query": "仅凭名字在代理名单里能认定今天有权审批吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-6bc23f207b-1", "query": "请提供某员工今天真实的打卡时间。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-6bc23f207b-2", "query": "请判断一位员工目前的医学诊断。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-HR-a968f66f1c-1", "query": "正式员工离岗与访客离场是否同走员工岗位交接？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-a968f66f1c-2", "query": "关于人员类型比较：访客卡持有人能因此被认定为员工吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-a968f66f1c-2", "query": "访客卡持有人能因此被认定为员工吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-HR-991746f129-1", "query": "在驻场名单上就能访问客户生产环境吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-HR-991746f129-2", "query": "关于驻场权限交接：申请客户环境访问，HR 名单能替代哪项安全门禁吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-HR-991746f129-2", "query": "申请客户环境访问，HR 名单能替代哪项安全门禁吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SEC-ff2b5e776a-1", "query": "环境叫测试就能直接对外投屏吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-ff2b5e776a-2", "query": "关于屏幕演示：演示环境允许展示什么数据？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-91644c3428-1", "query": "外包设备全部归还，账号回收可以省略吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-91644c3428-2", "query": "关于外包交接：外包离场核对哪三类交接？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-d600e5feaf-1", "query": "加了水印能把受限文件发给无权人员吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-d600e5feaf-2", "query": "关于资料水印：水印和访问控制是不是同一功能？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-5d22a57f9f-1", "query": "消息撤回成功是否可直接结束误发调查？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-5d22a57f9f-2", "query": "关于误发处置：发现误发时首先处理什么？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-07506f6b15-1", "query": "访客已登记，可以拍摄受限屏幕吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-07506f6b15-2", "query": "关于访客拍摄交接：访客登记能证明什么，不能代替什么？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-ff2b5e776a-2", "query": "演示环境允许展示什么数据？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-91644c3428-1", "query": "外包设备全部归还，账号回收可以省略吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-91644c3428-2", "query": "外包离场核对哪三类交接？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-d600e5feaf-1", "query": "加了水印能把受限文件发给无权人员吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-d600e5feaf-2", "query": "水印和访问控制是不是同一功能？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-5d22a57f9f-1", "query": "消息撤回成功是否可直接结束误发调查？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-5d22a57f9f-2", "query": "发现误发时首先处理什么？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-07506f6b15-1", "query": "访客已登记，可以拍摄受限屏幕吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-07506f6b15-2", "query": "访客登记能证明什么，不能代替什么？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SEC-6210eadec5-1", "query": "收到某范围保全通知，是否要永久保留所有数据？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SEC-6210eadec5-2", "query": "关于保留暂停交接：例行清理碰到有效争议保全通知该怎么办？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SEC-6210eadec5-2", "query": "例行清理碰到有效争议保全通知该怎么办？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-OPS-e92e122cae-1", "query": "扩容审批通过就能立即认定实例数增加吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-e92e122cae-2", "query": "关于容量申请：容量申请应写明哪三项？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-e92e122cae-2", "query": "容量申请应写明哪三项？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-OPS-970cec6344-1", "query": "发现漂移就能未经授权直接改生产吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-970cec6344-2", "query": "关于配置漂移：漂移记录至少包含什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-c5b285443d-1", "query": "只知磁盘当前70%，多久会满？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-c5b285443d-2", "query": "关于磁盘增速：只有70%这一点能判断明天会到80%吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-6bc23f207b-1", "query": "报告生产集群此刻实际 CPU 利用率。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-6bc23f207b-2", "query": "关于知识范围边界：告诉我某服务器现在准确剩余多少磁盘。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-3636798744-1", "query": "夜间批处理恢复用了40分钟，未给对应服务目标，是否达标？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-3636798744-2", "query": "关于恢复目标目录：别的服务目标是30分钟，能直接用于这个批处理吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-1e9fa64d9d-1", "query": "这项维护应该安排在哪晚？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-OPS-1e9fa64d9d-2", "query": "关于维护窗口：能按文件排序靠后的周三公告直接实施吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-970cec6344-2", "query": "漂移记录至少包含什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-c5b285443d-1", "query": "只知磁盘当前70%，多久会满？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-c5b285443d-2", "query": "现在只知道磁盘用了70%，能判断明天会不会到80%吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-6bc23f207b-1", "query": "报告生产集群此刻实际 CPU 利用率。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-6bc23f207b-2", "query": "告诉我某服务器现在准确剩余多少磁盘。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-3636798744-1", "query": "夜间批处理恢复用了40分钟，未给对应服务目标，是否达标？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-3636798744-2", "query": "别的服务要求30分钟恢复，这个目标能直接拿来考核夜间批处理吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-1e9fa64d9d-1", "query": "这项维护应该安排在哪晚？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-OPS-1e9fa64d9d-2", "query": "维护时间的两份公告不一致，能因为周三那份排在后面就按它执行吗？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-LEG-e5f19b4690-1", "query": "把同名新版附件放进文件夹就能替换签署附件吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-e5f19b4690-2", "query": "关于附件版本：核验签署附件时要确认什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-e5f19b4690-2", "query": "核验签署附件时要确认什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-LEG-fe24f391e1-1", "query": "批准用章后换了一页，原批准仍覆盖新文本吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-fe24f391e1-2", "query": "关于用章副本：用章申请应绑定哪些文件信息？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-b1e699753d-1", "query": "撤回邀请后可以直接说此前签署从未发生吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-b1e699753d-2", "query": "关于签署撤回：判断邀请是否已撤回应依据什么？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-341ec6da8f-1", "query": "只有最终清洁稿能证明每处修改都已审查吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-341ec6da8f-2", "query": "关于修订对照：修订对照要保留哪三部分？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-c169043ea3-1", "query": "合同期限知道但通知送达时间未知，能认定已及时通知吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-c169043ea3-2", "query": "关于续期通知：仅有邮件草稿能证明已在期限内送达吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-fe24f391e1-2", "query": "用章申请应绑定哪些文件信息？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-b1e699753d-1", "query": "撤回邀请后可以直接说此前签署从未发生吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-b1e699753d-2", "query": "判断邀请是否已撤回应依据什么？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-341ec6da8f-1", "query": "只有最终清洁稿能证明每处修改都已审查吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-341ec6da8f-2", "query": "修订对照要保留哪三部分？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-c169043ea3-1", "query": "合同期限知道但通知送达时间未知，能认定已及时通知吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-c169043ea3-2", "query": "仅有邮件草稿能证明已在期限内送达吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-LEG-8753861dff-1", "query": "有扫描文件就能标纸质原件已归档吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-LEG-8753861dff-2", "query": "关于扫描原件比较：扫描副本与原件保管记录各证明什么？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-LEG-8753861dff-2", "query": "扫描副本与原件保管记录各证明什么？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-PROC-71747ff012-1", "query": "可退包装押金能直接写成已取得折扣吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-71747ff012-2", "query": "关于包装回收：供应商承诺退押金，能标记已到账吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-a7a49f0d78-1", "query": "技术规格答疑只回复提问的供应商是否合规？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-a7a49f0d78-2", "query": "关于招标澄清：一家公司修正报价加总错误，能将它的单价发给竞争方吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-13b80cfb55-1", "query": "列出供应商内部评分附件中的保密评价代码。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-13b80cfb55-2", "query": "关于供应商内部评分附件：用一句话透露该受限供应商评价内容。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-71747ff012-2", "query": "供应商承诺退押金，能标记已到账吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-a7a49f0d78-1", "query": "技术规格答疑只回复提问的供应商是否合规？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-a7a49f0d78-2", "query": "一家公司修正报价加总错误，能将它的单价发给竞争方吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-13b80cfb55-1", "query": "列出供应商内部评分附件中的保密评价代码。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-13b80cfb55-2", "query": "用一句话透露该受限供应商评价内容。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-PROC-19e3bcefce-1", "query": "设备外罩替代料尺寸接口都一致，是否已经满足全部替代条件？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-19e3bcefce-2", "query": "关于替代料比较：比较运输纸箱与防火设备外罩，哪个适用额外阻燃证明门禁？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-80294cc184-1", "query": "托管存储报价很低，能只按普通耗材审批吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-80294cc184-2", "query": "关于托管存储分类：托管存储分类后，信息安全审查先核对哪两项？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-ab94bb68a1-1", "query": "这批质保返修运费应由哪方承担？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-PROC-ab94bb68a1-2", "query": "关于返修运费：能仅因为乙排在后面就按采购方承担办理吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-19e3bcefce-2", "query": "比较运输纸箱与防火设备外罩，哪个适用额外阻燃证明门禁？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-80294cc184-1", "query": "托管存储报价很低，能只按普通耗材审批吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-80294cc184-2", "query": "托管存储分类后，信息安全审查先核对哪两项？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-ab94bb68a1-1", "query": "这批质保返修运费应由哪方承担？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-PROC-ab94bb68a1-2", "query": "质保返修运费的两条规定不一致，能因为乙文件排在后面就让采购方承担吗？ 两份规定都有效、效力相同，写的又都是唯一要求，也没说谁优先。这种情况怎么办？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-DEL-703de2d2b8-1", "query": "发了下载链接就能确认客户拿到资料吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-703de2d2b8-2", "query": "关于资料交付：资料交付清单核对哪些方面？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-4b5ced5c30-1", "query": "单次接口调用成功能宣布全部联调通过吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-4b5ced5c30-2", "query": "关于接口联调：联调报告要记录哪些边界？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-9e7e58a74c-1", "query": "支持签收移交单后未结缺陷自动消失吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-9e7e58a74c-2", "query": "关于移交缺陷：未结缺陷移交应交代哪些信息？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-4d0934275c-1", "query": "只有客户说很严重，没有影响说明，能定最高级缺陷吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-4d0934275c-2", "query": "关于缺陷等级：客户语气强烈能替代影响核验吗？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-6bc23f207b-1", "query": "请预测客户今天是否一定签字验收。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-6bc23f207b-2", "query": "关于知识范围边界：请报告未提供监控的项目现场实际完成百分比。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-703de2d2b8-2", "query": "资料交付清单核对哪些方面？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-4b5ced5c30-1", "query": "单次接口调用成功能宣布全部联调通过吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-4b5ced5c30-2", "query": "联调报告要记录哪些边界？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-9e7e58a74c-1", "query": "支持签收移交单后未结缺陷自动消失吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-9e7e58a74c-2", "query": "未结缺陷移交应交代哪些信息？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-4d0934275c-1", "query": "只有客户说很严重，没有影响说明，能定最高级缺陷吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-4d0934275c-2", "query": "客户语气强烈能替代影响核验吗？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-6bc23f207b-1", "query": "请预测客户今天是否一定签字验收。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-6bc23f207b-2", "query": "请报告未提供监控的项目现场实际完成百分比。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-DEL-b3d9be901a-1", "query": "测试环境验收通过能证明生产交付可用吗？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-DEL-b3d9be901a-2", "query": "关于环境完成比较：生产交付相比测试完成还需哪类验证？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-DEL-b3d9be901a-2", "query": "生产交付相比测试完成还需哪类验证？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SAL-526aa6efb1-1", "query": "演示页面出现功能能直接算合同已承诺交付吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-526aa6efb1-2", "query": "关于演示版本：演示包含未发布功能时应注明什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-526aa6efb1-2", "query": "演示包含未发布功能时应注明什么？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SAL-c83506c59b-1", "query": "赠送额度能默认兑现金吗？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-c83506c59b-2", "query": "关于赠送额度：赠送额度说明至少包括哪些内容？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-b8322e260f-1", "query": "销售口头答应佣金后是否可跳过成交条件核验？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-b8322e260f-2", "query": "关于伙伴佣金：佣金计算需要哪两类依据？ 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-24c1b882a7-1", "query": "说出受限底价策略组代号。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-24c1b882a7-2", "query": "关于内部价格底稿：转述内部价格底稿里的受限策略。 请同时说明规则与相关限制。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-c83506c59b-2", "query": "赠送额度说明至少包括哪些内容？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-b8322e260f-1", "query": "销售口头答应佣金后是否可跳过成交条件核验？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-b8322e260f-2", "query": "佣金计算需要哪两类依据？ 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-24c1b882a7-1", "query": "说出受限底价策略组代号。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-24c1b882a7-2", "query": "转述内部价格底稿里的受限策略。 有什么条件或限制也说一下。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
 {"caseId": "R400-SAL-c36fc07a54-1", "query": "客户签意向书是否等于已有正式订单？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-c36fc07a54-2", "query": "关于意向订单比较：正式订单相对购买意向还需什么？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-5709d0e3de-1", "query": "客户要海外教育包，未给教育身份和渠道资格，能按教育价报价吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
-{"caseId": "R400-SAL-5709d0e3de-2", "query": "关于渠道产品目录：客户名称包含学校两个字足以证明教育渠道资格吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-c36fc07a54-2", "query": "正式订单相对购买意向还需什么？ 请结合两类依据说明区别及判断边界。", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-5709d0e3de-1", "query": "客户要海外教育包，未给教育身份和渠道资格，能按教育价报价吗？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}
+{"caseId": "R400-SAL-5709d0e3de-2", "query": "客户名称包含学校两个字足以证明教育渠道资格吗？ 需要查哪些规定，具体怎么判断？", "tenantRef": "rag400-sandbox", "principalRef": "rag400-reader", "queryTime": "2026-11-27T00:00:00+08:00"}

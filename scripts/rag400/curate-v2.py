@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import importlib.util
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / 'docs/fixtures/knowledge/rag400-v1'
@@ -32,10 +33,27 @@ def main():
         shutil.copyfile(BASE / name, DEST / name)
     (DEST / 'holdout').mkdir()
     grants = json.loads((BASE / 'auth-fixture.json').read_text(encoding='utf-8'))['grantedScopes']
+    spec=importlib.util.spec_from_file_location('natural_questions',Path(__file__).with_name('natural-questions.py'))
+    natural=importlib.util.module_from_spec(spec);spec.loader.exec_module(natural)
     changes, reviews, hashes = [], {}, {}
     corrections = {
         'R400-ADM-e59e2543f7-1': '不会。停车月卡绑定车牌及办公地点，不随员工口头转让。',
         'R400-ADM-eba06c67c3-2': '不会。现场已发生的布置费用另核，不因会议取消自动归零。',
+        'R400-ADM-6bc888946a-2': '借用记录通过设备序列号区别同型号投影仪。',
+        'R400-ADM-d6f9b06511-1': '不可以。服务商接单不证明修复完成。',
+        'R400-SUP-283d005035-1': '不能。后补附件不证明首次提交时资料已完整。',
+        'R400-FIN-b85a7a8e3a-2': '分摊依据至少需留存项目和比例。',
+        'R400-OPS-cb402a0bda-1': '不能。没有观察窗口数据时不能宣布灰度验证成功。',
+        'R400-OPS-cb402a0bda-2': '符合。灰度异常达到发布单明确的退出条件时停止扩大范围并按已批方案处理。',
+        'R400-PROC-cc2ddf46f5-2': '可以。供应商关闭续订回执已核验，可以标记自动续订已取消。',
+        'R400-SAL-1be8d714ce-1': '不等于。渠道报备记录机会归属，不直接证明最终签约权。',
+        'R400-ADM-20afcfc30d-2': '符合。共享柜分配到期后先通知领回物品，再按受控清理程序处理。',
+        'R400-HR-b5187ef300-1': '不能。面试通过不等于录用通知已签发。',
+        'R400-HR-b5187ef300-2': '不能。面试反馈只记录岗位相关评价，不写无关家庭和医疗信息。',
+        'R400-SEC-3811d46399-2': '材料密级标签由数据所有者确认，不能由上传者随意降级。',
+        'R400-PROC-5a40aa537d-1': '供应商仅更名且登记主体编号未变，需补更名证明。',
+        'R400-DEL-26453c7b04-2': '缺陷修复提交后须按原复现条件复验。',
+        'R400-DEL-0512c34530-2': '符合。迁移验收需核对记录总量与关键业务抽样，条数相同不证明字段映射正确。',
     }
     for split in ('dev', 'calibration', 'holdout-candidate'):
         src = BASE / 'holdout' if split == 'holdout-candidate' else BASE
@@ -63,6 +81,10 @@ def main():
                 claim['displayText'] = corrections[c['caseId']]
                 claim['attributes']['assertion'] = claim['displayText']
                 reasons.append('Only require facts asked by this question; sibling-topic detail remains optional.')
+            revised_question=natural.naturalize(c)
+            if revised_question!=c['query']:
+                c['query']=revised_question
+                reasons.append('Remove authoring topic prefix; resolve missing referents using existing question context; retain factual constraints.')
             if c['scenarioType'] == 'INSUFFICIENT' and c['caseId'].endswith('-2') and c['caseId'] != 'R400-HR-8626a60af7-2':
                 reviews[c['caseId']] = {
                     'acceptedActions': ['ABSTAIN', 'ANSWER'],
@@ -90,6 +112,10 @@ def main():
          'reviewScope': 'All 400 structural/referential checks; targeted semantic review of all 60 insufficient cases, known overbroad claims and conflict premises. Not independent adjudication of all 400.',
          'sourceCaseHashes': hashes, 'snapshotSha256': sha(DEST / 'knowledge-snapshot.json'),
          'caseHashes': {s: sha((DEST / 'holdout' if s == 'holdout-candidate' else DEST) / f'{s}.cases.jsonl') for s in hashes},
+         'remoteReview': {'sourceCommit':'3fb92ebe12d2feaeae6d0a98d7de0c583f964d70',
+                         'flaggedCases':20,'narrowedRequiredClaims':list(corrections),
+                         'alreadyCoveredByActionClarification':['R400-SEC-11f87a1347-2','R400-SAL-098db76d14-2'],
+                         'retained':{'R400-OPS-5ff50a6004-1':'Question explicitly asks related restrictions; sourceSections includes affected-path verification. Missing retrieval is not a reason to erase the gold obligation.'}},
          'changes': changes, 'overrides': reviews})
     print(f'Created {DEST}; {len(changes)} changed cases, {len(reviews)} disposition clarifications')
 

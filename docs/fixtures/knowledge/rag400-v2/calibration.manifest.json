@@ -4,7 +4,7 @@
   "schemaVersion": 2,
   "status": "DRAFT",
   "tenantRef": "rag400-sandbox",
-  "caseFileSha256": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
+  "caseFileSha256": "81b63235b971f96bc93a73d4fdf034d0c024cdd7ce8c45a46f52429b690fc638",
   "knowledgeSnapshotId": "rag400-synthetic-v1",
   "knowledgeSnapshotSha256": "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe",
   "indexBindings": [

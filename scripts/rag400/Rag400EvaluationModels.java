@@ -34,8 +34,10 @@ final class Rag400EvaluationModels implements EmbeddingModelPort {
             version = cfg.required("modelVersion").asText();
             dimension = cfg.required("dimension").asInt();
             var metadata = new LinkedHashMap<String,Object>();
+            var publicKeys = Set.of("provider","baseUrl","model","modelVersion","dimension","batchSize",
+                "timeoutSeconds","maxResponseBytes","queryInstruction","corpusInstruction");
             cfg.fields().forEachRemaining(e -> {
-                if (!e.getKey().equals("apiKey")) metadata.put(e.getKey(), json.convertValue(e.getValue(), Object.class));
+                if (publicKeys.contains(e.getKey())) metadata.put(e.getKey(), json.convertValue(e.getValue(), Object.class));
             });
             identity = metadata;
             delegate = new KnowledgeIngestionConfiguration().embeddingModelPort(jdbc,
