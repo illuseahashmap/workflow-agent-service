@@ -1,0 +1,129 @@
+{
+  "date": "2026-11-28",
+  "sourceCommit": "57406d1a87c599954183d4e1ffb2d8354bdcac7c",
+  "dataset": "rag400-v2",
+  "fixtureOnly": true,
+  "liveProviderCalls": 0,
+  "nativeDatabasePath": "Dedicated loopback PostgreSQL 18 pgvector server; runner uses --database-config, server provisioned by acceptance harness",
+  "runnerExitCode": 0,
+  "pythonUnitTests": 30,
+  "nodeUnitTests": 10,
+  "datasetStructuralCases": 400,
+  "retrievalExecutions": 1120,
+  "verifiedArtifactHashes": 55,
+  "results": [
+    {
+      "split": "dev",
+      "mode": "keyword",
+      "cases": 200,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 200
+      },
+      "rawSha256": "9a1cff34a244d08860b5b7371ee0b37aa3009ebdcc18cd775067a89c120a6c71"
+    },
+    {
+      "split": "dev",
+      "mode": "vector",
+      "cases": 200,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 200
+      },
+      "rawSha256": "a40ecf3e6a2e561cc52d50645130ef3ddccba43489dad863fa6e15baf06f223d"
+    },
+    {
+      "split": "dev",
+      "mode": "hybrid",
+      "cases": 200,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 200
+      },
+      "rawSha256": "7400653c9ba4a6d6fe1407bf0670f8fafa4e0dbc7ef518d45a8812825360bf04"
+    },
+    {
+      "split": "dev",
+      "mode": "hybrid-expansion",
+      "cases": 200,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "FUSED": 200
+      },
+      "rawSha256": "559ae93831c8afd57b23d1ce80aa28e96cf8abdc5ac83821c6544bf8c5aefa85"
+    },
+    {
+      "split": "calibration",
+      "mode": "keyword",
+      "cases": 80,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 80
+      },
+      "rawSha256": "fb68996d4acd183864d7a1b9954ebcb487a02843d416e3ef20fb8f54aac8d220"
+    },
+    {
+      "split": "calibration",
+      "mode": "vector",
+      "cases": 80,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 80
+      },
+      "rawSha256": "2801016c44998fe8d3e7cc2df2fc20b52c54426da0f9eb219a2b0aaa8d14b2a5"
+    },
+    {
+      "split": "calibration",
+      "mode": "hybrid",
+      "cases": 80,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "DISABLED": 80
+      },
+      "rawSha256": "7d873fef6cc410970c651d50665e7b6837fd7e7b54ab1328bc978899ae3131f0"
+    },
+    {
+      "split": "calibration",
+      "mode": "hybrid-expansion",
+      "cases": 80,
+      "finalEvidenceMaxK": 10,
+      "duplicateChunkIds": 0,
+      "unauthorizedScopeHits": 0,
+      "expansionOutcomes": {
+        "FUSED": 79,
+        "MAIN_NOT_ELIGIBLE": 1
+      },
+      "rawSha256": "7f1299016ed73d3939aaa38875cef347ef25ffa9cd8402e606f3652df0ab4b8e"
+    }
+  ],
+  "cleanup": {
+    "temporaryJavaSourcesAndClassesRemoved": true,
+    "remainingDatabases": [
+      "postgres",
+      "template0",
+      "template1"
+    ],
+    "ownedContainerRemoved": true,
+    "temporaryCredentialFileRemoved": true
+  },
+  "limits": [
+    "Synthetic vectors and auxiliary topics verify wiring only; no real-model quality claim.",
+    "Native PostgreSQL 17.5 remote deployment still requires its own pgvector preflight.",
+    "No live holdout resumed. No full backend regression claimed.",
+    "Final follow-up changes only documentation, line-ending rules and this evidence record."
+  ]
+}

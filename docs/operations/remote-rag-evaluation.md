@@ -91,14 +91,14 @@ tar -czf ../rag400-matrix-001.tar.gz -C .. rag400-matrix-001
 输出结构：
 
 - run.json：源提交、数据哈希、模式、非秘密配置身份。
-- comparison.json：三个 split × 四模式分别汇总，明确 fixtureOnly。
+- comparison.json：所选 split × 四模式分别汇总，明确 fixtureOnly。
 - SPLIT/MODE/retrieval：最终 Top 10 正文及顺序、实际生产结果/扩展 trace、检索覆盖和时延。
 - SPLIT/MODE/model：manifest、answers/judgments、results、summary、review-queue。
 - SPLIT/expansion：query-only 辅助查询、失败/用量及固定输入摘要。
 - embedding-cache.json：同批次复用的向量与非秘密模型身份。
 - checksums.json：输出文件原字节 SHA-256。
 
-远端返回源提交、完整命令与退出码、三组四模式的分母/覆盖/自动通过/语义通过但动作不符/金标争议/预算失败、FUSED 和回退数量，并附完整压缩包。退出码 0 是执行完成，不是每题正确。
+远端返回源提交、完整命令与退出码、所选分组与模式的分母/覆盖/自动通过/语义通过但动作不符/金标争议/预算失败、FUSED 和回退数量，并附完整压缩包。退出码 0 是执行完成，不是每题正确。
 
 这仍是生产检索组件加直接模型的分层对照，不是完整 AgentRun/LangGraph/Flowable/HTTP 授权端到端验收。相同题目成对比较，不混合 v1/v2，也不把合成题通过率说成真实业务正确概率。
 

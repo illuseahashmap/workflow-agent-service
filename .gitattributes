@@ -2,3 +2,7 @@
 docs/quality/artifacts/rag400-live-20261128/** -text
 docs/quality/artifacts/rag400-run-001/** -text
 scripts/rag400/live-answers.py text eol=lf
+
+# Dataset provenance hashes must survive Windows/Linux fresh clones.
+docs/fixtures/knowledge/rag400-v1/** text eol=lf
+docs/fixtures/knowledge/rag400-v2/** text eol=lf
