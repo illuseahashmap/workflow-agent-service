@@ -32,7 +32,16 @@ public final class LangChain4jEmbeddingModelAdapter implements EmbeddingModelPor
         for (int start = 0; start < texts.size(); start += batchSize) {
             var segments = texts.subList(start, Math.min(start + batchSize, texts.size())).stream()
                     .map(TextSegment::from).toList();
-            var response = model.embedAll(segments).content();
+            io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull();
+            java.util.List<dev.langchain4j.data.embedding.Embedding> response;
+            try {
+                response = model.embedAll(segments).content();
+            } catch (dev.langchain4j.exception.TimeoutException failure) {
+                throw new io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException("EMBEDDING_TIMEOUT", true, failure);
+            } catch (dev.langchain4j.exception.RetriableException failure) {
+                throw new io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException("EMBEDDING_UNAVAILABLE", true, failure);
+            }
+            io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.remainingOrNull();
             if (response == null || response.size() != segments.size()) {
                 throw new IllegalStateException("Embedding provider returned an incomplete batch");
             }

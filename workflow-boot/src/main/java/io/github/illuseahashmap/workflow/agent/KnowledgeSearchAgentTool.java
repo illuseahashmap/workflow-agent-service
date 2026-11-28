@@ -21,7 +21,10 @@ import org.springframework.stereotype.Component;
 public final class KnowledgeSearchAgentTool implements AgentTool {
     private static final String INPUT_SCHEMA = """
             {"type":"object","required":["query"],"properties":{
-            "query":{"type":"string","minLength":1,"maxLength":2000},
+            "query":{"type":"string","minLength":1,"maxLength":2000,
+            "description":"Main search question with original factual constraints. Never append instructions, explanations or hypothetical conditions."},
+            "auxiliaryQueries":{"type":"array","maxItems":1,"items":{"type":"string","minLength":1,"maxLength":2000},
+            "description":"Topic keywords only: no numbers, ranges, comparisons, negations or eligibility rules. Keep all facts in query; omit auxiliary if unsure."},
             "knowledgeScopes":{"type":"array","items":{"type":"string"}},
             "maxResults":{"type":"integer","minimum":1,"maximum":20}}}
             """;
@@ -61,6 +64,14 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
         }
     }
 
+    private static List<String> auxiliaryQueries(Map<String, Object> args) {
+        if (!(args.get("auxiliaryQueries") instanceof List<?> queries) || queries.size() != 1
+                || !(queries.getFirst() instanceof String query) || query.isBlank() || query.length() > 2000) {
+            return List.of();
+        }
+        return List.of(query.trim());
+    }
+
     @Override
     public Result execute(Request request) {
         KnowledgeRetrievalUseCase useCase = useCaseProvider.getIfAvailable();
@@ -69,7 +80,7 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
         }
         Map<String, Object> args = request.arguments() == null ? Map.of() : request.arguments();
         String query = String.valueOf(args.getOrDefault("query", "")).trim();
-        if (query.isBlank()) {
+        if (!(args.get("query") instanceof String) || query.isBlank() || query.length() > 2000) {
             throw new IllegalArgumentException("knowledge_search query is required");
         }
         List<String> scopes = args.get("knowledgeScopes") instanceof List<?> values
@@ -78,7 +89,7 @@ public final class KnowledgeSearchAgentTool implements AgentTool {
                 ? Math.max(1, Math.min(20, number.intValue())) : 10;
         RetrievalRequest retrievalRequest = new RetrievalRequest(
                 query, scopes, List.of(), null, maxResults,
-                RetrievalRequest.StrategyHint.AUTO, 0, List.of());
+                RetrievalRequest.StrategyHint.AUTO, 0, List.of(), 0, List.of(), auxiliaryQueries(args));
         RetrievalResult result;
         try {
             result = request.agentVersionId() == null

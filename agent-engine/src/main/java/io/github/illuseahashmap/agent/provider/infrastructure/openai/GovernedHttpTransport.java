@@ -1,5 +1,6 @@
 package io.github.illuseahashmap.agent.provider.infrastructure.openai;
 
+import io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,7 +69,9 @@ public final class GovernedHttpTransport {
                 outbound.setEntity(new org.apache.hc.core5.http.io.entity.ByteArrayEntity(payload,
                         org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
             }
-            long timeout = request.timeout().orElse(Duration.ofSeconds(60)).toMillis();
+            var configured = request.timeout().orElse(Duration.ofSeconds(60));
+            var scoped = ExecutionDeadline.remainingOrNull();
+            long timeout = Math.max(1, (scoped == null ? configured : ExecutionDeadline.minimum(configured, scoped)).toMillis());
             outbound.setConfig(RequestConfig.custom().setResponseTimeout(Timeout.ofMilliseconds(timeout)).build());
             var deadline = DEADLINES.schedule(() -> {
                 expired.set(true);

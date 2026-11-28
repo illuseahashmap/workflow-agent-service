@@ -217,7 +217,7 @@ public final class PostgresKeywordChunkSearchAdapter implements ChunkSearchPort 
                                 ? ApplicabilitySearch.SQL.formatted(rank)
                                 : SCOPED.formatted(rank, lexicalPredicate, action,
                                         SectionKeywordSearch.SQL.formatted(rank, lexicalPredicate), rank, role));
-        return jdbcTemplate.query(
+        return DeadlineQuery.query(jdbcTemplate,
                 sql,
                 parameters,
                 (row, rowNumber) -> {

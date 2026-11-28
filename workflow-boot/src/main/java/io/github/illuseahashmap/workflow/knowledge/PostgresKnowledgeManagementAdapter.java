@@ -36,7 +36,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 """, p, Long.class);
         List<ProfileView> rows = jdbc.query("""
                 SELECT id, profile_code, version, strategy, max_results, minimum_score,
-                       index_version_id, status, created_at, score_kind, score_version
+                       index_version_id, status, created_at, score_kind, score_version, query_expansion_policy
                 FROM knowledge_retrieval_profile_version
                 WHERE tenant_code=:tenant AND (CAST(:keyword AS VARCHAR) IS NULL OR profile_code ILIKE :keyword)
                   AND (CAST(:status AS VARCHAR) IS NULL OR status=:status)
@@ -47,7 +47,8 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                 List.of(), instant(r.getTimestamp("created_at")), List.of(),
                 new io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy(
                         io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceScore.Kind.valueOf(r.getString("score_kind")),
-                        r.getString("score_version"), r.getDouble("minimum_score"))));
+                        r.getString("score_version"), r.getDouble("minimum_score")),
+                io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy.valueOf(r.getString("query_expansion_policy"))));
         if (!rows.isEmpty()) {
             java.util.Map<Long, List<String>> scopes = new java.util.HashMap<>();
             jdbc.queryForList("""
@@ -59,7 +60,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
             rows = rows.stream().map(row -> new ProfileView(row.id(), row.profileCode(), row.version(),
                     row.strategy(), row.maxResults(), row.minimumScore(), row.indexVersionId(), row.status(),
                     scopes.getOrDefault(row.id(), List.of()), row.createdAt(),
-                    FrozenProfileIndexes.read(jdbc, tenant, row.id()), row.scorePolicy())).toList();
+                    FrozenProfileIndexes.read(jdbc, tenant, row.id()), row.scorePolicy(), row.queryExpansionPolicy())).toList();
         }
         return new Page<>(total, page, size, rows);
     }
@@ -106,13 +107,14 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
         long id = jdbc.queryForObject("""
                 INSERT INTO knowledge_retrieval_profile_version
                   (tenant_code, profile_code, version, strategy, max_results, minimum_score, index_version_id, status,
-                   score_kind, score_version)
+                   score_kind, score_version, query_expansion_policy)
                 VALUES (:tenant,:code,:version,:strategy,:maxResults,:minimumScore,:indexVersion,'DRAFT',
-                        :scoreKind,:scoreVersion) RETURNING id
+                        :scoreKind,:scoreVersion,:queryExpansionPolicy) RETURNING id
                 """, params(tenant).addValue("code", c.profileCode()).addValue("version", next)
                 .addValue("strategy", c.strategy()).addValue("maxResults", c.maxResults())
                 .addValue("minimumScore", c.minimumScore()).addValue("indexVersion", c.indexVersionId())
-                .addValue("scoreKind", scorePolicy.kind().name()).addValue("scoreVersion", scorePolicy.version()), Long.class);
+                .addValue("scoreKind", scorePolicy.kind().name()).addValue("scoreVersion", scorePolicy.version())
+                .addValue("queryExpansionPolicy", c.queryExpansionPolicy().name()), Long.class);
         insertScopes(tenant, id, c.knowledgeScopes());
         for (var binding : bindings) {
             jdbc.update("""
@@ -275,7 +277,7 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
     private ProfileView findProfile(String tenant, long id) {
         return jdbc.queryForObject("""
                 SELECT id, profile_code, version, strategy, max_results, minimum_score,
-                       index_version_id, status, created_at, score_kind, score_version
+                       index_version_id, status, created_at, score_kind, score_version, query_expansion_policy
                 FROM knowledge_retrieval_profile_version
                 WHERE id = :id AND tenant_code = :tenant
                 """, params(tenant).addValue("id", id),
@@ -284,19 +286,21 @@ public class PostgresKnowledgeManagementAdapter implements KnowledgeManagementPo
                         r.getString(8), instant(r.getTimestamp(9)),
                         new io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy(
                                 io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceScore.Kind.valueOf(r.getString(10)),
-                                r.getString(11), r.getDouble(6))));
+                                r.getString(11), r.getDouble(6)),
+                        io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy.valueOf(r.getString(12))));
     }
 
     private ProfileView profile(long id, String tenant, String code, int version,
                                 String strategy, int max, double minimumScore,
                                 long index, String status, Instant createdAt,
-                                io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy) {
+                                io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy,
+                                io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy queryExpansionPolicy) {
         List<String> scopes = jdbc.query("""
                 SELECT scope_code FROM knowledge_retrieval_profile_scope
                 WHERE tenant_code = :tenant AND profile_version_id = :id ORDER BY scope_code
                 """, params(tenant).addValue("id", id), (r, n) -> r.getString(1));
         return new ProfileView(id, code, version, strategy, max, minimumScore,
-                index, status, scopes, createdAt, FrozenProfileIndexes.read(jdbc, tenant, id), scorePolicy);
+                index, status, scopes, createdAt, FrozenProfileIndexes.read(jdbc, tenant, id), scorePolicy, queryExpansionPolicy);
     }
 
     private void insertScopes(String tenant, long id, List<String> scopes) {

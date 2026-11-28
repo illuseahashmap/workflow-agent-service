@@ -1,0 +1,253 @@
+{
+  "evaluation": "real-model-development-answer-and-citation-acceptance",
+  "model": "deepseek-v4-1-flash-261017",
+  "answerAndCitationPassed": 2,
+  "caseCount": 2,
+  "queryRewriteReview": "1500 auxiliary added 以下; faithful-rewrite quality needs improvement, not a full release gate PASS",
+  "cases": [
+    {
+      "modelResponse": {
+        "content": "{\n  \"answer\": \"单笔 1,500 元的普通办公采购属于「单笔金额不超过 2,000 元」这一档（1,500 元未超过 2,000 元的上限，落在该档的包含边界内），因此只需由直属负责人审批，无需部门负责人共同审批，也不涉及财务中心复核预算或采购委员会审批。\",\n  \"requiredApprovers\": [\"直属负责人\"],\n  \"sources\": [\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"]\n}",
+        "actualModel": "deepseek-v4-1-flash-261017",
+        "providerRequestId": "resp_021795840740538f4d7ae5d724d9e41b76430b6d79530bcd3ca32",
+        "finishReason": "STOP",
+        "inputTokens": 1413,
+        "outputTokens": 276,
+        "reasoningTokens": 124,
+        "latencyMillis": 2189,
+        "toolCall": null
+      },
+      "answer": {
+        "answer": "单笔 1,500 元的普通办公采购属于「单笔金额不超过 2,000 元」这一档（1,500 元未超过 2,000 元的上限，落在该档的包含边界内），因此只需由直属负责人审批，无需部门负责人共同审批，也不涉及财务中心复核预算或采购委员会审批。",
+        "requiredApprovers": [
+          "直属负责人"
+        ],
+        "sources": [
+          "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+        ]
+      },
+      "retrievalTraces": [
+        {
+          "queryFingerprint": "0a48def8be674b7fe6b688e7ec00f61d8ef357d3f608182d5ddabc12cf5152d2",
+          "authorizedScopes": [
+            "office-policy"
+          ],
+          "evidenceReferences": [
+            {
+              "sourceType": "CHUNK",
+              "sourceId": "employee-handbook.md",
+              "sourceVersion": "1",
+              "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+            }
+          ],
+          "traceId": "62a0e3fd-55ef-45ac-a389-bf5cee45c483",
+          "elapsedMillis": 196,
+          "queryExpansion": {
+            "policy": "RRF_V1",
+            "outcome": "FUSED",
+            "lanes": [
+              {
+                "queryFingerprint": "0a48def8be674b7fe6b688e7ec00f61d8ef357d3f608182d5ddabc12cf5152d2",
+                "traceId": "62a0e3fd-55ef-45ac-a389-bf5cee45c483",
+                "status": "SUCCESS",
+                "elapsedMillis": 105,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              },
+              {
+                "queryFingerprint": "cd95739f1854f08116a537f990dc138adc7f20ec833ae484e38c1eee1790f5a5",
+                "traceId": "1426dae7-e898-4ffb-a0d7-5aa2366ae819",
+                "status": "SUCCESS",
+                "elapsedMillis": 79,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              }
+            ]
+          },
+          "profileVersionId": 1,
+          "createdAt": "2026-11-28T04:39:00.777769Z"
+        }
+      ],
+      "arguments": [
+        {
+          "query": "单笔金额1500元的普通办公采购需要哪些审批人？",
+          "auxiliaryQueries": [
+            "办公采购审批制度 金额 1500元 以下 审批人 权限"
+          ],
+          "maxResults": 10
+        }
+      ],
+      "steps": [
+        {
+          "stepType": "ROUTE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "route:v1"
+        },
+        {
+          "stepType": "TOOL_INTENT",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool-intent:1"
+        },
+        {
+          "stepType": "TOOL_CALL",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool:1"
+        },
+        {
+          "stepType": "OUTPUT_CANDIDATE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "output-candidate"
+        },
+        {
+          "stepType": "VALIDATION",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "validation"
+        }
+      ],
+      "model": "deepseek-v4-1-flash-261017",
+      "toolOutputs": [
+        "{\"strategy\":\"QUERY_RRF\",\"status\":\"SUCCESS\",\"evidence\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"text\":\"单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批；金额超过 2,000 元但不超过 20,000 元的采购，需要直属负责人和部门负责人共同审批；超过 20,000 元的采购，还需要财务中心复核预算，必要时由采购委员会审批。\",\"score\":1.0,\"title\":\"employee-handbook.md\",\"scoreKind\":\"RRF_NORMALIZED\",\"scoreVersion\":\"query-rrf-k60-v1\"}],\"abstained\":false,\"warnings\":[],\"citations\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"citationId\":\"q1\"}],\"traceId\":\"62a0e3fd-55ef-45ac-a389-bf5cee45c483\"}"
+      ],
+      "caseId": "office-1500"
+    },
+    {
+      "modelResponse": {
+        "content": "{\n  \"answer\": \"根据员工手册规定，单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批。2000 元正好落在「不超过 2,000 元」的区间内（边界为包含关系），不属于「超过 2,000 元但不超过 20,000 元」需直属负责人与部门负责人共同审批的情形，因此本笔采购只需直属负责人审批。\",\n  \"requiredApprovers\": [\"直属负责人\"],\n  \"sources\": [\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"]\n}",
+        "actualModel": "deepseek-v4-1-flash-261017",
+        "providerRequestId": "resp_021795840749163ace291ce9e318ad358bb23d66c0661521933b6",
+        "finishReason": "STOP",
+        "inputTokens": 1340,
+        "outputTokens": 741,
+        "reasoningTokens": 579,
+        "latencyMillis": 4445,
+        "toolCall": null
+      },
+      "answer": {
+        "answer": "根据员工手册规定，单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批。2000 元正好落在「不超过 2,000 元」的区间内（边界为包含关系），不属于「超过 2,000 元但不超过 20,000 元」需直属负责人与部门负责人共同审批的情形，因此本笔采购只需直属负责人审批。",
+        "requiredApprovers": [
+          "直属负责人"
+        ],
+        "sources": [
+          "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+        ]
+      },
+      "retrievalTraces": [
+        {
+          "queryFingerprint": "e0f2e09b50da083843c0a9cc3b73ad696da6bf39dfb97b46ca75e8e7fd7f627d",
+          "authorizedScopes": [
+            "office-policy"
+          ],
+          "evidenceReferences": [
+            {
+              "sourceType": "CHUNK",
+              "sourceId": "employee-handbook.md",
+              "sourceVersion": "1",
+              "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+            }
+          ],
+          "traceId": "1576af0d-e5a0-4144-b737-a01445f54411",
+          "elapsedMillis": 144,
+          "queryExpansion": {
+            "policy": "RRF_V1",
+            "outcome": "FUSED",
+            "lanes": [
+              {
+                "queryFingerprint": "e0f2e09b50da083843c0a9cc3b73ad696da6bf39dfb97b46ca75e8e7fd7f627d",
+                "traceId": "1576af0d-e5a0-4144-b737-a01445f54411",
+                "status": "SUCCESS",
+                "elapsedMillis": 69,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              },
+              {
+                "queryFingerprint": "7467874079127666eecd6f455bd9df5a581fe7bba918e1577d471d2b32352068",
+                "traceId": "e9c81852-d3cb-4fe3-a8cb-41add77ca0e9",
+                "status": "SUCCESS",
+                "elapsedMillis": 74,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              }
+            ]
+          },
+          "profileVersionId": 1,
+          "createdAt": "2026-11-28T04:39:09.435125Z"
+        }
+      ],
+      "arguments": [
+        {
+          "query": "单笔金额2000元的普通办公采购需要哪些审批人？",
+          "auxiliaryQueries": [
+            "普通办公采购 审批权限 金额标准 审批人"
+          ],
+          "maxResults": 10
+        }
+      ],
+      "steps": [
+        {
+          "stepType": "ROUTE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "route:v1"
+        },
+        {
+          "stepType": "TOOL_INTENT",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool-intent:1"
+        },
+        {
+          "stepType": "TOOL_CALL",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool:1"
+        },
+        {
+          "stepType": "OUTPUT_CANDIDATE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "output-candidate"
+        },
+        {
+          "stepType": "VALIDATION",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "validation"
+        }
+      ],
+      "model": "deepseek-v4-1-flash-261017",
+      "toolOutputs": [
+        "{\"strategy\":\"QUERY_RRF\",\"status\":\"SUCCESS\",\"evidence\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"text\":\"单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批；金额超过 2,000 元但不超过 20,000 元的采购，需要直属负责人和部门负责人共同审批；超过 20,000 元的采购，还需要财务中心复核预算，必要时由采购委员会审批。\",\"score\":1.0,\"title\":\"employee-handbook.md\",\"scoreKind\":\"RRF_NORMALIZED\",\"scoreVersion\":\"query-rrf-k60-v1\"}],\"abstained\":false,\"warnings\":[],\"citations\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"citationId\":\"q1\"}],\"traceId\":\"1576af0d-e5a0-4144-b737-a01445f54411\"}"
+      ],
+      "caseId": "office-2000"
+    }
+  ]
+}

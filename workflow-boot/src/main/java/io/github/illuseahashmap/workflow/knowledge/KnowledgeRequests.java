@@ -21,7 +21,12 @@ public final class KnowledgeRequests {
                           @DecimalMin("0.0") @jakarta.validation.constraints.DecimalMax("1.0") double minimumScore,
                           @Positive long indexVersionId,
                           @NotEmpty @Size(max = 100) List<@NotBlank @Size(max = 128) String> knowledgeScopes,
-                          @Size(max = 100) List<@jakarta.validation.Valid IndexBinding> indexBindings) {
+                          @Size(max = 100) List<@jakarta.validation.Valid IndexBinding> indexBindings,
+                          io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy queryExpansionPolicy) {
+        public Profile(String profileCode, String strategy, int maxResults, double minimumScore,
+                long indexVersionId, List<String> knowledgeScopes, List<IndexBinding> indexBindings) {
+            this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, indexBindings, null);
+        }
         public Profile(String profileCode, String strategy, int maxResults, double minimumScore,
                 long indexVersionId, List<String> knowledgeScopes) {
             this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, List.of());
@@ -30,7 +35,7 @@ public final class KnowledgeRequests {
             return new KnowledgeManagementPort.CreateProfile(profileCode, strategy, maxResults, minimumScore,
                     indexVersionId, knowledgeScopes, indexBindings == null ? List.of()
                             : indexBindings.stream().map(binding -> new io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding(
-                                    binding.sourceCode(), binding.indexVersionId())).toList());
+                                    binding.sourceCode(), binding.indexVersionId())).toList(), queryExpansionPolicy);
         }
     }
 

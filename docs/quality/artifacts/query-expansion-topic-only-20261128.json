@@ -1,0 +1,253 @@
+{
+  "evaluation": "focused-development-real-answer-and-citation",
+  "policy": "topic-only-v1",
+  "model": "deepseek-v4-1-flash-economy-261017",
+  "cases": [
+    {
+      "answer": {
+        "answer": "单笔金额 1500 元未超过 2,000 元，属于「不超过 2,000 元的普通办公采购」档，仅需直属负责人审批；无需部门负责人共同审批，也无需财务中心复核预算或采购委员会审批。",
+        "requiredApprovers": [
+          "直属负责人"
+        ],
+        "sources": [
+          "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+        ]
+      },
+      "modelResponse": {
+        "content": "{\n  \"answer\": \"单笔金额 1500 元未超过 2,000 元，属于「不超过 2,000 元的普通办公采购」档，仅需直属负责人审批；无需部门负责人共同审批，也无需财务中心复核预算或采购委员会审批。\",\n  \"requiredApprovers\": [\"直属负责人\"],\n  \"sources\": [\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"]\n}",
+        "actualModel": "deepseek-v4-1-flash-economy-261017",
+        "providerRequestId": "resp_0217958413477454f170dda172df2cc79a65077ac74d4042be733",
+        "finishReason": "STOP",
+        "inputTokens": 1372,
+        "outputTokens": 419,
+        "reasoningTokens": 287,
+        "latencyMillis": 5430,
+        "toolCall": null
+      },
+      "caseId": "office-1500",
+      "toolOutputs": [
+        "{\"status\":\"SUCCESS\",\"strategy\":\"QUERY_RRF\",\"traceId\":\"f3212c69-a1df-4874-b955-0ead3b850714\",\"citations\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"citationId\":\"q1\"}],\"warnings\":[],\"abstained\":false,\"evidence\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"text\":\"单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批；金额超过 2,000 元但不超过 20,000 元的采购，需要直属负责人和部门负责人共同审批；超过 20,000 元的采购，还需要财务中心复核预算，必要时由采购委员会审批。\",\"score\":1.0,\"title\":\"employee-handbook.md\",\"scoreKind\":\"RRF_NORMALIZED\",\"scoreVersion\":\"query-rrf-k60-v1\"}]}"
+      ],
+      "model": "deepseek-v4-1-flash-economy-261017",
+      "steps": [
+        {
+          "stepType": "ROUTE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "route:v1"
+        },
+        {
+          "stepType": "TOOL_INTENT",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool-intent:1"
+        },
+        {
+          "stepType": "TOOL_CALL",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool:1"
+        },
+        {
+          "stepType": "OUTPUT_CANDIDATE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "output-candidate"
+        },
+        {
+          "stepType": "VALIDATION",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "validation"
+        }
+      ],
+      "arguments": [
+        {
+          "query": "单笔金额1500元的普通办公采购需要哪些审批人？",
+          "auxiliaryQueries": [
+            "办公采购审批权限"
+          ]
+        }
+      ],
+      "retrievalTraces": [
+        {
+          "evidenceReferences": [
+            {
+              "sourceType": "CHUNK",
+              "sourceId": "employee-handbook.md",
+              "sourceVersion": "1",
+              "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+            }
+          ],
+          "authorizedScopes": [
+            "office-policy"
+          ],
+          "queryFingerprint": "0a48def8be674b7fe6b688e7ec00f61d8ef357d3f608182d5ddabc12cf5152d2",
+          "createdAt": "2026-11-28T04:49:07.501403Z",
+          "profileVersionId": 1,
+          "queryExpansion": {
+            "policy": "RRF_V1",
+            "outcome": "FUSED",
+            "lanes": [
+              {
+                "queryFingerprint": "0a48def8be674b7fe6b688e7ec00f61d8ef357d3f608182d5ddabc12cf5152d2",
+                "traceId": "f3212c69-a1df-4874-b955-0ead3b850714",
+                "status": "SUCCESS",
+                "elapsedMillis": 92,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              },
+              {
+                "queryFingerprint": "5363820680afb0e20fce50b4aae2b6fd74a5a83f859466fed39061120fe4bb41",
+                "traceId": "9ef24f6c-0150-46b4-adf9-d16dea90295c",
+                "status": "SUCCESS",
+                "elapsedMillis": 82,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              }
+            ]
+          },
+          "elapsedMillis": 185,
+          "traceId": "f3212c69-a1df-4874-b955-0ead3b850714"
+        }
+      ]
+    },
+    {
+      "answer": {
+        "answer": "单笔金额 2,000 元属于“不超过 2,000 元”的区间（该边界包含本数），因此该普通办公采购仅需直属负责人审批，无需部门负责人共同审批。",
+        "requiredApprovers": [
+          "直属负责人"
+        ],
+        "sources": [
+          "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+        ]
+      },
+      "modelResponse": {
+        "content": "{\n  \"answer\": \"单笔金额 2,000 元属于“不超过 2,000 元”的区间（该边界包含本数），因此该普通办公采购仅需直属负责人审批，无需部门负责人共同审批。\",\n  \"requiredApprovers\": [\"直属负责人\"],\n  \"sources\": [\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"]\n}",
+        "actualModel": "deepseek-v4-1-flash-economy-261017",
+        "providerRequestId": "resp_0217958413590438bdd423d62f122d9a8ca392648b1c570682f07",
+        "finishReason": "STOP",
+        "inputTokens": 1340,
+        "outputTokens": 463,
+        "reasoningTokens": 341,
+        "latencyMillis": 5825,
+        "toolCall": null
+      },
+      "caseId": "office-2000",
+      "toolOutputs": [
+        "{\"status\":\"SUCCESS\",\"strategy\":\"QUERY_RRF\",\"traceId\":\"9b8b06e8-ee84-425e-bea7-418ca36cd44e\",\"citations\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"citationId\":\"q1\"}],\"warnings\":[],\"abstained\":false,\"evidence\":[{\"reference\":{\"sourceType\":\"CHUNK\",\"sourceId\":\"employee-handbook.md\",\"sourceVersion\":\"1\",\"locator\":\"1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2\"},\"text\":\"单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批；金额超过 2,000 元但不超过 20,000 元的采购，需要直属负责人和部门负责人共同审批；超过 20,000 元的采购，还需要财务中心复核预算，必要时由采购委员会审批。\",\"score\":1.0,\"title\":\"employee-handbook.md\",\"scoreKind\":\"RRF_NORMALIZED\",\"scoreVersion\":\"query-rrf-k60-v1\"}]}"
+      ],
+      "model": "deepseek-v4-1-flash-economy-261017",
+      "steps": [
+        {
+          "stepType": "ROUTE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "route:v1"
+        },
+        {
+          "stepType": "TOOL_INTENT",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool-intent:1"
+        },
+        {
+          "stepType": "TOOL_CALL",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "tool:1"
+        },
+        {
+          "stepType": "OUTPUT_CANDIDATE",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "output-candidate"
+        },
+        {
+          "stepType": "VALIDATION",
+          "status": "SUCCEEDED",
+          "errorCode": null,
+          "logicalStepId": "validation"
+        }
+      ],
+      "arguments": [
+        {
+          "query": "单笔金额2000元的普通办公采购需要哪些审批人？",
+          "auxiliaryQueries": [
+            "普通办公采购审批流程和审批权限"
+          ],
+          "maxResults": 20
+        }
+      ],
+      "retrievalTraces": [
+        {
+          "evidenceReferences": [
+            {
+              "sourceType": "CHUNK",
+              "sourceId": "employee-handbook.md",
+              "sourceVersion": "1",
+              "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+            }
+          ],
+          "authorizedScopes": [
+            "office-policy"
+          ],
+          "queryFingerprint": "e0f2e09b50da083843c0a9cc3b73ad696da6bf39dfb97b46ca75e8e7fd7f627d",
+          "createdAt": "2026-11-28T04:49:19.362400Z",
+          "profileVersionId": 1,
+          "queryExpansion": {
+            "policy": "RRF_V1",
+            "outcome": "FUSED",
+            "lanes": [
+              {
+                "queryFingerprint": "e0f2e09b50da083843c0a9cc3b73ad696da6bf39dfb97b46ca75e8e7fd7f627d",
+                "traceId": "9b8b06e8-ee84-425e-bea7-418ca36cd44e",
+                "status": "SUCCESS",
+                "elapsedMillis": 69,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              },
+              {
+                "queryFingerprint": "d47219d87cbac140ad1fc3807c7206b9ced15c6ab8f9f222880e110d4ec7fc7b",
+                "traceId": "9fd41b41-50eb-46a3-9deb-e1f98777c4b5",
+                "status": "SUCCESS",
+                "elapsedMillis": 69,
+                "rankedReferences": [
+                  {
+                    "sourceType": "CHUNK",
+                    "sourceId": "employee-handbook.md",
+                    "sourceVersion": "1",
+                    "locator": "1:d29ba4a2f871d048ff97c0ff5faf49ae4a525f803b58ea89752fe34671d27c30:2:f4f1b5fd429181d2"
+                  }
+                ]
+              }
+            ]
+          },
+          "elapsedMillis": 139,
+          "traceId": "9b8b06e8-ee84-425e-bea7-418ca36cd44e"
+        }
+      ]
+    }
+  ],
+  "answerAndCitationPassed": 2,
+  "caseCount": 2,
+  "notes": "Final pass; earlier model-format and instruction-leak failures retained in quality report. Not a 200-case evaluation."
+}

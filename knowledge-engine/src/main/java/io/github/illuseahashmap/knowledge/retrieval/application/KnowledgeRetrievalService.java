@@ -128,9 +128,11 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
                 Math.min(request.maxResults(), profile.maxResults()),
                 profile.strategy() == RetrievalRequest.StrategyHint.AUTO
                         ? RetrievalRequest.StrategyHint.KEYWORD : profile.strategy(),
-                request.maxHops(), request.requiredEvidenceTypes(), profile.indexVersionId(), profile.indexBindings());
+                request.maxHops(), request.requiredEvidenceTypes(), profile.indexVersionId(), profile.indexBindings(),
+                profile.queryExpansionPolicy() == io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy.RRF_V1
+                        ? request.auxiliaryQueries() : java.util.List.of());
         return search(profiled, tenantCode, requestScopes(request, profile.knowledgeScopes()),
-                principalId, profile.scorePolicy(), profile.id());
+                principalId, profile.scorePolicy(), profile.id(), profile.queryExpansionPolicy());
     }
 
     @Override
@@ -142,21 +144,23 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
             throw new IllegalStateException("Tenant code is required for knowledge retrieval");
         }
         var authorizedScopes = accessPolicy.authorize(tenant.tenantCode(), request.knowledgeScopes());
-        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes, null, null);
+        return retrieveAuthorized(request, tenant.tenantCode(), authorizedScopes, null, null, io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy.DISABLED);
     }
 
     private RetrievalResult search(RetrievalRequest request, String tenantCode,
                                    java.util.List<String> requestedScopes, String principalId,
-                                   io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy, Long profileVersionId) {
+                                   io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy, Long profileVersionId,
+                                   io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy expansionPolicy) {
         var authorizedScopes = accessPolicy.authorize(tenantCode, principalId,
                 request.knowledgeScopes(), requestedScopes);
-        return retrieveAuthorized(request, tenantCode, authorizedScopes, scorePolicy, profileVersionId);
+        return retrieveAuthorized(request, tenantCode, authorizedScopes, scorePolicy, profileVersionId, expansionPolicy);
     }
 
     private RetrievalResult retrieveAuthorized(RetrievalRequest request, String tenantCode,
                                                java.util.List<String> authorizedScopes,
                                                io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy,
-                                               Long profileVersionId) {
+                                               Long profileVersionId,
+                                               io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy expansionPolicy) {
         if (authorizedScopes.isEmpty()) {
             throw new IllegalStateException("No authorized knowledge scope is available");
         }
@@ -165,17 +169,28 @@ public final class KnowledgeRetrievalService implements KnowledgeRetrievalUseCas
         }
         long started = System.nanoTime();
         RetrievalRequest authorizedRequest = request.withAuthorizedScopes(authorizedScopes);
-        RetrievalResult raw = retriever.retrieve(tenantCode, authorizedRequest);
-        var effectiveScorePolicy = scorePolicy == null
-                ? io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy.forStrategy(raw.strategy(), 0) : scorePolicy;
-        RetrievalResult result = groundingPolicy.apply(raw, effectiveScorePolicy);
+        RetrievalResult result;
+        int evidenceCount;
+        var expansionTrace = io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionTrace.disabled();
+        if (expansionPolicy == io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy.RRF_V1) {
+            var expanded = new QueryExpansionRetrieval(retriever).retrieve(tenantCode, authorizedRequest, scorePolicy);
+            result = expanded.result();
+            evidenceCount = result.evidence().size();
+            expansionTrace = expanded.trace();
+        } else {
+            RetrievalResult raw = retriever.retrieve(tenantCode, authorizedRequest);
+            var effectiveScorePolicy = scorePolicy == null
+                    ? io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy.forStrategy(raw.strategy(), 0) : scorePolicy;
+            result = groundingPolicy.apply(raw, effectiveScorePolicy);
+            evidenceCount = raw.evidence().size();
+        }
         traceRepository.save(new RetrievalTrace(
                 result.retrievalTraceId(), tenantCode, fingerprint(request.query()), authorizedScopes,
-                result.status(), result.strategy(), raw.evidence().size(), Instant.now(),
+                result.status(), result.strategy(), evidenceCount, Instant.now(),
                 profileVersionId, authorizedRequest.frozenIndexIds().size() == 1
                         ? authorizedRequest.frozenIndexIds().getFirst() : null,
                 result.evidence().stream().map(evidence -> evidence.reference()).toList(),
-                java.time.Duration.ofNanos(System.nanoTime() - started).toMillis(), authorizedRequest.indexBindings()));
+                java.time.Duration.ofNanos(System.nanoTime() - started).toMillis(), authorizedRequest.indexBindings(), expansionTrace));
         return result;
     }
 

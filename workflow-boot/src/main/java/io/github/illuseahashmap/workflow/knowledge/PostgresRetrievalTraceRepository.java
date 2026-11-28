@@ -33,10 +33,10 @@ public final class PostgresRetrievalTraceRepository implements RetrievalTraceRep
                     INSERT INTO knowledge_retrieval_trace
                         (trace_id, tenant_code, query_fingerprint, authorized_scopes,
                          status, strategy, evidence_count, created_at, profile_version_id,
-                         index_version_id, evidence_references, elapsed_millis, index_bindings)
+                         index_version_id, evidence_references, elapsed_millis, index_bindings, query_expansion)
                     VALUES (:traceId, :tenantCode, :queryFingerprint, CAST(:scopes AS jsonb),
                             :status, :strategy, :evidenceCount, :createdAt, :profileVersionId,
-                            :indexVersionId, CAST(:references AS jsonb), :elapsedMillis, CAST(:bindings AS jsonb))
+                            :indexVersionId, CAST(:references AS jsonb), :elapsedMillis, CAST(:bindings AS jsonb), CAST(:expansion AS jsonb))
                     ON CONFLICT (trace_id) DO NOTHING
                     """, new MapSqlParameterSource()
                     .addValue("traceId", trace.traceId())
@@ -51,6 +51,7 @@ public final class PostgresRetrievalTraceRepository implements RetrievalTraceRep
                     .addValue("profileVersionId", trace.profileVersionId())
                     .addValue("indexVersionId", trace.indexVersionId())
                     .addValue("bindings", objectMapper.writeValueAsString(trace.indexBindings()))
+                    .addValue("expansion", objectMapper.writeValueAsString(trace.queryExpansion()))
                     .addValue("elapsedMillis", trace.elapsedMillis()));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize retrieval trace scopes", exception);
@@ -73,7 +74,9 @@ public final class PostgresRetrievalTraceRepository implements RetrievalTraceRep
                                 new com.fasterxml.jackson.core.type.TypeReference<java.util.List<io.github.illuseahashmap.knowledge.retrieval.domain.EvidenceReference>>() {}),
                         row.getLong("elapsed_millis"),
                         objectMapper.readValue(row.getString("index_bindings"),
-                                new com.fasterxml.jackson.core.type.TypeReference<java.util.List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding>>() {}));
+                                new com.fasterxml.jackson.core.type.TypeReference<java.util.List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding>>() {}),
+                        "{}".equals(row.getString("query_expansion")) ? null : objectMapper.readValue(row.getString("query_expansion"),
+                                io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionTrace.class));
             } catch (JsonProcessingException invalid) {
                 throw new IllegalStateException("Invalid retrieval trace provenance", invalid);
             }

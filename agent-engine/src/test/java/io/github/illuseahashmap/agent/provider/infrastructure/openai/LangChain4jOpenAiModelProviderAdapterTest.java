@@ -52,6 +52,32 @@ class LangChain4jOpenAiModelProviderAdapterTest {
     }
 
     @Test
+    void scopedDeadlineBoundsARequestWithALongerConfiguredTimeout() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/slow", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            try {
+                for (int i = 0; i < 100; i++) {
+                    exchange.getResponseBody().write(' ');
+                    exchange.getResponseBody().flush();
+                    Thread.sleep(40);
+                }
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally { exchange.close(); }
+        });
+        server.start();
+        var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/slow"))
+                .timeout(Duration.ofSeconds(20)).GET().build();
+        long started = System.nanoTime();
+        try (var ignored = io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.open(Duration.ofMillis(200), System::nanoTime)) {
+            assertThatThrownBy(() -> GovernedHttpTransport.send(request, null, java.net.http.HttpClient.newHttpClient(),
+                    new ProviderEndpointValidator(true, true), 1024)).isInstanceOf(java.net.http.HttpTimeoutException.class);
+        }
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+    }
+
+    @Test
     void rejectsPrivateResolutionAtConnectionTimeEvenAfterPreflightAcceptedHost() throws Exception {
         var body = new AtomicReference<String>();
         startServer(200, completion("must not receive"), body);

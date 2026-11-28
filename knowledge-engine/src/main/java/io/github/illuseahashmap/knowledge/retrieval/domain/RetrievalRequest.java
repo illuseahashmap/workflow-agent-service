@@ -15,8 +15,16 @@ public record RetrievalRequest(
         int maxHops,
         List<EvidenceType> requiredEvidenceTypes,
         long indexVersionId,
-        List<SourceIndexBinding> indexBindings
+        List<SourceIndexBinding> indexBindings,
+        List<String> auxiliaryQueries
 ) {
+    public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
+            Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
+            List<EvidenceType> requiredEvidenceTypes, long indexVersionId, List<SourceIndexBinding> indexBindings) {
+        this(query, knowledgeScopes, filters, asOfTime, maxResults, strategyHint, maxHops,
+                requiredEvidenceTypes, indexVersionId, indexBindings, List.of());
+    }
+
     public RetrievalRequest(String query, List<String> knowledgeScopes, List<MetadataFilter> filters,
             Instant asOfTime, int maxResults, StrategyHint strategyHint, int maxHops,
             List<EvidenceType> requiredEvidenceTypes, long indexVersionId) {
@@ -35,6 +43,10 @@ public record RetrievalRequest(
         query = Objects.requireNonNull(query, "query must not be null").trim();
         if (query.isBlank()) {
             throw new IllegalArgumentException("query must not be blank");
+        }
+        auxiliaryQueries = List.copyOf(Objects.requireNonNullElse(auxiliaryQueries, List.of()));
+        if (auxiliaryQueries.size() > 1 || auxiliaryQueries.stream().anyMatch(q -> q.isBlank() || q.length() > 2000)) {
+            throw new IllegalArgumentException("At most one bounded auxiliary query is allowed");
         }
         knowledgeScopes = List.copyOf(Objects.requireNonNullElse(knowledgeScopes, List.of()));
         filters = List.copyOf(Objects.requireNonNullElse(filters, List.of()));
@@ -60,7 +72,7 @@ public record RetrievalRequest(
     public RetrievalRequest withAuthorizedScopes(List<String> authorizedScopes) {
         return new RetrievalRequest(query, authorizedScopes, filters, asOfTime, maxResults,
                 strategyHint, maxHops, requiredEvidenceTypes, indexVersionId,
-                indexBindings.stream().filter(binding -> authorizedScopes.contains(binding.sourceCode())).toList());
+                indexBindings.stream().filter(binding -> authorizedScopes.contains(binding.sourceCode())).toList(), auxiliaryQueries);
     }
 
     public List<Long> frozenIndexIds() {

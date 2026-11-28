@@ -1,6 +1,7 @@
 package io.github.illuseahashmap.knowledge.retrieval.application.port;
 
 import java.time.Instant;
+import io.github.illuseahashmap.knowledge.retrieval.domain.QueryExpansionPolicy;
 import java.util.List;
 
 /** Application boundary for tenant-scoped RAG configuration and ingestion control. */
@@ -17,7 +18,17 @@ public interface KnowledgeManagementPort {
 
     record CreateProfile(String profileCode, String strategy, int maxResults, double minimumScore,
                          long indexVersionId, List<String> knowledgeScopes,
-                         List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings) {
+                         List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings,
+                         QueryExpansionPolicy queryExpansionPolicy) {
+        public CreateProfile {
+            queryExpansionPolicy = java.util.Objects.requireNonNullElse(queryExpansionPolicy, QueryExpansionPolicy.DISABLED);
+        }
+        public CreateProfile(String profileCode, String strategy, int maxResults, double minimumScore,
+                long indexVersionId, List<String> knowledgeScopes,
+                List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings) {
+            this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, indexBindings,
+                    QueryExpansionPolicy.DISABLED);
+        }
         public CreateProfile(String profileCode, String strategy, int maxResults, double minimumScore,
                 long indexVersionId, List<String> knowledgeScopes) {
             this(profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes, List.of());
@@ -31,7 +42,15 @@ public interface KnowledgeManagementPort {
                        double minimumScore, long indexVersionId, String status,
                        List<String> knowledgeScopes, Instant createdAt,
                        List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings,
-                       io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy) {
+                       io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy,
+                       QueryExpansionPolicy queryExpansionPolicy) {
+        public ProfileView(long id, String profileCode, int version, String strategy, int maxResults,
+                double minimumScore, long indexVersionId, String status, List<String> knowledgeScopes, Instant createdAt,
+                List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings,
+                io.github.illuseahashmap.knowledge.retrieval.domain.ScorePolicy scorePolicy) {
+            this(id, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status, knowledgeScopes,
+                    createdAt, indexBindings, scorePolicy, QueryExpansionPolicy.DISABLED);
+        }
         public ProfileView(long id, String profileCode, int version, String strategy, int maxResults,
                 double minimumScore, long indexVersionId, String status, List<String> knowledgeScopes, Instant createdAt,
                 List<io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding> indexBindings) {

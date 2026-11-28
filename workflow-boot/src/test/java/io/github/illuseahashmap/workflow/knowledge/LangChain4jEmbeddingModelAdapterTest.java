@@ -27,6 +27,19 @@ class LangChain4jEmbeddingModelAdapterTest {
     }
 
     @Test
+    void mapsRecoverableFailureButDoesNotHideAuthenticationFailures() {
+        EmbeddingModel model = mock(EmbeddingModel.class);
+        var adapter = new LangChain4jEmbeddingModelAdapter(model, "embedding-model:v1", 2, 2);
+        when(model.embedAll(anyList())).thenThrow(new dev.langchain4j.exception.TimeoutException("timeout"));
+        assertThatThrownBy(() -> adapter.embed(List.of("query")))
+                .isInstanceOfSatisfying(io.github.illuseahashmap.knowledge.ingestion.application.port.EmbeddingModelException.class,
+                        failure -> assertThat(failure.retryable()).isTrue());
+        org.mockito.Mockito.doThrow(new dev.langchain4j.exception.AuthenticationException("denied")).when(model).embedAll(anyList());
+        assertThatThrownBy(() -> adapter.embed(List.of("query")))
+                .isInstanceOf(dev.langchain4j.exception.AuthenticationException.class);
+    }
+
+    @Test
     void refusesChangedProviderDimensionBeforeIndexWrite() {
         EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embedAll(anyList())).thenReturn(Response.from(List.of(

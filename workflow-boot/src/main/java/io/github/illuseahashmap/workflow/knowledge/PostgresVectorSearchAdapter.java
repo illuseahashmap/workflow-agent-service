@@ -31,12 +31,12 @@ public final class PostgresVectorSearchAdapter implements VectorSearchPort {
             return List.of();
         }
         if (!request.frozenIndexIds().isEmpty()) {
-            var frozenModels = jdbc.queryForList("""
+            var frozenModels = DeadlineQuery.query(jdbc, """
                     SELECT embedding_model FROM knowledge_index_version
                     WHERE tenant_code = :tenantCode AND id IN (:indexVersionIds) AND source_code IN (:scopes)
                       AND status IN ('ACTIVE', 'RETIRED')
                     """, new MapSqlParameterSource().addValue("tenantCode", tenantCode)
-                    .addValue("indexVersionIds", request.frozenIndexIds()).addValue("scopes", request.knowledgeScopes()), String.class);
+                    .addValue("indexVersionIds", request.frozenIndexIds()).addValue("scopes", request.knowledgeScopes()), (row, number) -> row.getString(1));
             if (frozenModels.size() != request.frozenIndexIds().size()
                     || frozenModels.stream().anyMatch(frozenModel -> !modelVersion.equals(frozenModel))) {
                 throw new IllegalStateException("Published index requires a different embedding model version");
@@ -53,7 +53,7 @@ public final class PostgresVectorSearchAdapter implements VectorSearchPort {
                 .addValue("embedding", "[" + queryVector.stream().map(String::valueOf)
                         .collect(Collectors.joining(",")) + "]")
                 .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
-        return jdbc.query("""
+        return DeadlineQuery.query(jdbc, """
                 SELECT c.chunk_id, c.source_code, c.ordinal, c.content, c.content_fingerprint,
                        d.id AS document_version_id, d.external_document_id,
                        d.version AS document_version, d.content_hash,
