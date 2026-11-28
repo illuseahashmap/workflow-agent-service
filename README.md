@@ -1,5 +1,7 @@
 # workflow-agent-service
 
+AI 接手、安装环境、配置和初始化：先读 [本地运行指南](docs/operations/local-development.md)；协作入口为 [AGENTS.md](AGENTS.md)。
+
 Backend for Workflow Agent, an open-source, Java-first enterprise Human-Agent Workflow platform built on Flowable OSS.
 
 ## Baseline
