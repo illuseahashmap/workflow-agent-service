@@ -1,0 +1,736 @@
+{
+  "cases": 80,
+  "statusCounts": {
+    "OBSERVED": 80
+  },
+  "completeRequiredGroupsAtK": {
+    "3": 55,
+    "5": 61,
+    "10": 66
+  },
+  "denominatorIncludesMissingAndErrors": 80,
+  "answerQuality": "NOT_SCORED",
+  "authorizationAcceptance": "REQUIRES_TRUSTED_BACKEND_TRACE",
+  "results": [
+    {
+      "caseId": "R400-ADM-2e922bf74f-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-2e922bf74f-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-20afcfc30d-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-20afcfc30d-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-f3d13723ba-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-ADM-f3d13723ba-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-ae92bb7355-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-ADM-ae92bb7355-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-SUP-60e18fadf1-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-60e18fadf1-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-46412f42bb-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-SUP-46412f42bb-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-93226653c5-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-93226653c5-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-66eef8a662-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SUP-66eef8a662-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-FIN-4f31be27a1-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-FIN-4f31be27a1-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-FIN-a8a41cd490-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-FIN-a8a41cd490-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-FIN-6bc23f207b-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-FIN-6bc23f207b-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-FIN-24fe677ed9-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-FIN-24fe677ed9-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-b5187ef300-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-b5187ef300-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-4ecadadde0-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-4ecadadde0-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-5a34212dc9-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-5a34212dc9-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-bccb8e9582-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-HR-bccb8e9582-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-2cf8b7b66e-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-2cf8b7b66e-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-e8ab5e9dcb-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-e8ab5e9dcb-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-3811d46399-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-3811d46399-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-de48d3f2a8-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SEC-de48d3f2a8-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-392dba79f9-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-392dba79f9-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-cf3e8430f0-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-cf3e8430f0-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-5ff50a6004-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-OPS-5ff50a6004-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-2d9b994ff4-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-OPS-2d9b994ff4-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-LEG-2c944b654a-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-LEG-2c944b654a-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-LEG-893cc8b82f-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-LEG-893cc8b82f-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-LEG-d00d85d773-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-LEG-d00d85d773-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-LEG-1f7690d880-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-LEG-1f7690d880-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-5a40aa537d-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-5a40aa537d-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-PROC-d44cad13b3-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-d44cad13b3-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-12d97b6efa-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-PROC-12d97b6efa-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-a6c9d17512-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-PROC-a6c9d17512-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-26453c7b04-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-26453c7b04-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-0512c34530-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-0512c34530-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-1442e71866-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-1442e71866-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-b69c878d10-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-DEL-b69c878d10-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-39056e3307-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-39056e3307-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-787b839ea6-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-787b839ea6-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-6bc23f207b-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-SAL-6bc23f207b-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": false,
+        "5": false,
+        "10": false
+      }
+    },
+    {
+      "caseId": "R400-SAL-3c1a8d1393-1",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    },
+    {
+      "caseId": "R400-SAL-3c1a8d1393-2",
+      "status": "OBSERVED",
+      "requiredGroupsComplete": {
+        "3": true,
+        "5": true,
+        "10": true
+      }
+    }
+  ]
+}

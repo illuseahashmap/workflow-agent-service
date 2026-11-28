@@ -1,0 +1,72 @@
+{
+  "chunks" : 860,
+  "permissionBoundary" : "actual SQL scope filtering; not HTTP login/principal authorization acceptance",
+  "modelCalled" : false,
+  "maxResults" : 10,
+  "queries" : 80,
+  "indexBindings" : [ {
+    "sourceCode" : "knowledge/administration",
+    "indexVersionId" : 1
+  }, {
+    "sourceCode" : "knowledge/administration/restricted",
+    "indexVersionId" : 2
+  }, {
+    "sourceCode" : "knowledge/customer-support",
+    "indexVersionId" : 3
+  }, {
+    "sourceCode" : "knowledge/customer-support/restricted",
+    "indexVersionId" : 4
+  }, {
+    "sourceCode" : "knowledge/finance",
+    "indexVersionId" : 5
+  }, {
+    "sourceCode" : "knowledge/finance/restricted",
+    "indexVersionId" : 6
+  }, {
+    "sourceCode" : "knowledge/hr",
+    "indexVersionId" : 7
+  }, {
+    "sourceCode" : "knowledge/hr/restricted",
+    "indexVersionId" : 8
+  }, {
+    "sourceCode" : "knowledge/information-security",
+    "indexVersionId" : 9
+  }, {
+    "sourceCode" : "knowledge/information-security/restricted",
+    "indexVersionId" : 10
+  }, {
+    "sourceCode" : "knowledge/it-operations",
+    "indexVersionId" : 11
+  }, {
+    "sourceCode" : "knowledge/it-operations/restricted",
+    "indexVersionId" : 12
+  }, {
+    "sourceCode" : "knowledge/legal",
+    "indexVersionId" : 13
+  }, {
+    "sourceCode" : "knowledge/legal/restricted",
+    "indexVersionId" : 14
+  }, {
+    "sourceCode" : "knowledge/procurement",
+    "indexVersionId" : 15
+  }, {
+    "sourceCode" : "knowledge/procurement/restricted",
+    "indexVersionId" : 16
+  }, {
+    "sourceCode" : "knowledge/project-delivery",
+    "indexVersionId" : 17
+  }, {
+    "sourceCode" : "knowledge/project-delivery/restricted",
+    "indexVersionId" : 18
+  }, {
+    "sourceCode" : "knowledge/sales",
+    "indexVersionId" : 19
+  }, {
+    "sourceCode" : "knowledge/sales/restricted",
+    "indexVersionId" : 20
+  } ],
+  "snapshotSha256" : "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe",
+  "tenantMapping" : "rag400-sandbox -> default in disposable PostgreSQL database",
+  "documents" : 30,
+  "strategy" : "KEYWORD"
+}

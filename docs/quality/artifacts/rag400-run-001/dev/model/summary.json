@@ -1,0 +1,67 @@
+{
+  "split": "dev",
+  "total": 200,
+  "automaticPass": 156,
+  "semanticJudgePass": 169,
+  "semanticPassActionMismatch": 9,
+  "goldReviewRequired": 12,
+  "answerStatuses": {
+    "SUCCESS": 199,
+    "BUDGET_EXHAUSTED": 1
+  },
+  "judgeStatuses": {
+    "SUCCESS": 193,
+    "BUDGET_EXHAUSTED": 6,
+    "NOT_RUN": 1
+  },
+  "usage": {
+    "prompt_tokens": 634441,
+    "completion_tokens": 326337,
+    "total_tokens": 960778
+  },
+  "facets": {
+    "difficulty": {
+      "EASY": {
+        "total": 60,
+        "automaticPass": 50
+      },
+      "MEDIUM": {
+        "total": 80,
+        "automaticPass": 58
+      },
+      "HARD": {
+        "total": 60,
+        "automaticPass": 48
+      }
+    },
+    "scenarioType": {
+      "ANSWERABLE": {
+        "total": 140,
+        "automaticPass": 112
+      },
+      "INSUFFICIENT": {
+        "total": 30,
+        "automaticPass": 17
+      },
+      "OUT_OF_SCOPE": {
+        "total": 10,
+        "automaticPass": 9
+      },
+      "FORBIDDEN": {
+        "total": 10,
+        "automaticPass": 10
+      },
+      "CONFLICT": {
+        "total": 10,
+        "automaticPass": 8
+      }
+    }
+  },
+  "limitations": [
+    "Automatic judge, no independent human adjudication; see manifest for model identities.",
+    "Draft synthetic versioned dataset, not blind holdout or production accuracy.",
+    "Fresh real SQL retrieval plus direct model answers; not platform Agent/LangGraph/MCP/Flowable E2E.",
+    "SQL scope filter tested; no HTTP principal/tenant authorization acceptance.",
+    "No vector, query expansion or model-selected tools. No retries; failed cases remain in denominator."
+  ]
+}

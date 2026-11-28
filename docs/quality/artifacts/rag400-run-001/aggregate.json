@@ -1,0 +1,46 @@
+[
+  {
+    "split": "dev",
+    "total": 200,
+    "retrievalAt10": 177,
+    "automaticPass": 156,
+    "semanticJudgePass": 169,
+    "semanticPassActionMismatch": 9,
+    "goldReviewRequired": 12,
+    "answerStatuses": {
+      "SUCCESS": 199,
+      "BUDGET_EXHAUSTED": 1
+    },
+    "judgeStatuses": {
+      "SUCCESS": 193,
+      "BUDGET_EXHAUSTED": 6,
+      "NOT_RUN": 1
+    },
+    "usage": {
+      "prompt_tokens": 634441,
+      "completion_tokens": 326337,
+      "total_tokens": 960778
+    }
+  },
+  {
+    "split": "calibration",
+    "total": 80,
+    "retrievalAt10": 66,
+    "automaticPass": 59,
+    "semanticJudgePass": 62,
+    "semanticPassActionMismatch": 1,
+    "goldReviewRequired": 8,
+    "answerStatuses": {
+      "SUCCESS": 80
+    },
+    "judgeStatuses": {
+      "SUCCESS": 77,
+      "BUDGET_EXHAUSTED": 3
+    },
+    "usage": {
+      "prompt_tokens": 250798,
+      "completion_tokens": 124221,
+      "total_tokens": 375019
+    }
+  }
+]

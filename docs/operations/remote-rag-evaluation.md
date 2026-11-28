@@ -78,6 +78,8 @@ uv run --project agent-runtime-langgraph python scripts/rag400/run-remote.py --o
 
 ## 回传哪些文件
 
+2026-11-28 已收到源提交 ef333aa 的一次真实模型回传：[rag400-run-001 汇总](../quality/artifacts/rag400-run-001/SUMMARY.md)。用户批准使用本机原生 PostgreSQL 临时库替代 Docker，并在模型阶段要求停止原保留集；DEV/CALIBRATION 完整完成，保留集只有中止前部分回答、没有评分。该批次不是 Docker 入口验收，也不是完整 400 题模型评测。原始 run.json、user-stop.json 和校验清单均保留，不将中止退出码修改为成功。
+
 回传整个 `rag400-run-001` 目录，打包时仅包含结果目录：
 
 ```sh
