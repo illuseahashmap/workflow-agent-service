@@ -33,7 +33,8 @@ class RemoteRunnerSafety(unittest.TestCase):
 
         with TemporaryDirectory() as folder:
             target = Path(folder) / 'temporary.java'
-            with (patch.object(module, 'TARGET', target), patch.object(module, 'run', side_effect=run),
+            with (patch.object(module, 'ROOT', Path(folder) / 'source'),
+                  patch.object(module, 'TARGET', target), patch.object(module, 'run', side_effect=run),
                   patch.object(module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)),
                   patch('sys.argv', ['run-remote.py', '--output', str(Path(folder) / 'batch')]),
                   self.assertRaises(subprocess.CalledProcessError)):

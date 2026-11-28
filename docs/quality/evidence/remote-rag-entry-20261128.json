@@ -1,0 +1,238 @@
+{
+  "date": "2026-11-28",
+  "sourceCommit": "c40ec78209cde0c19f4a37fd755b58c4ca117f36",
+  "command": "python scripts/rag400/run-remote.py --output <new-external-directory>",
+  "exitCode": 0,
+  "modelCalls": 0,
+  "offlineTests": {
+    "python": 27,
+    "node": 10
+  },
+  "temporaryJavaSourceRemoved": true,
+  "temporaryJavaClassRemoved": true,
+  "splits": {
+    "dev": {
+      "cases": 200,
+      "statusCounts": {
+        "OBSERVED": 200
+      },
+      "completeRequiredGroupsAtK": {
+        "3": 152,
+        "5": 169,
+        "10": 177
+      },
+      "denominatorIncludesMissingAndErrors": 200,
+      "answerQuality": "NOT_SCORED",
+      "authorizationAcceptance": "REQUIRES_TRUSTED_BACKEND_TRACE",
+      "metric": "all nonblank section body lines covered within original chunk TopK",
+      "anyBodyOverlapAtK_upperBoundNotCompleteEvidence": {
+        "3": 163,
+        "5": 171,
+        "10": 178
+      },
+      "unauthorizedScopeHits": [],
+      "retrievalStatuses": {
+        "SUCCESS": 200
+      },
+      "latencyMs": {
+        "p50": 58.7407,
+        "p95": 80.5502
+      },
+      "latencyProtocol": "single pass, sequential, includes first query cold effects; no production SLA claim",
+      "facets": {
+        "difficulty": {
+          "EASY": {
+            "count": 60,
+            "completeAt10": 59
+          },
+          "MEDIUM": {
+            "count": 80,
+            "completeAt10": 66
+          },
+          "HARD": {
+            "count": 60,
+            "completeAt10": 52
+          }
+        },
+        "scenario": {
+          "ANSWERABLE": {
+            "count": 140,
+            "completeAt10": 127
+          },
+          "INSUFFICIENT": {
+            "count": 30,
+            "completeAt10": 29
+          },
+          "OUT_OF_SCOPE": {
+            "count": 10,
+            "completeAt10": 3
+          },
+          "FORBIDDEN": {
+            "count": 10,
+            "completeAt10": 10
+          },
+          "CONFLICT": {
+            "count": 10,
+            "completeAt10": 8
+          }
+        }
+      },
+      "split": "dev",
+      "formerHoldoutRead": false,
+      "answerGeneration": "NOT_RUN",
+      "profile": "project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM",
+      "permissionBoundary": "actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised"
+    },
+    "calibration": {
+      "cases": 80,
+      "statusCounts": {
+        "OBSERVED": 80
+      },
+      "completeRequiredGroupsAtK": {
+        "3": 55,
+        "5": 61,
+        "10": 66
+      },
+      "denominatorIncludesMissingAndErrors": 80,
+      "answerQuality": "NOT_SCORED",
+      "authorizationAcceptance": "REQUIRES_TRUSTED_BACKEND_TRACE",
+      "metric": "all nonblank section body lines covered within original chunk TopK",
+      "anyBodyOverlapAtK_upperBoundNotCompleteEvidence": {
+        "3": 62,
+        "5": 63,
+        "10": 66
+      },
+      "unauthorizedScopeHits": [],
+      "retrievalStatuses": {
+        "SUCCESS": 79,
+        "EMPTY": 1
+      },
+      "latencyMs": {
+        "p50": 59.4575,
+        "p95": 89.9628
+      },
+      "latencyProtocol": "single pass, sequential, includes first query cold effects; no production SLA claim",
+      "facets": {
+        "difficulty": {
+          "EASY": {
+            "count": 24,
+            "completeAt10": 23
+          },
+          "MEDIUM": {
+            "count": 32,
+            "completeAt10": 21
+          },
+          "HARD": {
+            "count": 24,
+            "completeAt10": 22
+          }
+        },
+        "scenario": {
+          "ANSWERABLE": {
+            "count": 56,
+            "completeAt10": 48
+          },
+          "FORBIDDEN": {
+            "count": 4,
+            "completeAt10": 3
+          },
+          "CONFLICT": {
+            "count": 4,
+            "completeAt10": 3
+          },
+          "OUT_OF_SCOPE": {
+            "count": 4,
+            "completeAt10": 2
+          },
+          "INSUFFICIENT": {
+            "count": 12,
+            "completeAt10": 10
+          }
+        }
+      },
+      "split": "calibration",
+      "formerHoldoutRead": false,
+      "answerGeneration": "NOT_RUN",
+      "profile": "project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM",
+      "permissionBoundary": "actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised"
+    },
+    "holdout-candidate": {
+      "cases": 120,
+      "statusCounts": {
+        "OBSERVED": 120
+      },
+      "completeRequiredGroupsAtK": {
+        "3": 74,
+        "5": 87,
+        "10": 93
+      },
+      "denominatorIncludesMissingAndErrors": 120,
+      "answerQuality": "NOT_SCORED",
+      "authorizationAcceptance": "REQUIRES_TRUSTED_BACKEND_TRACE",
+      "metric": "all nonblank section body lines covered within original chunk TopK",
+      "anyBodyOverlapAtK_upperBoundNotCompleteEvidence": {
+        "3": 79,
+        "5": 89,
+        "10": 95
+      },
+      "unauthorizedScopeHits": [],
+      "retrievalStatuses": {
+        "SUCCESS": 120
+      },
+      "latencyMs": {
+        "p50": 64.3031,
+        "p95": 75.074
+      },
+      "latencyProtocol": "single pass, sequential, includes first query cold effects; no production SLA claim",
+      "facets": {
+        "difficulty": {
+          "EASY": {
+            "count": 36,
+            "completeAt10": 33
+          },
+          "MEDIUM": {
+            "count": 48,
+            "completeAt10": 29
+          },
+          "HARD": {
+            "count": 36,
+            "completeAt10": 31
+          }
+        },
+        "scenario": {
+          "ANSWERABLE": {
+            "count": 84,
+            "completeAt10": 70
+          },
+          "INSUFFICIENT": {
+            "count": 18,
+            "completeAt10": 12
+          },
+          "FORBIDDEN": {
+            "count": 6,
+            "completeAt10": 5
+          },
+          "CONFLICT": {
+            "count": 6,
+            "completeAt10": 5
+          },
+          "OUT_OF_SCOPE": {
+            "count": 6,
+            "completeAt10": 1
+          }
+        }
+      },
+      "split": "holdout-candidate",
+      "formerHoldoutRead": true,
+      "answerGeneration": "NOT_RUN",
+      "profile": "project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM",
+      "permissionBoundary": "actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised"
+    }
+  },
+  "limitations": [
+    "Retrieval acceptance only; live provider evaluation is delegated to the remote operator.",
+    "Model transport and scoring-contract tests used deterministic mocks, not live calls.",
+    "Golden labels remain DRAFT; exposed former holdout is not blind testing.",
+    "Checkstyle skipped for the isolated historical Java retrieval template; not a full backend regression."
+  ]
+}

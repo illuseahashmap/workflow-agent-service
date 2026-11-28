@@ -39,13 +39,23 @@ class OutputContracts(unittest.TestCase):
         result = module.parse_judge(json.dumps({'claimsSatisfied': False, 'noUnsupportedClaims': True, 'reason': 'Missing condition'}))
         self.assertFalse(result['claimsSatisfied'])
 
+    def test_new_judge_requires_explicit_gold_review(self):
+        value = {'claimsSatisfied': True, 'noUnsupportedClaims': True, 'reason': 'supported'}
+        with self.assertRaises(ValueError):
+            module.parse_judge(json.dumps(value), require_review=True)
+        value.update(goldReviewRequired=True, goldReviewReason='reference asks unrelated facts')
+        self.assertTrue(module.parse_judge(json.dumps(value), require_review=True)['goldReviewRequired'])
+        value['goldReviewReason'] = ''
+        with self.assertRaises(ValueError):
+            module.parse_judge(json.dumps(value), require_review=True)
+
     def test_no_markdown_repair(self):
         with self.assertRaises(ValueError):
             module.parse_answer('```json\n{}\n```', set())
 
 
 class RunContracts(unittest.TestCase):
-    def exercise(self, budget_exhausted=False, split='dev'):
+    def exercise(self, budget_exhausted=False, split='dev', review_required=False):
         root = Path(__file__).resolve().parents[2]
         public = root / 'docs/fixtures/knowledge/rag400-v1'
         data = public / 'holdout' if split == 'holdout-candidate' else public
@@ -60,7 +70,9 @@ class RunContracts(unittest.TestCase):
             def post(self, url, headers, json):
                 calls.append(json)
                 is_judge = len(calls) % 2 == 0
-                payload = ({'claimsSatisfied': True, 'noUnsupportedClaims': True, 'reason': 'test'}
+                payload = ({'claimsSatisfied': True, 'noUnsupportedClaims': True, 'reason': 'test',
+                            'goldReviewRequired': review_required,
+                            'goldReviewReason': 'reference dispute' if review_required else ''}
                            if is_judge else {'action': 'ANSWER', 'answer': 'test', 'citations': ['chunk']})
                 import json as codec
                 body = {'choices': [{'message': {'content': codec.dumps(payload)},
@@ -98,6 +110,9 @@ class RunContracts(unittest.TestCase):
             else:
                 self.assertEqual(calls[1]['max_tokens'], 4096)
                 self.assertEqual(summary['semanticJudgePass'], 1)
+                if review_required:
+                    self.assertEqual(summary['automaticPass'], 0)
+                    self.assertEqual(summary['goldReviewRequired'], 1)
             with patch('sys.argv', argv + ['--judge-max-tokens', '8192']), redirect_stdout(StringIO()):
                 with self.assertRaisesRegex(ValueError, 'mixed configuration'):
                     module.main()
@@ -118,6 +133,9 @@ class RunContracts(unittest.TestCase):
 
     def test_former_holdout_selection(self):
         self.exercise(split='holdout-candidate')
+
+    def test_gold_dispute_never_automatically_passes(self):
+        self.exercise(review_required=True)
 
 
 if __name__ == '__main__':

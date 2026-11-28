@@ -30,6 +30,10 @@ JUDGE_PROMPT = """你是评测评分器，不是回答问题的助手。问题�
 对于拒答或人工审核，按金标预期判断理由是否正确；不能把安全但不必要的拒答当正确答案。
 只输出 JSON：{"claimsSatisfied":true或false,"noUnsupportedClaims":true或false,"reason":"简短具体理由"}。
 这是候选集上的自动初评，不代表独立人工裁决。
+参考金标也可能有问题。若 expectedClaims 要求超出本问的补充事实，或动作金标与问题含义冲突，
+不要直接把争议归为模型事实错误；必须标记 goldReviewRequired=true，并在 goldReviewReason 中说明具体冲突。
+没有金标争议时 goldReviewRequired=false、goldReviewReason=""。输出对象还必须包含这两个字段。
+标记争议不会自动判通过，须等待独立复核；不得为了候选答案而放宽实际必要条件。
 """
 
 
@@ -55,10 +59,19 @@ def parse_answer(content, ids):
     return answer, all(x in ids for x in citations) and len(citations) == len(set(citations))
 
 
-def parse_judge(content):
+def parse_judge(content, require_review=False):
     result = json.loads(content)
-    if not isinstance(result, dict) or set(result) != {'claimsSatisfied', 'noUnsupportedClaims', 'reason'}:
+    legacy = {'claimsSatisfied', 'noUnsupportedClaims', 'reason'}
+    reviewed = legacy | {'goldReviewRequired', 'goldReviewReason'}
+    if not isinstance(result, dict) or set(result) not in (legacy, reviewed):
         raise ValueError('judge fields')
+    if require_review and set(result) != reviewed:
+        raise ValueError('judge review fields required')
+    if set(result) == reviewed:
+        if type(result['goldReviewRequired']) is not bool or not isinstance(result['goldReviewReason'], str):
+            raise ValueError('judge review fields')
+        if result['goldReviewRequired'] and not result['goldReviewReason'].strip():
+            raise ValueError('gold dispute requires a reason')
     if type(result['claimsSatisfied']) is not bool or type(result['noUnsupportedClaims']) is not bool:
         raise ValueError('judge boolean')
     if not isinstance(result['reason'], str):
@@ -109,7 +122,7 @@ def main():
         if raw[q['caseId']].get('status', 'SUCCESS') != 'SUCCESS':
             raise ValueError('retrieval failed; do not score missing evidence as a model refusal')
     a.output.mkdir(parents=True, exist_ok=True)
-    provenance = {'schemaVersion': 2, 'split': a.split, 'model': cfg['model'], 'baseUrl': cfg['baseUrl'], 'limit': a.limit,
+    provenance = {'schemaVersion': 3, 'split': a.split, 'model': cfg['model'], 'baseUrl': cfg['baseUrl'], 'limit': a.limit,
         'judgeModel': judge_cfg['model'], 'judgeBaseUrl': judge_cfg['baseUrl'],
         'mode': 'fresh-project-keyword-retrieval + live-answer + automatic-judge',
         'queriesSha256': digest(queries_path), 'goldSha256': digest(gold_path),
@@ -214,7 +227,7 @@ def main():
                 result['status'] = 'BUDGET_EXHAUSTED'
                 return result
             try:
-                result['parsed'] = parse_judge(result['content'])
+                result['parsed'] = parse_judge(result['content'], require_review=True)
                 if result.get('finishReason') != 'stop':
                     result['status'] = 'INCOMPLETE'
             except (ValueError, TypeError):
@@ -230,6 +243,7 @@ def main():
         ok = (ans['status'] == 'SUCCESS' and ans.get('citationIdsValid', False)
             and action == g['expectedDisposition']['action'] and judge['status'] == 'SUCCESS'
             and semantic.get('claimsSatisfied') is True and semantic.get('noUnsupportedClaims') is True
+            and semantic.get('goldReviewRequired') is False
             and (action != 'ANSWER' or bool(ans.get('parsed', {}).get('citations'))))
         results.append({'caseId': cid, 'scenarioGroupId': g['scenarioGroupId'],
             'difficulty': g['difficulty']['level'], 'scenarioType': g['scenarioType'],
@@ -240,6 +254,7 @@ def main():
             'citationIdsValid': ans.get('citationIdsValid', False),
             'claimsSatisfied': semantic.get('claimsSatisfied'),
             'noUnsupportedClaims': semantic.get('noUnsupportedClaims'),
+            'goldReviewRequired': semantic.get('goldReviewRequired'),
             'automaticPass': bool(ok)})
     facets = {}
     for key in ('difficulty', 'scenarioType'):
@@ -254,6 +269,7 @@ def main():
     summary = {'split': a.split, 'total': len(results), 'automaticPass': sum(r['automaticPass'] for r in results),
         'semanticJudgePass': sum(r['semanticJudgePass'] for r in results),
         'semanticPassActionMismatch': sum(r['semanticJudgePass'] and not r['actionMatches'] for r in results),
+        'goldReviewRequired': sum(r['goldReviewRequired'] is True for r in results),
         'answerStatuses': dict(Counter(r['answerStatus'] for r in results)),
         'judgeStatuses': dict(Counter(r['judgeStatus'] for r in results)), 'usage': dict(usage),
         'facets': facets, 'limitations': ['Automatic judge, no independent human adjudication; see manifest for model identities.',

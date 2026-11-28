@@ -10,9 +10,12 @@
 - 明确缺少所求结论必要事实时，即使给出解释，也须输出 ABSTAIN；不会在模型返回后偷偷把 ANSWER 改为 ABSTAIN。
 - 保留严格 automaticPass，同时另列 semanticJudgePass、semanticPassActionMismatch、引用合法性及裁判字段。失败项输出 review-queue.json，不能把动作错误、金标争议与幻觉混算。
 - 可用独立 judge-config 指定另一个评分模型；自动裁判仍不能替代独立人工复核。旧金标不因本轮分数而修改。金标要求过多的争议保留到独立复核队列，不自动放宽通过标准。
+- 新评分契约强制提供 goldReviewRequired/goldReviewReason。发现参考要求超出本问或动作金标争议，单独标记并进入复核队列，禁止自动通过；不再直接把这一类争议都解释成模型事实错误。汇总新增 goldReviewRequired 计数。
 - 禁止混入缺失/重复/外来检索记录；续跑核对代码与输入哈希、检索原始字节及模型参数。配置改变必须新建批次；已记录失败不会在同批次重试。
 
 原始 200 题结果保留在 docs/quality/artifacts/rag400-live-20261128。新结果不得覆盖它；旧 manifest 的 runnerSha256 对应旧提交的脚本，而非本次修改后的脚本。
+
+本机交付验收：[完整入口证据](../quality/evidence/remote-rag-entry-20261128.json)。400 题检索实跑完成：DEV 完整必要证据 Top 10 为 177/200、CALIBRATION 为 66/80、原保留集为 93/120；临时数据库、Java 源文件和编译产物均清理。37 项离线工具测试通过。模型阶段采用确定性模拟检查契约、预算和续跑；本轮未进行真实模型调用，不把检索覆盖率当作答案准确率。
 
 ## 环境准备
 
