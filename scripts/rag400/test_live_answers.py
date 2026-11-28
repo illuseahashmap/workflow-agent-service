@@ -103,7 +103,7 @@ class RunContracts(unittest.TestCase):
             self.assertEqual(len(calls), 1 if budget_exhausted else 2)
             self.assertEqual(calls[0]['max_tokens'], 2048)
             answer_input = json.loads(calls[0]['messages'][1]['content'])
-            self.assertEqual(set(answer_input), {'question', 'retrievedEvidence'})
+            self.assertEqual(set(answer_input), {'question', 'retrievedEvidence', 'retrievalAbstained'})
             if budget_exhausted:
                 self.assertEqual(summary['answerStatuses'], {'BUDGET_EXHAUSTED': 1})
                 self.assertEqual(summary['judgeStatuses'], {'NOT_RUN': 1})

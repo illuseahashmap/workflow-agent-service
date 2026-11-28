@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.illuseahashmap.knowledge.ingestion.application.DocumentIngestionService;
 import io.github.illuseahashmap.knowledge.ingestion.domain.TextChunker;
 import io.github.illuseahashmap.knowledge.retrieval.application.KeywordRetriever;
+import io.github.illuseahashmap.knowledge.retrieval.application.VectorRetriever;
+import io.github.illuseahashmap.knowledge.retrieval.application.StrategyRetriever;
+import io.github.illuseahashmap.knowledge.retrieval.application.Rag400ExpansionBridge;
+import io.github.illuseahashmap.knowledge.retrieval.domain.ChunkEvidence;
+import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalResult;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.ChunkSearchPort;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
 import io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding;
@@ -51,7 +56,10 @@ class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
             var tx = new TransactionTemplate(new DataSourceTransactionManager(ds));
             var store = new NativeEvidenceStore(jdbc,new PostgresKnowledgeManagementAdapter(jdbc),JSON);
             var indexes = new PostgresKnowledgeIndexAdapter(jdbc);
-            var ingestion = new DocumentIngestionService(new PostgresKnowledgeDocumentStore(jdbc),indexes,new TextChunker(1200,120));
+            var modes = List.of(System.getProperty("rag400.modes", "keyword").split(","));
+            assertThat(Set.of("keyword","vector","hybrid","hybrid-expansion")).containsAll(modes);
+            var embeddings = modes.stream().anyMatch(m -> !m.equals("keyword")) ? new Rag400EvaluationModels(jdbc.getJdbcTemplate()) : null;
+            var ingestion = new DocumentIngestionService(new PostgresKnowledgeDocumentStore(jdbc),indexes,new TextChunker(1200,120),embeddings);
             var lastDoc = new TreeMap<String,Long>();
             var locators = new HashMap<String,List<NativeLocator>>();
             var bindings = new ArrayList<SourceIndexBinding>();
@@ -76,39 +84,81 @@ class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
             }
             jdbc.getJdbcTemplate().execute("ANALYZE knowledge_chunk,knowledge_document_version,knowledge_source,knowledge_index_version,knowledge_scope_term");
             var adapter=new PostgresKeywordChunkSearchAdapter(jdbc);
-            var captured=new ArrayList<ChunkSearchPort.SearchHit>();
-            var retriever=new KeywordRetriever((t,r,k) -> { var hits=adapter.search(t,r,k); captured.addAll(hits);return hits; });
-            var raw=new ArrayList<String>();
-            for (String line:queries) {
-                JsonNode q=JSON.readTree(line);
-                captured.clear();
-                var request=new RetrievalRequest(q.get("query").asText(),scopes,List.of(),null,10,
-                    RetrievalRequest.StrategyHint.KEYWORD,0,List.of(),0,
-                    bindings.stream().filter(b->scopes.contains(b.sourceCode())).toList());
-                long start=System.nanoTime();
-                var result=retriever.retrieve(tenant,request);
-                double ms=(System.nanoTime()-start)/1e6;
-                var hits=new ArrayList<Map<String,Object>>();
-                for (var hit:captured) {
-                    var c=hit.chunk(); var code=c.documentVersion().externalDocumentId();
-                    var loc=locators.get(code).get(c.ordinal());
-                    hits.add(Map.of("rank",hits.size()+1,"documentCode",code,"databaseVersion",c.documentVersion().version(),
-                        "scope",c.documentVersion().sourceCode(),"chunkId",c.chunkId(),"ordinal",c.ordinal(),
-                        "startLine",Integer.parseInt(loc.start()),"endLine",Integer.parseInt(loc.end()),
-                        "text",c.text(),"score",hit.score()));
+            var vectorAdapter=new PostgresVectorSearchAdapter(jdbc);
+            var captured=new HashMap<String,ChunkSearchPort.SearchHit>();
+            var keyword=new KeywordRetriever((t,r,k) -> {
+                var found=adapter.search(t,r,k); found.forEach(h -> captured.put(h.chunk().chunkId(),h)); return found;
+            });
+            var vector=embeddings==null ? null : new VectorRetriever(embeddings,(t,r,v,m,k) -> {
+                var found=vectorAdapter.search(t,r,v,m,k); found.forEach(h -> captured.put(h.chunk().chunkId(),h)); return found;
+            });
+            var retriever=new StrategyRetriever(keyword,vector);
+            var auxiliary=new HashMap<String,String>();
+            if (modes.contains("hybrid-expansion")) {
+                for (String row:Files.readAllLines(Path.of(System.getProperty("rag400.auxiliary")),StandardCharsets.UTF_8)) {
+                    var entry=JSON.readTree(row);
+                    if (entry.get("status").asText().equals("SUCCESS")) auxiliary.put(entry.get("caseId").asText(),entry.get("auxiliaryQuery").asText());
                 }
-                raw.add(JSON.writeValueAsString(Map.of("caseId",q.get("caseId").asText(),"status","SUCCESS",
-                    "snapshotSha256",sha(snapshotBytes),"latencyMs",ms,"retrievalStatus",result.status(),
-                    "abstained",result.abstained(),"traceId",result.retrievalTraceId(),"hits",hits)));
             }
-            Files.write(output.resolve("project-raw.jsonl"),raw,StandardCharsets.UTF_8);
-            Files.writeString(output.resolve("project-run.json"),JSON.writerWithDefaultPrettyPrinter().writeValueAsString(
-                Map.of("queries",queries.size(),"documents",snapshot.get("documents").size(),"chunks",chunks,
-                    "indexBindings",bindings,"strategy","KEYWORD","maxResults",10,
-                    "tenantMapping","rag400-sandbox -> default in disposable PostgreSQL database",
-                    "permissionBoundary","actual SQL scope filtering; not HTTP login/principal authorization acceptance",
-                    "modelCalled",false,"snapshotSha256",sha(snapshotBytes))));
-            assertThat(raw).hasSize(expected);
+            if (embeddings!=null) {
+                var inputs=new ArrayList<String>();
+                for (String row:queries) inputs.add(JSON.readTree(row).get("query").asText());
+                inputs.addAll(auxiliary.values());
+                embeddings.embedQuery(inputs);
+            }
+            for (String mode:modes) {
+                var raw=new ArrayList<String>();
+                var modeOutput=Files.createDirectories(output.resolve(mode).resolve("retrieval"));
+                for (String line:queries) {
+                    JsonNode q=JSON.readTree(line);
+                    captured.clear();
+                    var hint=mode.equals("keyword") ? RetrievalRequest.StrategyHint.KEYWORD :
+                        mode.equals("vector") ? RetrievalRequest.StrategyHint.VECTOR : RetrievalRequest.StrategyHint.HYBRID;
+                    String aux=auxiliary.get(q.get("caseId").asText());
+                    var request=new RetrievalRequest(q.get("query").asText(),scopes,List.of(),null,10,
+                        hint,0,List.of(),0,bindings.stream().filter(b->scopes.contains(b.sourceCode())).toList(),
+                        mode.equals("hybrid-expansion") && aux!=null ? List.of(aux) : List.of());
+                    long start=System.nanoTime();
+                    RetrievalResult result;
+                    Object expansionTrace=Map.of("policy","DISABLED");
+                    if (mode.equals("hybrid-expansion")) {
+                        var expanded=Rag400ExpansionBridge.retrieve(retriever,tenant,request);
+                        result=expanded.result(); expansionTrace=expanded.trace();
+                    } else result=retriever.retrieve(tenant,request);
+                    double ms=(System.nanoTime()-start)/1e6;
+                    var hits=new ArrayList<Map<String,Object>>();
+                    // Score ONLY the final production evidence list, never union all channel candidates.
+                    for (var selected:result.evidence()) {
+                        var evidence=(ChunkEvidence)selected;
+                        var hit=captured.get(evidence.reference().locator());
+                        assertThat(hit).isNotNull();
+                        var c=hit.chunk(); var code=c.documentVersion().externalDocumentId();
+                        var loc=locators.get(code).get(c.ordinal());
+                        hits.add(Map.of("rank",hits.size()+1,"documentCode",code,"databaseVersion",c.documentVersion().version(),
+                            "scope",c.documentVersion().sourceCode(),"chunkId",c.chunkId(),"ordinal",c.ordinal(),
+                            "startLine",Integer.parseInt(loc.start()),"endLine",Integer.parseInt(loc.end()),
+                            "text",evidence.text(),"score",evidence.score()));
+                    }
+                    assertThat(hits.size()).isLessThanOrEqualTo(10);
+                    var row=new LinkedHashMap<String,Object>();
+                    row.put("caseId",q.get("caseId").asText()); row.put("status","SUCCESS");
+                    row.put("snapshotSha256",sha(snapshotBytes)); row.put("latencyMs",ms);
+                    row.put("retrievalStatus",result.status()); row.put("abstained",result.abstained());
+                    row.put("traceId",result.retrievalTraceId()); row.put("hits",hits);
+                    row.put("mode",mode); row.put("expansionTrace",expansionTrace);
+                    row.put("fixtureOnly",Boolean.getBoolean("rag400.fixture"));
+                    raw.add(JSON.writeValueAsString(row));
+                }
+                Files.write(modeOutput.resolve("project-raw.jsonl"),raw,StandardCharsets.UTF_8);
+                var metadata=new LinkedHashMap<String,Object>();
+                metadata.put("queries",queries.size()); metadata.put("documents",snapshot.get("documents").size());
+                metadata.put("chunks",chunks); metadata.put("indexBindings",bindings); metadata.put("strategy",mode);
+                metadata.put("maxResults",10); metadata.put("snapshotSha256",sha(snapshotBytes));
+                metadata.put("embedding",embeddings==null ? Map.of("enabled",false) : embeddings.metrics());
+                metadata.put("permissionBoundary","actual fixed SQL scopes; not HTTP principal authorization");
+                Files.writeString(modeOutput.resolve("project-run.json"),JSON.writerWithDefaultPrettyPrinter().writeValueAsString(metadata));
+                assertThat(raw).hasSize(expected);
+            }
         });
     }
 }

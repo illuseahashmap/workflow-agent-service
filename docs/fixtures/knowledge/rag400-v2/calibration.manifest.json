@@ -1,0 +1,22 @@
+{
+  "datasetId": "rag400-calibration",
+  "version": 4,
+  "schemaVersion": 2,
+  "status": "DRAFT",
+  "tenantRef": "rag400-sandbox",
+  "caseFileSha256": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
+  "knowledgeSnapshotId": "rag400-synthetic-v1",
+  "knowledgeSnapshotSha256": "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe",
+  "indexBindings": [
+    {
+      "sourceCode": "rag400-corpus",
+      "indexVersionId": "UNBUILT-DRAFT-ONLY"
+    }
+  ],
+  "scoringRuleVersion": "rag400-diagnostic-v1",
+  "difficultyRubricVersion": "difficulty-rubric-v1",
+  "annotationGuidelineVersion": "rag400-author-review-v4",
+  "createdBy": "codex-rag400-author",
+  "createdAt": "2026-11-27T00:00:00+08:00",
+  "splitGroupRegistrySha256": "1cbce5c2eb1a9ce591d12b65fd0cfc97bf06520cffdf9c46f4e37078c96e65c0"
+}

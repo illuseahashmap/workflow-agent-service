@@ -1,0 +1,47 @@
+{
+  "DEV": {
+    "count": 200,
+    "difficulty": {
+      "EASY": 60,
+      "MEDIUM": 80,
+      "HARD": 60
+    },
+    "scenario": {
+      "ANSWERABLE": 140,
+      "INSUFFICIENT": 30,
+      "OUT_OF_SCOPE": 10,
+      "FORBIDDEN": 10,
+      "CONFLICT": 10
+    }
+  },
+  "CALIBRATION": {
+    "count": 80,
+    "difficulty": {
+      "EASY": 24,
+      "MEDIUM": 32,
+      "HARD": 24
+    },
+    "scenario": {
+      "ANSWERABLE": 56,
+      "FORBIDDEN": 4,
+      "CONFLICT": 4,
+      "OUT_OF_SCOPE": 4,
+      "INSUFFICIENT": 12
+    }
+  },
+  "LOCKED_TEST": {
+    "count": 120,
+    "difficulty": {
+      "EASY": 36,
+      "MEDIUM": 48,
+      "HARD": 36
+    },
+    "scenario": {
+      "ANSWERABLE": 84,
+      "INSUFFICIENT": 18,
+      "FORBIDDEN": 6,
+      "CONFLICT": 6,
+      "OUT_OF_SCOPE": 6
+    }
+  }
+}

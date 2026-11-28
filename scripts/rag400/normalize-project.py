@@ -72,9 +72,12 @@ def main():
         'anyBodyOverlapAtK_upperBoundNotCompleteEvidence':overlap['completeRequiredGroupsAtK'],
         'unauthorizedScopeHits':leaks,'retrievalStatuses':dict(collections.Counter(r['retrievalStatus'] for r in raw)),
         'latencyMs':{'p50':times[math.ceil(len(times)*.50)-1],'p95':times[math.ceil(len(times)*.95)-1]},
-        'latencyProtocol':'single pass, sequential, includes first query cold effects; no production SLA claim',
+        'latencyProtocol':'sequential exact SQL; query vectors prewarmed in matrix runs; provider preparation separately recorded; no SLA claim',
         'facets':facets,'split':a.split,'formerHoldoutRead':a.split=='holdout-candidate','answerGeneration':'NOT_RUN',
-        'profile':'project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM',
+        'mode':raw[0].get('mode','keyword'),
+        'fixtureOnly':any(r.get('fixtureOnly',False) for r in raw),
+        'expansionOutcomes':dict(collections.Counter(r.get('expansionTrace',{}).get('outcome','DISABLED') for r in raw)),
+        'profile':'production final evidence list; native Markdown; K=10; see project-run.json for embedding/index identity',
         'permissionBoundary':'actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised'})
     save(a.run/'summary.json',summary);print(json.dumps(summary,ensure_ascii=False))
 

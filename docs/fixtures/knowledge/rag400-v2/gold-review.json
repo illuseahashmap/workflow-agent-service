@@ -1,0 +1,1354 @@
+{
+  "version": 2,
+  "independentReview": false,
+  "reviewScope": "All 400 structural/referential checks; targeted semantic review of all 60 insufficient cases, known overbroad claims and conflict premises. Not independent adjudication of all 400.",
+  "sourceCaseHashes": {
+    "dev": "f690cdebd65a8c147f56bf9849f40fd50931b087a1ef126767f7b7fd3f164e33",
+    "calibration": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
+    "holdout-candidate": "cb808d36582b733d6ae9b3702f97039532b6a3f89d281ecc788089f6fe857c13"
+  },
+  "snapshotSha256": "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe",
+  "caseHashes": {
+    "dev": "b075c2b49a1de837e3c4920b5a23644da204868ca4e0cf7e7deeb8b7d28ebde1",
+    "calibration": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
+    "holdout-candidate": "236220004a7fe87072a728cfc5634a282f0e39ad2857cb56f6bd88880380461a"
+  },
+  "changes": [
+    {
+      "caseId": "R400-ADM-e59e2543f7-1",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "6d94ea3d4c610f764c3fba7263bc6196f861742b763300e4493e1204f57f121a",
+      "afterSha256": "e925ec237b0d3cc13b7b01c65b766a6820a75ef8ad2bf9e9e7737d8833bc5c33"
+    },
+    {
+      "caseId": "R400-ADM-eba06c67c3-2",
+      "reasons": [
+        "Only require facts asked by this question; sibling-topic detail remains optional."
+      ],
+      "beforeSha256": "9d155409d17c7c78381fc648a6067593981b9c32df8d4271344a4ba6d78c6016",
+      "afterSha256": "8f7b5bba803b4d6170a6ad53c490301f09be9931ec80aa9a70e27bb967a8335a"
+    },
+    {
+      "caseId": "R400-ADM-ab98107cb4-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f552aa170e5999cc8d350350546c2db4fe10269d816adb83e59a399e8099aa2d",
+      "afterSha256": "1daa908af1354036409881c3c233f527ef5c7e3a6b639e13161a3428dae7719f"
+    },
+    {
+      "caseId": "R400-ADM-ab98107cb4-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ac1d70bfeddb255f72adbd3645d3ad69b6a8558271062932ede7953fd1e02196",
+      "afterSha256": "2303afd52fdefc5a989ebf6b6b6d32a9bb9dca1add5c2e60e56954f45eaefe41"
+    },
+    {
+      "caseId": "R400-ADM-e736b92a6b-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "b0a0f3092ae7d391074b67e31ea568b3cd1f537056fb60cb1f3c9c9f6bc60113",
+      "afterSha256": "5608d5ce7499b0ef375c552f86aa29002ff5902bec559dfb63c668c1f5eefd4d"
+    },
+    {
+      "caseId": "R400-ADM-e736b92a6b-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "2a31aa2d7dc755ca6e2e38d081f9d21251e6c1f7382f351223dcdc9b5b1e75d7",
+      "afterSha256": "7ff95fd3fba140fea5aa1a180c8e10c5ae9dd0758165e95551a0701b52441c17"
+    },
+    {
+      "caseId": "R400-ADM-30693ddbcb-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "be4985be25dbb8e6bd2d6e6db3e8389fd85418619a91169a19eb48257afa4b1f",
+      "afterSha256": "757a089c5279dadcb8de80ed6be113783e28530be37a2b69d93123be8896a7b2"
+    },
+    {
+      "caseId": "R400-ADM-30693ddbcb-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "39d88f1626576e862a2b12a3cbc5c646f04bb634a14608bc093ad1029ab8a9eb",
+      "afterSha256": "a598a86d2830336e39b9ab4e14f623997cd914cadefbf3547500cb6089dd8bae"
+    },
+    {
+      "caseId": "R400-ADM-671b6e0603-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "31080b5f5383bd0c27548d5a3b78097749045950a36da0f1d6b37d7df2eb769a",
+      "afterSha256": "298dee85bb8256ff34aa1e3eb039d512c711a3145ec7df1d1c94dd6e61528ded"
+    },
+    {
+      "caseId": "R400-ADM-671b6e0603-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "75076b89522bc104558bed054ec31ce4003bb4645296f5d0c7c8ec0dab079c99",
+      "afterSha256": "8210c7f6fe9fa2a82414253b424b69da1f58376fe70223c47f90a005a3e87509"
+    },
+    {
+      "caseId": "R400-ADM-2944f35c74-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "e9d60d5f5c9d4aaaa07404bf7f2f8533b8daebb0e260bab70a5e1f8c3dae3d17",
+      "afterSha256": "8f9116c8912fce9c047e51aa027584129b6afa2d275ee8e78f1c79ee02237b2d"
+    },
+    {
+      "caseId": "R400-ADM-2944f35c74-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "8b49dd2464c5a4eaef1c7f3830142ccee422a96aac10cdfeb56a3f7a2176d784",
+      "afterSha256": "3c56488603305d97b8dd7b781a7f273c6196fe4beaffffe72e8d835eb11f2d5d"
+    },
+    {
+      "caseId": "R400-ADM-7835b4c03f-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "25396dfd84863d60da958532e66c24d9b19f27f47b98fa8ff05899f54018355b",
+      "afterSha256": "5d100245babed1c395426868f8a9c0d2704c379be9229db5893958d81511f7ed"
+    },
+    {
+      "caseId": "R400-ADM-7835b4c03f-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1072340ded8da2dada9b76a1e77e05e99f772993b756d2810dd2e96d08dc1173",
+      "afterSha256": "edf39494fdb4ddfe7f71b31dd475565c8bfbffa883afe71ee942eb621944b297"
+    },
+    {
+      "caseId": "R400-SUP-ee54d31611-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "2c74d4e6a4153f391bf610ba08afb42652812eb02af1b1cd25c47211903a043d",
+      "afterSha256": "586dec7178a4b85c2499c40f90ad6b7596f143ffeacebebe100a54b5dc1b5973"
+    },
+    {
+      "caseId": "R400-SUP-ee54d31611-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "c144c3f70a55df7d07e3cdd3982737abf7d5ad017bff509f15a93d3df04f06c4",
+      "afterSha256": "41a997eb782c3f83b87f1c9683013ae698bfa7b62a7ca0f85385d63cfca606bc"
+    },
+    {
+      "caseId": "R400-SUP-2eeb32a5b4-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "dea93d127c20baaa5c01db258e924e2c60957fc5613e8f2c0109cc5232b24235",
+      "afterSha256": "2136458e7db59db82fc06f73a4ae203564f884d7e4d4fab65ba96a2d4f593af2"
+    },
+    {
+      "caseId": "R400-SUP-2eeb32a5b4-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "39cf4eb1e7c615eab3cdea2e527a37aeb61143ceab33827841fd0e580b2dcf27",
+      "afterSha256": "58f3e8274d8e05db6de33912f6883445c7f9290568fa16a2d3aa163426adff76"
+    },
+    {
+      "caseId": "R400-SUP-d02b4a5605-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "66223e74c747486cae78d4a1aa380fc4c9872c2667ed7899c5f4a3b1ce1bf4b6",
+      "afterSha256": "1d5794137e288ca354e5be63c343838c21ed8274a808c874015b30a0fd18f0a9"
+    },
+    {
+      "caseId": "R400-SUP-d02b4a5605-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ad9553b0009b58ebbf79043192e341d1fbc0e73dbd7400666e6228749aebbd86",
+      "afterSha256": "4e8afd117cc9e1eaaf758fa4162a89950f11214f0c37ebaae243b000b915f3e6"
+    },
+    {
+      "caseId": "R400-SUP-b5be41cd3e-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1bc301116b543493a90ce92817fddf2b95489fc1f3ab9b2d2f4a3b095d35d208",
+      "afterSha256": "848b7e3db8db20b5cc3ad8d97aa1e7fac107b6e02bef7ef1a78faacfc6409d99"
+    },
+    {
+      "caseId": "R400-SUP-b5be41cd3e-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "89456ff282c920235f4bd6b2cbb6efb38aaf56b748dda3d9c5fe6dc4ffd6df3e",
+      "afterSha256": "51a119a1225ce4a1e12d55c3756b3b432038a7d5612de94ef0fb7256f1a789af"
+    },
+    {
+      "caseId": "R400-SUP-1dbebd914f-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "3ac39b09288bd23aedf76d79809d5976dfa8a20644aad6409434134da8cee2fb",
+      "afterSha256": "5cc3b895b72b6bc31600346e44f5732f8e585381ab517c80e485f8922c031374"
+    },
+    {
+      "caseId": "R400-SUP-1dbebd914f-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f41193eacab178026bb951d411a2fc23016a16c9f739717a1dde833321015b4d",
+      "afterSha256": "548337e4bcda61880dd4111c2e9291f570704b1020088ecc9e8c6a0d892ef41f"
+    },
+    {
+      "caseId": "R400-SUP-f299543a44-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "e0160b62b63c68f5c3acbdfbf4bb2fee28dd64fede0dc133bc5b48f21611ec90",
+      "afterSha256": "7ccc4b3d663ecbe9c5aaf0f68ef201cf55795db2562756fcecfc43e00e94a342"
+    },
+    {
+      "caseId": "R400-SUP-f299543a44-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "6699080680cb02d52a51ee697b2d8f63c291fdbc9f18dc46d0bb870815b6bcb0",
+      "afterSha256": "62352a11c80b0ee81ed67c789601c8c83df468a4e913591faecfd88ee4283e67"
+    },
+    {
+      "caseId": "R400-FIN-0372c3b4fe-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ac246647dffa4e665230ab5a9dffe5ad47e8bcb2296628a1eed54283f2044bc4",
+      "afterSha256": "22ad47f978803304c913cab009305e36acb3784bfaa9d0ac0c51fe907d2f4cf0"
+    },
+    {
+      "caseId": "R400-FIN-0372c3b4fe-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1ba07056e71a40f7c901579ed8e771203e2204829bdc4c195b1c9bbe0a786ac4",
+      "afterSha256": "c649f28f129108ea190a34e7f691c4f22f8e60f2f16ca1ded985884e37dc2a96"
+    },
+    {
+      "caseId": "R400-FIN-c8f2903184-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "6ad44855f969b765908a7407674547e6bd2bcfc1daf0f588b2c4f1c0b7eb0245",
+      "afterSha256": "f0b1b98a3894b1326d31b0e212ffd7a7e643eaed7fee18bdaae8b474dcf12fe2"
+    },
+    {
+      "caseId": "R400-FIN-c8f2903184-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "0baf8cefd90c76495f9a243ae584a07e31e2529e62660d8e375eca234487f1be",
+      "afterSha256": "e9c26870bd14e161eb6dc29af46ba049350f1b804cf2b345019eab7839474b37"
+    },
+    {
+      "caseId": "R400-FIN-2d15c8507c-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "10a3f658bb5a4559273f5a725f070491043d73dfdfbc5d58f6c07716dcb67a8d",
+      "afterSha256": "4ea8a6d866b58b836d43cbe07911113e39514d6a42b67d2e07550ad29433d7d3"
+    },
+    {
+      "caseId": "R400-FIN-2d15c8507c-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "6146b8246d974cdfcb2415276f2dca0e93413f473fbffc25fbea96aa68d33dd4",
+      "afterSha256": "b0a1b84e9bb48188bb5082ad96a1d657b1d6cec0261db7451e61347d5d01f3fa"
+    },
+    {
+      "caseId": "R400-FIN-5e97df3b60-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ee1b682fc18f5bf1cd12b6829b341f1b8dfbb8cf306d3a9dd245a4cb390600c8",
+      "afterSha256": "2225a5b7308f85a0f94d11c88dbbf25cbd0b5eb4201c4587944a93ac9859f896"
+    },
+    {
+      "caseId": "R400-FIN-5e97df3b60-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "221fffc0965d3a01aae695cc6e11727797ddff4487d8db94bdef5b8d0a51a076",
+      "afterSha256": "3852fb62fb443bd80d61a46a7887116daba441f2b0638ffd0a0d07cddb488e0f"
+    },
+    {
+      "caseId": "R400-FIN-2a0a51a3fb-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "390c7823c226f1733771ab133899a98513a05b3c5834c20956b78f9e75ced693",
+      "afterSha256": "07b236ad77f50932e99e1d90617f41f5c3c98247b377dcca5fd9fe7ab3ccbfcf"
+    },
+    {
+      "caseId": "R400-FIN-2a0a51a3fb-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "c60b5b603fd1eff594c60c31c2af858f7256bed07121b92170f7082f6dfbf7c0",
+      "afterSha256": "90aaea807bf8d74585233512b474c49d7a4ed28ce987d531eedc8af78cb3d175"
+    },
+    {
+      "caseId": "R400-FIN-bf24e417be-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "3b34abb01cfed91751ed4ac4c8a56806ef3d6d114667ebe21ee4b3ccd3186f9a",
+      "afterSha256": "a739b086e143646e362e9e7d0e71426a62e62da610004bc660c37d20da138163"
+    },
+    {
+      "caseId": "R400-FIN-bf24e417be-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "6fb99c02d62f8f895ae5ad57ba1aa8cee7ca1d6d801f8a9055c49142e31e8c72",
+      "afterSha256": "c87e4392f3d1fa017f1580f54324d6528195d690b4544858d55035ae7b7e3671"
+    },
+    {
+      "caseId": "R400-HR-6b791dd237-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "66ecf0789f30277c3aef9a456d97d6562397e9e59b32760374689d1b4b5d1f0c",
+      "afterSha256": "5efba06ef9f353151f0ada2d9a6e4cc50271714ebe648c72dbd9381b97b8d2b6"
+    },
+    {
+      "caseId": "R400-HR-6b791dd237-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "fb1d131c71a5ca7d0a575ed6248482231b1e7abcfba289922868e0d0abc2b143",
+      "afterSha256": "955f9f24678e5ae6bbeb249b02eebcb1d94a2eaed8f617fa2bbb641dc7496ea9"
+    },
+    {
+      "caseId": "R400-HR-8be8f1200e-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "cb663b76582cc616014d869224f08e3e6d16e97f40e013118210266da6af5dfb",
+      "afterSha256": "d3ee9ebb2c900263b66c6281d92cb8cd668b9e9704842e4308bdce7da7cedc75"
+    },
+    {
+      "caseId": "R400-HR-8be8f1200e-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f65636ceae823a4938fd216e85626408b1001bac870a605a490e4196d772e38f",
+      "afterSha256": "1da5dda5b423bd6162d0cd069c00168978446e49c4b8eb14bf993dbaa4e06182"
+    },
+    {
+      "caseId": "R400-HR-80e58709b9-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "94bb5f4796354745a311820701a78ab153da9ba89e26e599207ac4f6580390e7",
+      "afterSha256": "f94b0e3aeeaa1c5e4cfa8f1fc0573795a88df2229893ecf6051587c87d0a0eca"
+    },
+    {
+      "caseId": "R400-HR-80e58709b9-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "3631e500a25a986d5d0a0ff21e463aa6bc4ff029b4e342c08840a607e51dbc1a",
+      "afterSha256": "d8f3d11bfcf671c0a38817e0661c97477cadf9936f55984568187ae10d8806b8"
+    },
+    {
+      "caseId": "R400-HR-6bc23f207b-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "68ac5cb48ad92a75ebaf7b78f03e2baf1ee1f439551bb875a6b3d8f79a8b61aa",
+      "afterSha256": "e3f1a7b4e4a0365024b673e9593e4e69fe532ad17f67400029119cf9436bb0ef"
+    },
+    {
+      "caseId": "R400-HR-6bc23f207b-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "534ce4a1d759e2c95ee315f6a6c677eb728efc2959531de328c22db20ca08914",
+      "afterSha256": "d110ad8d879016b49e72eb2368b75048373236dd935b0c1772494b65b62519ec"
+    },
+    {
+      "caseId": "R400-HR-a968f66f1c-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "bf98981d88dcd9827b9a95ea6d23c811a0aea09c04caefd63eb49993e0e069b4",
+      "afterSha256": "3c1d3f73b7bb55cf2bd0897833b74f0fca084b331b6dcc57228b159e349ba15e"
+    },
+    {
+      "caseId": "R400-HR-a968f66f1c-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ef2e96fcf2677ef1979119983900cddd53a6a56b0ca9ab89fb21011c4cfcfbfe",
+      "afterSha256": "8619e576d4d6796d76c7613e30a41361cb6399cdcdcc380a477021bbbe82c9b0"
+    },
+    {
+      "caseId": "R400-HR-991746f129-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1a38d2afad0e8af0fbb0c0ddb136db46251b6f415dab10bd960db1c97aa379d4",
+      "afterSha256": "7742c43ab91c14821e4fb1335c506400b41cfb11ee030cb30c89002d140db731"
+    },
+    {
+      "caseId": "R400-HR-991746f129-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "36c69cf33af9ecd95800256c900f0761c18bbb2a83cb0893ba92c86311533224",
+      "afterSha256": "f7fcffd6bd59859dba6b993a4923d15a80923d5c3f7eae2e7da148925165b6b1"
+    },
+    {
+      "caseId": "R400-SEC-ff2b5e776a-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1e2b70a2212ff2c657ba48e3d33957649e4f9d0f7c80de1b170bc604284a8a3d",
+      "afterSha256": "2c8d1f9de14a32f45b9663354543739ca70847ffc35cb0e3011b94d9cf198e23"
+    },
+    {
+      "caseId": "R400-SEC-ff2b5e776a-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "cea2599f2fd47fe5ae062817b937291c39f447a2783306f00f8b7acb0e8624ac",
+      "afterSha256": "e6371a32ca07655a0cea16c0b20a957751c437c8ee25b4955350ae29f561edee"
+    },
+    {
+      "caseId": "R400-SEC-91644c3428-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "73da4419fc118936ccab7b9185cfcd2026b1787d49ab828d8d40284ba6783814",
+      "afterSha256": "9c68c049bac4349e28ca5b3b146827df8544f4cba1d17c453ce251c6db7de8aa"
+    },
+    {
+      "caseId": "R400-SEC-91644c3428-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9705c93524adaa5827943329da5438b5dca995c583df5081ea0e5e1e9635cec7",
+      "afterSha256": "0d217daccf8f3d08cfef50f0b2c5852d56296cb7fa7e0bbf7964e3c8667d9a9e"
+    },
+    {
+      "caseId": "R400-SEC-d600e5feaf-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "c9aba674331a5831ddc6ecbf5d41f046a1d79b5ab1088e83d5e21891bd1a3c04",
+      "afterSha256": "d3e9b41575317cff424685de51acfc5713b05423f17b10b1541558d00432e00b"
+    },
+    {
+      "caseId": "R400-SEC-d600e5feaf-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9a1b00cfa5d25fb137daab176e2d79378ece0ef407615e251b2bf076dea40faa",
+      "afterSha256": "31195605dcdc02d5d8b8712c82f3131b70c868fcf7616fcb12d32207257f00a2"
+    },
+    {
+      "caseId": "R400-SEC-5d22a57f9f-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "81fb3662a1e2571461812642d81975ee5ecd250e1676d7d2572bd71ab1b4c7f4",
+      "afterSha256": "7ad8bc5b73581f3d46dcff686ea7b4eadc323a4bcd07ed7bef37c4cf3c9ec3f1"
+    },
+    {
+      "caseId": "R400-SEC-5d22a57f9f-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "fbb49318ac3dbfc18640b058f21d69d36bc60d15b6d0dcf1d7d8211564ba3632",
+      "afterSha256": "c855f41eb9fae938aa8ee8fb00784ef4ddf6af09951432580377d30eddd06d46"
+    },
+    {
+      "caseId": "R400-SEC-07506f6b15-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "d2921605c32e9aa79976fc4249e36de53525f85d1e01ffa79f0ae37126ecb92f",
+      "afterSha256": "d27562f18fffdb4702f5ba37f990485b1eaa1ae115b33054e6d57937ab8fd200"
+    },
+    {
+      "caseId": "R400-SEC-07506f6b15-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "57b735f4cf1db27929ff98193710c001429d6bd919c6d68df9a5862fcacfbb09",
+      "afterSha256": "ef28add6895e2fdb1946c681a5ad7237a92d948ecea3c903f735dec81c3a65a7"
+    },
+    {
+      "caseId": "R400-SEC-6210eadec5-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9320294402882f406346845392d7b52310351b620d5f961262cc74b4bcf68851",
+      "afterSha256": "06c9e86bc96836b6214cc638aa9d817374aa4a6ee63f9077e139698d54fcc421"
+    },
+    {
+      "caseId": "R400-SEC-6210eadec5-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "101326c3dd6c01fb5fed10ba8e806e4ab28679d62fd2cb00edd2294e77f83c96",
+      "afterSha256": "cb0fc4e165c424ba98d70958455b667baf34d21eaab35459c495eeb82d4b9a60"
+    },
+    {
+      "caseId": "R400-OPS-e92e122cae-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "c7d9470e418c748733910840ced93f88397a935ffadf7b5f868fa31a11081a9d",
+      "afterSha256": "d389cf137d818b0b8a7c62488c1901b47b6cb15a85ce30b22c95e98b9b002c1b"
+    },
+    {
+      "caseId": "R400-OPS-e92e122cae-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1ae6a94938e78354e35e0d956a652d3d6e0495c8bbebb79a33e222ae4bac22b6",
+      "afterSha256": "51345630d27ecd0ef0145298eaa01c742f5e4ecd33e6ae9d525def09a4a3898b"
+    },
+    {
+      "caseId": "R400-OPS-970cec6344-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "45cec467f886650dfe6df94be7330e7eac5351cad1fc2ced6c231bd7b7950579",
+      "afterSha256": "fafb3cb99f220b11f59eac0f92588a0afcac53cb0cfdb439fca683a77e04f751"
+    },
+    {
+      "caseId": "R400-OPS-970cec6344-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "868366b80a78d38029a48551f23818a8cda011af0c38025987a8147fc62c02a4",
+      "afterSha256": "b385ddc21eeec612735c5786d20087b07440f23f6f944f9452564d33dd76f334"
+    },
+    {
+      "caseId": "R400-OPS-c5b285443d-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "a2f552c0ed376ed81f05e1ddb2376a005a8ed1c2f6fe4672072b625dc7ef586b",
+      "afterSha256": "824ef2ff84b7953eee8c51db7b114757a797c04b287ba2a9623472fa3e21b1c9"
+    },
+    {
+      "caseId": "R400-OPS-c5b285443d-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f606a64c33206fe6a74c7a0d6a1b02ed8cf4602a54017382181118072a520e3e",
+      "afterSha256": "9748d1978d5f2ba75f6de74ac2621c667fd79fd4c4e749a610499ab3e8399cdf"
+    },
+    {
+      "caseId": "R400-OPS-6bc23f207b-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "bcbbfa19b332227c0953b6e0c212810678cf35e5b1d89c9737dce4b1cfc90529",
+      "afterSha256": "9b2eec12d11d2d04378c80459a6c5bead513715193068113bc94d44634e91e85"
+    },
+    {
+      "caseId": "R400-OPS-6bc23f207b-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "058fca449cb7d501c4a1bdb6e73e43d5c140358e74fb7434381682942d435bdc",
+      "afterSha256": "eb1c1a47555f7ccd2b328338c15e644c21220efa1dbef8dea7682d80ab77f2c9"
+    },
+    {
+      "caseId": "R400-OPS-3636798744-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9c863eb194d97d2f5972ae0039f641dcdb6ca1f4029b28a6f26fb549db2c7aea",
+      "afterSha256": "beac86135f10f27d67bd6255973f79fd325cf0ff6f25370a454d24cf08b17bb8"
+    },
+    {
+      "caseId": "R400-OPS-3636798744-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "265cc949ae393f4f303fa978b5dbd5ffe05bc78a51c7673b1994ba33f897fda4",
+      "afterSha256": "e4a7715813ae992213b216df6e88365f7a22c554dbaecf9533cabf45dfe26213"
+    },
+    {
+      "caseId": "R400-OPS-1e9fa64d9d-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "09c9b207235c30e1675fe7ea8b4823b1b73064d1e4a858e2f914b5d6d3a4aa25",
+      "afterSha256": "f3274e2537fed646a481fd39613b40799f6f4e70bb2b6d24f9d4bd48e7913210"
+    },
+    {
+      "caseId": "R400-OPS-1e9fa64d9d-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "ab922e6b3fc8afded0d08fd7008d5ca297f9adea8dc380a3111501eae31c15c5",
+      "afterSha256": "016b0689d6f9ae0db631af40c3f6f6b327d21af464b173a3b2df5a0e5796a916"
+    },
+    {
+      "caseId": "R400-LEG-e5f19b4690-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "fe7473a548bbdf56ef3cab1b6829776ba9f327a129f01de0cbc531ff61218c36",
+      "afterSha256": "e02255ea04bbf89a07009cf00f840f6012d99fef492ffd0dcce7cb49f9e28b55"
+    },
+    {
+      "caseId": "R400-LEG-e5f19b4690-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "42c9686cb880cc25263a6133d7a163a8020da6f1764c250783ce8eacb7a9d68c",
+      "afterSha256": "f257652799041444d390706ed3a488ca9610fa8d6b03c5ad31fa02983862ae03"
+    },
+    {
+      "caseId": "R400-LEG-fe24f391e1-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9f04a08c504ffcb0408ebace9797728c62dc6344366429360799296e2f05b186",
+      "afterSha256": "de7bc14383989d840179792feabac32b62b12c4c1ddb31e96d8f6cab177785b7"
+    },
+    {
+      "caseId": "R400-LEG-fe24f391e1-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "a256909e9b995db696bffe33b62fc5ddd4fbe596dbf94f18b123f0a0a8949a8d",
+      "afterSha256": "280b6de9e3b20121cf93d19e543579f2249e9ae6b26aff2a3e2f8480f49fa561"
+    },
+    {
+      "caseId": "R400-LEG-b1e699753d-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1a07b707840908e3b62b74605ed3557a52dea9d37252dedf21fca03a84a102ad",
+      "afterSha256": "e1dbd4c91841bca99c93dd5710d6548507904d0ec26fd5a5f8d8d0e9243cc278"
+    },
+    {
+      "caseId": "R400-LEG-b1e699753d-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "b8f4605bc53f4e856883f414365d7b6217e10711a9ca5c52c70ca0be4017050e",
+      "afterSha256": "dd432d2394ba7e767ca869ab37b0bac16c52de66798c10dc9ad8f858d43ea2ad"
+    },
+    {
+      "caseId": "R400-LEG-341ec6da8f-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "475cbba0c7c9875f1e8dca60d8e4c62c10e4e19b79c10a5bedec678c581427d7",
+      "afterSha256": "ae44091e8332e6faeb02f927d5e2c51b62d43fcae33ebcbc8dcfd68d0a668449"
+    },
+    {
+      "caseId": "R400-LEG-341ec6da8f-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "531f98da5d9208f1b00353c9b8d2e8128e2f573a854c54a643cfc47741f3f11b",
+      "afterSha256": "b39724ddb3ef65911094d19f245bfa8e502f8f6a91ebca9d57653f80ec10bb77"
+    },
+    {
+      "caseId": "R400-LEG-c169043ea3-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "9c9645c72150aba1189f3847479631454c7a26ea6e7d1dccb5352d2959813056",
+      "afterSha256": "dc7b479ede8b5a7e9f7d45a27085e75d579a763239a2d01917ef81cf4853bd98"
+    },
+    {
+      "caseId": "R400-LEG-c169043ea3-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "e61139ea4144093f9cb06eb308fec6d70aa1c71fd8288bc0be510664670eab14",
+      "afterSha256": "a0ed7cceae5c1f8e76728f74b8c6e5bea17d32a2d17235a2d9f8063960de28d1"
+    },
+    {
+      "caseId": "R400-LEG-8753861dff-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "2987985f08cfb21f595722e78b2a2039549ec94f6021d6efb0c79e3687fb5ca1",
+      "afterSha256": "ee33479b06b3a414f0242dce8c450618abab0ab99679d43357d76d7abe7b16dd"
+    },
+    {
+      "caseId": "R400-LEG-8753861dff-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "0d680a26179d51f969caae11e74b487229870816585fbe7b8e8ff85c04025082",
+      "afterSha256": "761ea51b3990b6c679bb65b8788b1b74881c81f2ae3257dd790791d77245a3bc"
+    },
+    {
+      "caseId": "R400-PROC-71747ff012-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "cb3d6896b2c833eecd8387a9864d9e2ccd3161a645baeb328676facec15a0a2c",
+      "afterSha256": "4236fe24e0f08beaf978c9b9935bc78456288eb5c15ae48ed16d4355803188ae"
+    },
+    {
+      "caseId": "R400-PROC-71747ff012-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "b71286bd64af38b5190929414e49964d94f0a0d88d71a1428f40c825771d3ddc",
+      "afterSha256": "576f295c36240314de6952279d41b1daada395fd5e0eed50ba74b1ca1d5adfd4"
+    },
+    {
+      "caseId": "R400-PROC-a7a49f0d78-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "2ff45152ec302a40741c6876039566055990d8571f4099d9f49c1cbf3fcf3cb0",
+      "afterSha256": "b9d732fb4460105ef89a0b1cbd8bd81c869775b68b7fafb67c8a57b9e8030254"
+    },
+    {
+      "caseId": "R400-PROC-a7a49f0d78-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "d9ae0700cfa0b7181bb328e7e8ddd101e9a3dd7713f5194264626eb8ed8c1a23",
+      "afterSha256": "4830164d238b72ad9a5c170a5fd73edb50d2782c42aa4a619fc59f0916cfa116"
+    },
+    {
+      "caseId": "R400-PROC-13b80cfb55-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ed4943d99bfb4d9f83e34ddfe38c8b0a397165c5318bba26295b1d277418dd84",
+      "afterSha256": "4e6a371ad5063ab4d2f3f8109aa1d43cedd5e56b15ef90f3e1a60dfccf67bccb"
+    },
+    {
+      "caseId": "R400-PROC-13b80cfb55-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "4f36c124d239a7520c4684744d9f81c3442cbd347adb691eff4e2e5a8aa811dd",
+      "afterSha256": "2d114ada4f74df16302a834f9f060799405ddfe6e561aba3ea1ae76920220ba9"
+    },
+    {
+      "caseId": "R400-PROC-19e3bcefce-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "01ab827e109840e80d2f2b0a99678185c62b623942fa152f5c246dfbacf5cb25",
+      "afterSha256": "17dd0a4ee8f45c9eadd1f7ebb965b1a2cfe5b1432feebdad75d7680ff555633a"
+    },
+    {
+      "caseId": "R400-PROC-19e3bcefce-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "688f03f637d1a1e869d8609f61456a86197fb1ada96ddd03e6f7d2d7822d81d9",
+      "afterSha256": "fd9f161d4a9dc993f7537cd8228dc29d70e18caa58e40939ecee02fc7edc47ef"
+    },
+    {
+      "caseId": "R400-PROC-80294cc184-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "4fad444f69a13e93418e1306e71a87984962ee05afc6bd4b54e5414499364587",
+      "afterSha256": "e32cddabfcf61f57780e2a08448960484351c237a34b18c5db30b20b36530f11"
+    },
+    {
+      "caseId": "R400-PROC-80294cc184-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f836433bcaef245e46e8634a71861d16f547ded28a3ead576df6e62304f3e5df",
+      "afterSha256": "e558012d30239e56f0c55fb4c8c7c5a30142e5fde7f83e38d7db300994c739e8"
+    },
+    {
+      "caseId": "R400-PROC-ab94bb68a1-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "45402245c0f4d291a963f5c1273d485c5403149fea06c6b8eb717469f2da4308",
+      "afterSha256": "1bedeec53b9a5e3a6ede9ca664f17c46644e9eaa1b0baefae7c721d97b23dab0"
+    },
+    {
+      "caseId": "R400-PROC-ab94bb68a1-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3.",
+        "Make mutually exclusive conflict premise explicit instead of assuming incompatible minima."
+      ],
+      "beforeSha256": "96fd656b03421b9c6d1fdd93436ef24543f7b28fd86a6ad8b0b6b6385681b34d",
+      "afterSha256": "c68dd97d41a4972bb936053093a9a516ceff05450cfee9345d1bc19ce207d5cd"
+    },
+    {
+      "caseId": "R400-DEL-703de2d2b8-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "0be9ceb26893e06641e54e7b9914304b056ab86719e65b23ea45433cceda13b2",
+      "afterSha256": "7281e045fb3de113d5de082f059562532611cc56d74bc67928d234adacea8dc8"
+    },
+    {
+      "caseId": "R400-DEL-703de2d2b8-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "dc9753fea4334b71fa501acaca351d7e2f52c206cbcb8535fdb23c3c0fd56ca6",
+      "afterSha256": "81d29ff3bac71f32de1ff2475bc5d41d6ae6b7c95f6734024ec5817bbb77a022"
+    },
+    {
+      "caseId": "R400-DEL-4b5ced5c30-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "24ea112c481e65f830df01b67d374108292c1df46959d6b7bab19bdf2e713b39",
+      "afterSha256": "67f7bedb9823c828c576263b9bfba12905cffde3ab2ae5144b7c78d50b134f9d"
+    },
+    {
+      "caseId": "R400-DEL-4b5ced5c30-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "4a12a0e8a1c134bb586279b7624284b769f4d739dedfb3c9e590b01e55957d2d",
+      "afterSha256": "603f66682886da14418d762185a8cf29d4623f77f930e6b99b4e1d863432e56e"
+    },
+    {
+      "caseId": "R400-DEL-9e7e58a74c-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "95befbb05bffd6b4e9ce57e35b34274fbd9e2c57703280e2a216816c09c2e6c8",
+      "afterSha256": "f2687834818fa19af1b4ff1bf520e52706c46ba718b0f0449dce8b68deb0fb09"
+    },
+    {
+      "caseId": "R400-DEL-9e7e58a74c-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "2362afa66d3f0297258ec7adb775d2b3f2fae0ee93461333abf8c66cc58dacdd",
+      "afterSha256": "3e4dcca2558501a8726a1a6b02ad40a0efdfe14667773b326439e4d0f330bd77"
+    },
+    {
+      "caseId": "R400-DEL-4d0934275c-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "dc4dda4a5ed1061ce711b435c0667524a923c90412eb468bc185be02089637d0",
+      "afterSha256": "6bd5ab48227a0c9c140438e7c54fa8e23809b7284ff7badee77ea779ca39518f"
+    },
+    {
+      "caseId": "R400-DEL-4d0934275c-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "b325e7de374445fbc4811ce384bbbb5db7de1f7bc8e02a16ea25c648cdf44d20",
+      "afterSha256": "1c06f4b0fd24f396fb378d66ef4493c83c4b987e2064817fa1357aeb642cf4c9"
+    },
+    {
+      "caseId": "R400-DEL-6bc23f207b-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "d4983585a2a8190beafe065f6eca91e940984eaef14e77af9c8ca3802a8ae9c6",
+      "afterSha256": "35ddc536b5af16b9f4f311e624cc8155389385ad82fe58f5cd79fdb12c08893c"
+    },
+    {
+      "caseId": "R400-DEL-6bc23f207b-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "fff187881e3ec25ac1f86b650e8b5a25a293908e9a344cdec883a8a5e4de1a0d",
+      "afterSha256": "d0e6e7fdf88ab5df577f902b523f22d4f19ce576b9614cd302049e1e16e68ef3"
+    },
+    {
+      "caseId": "R400-DEL-b3d9be901a-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "1b4fc9bdface120b87e5f7cf397b297b6abe86688d026e1771ac00a7363e583e",
+      "afterSha256": "44fd03c8bb6641374907b327efcf638407cdcb7466fa400ae59f915bae63ecc6"
+    },
+    {
+      "caseId": "R400-DEL-b3d9be901a-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "09cf966dad1ddb02c2079c845159cd295d7db3d3dd06856180e49b70f9bc4b79",
+      "afterSha256": "fca44f0a3dcb9c878a3f7cdfd354a999a68ccf9f9ff26ea1ee8c54c43e9af3f6"
+    },
+    {
+      "caseId": "R400-SAL-526aa6efb1-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "af40f087dff350645aa059f0bf6a16f0514f17374e5bdb35e2b1e9980de8573f",
+      "afterSha256": "529019ee6b82dc5720128096bd43922821a464833f64c5b9a80d00390ddfb609"
+    },
+    {
+      "caseId": "R400-SAL-526aa6efb1-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "467040494db8ef0957d84727b1510efa036b8fce22be6c6dcf4a11777e8ef9f1",
+      "afterSha256": "66aa03c1f339950fd36f5f4a853cc1f898d453100266e6b3e1e9c494b522506e"
+    },
+    {
+      "caseId": "R400-SAL-c83506c59b-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "6fd5de6aeaac566e708e0593273ad0e8be662706934f26d91070b7e0dd4bf5cf",
+      "afterSha256": "73596f4dc8ce28d34dab767312cb17aa548fbe95fadc6811375caa94f3b44e9b"
+    },
+    {
+      "caseId": "R400-SAL-c83506c59b-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "209fe64bc4b8a5b024afd9e135084b962f30274a6597960c2618684a56d173d8",
+      "afterSha256": "491dab06f0075f0ed429a828bc11bddc2b8d63ff71360ffb4f7084be6d854c18"
+    },
+    {
+      "caseId": "R400-SAL-b8322e260f-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "04a8d7b9613b3cfb63e6caa8161852fa737454882f85a530e7dcc59aa8206fcc",
+      "afterSha256": "31b5fcbe8c121152c4c53c03f44aab29c11f236bd846293244b3a25d8f911437"
+    },
+    {
+      "caseId": "R400-SAL-b8322e260f-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "d2433e9b08892c009cc156466e22a71f6fc893c20311b80924486920e79d4e8d",
+      "afterSha256": "83f9abe81838b55def69a99ed845cc6fa6580bbdfde37f090cf2d6bbdff90cec"
+    },
+    {
+      "caseId": "R400-SAL-24c1b882a7-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "e0f945f39ff8a540f8b59d1520a9461fff5dc6d101f925410bdfe404c1ea781c",
+      "afterSha256": "d11f75aace91276df46e87312435853ce0b46953bacb4c5437e2a7683679e6a4"
+    },
+    {
+      "caseId": "R400-SAL-24c1b882a7-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "20f061e04015e3a2f794b69784e76dd447ea3a36d1e6bd7db3939c7e8c5d3095",
+      "afterSha256": "88bf9feb239d66a534df3d33ec7cff2c35bb2a51bd778f3b29577f88cb8c7f6e"
+    },
+    {
+      "caseId": "R400-SAL-c36fc07a54-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "f2d5b33ea136dfe9edd18a2da8e17fcc72b10119e356fcecf0578558512801a7",
+      "afterSha256": "d2eb0d0d9a6b070b69f00b98e53adcd660509212e6a00dc8fcd37bb08cf00787"
+    },
+    {
+      "caseId": "R400-SAL-c36fc07a54-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "dfa76181eb6ff89444eeee68bce8a82898c302dc630daa1e961391f7ba91aa63",
+      "afterSha256": "e30cf3e292cd1ddf4bd1c5a19e874da0324cad7b8be862f2387943425004f098"
+    },
+    {
+      "caseId": "R400-SAL-5709d0e3de-1",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "ce8377c301037cf2acdec799c4840f4a61f4508a46026b05d7fd8a9b7635bceb",
+      "afterSha256": "757a91b2b1cbfed45c28ef4335c21ec7741a52f909c1ce88bdc15fadb8f05b64"
+    },
+    {
+      "caseId": "R400-SAL-5709d0e3de-2",
+      "reasons": [
+        "Align gold scope declaration with fixed auth fixture; never route by gold evidence.",
+        "Remove benchmark instruction prefix, as already done for DEV/CALIBRATION v3."
+      ],
+      "beforeSha256": "d8d761cf2e9cf21b56bb536b32e5f0fbf664deeb2abd3ecebfc4750ba0cb5a13",
+      "afterSha256": "452f332da985244d8d71e31edd6326d8b98e8851aa97550775701a0e74ff8f67"
+    }
+  ],
+  "overrides": {
+    "R400-ADM-7bd79e543f-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "无法确定总价，缺少里程与等待计费依据。"
+    },
+    "R400-SUP-049e8914bd-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能把客户沉默默认为确认解决；需核对合同关闭条件及通知证据。"
+    },
+    "R400-SUP-ad359c847f-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认，缺少对应服务包覆盖证明。"
+    },
+    "R400-FIN-e21b247981-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能未经确认按人数平均分；须取得各受益项目的已确认分摊比例。"
+    },
+    "R400-FIN-a9e3640a9a-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "无法确认入账期间，先补实际完成日期及适用规则。"
+    },
+    "R400-FIN-81ec8f5737-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认尚未核销；未提供台账不是核销额为零的证据，需查询已核销记录。"
+    },
+    "R400-HR-07c0e9b1fa-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "证据不足；须查询该人的证书类别和有效期。"
+    },
+    "R400-SEC-54b84dc93c-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认接收资格，先补身份与授权范围。"
+    },
+    "R400-SEC-11f87a1347-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确定是否可清理，须先核验期限与保全状态。"
+    },
+    "R400-OPS-a4670a8450-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能把工单创建时刻替代确认的影响起点；还需恢复验证时间才能计算故障时长。"
+    },
+    "R400-LEG-435ae483eb-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认完整，须按数据使用授权清单补对方确认。"
+    },
+    "R400-PROC-e5567edc06-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "没有两家报价税口径，不能判断净价高低。"
+    },
+    "R400-DEL-b18b93cd2d-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认正式验收，缺少确认人授权。"
+    },
+    "R400-SAL-098db76d14-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能用草稿创建日代替正式签发日；须核对正式签发记录及有效截止日。"
+    },
+    "R400-SEC-de48d3f2a8-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认访问资格，需查授权登记册。"
+    },
+    "R400-LEG-1f7690d880-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认，须核验完整授权范围。"
+    },
+    "R400-PROC-12d97b6efa-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能保证送到使用现场；必须明确约定交付地点及交付方式。"
+    },
+    "R400-PROC-a6c9d17512-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "无法确定剩余可追加数量；缺少已承诺数量。"
+    },
+    "R400-DEL-b69c878d10-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认完成，需按受监管接口清单补字段校验。"
+    },
+    "R400-SAL-787b839ea6-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "无法计算折扣，需要适用目录价和一致口径。"
+    },
+    "R400-ADM-671b6e0603-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能判断，须补核定容量及布局。"
+    },
+    "R400-ADM-7835b4c03f-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认归还；需钥匙登记册中的签收记录。"
+    },
+    "R400-SUP-f299543a44-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能判断是否超时，需服务窗口及起始事件。"
+    },
+    "R400-HR-80e58709b9-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确认代理资格，缺少授权范围和生效区间。"
+    },
+    "R400-OPS-c5b285443d-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "无法推算，缺少增长速度所需观测。"
+    },
+    "R400-OPS-3636798744-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能判断达标，缺少该服务等级目标。"
+    },
+    "R400-LEG-c169043ea3-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能认定，需要送达时间。"
+    },
+    "R400-DEL-4d0934275c-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能直接定最高级，需补实际影响及分级依据。"
+    },
+    "R400-SAL-5709d0e3de-2": {
+      "acceptedActions": [
+        "ABSTAIN",
+        "ANSWER"
+      ],
+      "rationale": "Rule/boundary question: a supported negative explanation and explicit inability to confirm the business outcome are both admissible. Never approve the unverified outcome.",
+      "requiredMeaning": "不能确定资格，需要清单要求的身份及渠道证明。"
+    }
+  }
+}

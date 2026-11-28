@@ -1,0 +1,1064 @@
+[
+  {
+    "scenarioGroupId": "R400-ADM-e59e2543f7",
+    "primaryDomain": "administration",
+    "family": "停车月卡",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-540ff83232e5a8"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-eba06c67c3",
+    "primaryDomain": "administration",
+    "family": "会议取消",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-5b04e22bf934c9"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-6bc888946a",
+    "primaryDomain": "administration",
+    "family": "物资借用",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-e99b487f550706"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-d6f9b06511",
+    "primaryDomain": "administration",
+    "family": "空调报修",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-dd9cec99650b25"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-c28596e5a9",
+    "primaryDomain": "administration",
+    "family": "搬位安排",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-e7fb3e7c341e09",
+      "R400-ADM-RULES:s-784ec8713997d8"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-7bd79e543f",
+    "primaryDomain": "administration",
+    "family": "包车费用",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-7db95f6c255803",
+      "R400-ADM-RULES:s-2fd5698a9bf28f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-6bc23f207b",
+    "primaryDomain": "administration",
+    "family": "知识范围边界",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-5e184342e3fb94",
+      "R400-ADM-RULES:s-aa7a19d4335f74"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-d1d3cd0ba4",
+    "primaryDomain": "administration",
+    "family": "冷藏柜映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-7b25018fb76a4c",
+      "R400-ADM-DETAILS:s-45a619ebbb89f2"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-349736b13a",
+    "primaryDomain": "administration",
+    "family": "预约状态比较",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-7118d30c86d523",
+      "R400-ADM-DETAILS:s-70f0b153c3a112"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-ADM-7d2cc9f2e2",
+    "primaryDomain": "administration",
+    "family": "差旅保险交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-ADM-RULES:s-96425eff8cc02e",
+      "R400-HR-DETAILS:s-a3491a6ef6b420"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-283d005035",
+    "primaryDomain": "customer-support",
+    "family": "附件补充",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-57452cf37e7090"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-a3d9baf696",
+    "primaryDomain": "customer-support",
+    "family": "临时绕过",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-8ec888c25425a9"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-a8c0f0323b",
+    "primaryDomain": "customer-support",
+    "family": "备件寄送",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-a9a1038d765371",
+      "R400-SUP-RULES:s-97f537c99d46c7"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-049e8914bd",
+    "primaryDomain": "customer-support",
+    "family": "关闭约定",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-1110cfcfb540c8",
+      "R400-SUP-RULES:s-a926c0d27982e9"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-6bc23f207b",
+    "primaryDomain": "customer-support",
+    "family": "知识范围边界",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-b161550cb9fdb8",
+      "R400-SUP-RULES:s-03bf3f07d45c9b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-a38909d2b3",
+    "primaryDomain": "customer-support",
+    "family": "服务风险附件",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-98fece6c20de27",
+      "R400-SUP-RULES:s-08c6c16632bd6c"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-02a1cc249c",
+    "primaryDomain": "customer-support",
+    "family": "恢复关闭比较",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-d8eb66eed67190",
+      "R400-SUP-DETAILS:s-d77e8c4600a14a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-f082e9415c",
+    "primaryDomain": "customer-support",
+    "family": "安全疑点交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-ae141936719681",
+      "R400-SEC-DETAILS:s-7ad3954eb2073b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-ad359c847f",
+    "primaryDomain": "customer-support",
+    "family": "服务包目录",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-2ed2f20ba17346",
+      "R400-SUP-DETAILS:s-83d08afc35986d"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SUP-b5b35ec8da",
+    "primaryDomain": "customer-support",
+    "family": "回访频率",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SUP-RULES:s-3dd1c1b99ffb02",
+      "R400-SUP-DETAILS:s-ee0c4893574022"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-240e306440",
+    "primaryDomain": "finance",
+    "family": "发票红冲",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-722b7c5fec79d4"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-b85a7a8e3a",
+    "primaryDomain": "finance",
+    "family": "费用归属",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-e850a515106322"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-ad41c00235",
+    "primaryDomain": "finance",
+    "family": "外币凭证",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-730ff2f9702296"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-75b67543a9",
+    "primaryDomain": "finance",
+    "family": "预付款余额",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-ca41ff1692d5f5"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-02335c9a40",
+    "primaryDomain": "finance",
+    "family": "费用更正",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-f900b1ca3029c7"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-c3cdb80fed",
+    "primaryDomain": "finance",
+    "family": "代付核验",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-37ccd3c5be0c5f",
+      "R400-FIN-RULES:s-62ccf8ccff9b0e"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-e21b247981",
+    "primaryDomain": "finance",
+    "family": "分摊比例",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-f97d53bc1440b1",
+      "R400-FIN-RULES:s-f5d84071ecf34d"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-a9e3640a9a",
+    "primaryDomain": "finance",
+    "family": "入账期间",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-b1db977bae9f9a",
+      "R400-FIN-RULES:s-eba844d3f4a6f5"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-e9fa28876c",
+    "primaryDomain": "finance",
+    "family": "折让交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-f4449621ccd9d9",
+      "R400-SAL-DETAILS:s-9680fc8105c5da"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-FIN-81ec8f5737",
+    "primaryDomain": "finance",
+    "family": "预付核销余额",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-FIN-RULES:s-bf7b73a99416c9",
+      "R400-FIN-DETAILS:s-4c2807945ebfd4"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-b3e448a257",
+    "primaryDomain": "hr",
+    "family": "导师变更",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-486f9e029f9840"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-e47a09dbff",
+    "primaryDomain": "hr",
+    "family": "证书到期",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-2cfbfa19cd6a4b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-d2405567a0",
+    "primaryDomain": "hr",
+    "family": "员工更名",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-98a9279fd7d327"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-699c9ec3e5",
+    "primaryDomain": "hr",
+    "family": "轮班交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-82e11c0b6e0168"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-7d9b827925",
+    "primaryDomain": "hr",
+    "family": "远程办公",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-7a8cbd4fa8fd11",
+      "R400-HR-RULES:s-2e09cbe86bf401"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-b2121edfc2",
+    "primaryDomain": "hr",
+    "family": "内部推荐",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-fefeabaea820d3",
+      "R400-HR-RULES:s-cea43d57e392cc"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-183842d22e",
+    "primaryDomain": "hr",
+    "family": "证明用途",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-06a613701bef35",
+      "R400-HR-RULES:s-d34c7bd4e70f0a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-8626a60af7",
+    "primaryDomain": "hr",
+    "family": "调休可用量",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-496eb6b3895ed0",
+      "R400-HR-RULES:s-2351fa92bb6b41"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-07c0e9b1fa",
+    "primaryDomain": "hr",
+    "family": "岗位证书记录",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-85fbb1c36f91c7",
+      "R400-HR-DETAILS:s-b27956bbe0872f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-HR-0f12e4d5a1",
+    "primaryDomain": "hr",
+    "family": "轮岗期",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-HR-RULES:s-c35b1dada69e7e",
+      "R400-HR-DETAILS:s-bc3e929afa280f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-6503c9176a",
+    "primaryDomain": "information-security",
+    "family": "共享链接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-30e5273576cebb"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-8a5c44da54",
+    "primaryDomain": "information-security",
+    "family": "审计导出",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-16cf4a24b108d5"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-527e6573d4",
+    "primaryDomain": "information-security",
+    "family": "备份恢复演练",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-5bb6b5046fe476"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-54b84dc93c",
+    "primaryDomain": "information-security",
+    "family": "导出接收人",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-2fc8952ce7464d",
+      "R400-SEC-RULES:s-b12e1ccc17d072"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-11f87a1347",
+    "primaryDomain": "information-security",
+    "family": "保留期限",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-62055c78c58b72",
+      "R400-SEC-RULES:s-43f9d09f1584dd"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-6bc23f207b",
+    "primaryDomain": "information-security",
+    "family": "知识范围边界",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-8ce5f9540c33e9",
+      "R400-SEC-RULES:s-eb3cc0b90b9f78"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-f742bed2c7",
+    "primaryDomain": "information-security",
+    "family": "隔离评估摘要",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-bbedf4b7818c76",
+      "R400-SEC-RULES:s-27041e6b254a8f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-a54f1fd7d0",
+    "primaryDomain": "information-security",
+    "family": "分类映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-962982b0d2cccd",
+      "R400-SEC-DETAILS:s-241434ac8d6a2b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-9812fb09bb",
+    "primaryDomain": "information-security",
+    "family": "销毁状态比较",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-586b6f0ff30bf4",
+      "R400-SEC-DETAILS:s-b475272f8f6649"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SEC-b08059e482",
+    "primaryDomain": "information-security",
+    "family": "演练留存",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SEC-RULES:s-90d5320b1ba6d3",
+      "R400-SEC-DETAILS:s-5c08d914522215"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-d9a5f697ea",
+    "primaryDomain": "it-operations",
+    "family": "告警确认",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-4834c721fb875a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-e72ba7b1e6",
+    "primaryDomain": "it-operations",
+    "family": "证书续期",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-9166d5ad2e15dd"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-5fb3c055ac",
+    "primaryDomain": "it-operations",
+    "family": "日志时区",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-f1de17ed367c65"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-cb402a0bda",
+    "primaryDomain": "it-operations",
+    "family": "灰度退出",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-b15f5ca80fa97e"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-4f6aceba4c",
+    "primaryDomain": "it-operations",
+    "family": "值班交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-d5bd1262317938",
+      "R400-OPS-RULES:s-c9266d7973734f"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-a4670a8450",
+    "primaryDomain": "it-operations",
+    "family": "故障时长",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-b346dfea1232fd",
+      "R400-OPS-RULES:s-d3261cc552cdcd"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-67b1f3c7d0",
+    "primaryDomain": "it-operations",
+    "family": "容量规划附件",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-ae463e2e2fd60e",
+      "R400-OPS-RULES:s-d5f666078b6ef4"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-72cd0e4cf0",
+    "primaryDomain": "it-operations",
+    "family": "存储目录映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-34286590a0ebb6",
+      "R400-OPS-DETAILS:s-ed7da510114be4"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-6269eaead2",
+    "primaryDomain": "it-operations",
+    "family": "支持事件交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-b38680a3ff57b9",
+      "R400-SUP-DETAILS:s-d27c8fe6005ea0"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-OPS-b8ef9bf122",
+    "primaryDomain": "it-operations",
+    "family": "发布材料交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-OPS-RULES:s-837f6fbe52c5dd",
+      "R400-DEL-DETAILS:s-84a11362ffb3ee"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-9e848093a1",
+    "primaryDomain": "legal",
+    "family": "草签副本",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-dc336d13aa85cf"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-581a31636a",
+    "primaryDomain": "legal",
+    "family": "通知地址",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-238fc9215a975e"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-ea6a46afec",
+    "primaryDomain": "legal",
+    "family": "承诺函范围",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-d4d5863d4555ad"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-6bc23f207b",
+    "primaryDomain": "legal",
+    "family": "知识范围边界",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-56f9024ea5e1bc",
+      "R400-LEG-RULES:s-3b0e859cb02161"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-475993311b",
+    "primaryDomain": "legal",
+    "family": "争议策略附件",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-3b549cbc3f0fb1",
+      "R400-LEG-RULES:s-ab6d0f8b3961ac"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-b642512ab7",
+    "primaryDomain": "legal",
+    "family": "模板分类映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-9426e2fe8c6547",
+      "R400-LEG-DETAILS:s-53cf82b9f625d0"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-c43ae776fb",
+    "primaryDomain": "legal",
+    "family": "回款交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-d20b359a8c3450",
+      "R400-FIN-DETAILS:s-a17a9f59efbf3d"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-cea80065a6",
+    "primaryDomain": "legal",
+    "family": "商标交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-6acd4a8352af28",
+      "R400-SAL-DETAILS:s-ddb36a640f8074"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-435ae483eb",
+    "primaryDomain": "legal",
+    "family": "归档目录核对",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-4b59da0c706180",
+      "R400-LEG-DETAILS:s-0751e0eaa8c5d1"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-LEG-661428d939",
+    "primaryDomain": "legal",
+    "family": "保密审查角色",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-LEG-RULES:s-599b36da366f76",
+      "R400-LEG-DETAILS:s-ce9da95340bc91"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-31f2ffc124",
+    "primaryDomain": "procurement",
+    "family": "样机借测",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-5ed110bc7dbc45"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-453f4c77e5",
+    "primaryDomain": "procurement",
+    "family": "备件验收",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-9baa7cf2f846bd"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-6cfa312134",
+    "primaryDomain": "procurement",
+    "family": "报价附件",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-f1a6cc1678c865"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-ab57efea05",
+    "primaryDomain": "procurement",
+    "family": "收货差异",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-85755bbdf48766"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-cc2ddf46f5",
+    "primaryDomain": "procurement",
+    "family": "订阅退出",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-6afb1826642c0c"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-a67ecc2fda",
+    "primaryDomain": "procurement",
+    "family": "采购撤销",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-c2884ca8cfdb95",
+      "R400-PROC-RULES:s-650a7223968b8b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-e5567edc06",
+    "primaryDomain": "procurement",
+    "family": "报价税口径",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-f1c42b714fa3ae",
+      "R400-PROC-RULES:s-58623f1c584dbe"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-6bc23f207b",
+    "primaryDomain": "procurement",
+    "family": "知识范围边界",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-35b48d3caae21f",
+      "R400-PROC-RULES:s-5197d13e90ef6c"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-64ab840127",
+    "primaryDomain": "procurement",
+    "family": "质保映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-5aecf7689f6d93",
+      "R400-PROC-DETAILS:s-2873f6982dd172"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-PROC-fc6f91dadc",
+    "primaryDomain": "procurement",
+    "family": "进口服务交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-PROC-RULES:s-221d0177d61cb0",
+      "R400-FIN-DETAILS:s-c03a9106016b06"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-9daaa05833",
+    "primaryDomain": "project-delivery",
+    "family": "需求澄清",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-0ed660f97cca87"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-1930bd839d",
+    "primaryDomain": "project-delivery",
+    "family": "培训交付",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-81326a627ce4a7"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-486480521b",
+    "primaryDomain": "project-delivery",
+    "family": "配置清单",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-573d5ab31ec7ce"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-9bbc81754c",
+    "primaryDomain": "project-delivery",
+    "family": "验收意见",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-61bad7d81e4797"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-8c5da7a973",
+    "primaryDomain": "project-delivery",
+    "family": "范围异议",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-1eabba34d614e0",
+      "R400-DEL-RULES:s-9050d11268daf7"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-b18b93cd2d",
+    "primaryDomain": "project-delivery",
+    "family": "验收角色",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-e170dfb354d706",
+      "R400-DEL-RULES:s-c2dc3fc5c64fcb"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-29a5c6a485",
+    "primaryDomain": "project-delivery",
+    "family": "交付风险底稿",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-d9c257b99a7d25",
+      "R400-DEL-RULES:s-4d3205d98cf94c"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-f09d4e7b5f",
+    "primaryDomain": "project-delivery",
+    "family": "交付目录映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-f79caff30f5dff",
+      "R400-DEL-DETAILS:s-ea10877c708da3"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-a95eb6d057",
+    "primaryDomain": "project-delivery",
+    "family": "回款里程碑交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-22d7a9eaa5f184",
+      "R400-FIN-DETAILS:s-a0d849f4bd887b"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-DEL-e4ed62e301",
+    "primaryDomain": "project-delivery",
+    "family": "样本验收量",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-DEL-RULES:s-1f3054f9b84c0e",
+      "R400-DEL-DETAILS:s-6f17491e378056"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-2753a45a8f",
+    "primaryDomain": "sales",
+    "family": "试用到期",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-9ea3635c37b84c"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-1be8d714ce",
+    "primaryDomain": "sales",
+    "family": "渠道归属",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-2248a6be5cce5e"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-527e42577b",
+    "primaryDomain": "sales",
+    "family": "报价抬头",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-9f355be6a89785"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-3d08e9bb51",
+    "primaryDomain": "sales",
+    "family": "续费数量",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-d0677223b3c11a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-ac3b93618a",
+    "primaryDomain": "sales",
+    "family": "产品替换",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-8587106e20442e",
+      "R400-SAL-RULES:s-40fea60f75782e"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-cb21f967ca",
+    "primaryDomain": "sales",
+    "family": "交期预测",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-08bea422547761",
+      "R400-SAL-RULES:s-056f3766391c0a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-098db76d14",
+    "primaryDomain": "sales",
+    "family": "报价期限",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-a8ca4b86befb99",
+      "R400-SAL-RULES:s-02ccade3310ea3"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-bbfe6b1257",
+    "primaryDomain": "sales",
+    "family": "组合目录映射",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-ac007b9d549e54",
+      "R400-SAL-DETAILS:s-ca13df9c85f24a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-51698e33f6",
+    "primaryDomain": "sales",
+    "family": "数据演示交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-69acdb8415a5e3",
+      "R400-SEC-DETAILS:s-d6ae0bb235081a"
+    ]
+  },
+  {
+    "scenarioGroupId": "R400-SAL-bc6ba12805",
+    "primaryDomain": "sales",
+    "family": "实施费交接",
+    "split": "DEV",
+    "caseCount": 2,
+    "evidenceIds": [
+      "R400-SAL-RULES:s-7d279493746664",
+      "R400-DEL-DETAILS:s-4d35c795d86d42"
+    ]
+  }
+]
