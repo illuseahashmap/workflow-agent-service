@@ -92,6 +92,53 @@ class PlatformAgentExecutorTest {
     }
 
     @Test
+    void correctsCitationAsReceiptWithinExistingReadBudgetWithoutRepeatingTool() {
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(
+                response(route("lookup")),
+                response("{\"action\":\"TOOL_CALL\",\"tool\":\"lookup\",\"arguments\":{}}"),
+                response("{\"action\":\"READ_RESULT\",\"reference\":\"citation-1\"}"),
+                response("{\"action\":\"READ_RESULT\",\"reference\":\"receipt-1\",\"pointer\":\"/body\"}"),
+                response("{\"answer\":\"found\"}"));
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        AgentTool tool = new AgentTool() {
+            @Override
+            public String name() { return "lookup"; }
+            @Override
+            public Result execute(Request request) {
+                calls.incrementAndGet();
+                return new Result("{\"body\":\"original source\"}", "receipt-1");
+            }
+        };
+        var executor = new PlatformAgentExecutor(mock(AgentCredentialResolver.class),
+                new ModelProviderRegistry(List.of(adapter)), new AgentOutputSchemaValidator(new ObjectMapper()),
+                new AgentToolRegistry(List.of(tool)), new ObjectMapper(), 3);
+        assertThat(executor.execute(new AgentExecutor.Command("tenant-a", version(), provider(),
+                "hello", Duration.ofSeconds(10), "trace-1")).modelResponse().content()).contains("found");
+        assertThat(calls.get()).isEqualTo(1);
+        var requests = ArgumentCaptor.forClass(io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest.class);
+        verify(adapter, org.mockito.Mockito.times(5)).invoke(requests.capture());
+        assertThat(requests.getAllValues().get(3).userInput()).contains("READ_RESULT rejected", "receiptRef");
+        assertThat(requests.getAllValues().get(4).userInput()).contains("original source");
+    }
+
+    @Test
+    void repeatedUnknownReceiptStopsAtExistingReadBudget() {
+        ModelProviderPort adapter = mock(ModelProviderPort.class);
+        when(adapter.providerType()).thenReturn(AgentProviderType.MOCK);
+        when(adapter.invoke(any())).thenReturn(response(route()),
+                response("{\"action\":\"READ_RESULT\",\"reference\":\"another-run-receipt\"}"));
+        var executor = new PlatformAgentExecutor(mock(AgentCredentialResolver.class),
+                new ModelProviderRegistry(List.of(adapter)), new AgentOutputSchemaValidator(new ObjectMapper()));
+        assertThatThrownBy(() -> executor.execute(new AgentExecutor.Command("tenant-a", version(), provider(),
+                "hello", Duration.ofSeconds(10), "trace-1")))
+                .isInstanceOfSatisfying(io.github.illuseahashmap.agent.runtime.application.AgentExecutionException.class,
+                        e -> assertThat(e.failure().errorCode()).isEqualTo("AGENT_RESULT_READ_INVALID"));
+        verify(adapter, org.mockito.Mockito.times(4)).invoke(any());
+    }
+
+    @Test
     void treatsMissingToolArgumentsAsEmptyRuntimeOwnedArguments() {
         AgentCredentialResolver credentials = mock(AgentCredentialResolver.class);
         ModelProviderPort adapter = mock(ModelProviderPort.class);

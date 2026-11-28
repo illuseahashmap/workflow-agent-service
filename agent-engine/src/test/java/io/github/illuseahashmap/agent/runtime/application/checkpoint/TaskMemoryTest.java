@@ -65,6 +65,30 @@ class TaskMemoryTest {
     }
 
     @Test
+    void receiptAndCitationRemainSeparateAcrossLegacySnapshotRecovery() throws Exception {
+        var memory = memory(null);
+        String original = "{\"metadata\":\"" + "x".repeat(2000)
+                + "\",\"evidence\":[{\"text\":\"authoritative body\",\"reference\":{\"locator\":\"chunk-1\"}}]}";
+        var receipt = new TaskMemory.Receipt("receipt-1", "call", "lookup", "{}", policy.digest(original));
+        memory.observe(receipt, original);
+        memory.merge(receipt, original, "model", input -> {
+            assertThat(input).contains("authoritative body", "receipt-1");
+            return "notes";
+        });
+        var restored = memory(null);
+        var state = restored.open(memory.snapshot(), 2);
+        restored.observe(state.receipts().getFirst(), original);
+        assertThat(restored.prompt()).contains("receiptRef", "receipt-1");
+        assertThat(json.readTree(restored.readSegment(
+                "{\"action\":\"READ_RESULT\",\"reference\":\"receipt-1\",\"pointer\":\"/evidence/0/text\"}"))
+                .path("value").asText()).isEqualTo("authoritative body");
+        assertThatThrownBy(() -> restored.readSegment(
+                "{\"action\":\"READ_RESULT\",\"reference\":\"chunk-1\"}"))
+                .isInstanceOfSatisfying(AgentExecutionException.class,
+                        e -> assertThat(e.failure().errorCode()).isEqualTo("AGENT_RESULT_READ_INVALID"));
+    }
+
+    @Test
     void missingFactOrMismatchedSubjectIsNotAnExplicitUnknown() {
         String schema =
                 """
