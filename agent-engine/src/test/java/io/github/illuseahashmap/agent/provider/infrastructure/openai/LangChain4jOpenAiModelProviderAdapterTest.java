@@ -6,8 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderException;
 import io.github.illuseahashmap.agent.provider.application.port.ModelProviderRequest;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -17,8 +22,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 
 class LangChain4jOpenAiModelProviderAdapterTest {
 
@@ -27,27 +30,85 @@ class LangChain4jOpenAiModelProviderAdapterTest {
     @Test
     void totalTimeoutStopsATricklingResponseBody() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/v1/chat/completions", exchange -> {
-            exchange.sendResponseHeaders(200, 0);
-            try {
-                for (int index = 0; index < 100; index++) {
-                    exchange.getResponseBody().write(' ');
-                    exchange.getResponseBody().flush();
-                    Thread.sleep(40);
-                }
-            } catch (InterruptedException exception) {
-                Thread.currentThread().interrupt();
-            } finally {
-                exchange.close();
-            }
-        });
+        server.createContext(
+                "/v1/chat/completions",
+                exchange -> {
+                    exchange.sendResponseHeaders(200, 0);
+                    try {
+                        for (int index = 0; index < 100; index++) {
+                            exchange.getResponseBody().write(' ');
+                            exchange.getResponseBody().flush();
+                            Thread.sleep(40);
+                        }
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        exchange.close();
+                    }
+                });
         server.start();
-        var request = new ModelProviderRequest("http://127.0.0.1:" + server.getAddress().getPort() + "/v1",
-                "secret", "test-model", "system", "input", Duration.ofMillis(150), "timeout-test", List.of(), null);
+        var request =
+                new ModelProviderRequest(
+                        "http://127.0.0.1:" + server.getAddress().getPort() + "/v1",
+                        "secret",
+                        "test-model",
+                        "system",
+                        "input",
+                        Duration.ofMillis(150),
+                        "timeout-test",
+                        List.of(),
+                        null);
         long started = System.nanoTime();
         assertThatThrownBy(() -> adapter(1024).invoke(request))
-                .isInstanceOfSatisfying(ModelProviderException.class,
+                .isInstanceOfSatisfying(
+                        ModelProviderException.class,
                         failure -> assertThat(failure.errorCode()).isEqualTo("PROVIDER_TIMEOUT"));
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void scopedDeadlineBoundsARequestWithALongerConfiguredTimeout() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext(
+                "/slow",
+                exchange -> {
+                    exchange.sendResponseHeaders(200, 0);
+                    try {
+                        for (int i = 0; i < 100; i++) {
+                            exchange.getResponseBody().write(' ');
+                            exchange.getResponseBody().flush();
+                            Thread.sleep(40);
+                        }
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        exchange.close();
+                    }
+                });
+        server.start();
+        var request =
+                java.net.http.HttpRequest.newBuilder(
+                                java.net.URI.create(
+                                        "http://127.0.0.1:"
+                                                + server.getAddress().getPort()
+                                                + "/slow"))
+                        .timeout(Duration.ofSeconds(20))
+                        .GET()
+                        .build();
+        long started = System.nanoTime();
+        try (var ignored =
+                io.github.illuseahashmap.workflow.shared.context.ExecutionDeadline.open(
+                        Duration.ofMillis(200), System::nanoTime)) {
+            assertThatThrownBy(
+                            () ->
+                                    GovernedHttpTransport.send(
+                                            request,
+                                            null,
+                                            java.net.http.HttpClient.newHttpClient(),
+                                            new ProviderEndpointValidator(true, true),
+                                            1024))
+                    .isInstanceOf(java.net.http.HttpTimeoutException.class);
+        }
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
     }
 
@@ -57,12 +118,26 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         startServer(200, completion("must not receive"), body);
         var validator = org.mockito.Mockito.spy(new ProviderEndpointValidator(false, false));
         // Simulates a public answer at preflight followed by a private answer during connection.
-        org.mockito.Mockito.doNothing().when(validator).validate(org.mockito.ArgumentMatchers.any());
-        var adapter = new LangChain4jOpenAiModelProviderAdapter(new ObjectMapper(), validator, 1024);
-        var request = new ModelProviderRequest("http://localhost:" + server.getAddress().getPort() + "/v1",
-                "secret", "test-model", "system", "input", Duration.ofSeconds(2), "dns-test", List.of(), null);
-        assertThatThrownBy(() -> adapter.invoke(request)).isInstanceOf(ModelProviderException.class);
-        org.mockito.Mockito.verify(validator, org.mockito.Mockito.atLeastOnce()).resolve("localhost");
+        org.mockito.Mockito.doNothing()
+                .when(validator)
+                .validate(org.mockito.ArgumentMatchers.any());
+        var adapter =
+                new LangChain4jOpenAiModelProviderAdapter(new ObjectMapper(), validator, 1024);
+        var request =
+                new ModelProviderRequest(
+                        "http://localhost:" + server.getAddress().getPort() + "/v1",
+                        "secret",
+                        "test-model",
+                        "system",
+                        "input",
+                        Duration.ofSeconds(2),
+                        "dns-test",
+                        List.of(),
+                        null);
+        assertThatThrownBy(() -> adapter.invoke(request))
+                .isInstanceOf(ModelProviderException.class);
+        org.mockito.Mockito.verify(validator, org.mockito.Mockito.atLeastOnce())
+                .resolve("localhost");
         assertThat(body.get()).isNull();
     }
 
@@ -76,19 +151,27 @@ class LangChain4jOpenAiModelProviderAdapterTest {
     @Test
     void mapsChatCompletionAndToolSchemaThroughPlatformContract() throws Exception {
         AtomicReference<String> requestBody = new AtomicReference<>();
-        startServer(200, """
+        startServer(
+                200,
+                """
                 {"id":"request-1","model":"actual-model",
                  "choices":[{"message":{"role":"assistant","content":null,
                    "tool_calls":[{"id":"call-1","type":"function",
                      "function":{"name":"employee_directory","arguments":"{\\"name\\":\\"张三\\"}"}}]},
                    "finish_reason":"tool_calls"}],
                  "usage":{"prompt_tokens":12,"completion_tokens":4}}
-                """, requestBody);
+                """,
+                requestBody);
         var adapter = adapter(1024 * 1024);
-        var request = request(List.of(new ModelProviderRequest.ToolDefinition(
-                "employee_directory", "Read employee", """
-                {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
-                """)));
+        var request =
+                request(
+                        List.of(
+                                new ModelProviderRequest.ToolDefinition(
+                                        "employee_directory",
+                                        "Read employee",
+                                        """
+                                        {"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}
+                                        """)));
 
         var response = adapter.invoke(request);
 
@@ -103,18 +186,28 @@ class LangChain4jOpenAiModelProviderAdapterTest {
     @Test
     void mapsResponsesApiThroughLangChain4jWithoutExposingNativeTools() throws Exception {
         AtomicReference<String> requestBody = new AtomicReference<>();
-        startServer("/v1/responses", 200, """
+        startServer(
+                "/v1/responses",
+                200,
+                """
                 {"id":"response-1","model":"actual-model","status":"completed",
                  "output":[{"type":"message","role":"assistant","content":[
                    {"type":"output_text","text":"connected","annotations":[]}
                  ]}],
                  "usage":{"input_tokens":10,"output_tokens":3,"total_tokens":13,
                    "output_tokens_details":{"reasoning_tokens":1}}}
-                """, requestBody);
-        var request = request("/v1/responses", List.of(new ModelProviderRequest.ToolDefinition(
-                "employee_directory", "Read employee", """
-                {"type":"object","properties":{"name":{"type":"string"}}}
-                """)));
+                """,
+                requestBody);
+        var request =
+                request(
+                        "/v1/responses",
+                        List.of(
+                                new ModelProviderRequest.ToolDefinition(
+                                        "employee_directory",
+                                        "Read employee",
+                                        """
+                                        {"type":"object","properties":{"name":{"type":"string"}}}
+                                        """)));
 
         var response = adapter(1024 * 1024).invoke(request);
 
@@ -126,7 +219,8 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         assertThat(response.reasoningTokens()).isEqualTo(1);
         assertThat(requestBody.get()).contains("\"input\"", "system prompt", "user input");
         assertThat(requestBody.get()).doesNotContain("employee_directory", "\"tools\"");
-        assertThat(adapter(1024 * 1024).capabilities(request.baseUrl()).nativeToolCalling()).isFalse();
+        assertThat(adapter(1024 * 1024).capabilities(request.baseUrl()).nativeToolCalling())
+                .isFalse();
     }
 
     @Test
@@ -134,8 +228,11 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         startServer(200, "x".repeat(2048), new AtomicReference<>());
 
         assertThatThrownBy(() -> adapter(1024).invoke(request(List.of())))
-                .isInstanceOfSatisfying(ModelProviderException.class, exception ->
-                        assertThat(exception.errorCode()).isEqualTo("PROVIDER_RESPONSE_TOO_LARGE"));
+                .isInstanceOfSatisfying(
+                        ModelProviderException.class,
+                        exception ->
+                                assertThat(exception.errorCode())
+                                        .isEqualTo("PROVIDER_RESPONSE_TOO_LARGE"));
     }
 
     @Test
@@ -144,16 +241,25 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         try (ServerSocket socket = new ServerSocket(0)) {
             unavailablePort = socket.getLocalPort();
         }
-        ModelProviderRequest request = new ModelProviderRequest(
-                "http://127.0.0.1:" + unavailablePort + "/v1",
-                "secret", "test-model", "system prompt", "user input",
-                Duration.ofSeconds(1), "trace-transport", List.of(), null);
+        ModelProviderRequest request =
+                new ModelProviderRequest(
+                        "http://127.0.0.1:" + unavailablePort + "/v1",
+                        "secret",
+                        "test-model",
+                        "system prompt",
+                        "user input",
+                        Duration.ofSeconds(1),
+                        "trace-transport",
+                        List.of(),
+                        null);
 
         assertThatThrownBy(() -> adapter(1024 * 1024).invoke(request))
-                .isInstanceOfSatisfying(ModelProviderException.class, exception -> {
-                    assertThat(exception.errorCode()).isEqualTo("PROVIDER_UNAVAILABLE");
-                    assertThat(exception.failureKind().name()).isEqualTo("RETRYABLE");
-                });
+                .isInstanceOfSatisfying(
+                        ModelProviderException.class,
+                        exception -> {
+                            assertThat(exception.errorCode()).isEqualTo("PROVIDER_UNAVAILABLE");
+                            assertThat(exception.failureKind().name()).isEqualTo("RETRYABLE");
+                        });
     }
 
     @Test
@@ -161,13 +267,23 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         AtomicReference<String> requestBody = new AtomicReference<>();
         startServer(200, completion("structured"), requestBody);
         ModelProviderRequest base = request(List.of());
-        ModelProviderRequest request = new ModelProviderRequest(
-                base.baseUrl(), base.credential(), base.model(), base.systemPrompt(), base.userInput(),
-                base.timeout(), base.traceId(), base.tools(), null,
-                new ModelProviderRequest.StructuredOutput("agent_result", """
-                        {"type":"object","properties":{"summary":{"type":"string"}},
-                         "required":["summary"],"additionalProperties":false}
-                        """));
+        ModelProviderRequest request =
+                new ModelProviderRequest(
+                        base.baseUrl(),
+                        base.credential(),
+                        base.model(),
+                        base.systemPrompt(),
+                        base.userInput(),
+                        base.timeout(),
+                        base.traceId(),
+                        base.tools(),
+                        null,
+                        new ModelProviderRequest.StructuredOutput(
+                                "agent_result",
+                                """
+                                {"type":"object","properties":{"summary":{"type":"string"}},
+                                 "required":["summary"],"additionalProperties":false}
+                                """));
 
         adapter(1024 * 1024).invoke(request);
 
@@ -179,24 +295,41 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         AtomicInteger calls = new AtomicInteger();
         List<String> bodies = new CopyOnWriteArrayList<>();
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/v1/chat/completions", exchange -> {
-            bodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-            if (calls.getAndIncrement() == 0) {
-                respond(exchange, 400, """
-                        {"error":{"message":"response_format json_schema is unsupported",
-                         "type":"invalid_request_error"}}
-                        """);
-            } else {
-                respond(exchange, 200, completion("fallback"));
-            }
-        });
+        server.createContext(
+                "/v1/chat/completions",
+                exchange -> {
+                    bodies.add(
+                            new String(
+                                    exchange.getRequestBody().readAllBytes(),
+                                    StandardCharsets.UTF_8));
+                    if (calls.getAndIncrement() == 0) {
+                        respond(
+                                exchange,
+                                400,
+                                """
+                                {"error":{"message":"response_format json_schema is unsupported",
+                                 "type":"invalid_request_error"}}
+                                """);
+                    } else {
+                        respond(exchange, 200, completion("fallback"));
+                    }
+                });
         server.start();
         ModelProviderRequest base = request(List.of());
-        ModelProviderRequest request = new ModelProviderRequest(
-                base.baseUrl(), base.credential(), base.model(), base.systemPrompt(), base.userInput(),
-                base.timeout(), base.traceId(), base.tools(), null,
-                new ModelProviderRequest.StructuredOutput("agent_result", "{" +
-                        "\"type\":\"object\",\"additionalProperties\":true}"));
+        ModelProviderRequest request =
+                new ModelProviderRequest(
+                        base.baseUrl(),
+                        base.credential(),
+                        base.model(),
+                        base.systemPrompt(),
+                        base.userInput(),
+                        base.timeout(),
+                        base.traceId(),
+                        base.tools(),
+                        null,
+                        new ModelProviderRequest.StructuredOutput(
+                                "agent_result",
+                                "{" + "\"type\":\"object\",\"additionalProperties\":true}"));
 
         assertThat(adapter(1024 * 1024).invoke(request).content()).isEqualTo("fallback");
         assertThat(bodies).hasSize(2);
@@ -213,24 +346,38 @@ class LangChain4jOpenAiModelProviderAdapterTest {
         return request("/v1", tools);
     }
 
-    private ModelProviderRequest request(String path, List<ModelProviderRequest.ToolDefinition> tools) {
+    private ModelProviderRequest request(
+            String path, List<ModelProviderRequest.ToolDefinition> tools) {
         return new ModelProviderRequest(
                 "http://127.0.0.1:" + server.getAddress().getPort() + path,
-                "secret", "test-model", "system prompt", "user input",
-                Duration.ofSeconds(3), "trace-1", tools, null);
+                "secret",
+                "test-model",
+                "system prompt",
+                "user input",
+                Duration.ofSeconds(3),
+                "trace-1",
+                tools,
+                null);
     }
 
-    private void startServer(int status, String body, AtomicReference<String> requestBody) throws IOException {
+    private void startServer(int status, String body, AtomicReference<String> requestBody)
+            throws IOException {
         startServer("/v1/chat/completions", status, body, requestBody);
     }
 
-    private void startServer(String path, int status, String body,
-                             AtomicReference<String> requestBody) throws IOException {
+    private void startServer(
+            String path, int status, String body, AtomicReference<String> requestBody)
+            throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext(path, exchange -> {
-            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-            respond(exchange, status, body);
-        });
+        server.createContext(
+                path,
+                exchange -> {
+                    requestBody.set(
+                            new String(
+                                    exchange.getRequestBody().readAllBytes(),
+                                    StandardCharsets.UTF_8));
+                    respond(exchange, status, body);
+                });
         server.start();
     }
 
@@ -243,10 +390,11 @@ class LangChain4jOpenAiModelProviderAdapterTest {
 
     private String completion(String content) {
         return """
-                {"id":"request-1","model":"actual-model",
-                 "choices":[{"message":{"role":"assistant","content":"%s"},
-                   "finish_reason":"stop"}],
-                 "usage":{"prompt_tokens":1,"completion_tokens":1}}
-                """.formatted(content);
+        {"id":"request-1","model":"actual-model",
+         "choices":[{"message":{"role":"assistant","content":"%s"},
+           "finish_reason":"stop"}],
+         "usage":{"prompt_tokens":1,"completion_tokens":1}}
+        """
+                .formatted(content);
     }
 }

@@ -18,23 +18,95 @@ public record RetrievalTrace(
         Long indexVersionId,
         List<EvidenceReference> evidenceReferences,
         long elapsedMillis,
-        List<SourceIndexBinding> indexBindings
-) {
-    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
-            List<String> authorizedScopes, RetrievalStatus status, String strategy, int evidenceCount,
-            Instant createdAt, Long profileVersionId, Long indexVersionId,
-            List<EvidenceReference> evidenceReferences, long elapsedMillis) {
-        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy, evidenceCount,
-                createdAt, profileVersionId, indexVersionId, evidenceReferences, elapsedMillis, List.of());
+        List<SourceIndexBinding> indexBindings,
+        QueryExpansionTrace queryExpansion) {
+    public RetrievalTrace(
+            String traceId,
+            String tenantCode,
+            String queryFingerprint,
+            List<String> authorizedScopes,
+            RetrievalStatus status,
+            String strategy,
+            int evidenceCount,
+            Instant createdAt,
+            Long profileVersionId,
+            Long indexVersionId,
+            List<EvidenceReference> evidenceReferences,
+            long elapsedMillis,
+            List<SourceIndexBinding> indexBindings) {
+        this(
+                traceId,
+                tenantCode,
+                queryFingerprint,
+                authorizedScopes,
+                status,
+                strategy,
+                evidenceCount,
+                createdAt,
+                profileVersionId,
+                indexVersionId,
+                evidenceReferences,
+                elapsedMillis,
+                indexBindings,
+                QueryExpansionTrace.disabled());
     }
-    public RetrievalTrace(String traceId, String tenantCode, String queryFingerprint,
-                          List<String> authorizedScopes, RetrievalStatus status, String strategy,
-                          int evidenceCount, Instant createdAt) {
-        this(traceId, tenantCode, queryFingerprint, authorizedScopes, status, strategy,
-                evidenceCount, createdAt, null, null, List.of(), 0);
+
+    public RetrievalTrace(
+            String traceId,
+            String tenantCode,
+            String queryFingerprint,
+            List<String> authorizedScopes,
+            RetrievalStatus status,
+            String strategy,
+            int evidenceCount,
+            Instant createdAt,
+            Long profileVersionId,
+            Long indexVersionId,
+            List<EvidenceReference> evidenceReferences,
+            long elapsedMillis) {
+        this(
+                traceId,
+                tenantCode,
+                queryFingerprint,
+                authorizedScopes,
+                status,
+                strategy,
+                evidenceCount,
+                createdAt,
+                profileVersionId,
+                indexVersionId,
+                evidenceReferences,
+                elapsedMillis,
+                List.of());
+    }
+
+    public RetrievalTrace(
+            String traceId,
+            String tenantCode,
+            String queryFingerprint,
+            List<String> authorizedScopes,
+            RetrievalStatus status,
+            String strategy,
+            int evidenceCount,
+            Instant createdAt) {
+        this(
+                traceId,
+                tenantCode,
+                queryFingerprint,
+                authorizedScopes,
+                status,
+                strategy,
+                evidenceCount,
+                createdAt,
+                null,
+                null,
+                List.of(),
+                0);
     }
 
     public RetrievalTrace {
+        queryExpansion =
+                Objects.requireNonNullElseGet(queryExpansion, QueryExpansionTrace::disabled);
         traceId = requireText(traceId, "traceId");
         tenantCode = requireText(tenantCode, "tenantCode");
         queryFingerprint = requireText(queryFingerprint, "queryFingerprint");

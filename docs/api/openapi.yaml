@@ -2131,6 +2131,7 @@ components:
       type: object
       required: [profileCode, strategy, maxResults, minimumScore, indexVersionId, knowledgeScopes]
       properties:
+        queryExpansionPolicy: { $ref: '#/components/schemas/QueryExpansionPolicy' }
         profileCode: { type: string, minLength: 1, maxLength: 128 }
         strategy: { type: string, enum: [KEYWORD, VECTOR, HYBRID] }
         maxResults: { type: integer, minimum: 1, maximum: 50 }
@@ -2168,6 +2169,7 @@ components:
       type: object
       required: [id, profileCode, version, strategy, maxResults, minimumScore, indexVersionId, status, knowledgeScopes, createdAt]
       properties:
+        queryExpansionPolicy: { $ref: '#/components/schemas/QueryExpansionPolicy' }
         id: { type: integer, format: int64 }
         profileCode: { type: string }
         version: { type: integer }
@@ -2180,6 +2182,11 @@ components:
         indexBindings: { type: array, items: { $ref: '#/components/schemas/KnowledgeSourceIndexBinding' } }
         scorePolicy: { $ref: '#/components/schemas/KnowledgeScorePolicy' }
         createdAt: { type: string, format: date-time }
+    QueryExpansionPolicy:
+      type: string
+      enum: [DISABLED, RRF_V1]
+      default: DISABLED
+      description: Frozen on publication. Omission preserves single-query retrieval; changing policy requires a new profile version.
     KnowledgeScorePolicy:
       type: object
       description: Frozen score scale and calibration version; not an answer correctness probability.

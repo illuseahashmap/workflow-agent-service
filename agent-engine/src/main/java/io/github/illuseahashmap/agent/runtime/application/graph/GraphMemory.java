@@ -2,6 +2,7 @@ package io.github.illuseahashmap.agent.runtime.application.graph;
 
 import static io.github.illuseahashmap.agent.runtime.application.graph.GraphGatewayContract.require;
 
+import io.github.illuseahashmap.agent.runtime.application.checkpoint.ToolResultPreview;
 import io.github.illuseahashmap.agent.runtime.application.port.GraphCognitionPort.ToolFact;
 
 import java.util.List;
@@ -49,6 +50,8 @@ public final class GraphMemory {
                                             Map.of(
                                                     "reference",
                                                     f.receiptRef(),
+                                                    "receiptRef",
+                                                    f.receiptRef(),
                                                     "tool",
                                                     f.toolCode(),
                                                     "output_digest",
@@ -81,7 +84,10 @@ public final class GraphMemory {
                                                             f.argumentsJson(),
                                                             policy.inlineCharacters()),
                                                     "output_preview",
-                                                    preview(f.output(), policy.inlineCharacters()),
+                                                    ToolResultPreview.render(
+                                                            f.receiptRef(),
+                                                            f.output(),
+                                                            policy.inlineCharacters()),
                                                     "output_digest",
                                                     f.outputDigest()))
                             .toList();

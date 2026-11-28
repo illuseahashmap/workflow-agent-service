@@ -1,0 +1,23 @@
+{
+  "split": "development-regression",
+  "source": "User-provided public employee-handbook example; not part of rag400 blind split",
+  "sourceSha256": "8d58ac840a8ee579a4d049b8a1f22c92d35037eda6a84f8bcb92869bb2b26220",
+  "cases": [
+    {
+      "id": "office-1500",
+      "query": "单笔金额1500元的普通办公采购需要哪些审批人？",
+      "requiredApprovers": [
+        "直属负责人"
+      ],
+      "requiredQuote": "单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批"
+    },
+    {
+      "id": "office-2000",
+      "query": "单笔金额2000元的普通办公采购需要哪些审批人？",
+      "requiredApprovers": [
+        "直属负责人"
+      ],
+      "requiredQuote": "单笔金额不超过 2,000 元的普通办公采购，由直属负责人审批"
+    }
+  ]
+}

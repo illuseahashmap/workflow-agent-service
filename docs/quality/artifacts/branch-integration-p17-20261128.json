@@ -1,0 +1,431 @@
+{
+  "date": "2026-11-28",
+  "scope": "Scripted provider, real isolated PostgreSQL and Flowable, no live-model accuracy claim",
+  "totalScenarios": 28,
+  "runs": [
+    {
+      "backend": "LANGGRAPH",
+      "evidenceContractVersion": 0,
+      "total": 7,
+      "failures": [],
+      "cases": [
+        {
+          "case": "B08",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-BUDGET",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"ORDER_NOT_READY\",\"action\":\"ANSWER\"}"
+          }
+        },
+        {
+          "case": "P17-EMPTY",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-FOREIGN",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 5,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-OK",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"ORDER_READY\",\"action\":\"ANSWER\"}"
+          }
+        },
+        {
+          "case": "P17-REVOKED",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+            "current_attempt_id": 7,
+            "resumed": true,
+            "answer": null
+          }
+        },
+        {
+          "case": "P17-TIMEOUT",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "1ed1d89b5ada25e7ce54fe3f3f22a0b88dc7d0e4cbfe23ddea33c0ea183511d8",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "MCP_TIMEOUT",
+            "current_attempt_id": 6,
+            "resumed": true,
+            "answer": null
+          }
+        }
+      ]
+    },
+    {
+      "backend": "LANGGRAPH",
+      "evidenceContractVersion": 1,
+      "total": 7,
+      "failures": [],
+      "cases": [
+        {
+          "case": "B08",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "2472d5b81d50961c5ceab037322cf2681ea34272e4401b350918e0eded2971bd",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-BUDGET",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true,
+            "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_NOT_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-EMPTY",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-FOREIGN",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 5,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-OK",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true,
+            "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-REVOKED",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+            "current_attempt_id": 7,
+            "resumed": true,
+            "answer": null
+          }
+        },
+        {
+          "case": "P17-TIMEOUT",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "1c13c9526f34814c0543db645d60988841c506290a32f1ef7ec056c7f2d95687",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "MCP_TIMEOUT",
+            "current_attempt_id": 6,
+            "resumed": true,
+            "answer": null
+          }
+        }
+      ]
+    },
+    {
+      "backend": "NATIVE",
+      "evidenceContractVersion": 0,
+      "total": 7,
+      "failures": [],
+      "cases": [
+        {
+          "case": "B08",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-BUDGET",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"ORDER_NOT_READY\",\"action\":\"ANSWER\"}"
+          }
+        },
+        {
+          "case": "P17-EMPTY",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-FOREIGN",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 5,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"MISSING_LIVE_RECORDS\",\"action\":\"ABSTAIN\"}"
+          }
+        },
+        {
+          "case": "P17-OK",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true,
+            "answer": "{\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"],\"decision\":\"ORDER_READY\",\"action\":\"ANSWER\"}"
+          }
+        },
+        {
+          "case": "P17-REVOKED",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+            "current_attempt_id": 8,
+            "resumed": true,
+            "answer": null
+          }
+        },
+        {
+          "case": "P17-TIMEOUT",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 0,
+          "promptSha256": "3c71ef3d34fe21e7b12f9906d8f51826ac73c201860f4592fd3e923f412257f6",
+          "outputSchemaSha256": "3bc172f2bc65f89e73480399f6111e183f79f1f735cad42f0f6eea078af08eff",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "MCP_TIMEOUT",
+            "current_attempt_id": 7,
+            "resumed": true,
+            "answer": null
+          }
+        }
+      ]
+    },
+    {
+      "backend": "NATIVE",
+      "evidenceContractVersion": 1,
+      "total": 7,
+      "failures": [],
+      "cases": [
+        {
+          "case": "B08",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "8b56682970d090e4d6911ffe2beb9d20698988ed8f8fec6639a8cc8bdccc6a5d",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 1,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-BUDGET",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 3,
+            "resumed": true,
+            "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_NOT_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-EMPTY",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 4,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-FOREIGN",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 5,
+            "resumed": true,
+            "answer": "{\"action\":\"ABSTAIN\",\"decision\":\"MISSING_LIVE_RECORDS\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-OK",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "SUCCEEDED",
+            "error_code": null,
+            "current_attempt_id": 2,
+            "resumed": true,
+            "answer": "{\"action\":\"ANSWER\",\"decision\":\"ORDER_READY\",\"citations\":[\"1:c5949f1fd272bb0cbc9084e4fa43d95f1a94bf10d785ba888a5ba164bb0a00f6:11:c740f9c1ddb83fc2\"]}"
+          }
+        },
+        {
+          "case": "P17-REVOKED",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "KNOWLEDGE_RESULT_ACCESS_REVOKED",
+            "current_attempt_id": 8,
+            "resumed": true,
+            "answer": null
+          }
+        },
+        {
+          "case": "P17-TIMEOUT",
+          "source": "SCRIPTED_TRANSPORT",
+          "evidenceContractVersion": 1,
+          "promptSha256": "516601159bed95159862b10d856d300811776b67c96f988b10676d0632965ab3",
+          "outputSchemaSha256": "d967606b2b2e9137b2603408205a3ea09c4a5b8bc4a3b92bef053f3d7867cd3b",
+          "outcome": {
+            "status": "FAILED",
+            "error_code": "MCP_TIMEOUT",
+            "current_attempt_id": 7,
+            "resumed": true,
+            "answer": null
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -26,6 +26,19 @@ for (const [path, pathItem] of Object.entries(contract.paths ?? {})) {
   }
 }
 
+// Guard the frozen retrieval policy on both sides of the public API boundary.
+const schemas = contract.components?.schemas ?? {};
+for (const name of ['CreateKnowledgeProfileRequest', 'KnowledgeProfile']) {
+  const property = schemas[name]?.properties?.queryExpansionPolicy;
+  const policy = property?.$ref ? schemas[property.$ref.split('/').at(-1)] : property;
+  if (JSON.stringify(policy?.enum) !== JSON.stringify(['DISABLED', 'RRF_V1']) || policy?.default !== 'DISABLED') {
+    failures.push(`${name}: queryExpansionPolicy must declare the supported enum and legacy DISABLED default`);
+  }
+}
+if (schemas.CreateKnowledgeProfileRequest?.required?.includes('queryExpansionPolicy')) {
+  failures.push('CreateKnowledgeProfileRequest: legacy clients may omit queryExpansionPolicy');
+}
+
 if (failures.length > 0) {
   console.error('OpenAPI successful responses must use endpoint-specific data models:');
   failures.forEach((failure) => console.error(`- ${failure}`));

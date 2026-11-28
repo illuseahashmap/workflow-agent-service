@@ -887,8 +887,9 @@ class KnowledgeDocumentImmutabilityIntegrationTest extends KnowledgeDatabaseFixt
                 .migrate();
         assertThat(
                         jdbc.queryForObject(
-                                "SELECT (to_jsonb(p)-'score_kind'-'score_version')::text FROM"
-                                        + " knowledge_retrieval_profile_version p WHERE id=?",
+                                "SELECT"
+                                    + " (to_jsonb(p)-'score_kind'-'score_version'-'query_expansion_policy')::text"
+                                    + " FROM knowledge_retrieval_profile_version p WHERE id=?",
                                 String.class,
                                 profile))
                 .isEqualTo(original);
@@ -906,6 +907,20 @@ class KnowledgeDocumentImmutabilityIntegrationTest extends KnowledgeDatabaseFixt
                                 String.class,
                                 profile))
                 .isEqualTo("postgres-simple-lexical-v1");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT query_expansion_policy FROM"
+                                    + " knowledge_retrieval_profile_version WHERE id=?",
+                                String.class,
+                                profile))
+                .isEqualTo("DISABLED");
+        assertThatThrownBy(
+                        () ->
+                                jdbc.update(
+                                        "UPDATE knowledge_retrieval_profile_version SET"
+                                            + " query_expansion_policy='RRF_V1' WHERE id=?",
+                                        profile))
+                .hasMessageContaining("Published query expansion policy is immutable");
     }
 
     private KnowledgeManagementPort.CreateDocument command(String text) {

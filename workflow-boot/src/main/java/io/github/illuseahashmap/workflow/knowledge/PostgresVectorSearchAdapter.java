@@ -5,14 +5,16 @@ import io.github.illuseahashmap.knowledge.ingestion.domain.Chunk;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.ChunkSearchPort;
 import io.github.illuseahashmap.knowledge.retrieval.application.port.VectorSearchPort;
 import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /** Exact pgvector cosine search. Tenant/scope/index filtering happens before ordering and limit. */
 @Component
@@ -25,35 +27,60 @@ public final class PostgresVectorSearchAdapter implements VectorSearchPort {
     }
 
     @Override
-    public List<ChunkSearchPort.SearchHit> search(String tenantCode, RetrievalRequest request,
-                                                  List<Float> queryVector, String modelVersion, int limit) {
+    public List<ChunkSearchPort.SearchHit> search(
+            String tenantCode,
+            RetrievalRequest request,
+            List<Float> queryVector,
+            String modelVersion,
+            int limit) {
         if (request.knowledgeScopes().isEmpty() || queryVector.isEmpty()) {
             return List.of();
         }
         if (!request.frozenIndexIds().isEmpty()) {
-            var frozenModels = jdbc.queryForList("""
-                    SELECT embedding_model FROM knowledge_index_version
-                    WHERE tenant_code = :tenantCode AND id IN (:indexVersionIds) AND source_code IN (:scopes)
-                      AND status IN ('ACTIVE', 'RETIRED')
-                    """, new MapSqlParameterSource().addValue("tenantCode", tenantCode)
-                    .addValue("indexVersionIds", request.frozenIndexIds()).addValue("scopes", request.knowledgeScopes()), String.class);
+            var frozenModels =
+                    DeadlineQuery.query(
+                            jdbc,
+                            """
+                            SELECT embedding_model FROM knowledge_index_version
+                            WHERE tenant_code = :tenantCode AND id IN (:indexVersionIds) AND source_code IN (:scopes)
+                              AND status IN ('ACTIVE', 'RETIRED')
+                            """,
+                            new MapSqlParameterSource()
+                                    .addValue("tenantCode", tenantCode)
+                                    .addValue("indexVersionIds", request.frozenIndexIds())
+                                    .addValue("scopes", request.knowledgeScopes()),
+                            (row, number) -> row.getString(1));
             if (frozenModels.size() != request.frozenIndexIds().size()
-                    || frozenModels.stream().anyMatch(frozenModel -> !modelVersion.equals(frozenModel))) {
-                throw new IllegalStateException("Published index requires a different embedding model version");
+                    || frozenModels.stream()
+                            .anyMatch(frozenModel -> !modelVersion.equals(frozenModel))) {
+                throw new IllegalStateException(
+                        "Published index requires a different embedding model version");
             }
         }
-        var params = new MapSqlParameterSource()
-                .addValue("tenantCode", tenantCode)
-                .addValue("scopes", request.knowledgeScopes())
-                .addValue("indexVersionId", request.indexVersionId())
-                .addValue("frozen", !request.frozenIndexIds().isEmpty())
-                .addValue("indexVersionIds", request.frozenIndexIds().isEmpty() ? List.of(-1L) : request.frozenIndexIds())
-                .addValue("modelVersion", modelVersion)
-                .addValue("dimension", queryVector.size())
-                .addValue("embedding", "[" + queryVector.stream().map(String::valueOf)
-                        .collect(Collectors.joining(",")) + "]")
-                .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
-        return jdbc.query("""
+        var params =
+                new MapSqlParameterSource()
+                        .addValue("tenantCode", tenantCode)
+                        .addValue("scopes", request.knowledgeScopes())
+                        .addValue("indexVersionId", request.indexVersionId())
+                        .addValue("frozen", !request.frozenIndexIds().isEmpty())
+                        .addValue(
+                                "indexVersionIds",
+                                request.frozenIndexIds().isEmpty()
+                                        ? List.of(-1L)
+                                        : request.frozenIndexIds())
+                        .addValue("modelVersion", modelVersion)
+                        .addValue("dimension", queryVector.size())
+                        .addValue(
+                                "embedding",
+                                "["
+                                        + queryVector.stream()
+                                                .map(String::valueOf)
+                                                .collect(Collectors.joining(","))
+                                        + "]")
+                        .addValue("limit", Math.max(1, Math.min(limit, request.maxResults())));
+        return DeadlineQuery.query(
+                jdbc,
+                """
                 SELECT c.chunk_id, c.source_code, c.ordinal, c.content, c.content_fingerprint,
                        d.id AS document_version_id, d.external_document_id,
                        d.version AS document_version, d.content_hash,
@@ -75,15 +102,29 @@ public final class PostgresVectorSearchAdapter implements VectorSearchPort {
                   AND d.status IN ('READY', 'ACTIVE')
                 ORDER BY distance ASC, c.ordinal ASC, c.source_code COLLATE "C" ASC,
                          c.index_version_id ASC, c.chunk_id COLLATE "C" ASC LIMIT :limit
-                """, params, (row, n) -> {
-            var document = new DocumentVersion(row.getLong("document_version_id"), tenantCode,
-                    row.getString("source_code"), row.getString("external_document_id"),
-                    row.getInt("document_version"), row.getString("content_hash"),
-                    row.getString("document_status"), instant(row.getTimestamp("document_created_at")));
-            var chunk = new Chunk(row.getString("chunk_id"), document, row.getInt("ordinal"),
-                    row.getString("content"), row.getString("content_fingerprint"));
-            return new ChunkSearchPort.SearchHit(chunk, Math.max(0, 1.0 - row.getDouble("distance")));
-        });
+                """,
+                params,
+                (row, n) -> {
+                    var document =
+                            new DocumentVersion(
+                                    row.getLong("document_version_id"),
+                                    tenantCode,
+                                    row.getString("source_code"),
+                                    row.getString("external_document_id"),
+                                    row.getInt("document_version"),
+                                    row.getString("content_hash"),
+                                    row.getString("document_status"),
+                                    instant(row.getTimestamp("document_created_at")));
+                    var chunk =
+                            new Chunk(
+                                    row.getString("chunk_id"),
+                                    document,
+                                    row.getInt("ordinal"),
+                                    row.getString("content"),
+                                    row.getString("content_fingerprint"));
+                    return new ChunkSearchPort.SearchHit(
+                            chunk, Math.max(0, 1.0 - row.getDouble("distance")));
+                });
     }
 
     private static Instant instant(Timestamp timestamp) {

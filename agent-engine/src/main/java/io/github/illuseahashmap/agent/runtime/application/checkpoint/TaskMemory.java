@@ -175,7 +175,11 @@ public final class TaskMemory {
             throw invalid("Duplicate result reference");
         }
         receipts.add(r);
-        return new ToolResult(r.callId(), r.tool(), r.argumentsJson(), policy.preview(original));
+        return new ToolResult(
+                r.callId(),
+                r.tool(),
+                r.argumentsJson(),
+                ToolResultPreview.render(r.reference(), original, policy.inlineLimit()));
     }
 
     /**
@@ -184,7 +188,11 @@ public final class TaskMemory {
      */
     public void merge(
             Receipt r, String original, String model, Function<String, String> summarize) {
-        String delta = r.reference() + ": " + policy.preview(original);
+        String delta =
+                "receiptRef="
+                        + r.reference()
+                        + "\n"
+                        + ToolResultPreview.render(r.reference(), original, policy.inlineLimit());
         String priorView = policy.preview(notes);
         String merged = priorView.isEmpty() ? delta : priorView + "\n" + delta;
         if (original.length() > policy.inlineLimit() || merged.length() > policy.inlineLimit()) {
@@ -231,32 +239,34 @@ public final class TaskMemory {
         if (body == null
                 || pointer.length() > 256
                 || (!pointer.isEmpty() && !pointer.startsWith("/"))) {
-            throw invalid("Unknown result reference or invalid JSON pointer for this run");
+            throw invalidRead(
+                    "Use a listed tool receipt reference, not a citation ID or locator, and a valid"
+                        + " JSON pointer");
         }
         if (!pointer.isEmpty()) {
             try {
                 var root = json.readTree(body);
                 if (root == null) {
-                    throw invalid("Empty result has no JSON fields");
+                    throw invalidRead("Empty result has no JSON fields");
                 }
                 var part = root.at(pointer);
                 if (part.isMissingNode()) {
-                    throw invalid("Referenced field does not exist");
+                    throw invalidRead("Referenced field does not exist");
                 }
                 body = part.isTextual() ? part.textValue() : part.toString();
             } catch (java.io.IOException | IllegalArgumentException e) {
-                throw invalid("Invalid result path");
+                throw invalidRead("Invalid result path");
             }
         }
         // Offset counts Unicode code points; length is bounded in UTF-16 to match the request
         // budget.
         var offset = read.path("offset");
         if (!offset.isMissingNode() && (!offset.isIntegralNumber() || !offset.canConvertToInt())) {
-            throw invalid("Invalid result offset");
+            throw invalidRead("Invalid result offset");
         }
         int start = offset.asInt(0);
         if (start < 0 || start > body.codePointCount(0, body.length())) {
-            throw invalid("Result offset outside source");
+            throw invalidRead("Result offset outside source");
         }
         int from = body.offsetByCodePoints(0, start);
         int end = Math.min(body.length(), from + policy.inlineLimit());
@@ -310,8 +320,25 @@ public final class TaskMemory {
                 + input
                 + "\n非权威工作摘要：\n"
                 + policy.preview(notes)
-                + "\n工具来源："
-                + encode(receipts.stream().map(Receipt::reference).toList())
+                + "\n工具结果读取索引（receiptRef 仅用于 READ_RESULT；不是答案引用 locator）："
+                + encode(
+                        receipts.stream()
+                                .map(
+                                        r ->
+                                                Map.of(
+                                                        "receiptRef",
+                                                        r.reference(),
+                                                        "tool",
+                                                        r.tool(),
+                                                        "read",
+                                                        Map.of(
+                                                                "action",
+                                                                "READ_RESULT",
+                                                                "reference",
+                                                                r.reference(),
+                                                                "pointer",
+                                                                "")))
+                                .toList())
                 + (fact == null
                         ? ""
                         : "\n经工具核对的决策字段："
@@ -458,6 +485,16 @@ public final class TaskMemory {
                         AgentFailureCategory.EXECUTION_UNEXPECTED,
                         false,
                         ResultStatus.FAILED,
+                        message));
+    }
+
+    private static AgentExecutionException invalidRead(String message) {
+        return new AgentExecutionException(
+                new AgentFailure(
+                        "AGENT_RESULT_READ_INVALID",
+                        AgentFailureCategory.RESULT_POLICY,
+                        false,
+                        ResultStatus.REJECTED,
                         message));
     }
 

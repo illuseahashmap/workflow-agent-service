@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-28",
+  "integrationParents": [
+    "40c5cfd9a9500fcaeca91e8379961ae2b371b5b5",
+    "5297c52d86f43718f70e45e66579dd170dbfa2b5"
+  ],
+  "java": {
+    "tests": 774,
+    "passed": 767,
+    "failures": 0,
+    "conditionalSkipped": 7,
+    "aggregation": "Full-suite class inventory plus passing reruns and opt-in cross-language tests. Enabled recovery factory expands its skipped placeholder to two cases. Repeated classes are not double counted.",
+    "phases": [
+      {
+        "log": "workflow-merge-full.log",
+        "buildSuccess": false,
+        "tests": 773,
+        "failures": 2,
+        "skipped": 21
+      },
+      {
+        "log": "workflow-merge-final-verify.log",
+        "buildSuccess": true,
+        "tests": 7,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "log": "workflow-merge-p17-legacy.log",
+        "buildSuccess": true,
+        "tests": 22,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "log": "workflow-merge-p17-evidence.log",
+        "buildSuccess": true,
+        "tests": 2,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "log": "java-gateway.log",
+        "buildSuccess": true,
+        "tests": 264,
+        "failures": 0,
+        "skipped": 0
+      }
+    ],
+    "remainingConditionalSuites": {
+      "io.github.illuseahashmap.workflow.agent.P17GraphJointRunTest": 1,
+      "io.github.illuseahashmap.workflow.agent.P17JointRunTest": 1,
+      "io.github.illuseahashmap.workflow.integration.LocalRagAgentFlowAcceptanceTest": 1,
+      "io.github.illuseahashmap.workflow.integration.LocalRagVectorAcceptanceTest": 1,
+      "io.github.illuseahashmap.workflow.knowledge.KnowledgeOptionalAcceptanceTest": 2,
+      "io.github.illuseahashmap.workflow.knowledge.QueryExpansionAcceptanceTest": 1
+    }
+  },
+  "governanceCoverageFreshRun": {
+    "GraphCognitionGateway": {
+      "BRANCH": 80.65,
+      "LINE": 95.79
+    },
+    "JdbcGraphCallCapacityStore": {
+      "BRANCH": 75.53,
+      "LINE": 99.56
+    },
+    "JdbcGraphCompletionStore": {
+      "BRANCH": 80.43,
+      "LINE": 92.31
+    },
+    "JdbcGraphExecutionStore": {
+      "BRANCH": 77.84,
+      "LINE": 98.16
+    },
+    "JdbcGraphReservationStore": {
+      "BRANCH": 78.72,
+      "LINE": 96.86
+    }
+  },
+  "python": {
+    "passed": 102,
+    "crossLanguageDriverPassed": 1
+  },
+  "frontend": {
+    "unitPassed": 51,
+    "e2ePassed": 23
+  },
+  "p17ScenariosPassed": 28,
+  "ragContractChecksPassed": 26,
+  "liveProviderCalls": 0
+}

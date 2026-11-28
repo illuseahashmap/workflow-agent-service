@@ -198,8 +198,15 @@ class ProcurementTaskMemoryIntegrationTest {
                                                     "pointer",
                                                     "/delayed"))));
             assertThatThrownBy(() -> run(badRead, a, first, null))
-                    .hasMessageContaining("Unknown result reference");
-            verify(badRead).invoke(any());
+                    .isInstanceOfSatisfying(
+                            io.github.illuseahashmap.agent.runtime.application
+                                    .AgentExecutionException.class,
+                            failure ->
+                                    assertThat(failure.failure().errorCode())
+                                            .isEqualTo("AGENT_RESULT_READ_INVALID"));
+            // Invalid references consume only the existing two read-repair opportunities.
+            verify(badRead, org.mockito.Mockito.times(3)).invoke(any());
+            assertThat(calls.get()).isEqualTo(4);
 
             for (var order : List.of(a, b)) {
                 String saved = order == a ? first : second;

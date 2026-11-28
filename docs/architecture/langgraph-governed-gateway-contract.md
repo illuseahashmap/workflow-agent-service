@@ -98,6 +98,8 @@ ReferencePort 必须原子登记或核对不可变回执引用；引用指向已
 
 2026-11-20 后续治理切片：已补 v2 Run 次数预算、不可逆停止与独立无模型收尾。实现范围、V71 兼容策略及 Token/费用剩余边界见[预算与停止验收](../quality/graph-v2-budget-stop-regression.md)。
 
+2026-11-27 待实现方案：在现有次数/deadline 之外增加 Token 发送前预留、用量结算、未知占位和租户周期配额。Java 为权威，图根据明确的等待或停止结果推进；Run 超预算无模型收尾，周期额度等待不能延长 deadline。详细规则见[资源治理第五节](agent-resource-governance.md#五执行租约和预算)。这不表示当前 Gateway 已执行 Token 硬限额。
+
 
 2026-11-20：V72 增加 v2 冻结重复检测策略和不可变判定账本；动作/结果重复及短周期命中后返回既有 `RUN_STOPPED`，无需新 wire 字段。策略声明只允许可信 Java 发布入口设置，不能从图请求覆盖；完整边界见[重复与短周期验收](../quality/graph-v2-loop-regression.md)。
 
