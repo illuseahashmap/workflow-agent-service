@@ -2,7 +2,7 @@
 
 A heading alone never counts. Full section body coverage is a deliberately conservative
 primary metric; any body overlap is separately reported, never called answer correctness.
-Uses public DEV cases only for scoring AFTER the project retrieval run.
+Uses selected split cases only for scoring AFTER the project retrieval run.
 """
 import argparse,hashlib,json,collections,math,importlib.util
 from pathlib import Path
@@ -40,7 +40,7 @@ def normalize(raw, documents, bodies, snapshot_hash):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--public',type=Path,required=True);p.add_argument('--run',type=Path,required=True)
     p.add_argument('--split',choices=['dev','calibration','holdout-candidate'],default='dev')
-    a=p.parse_args();data=a.public/'holdout' if a.split=='holdout-candidate' else a.public;snap=a.public/'knowledge-snapshot.json';digest=hashlib.sha256(snap.read_bytes()).hexdigest()
+    a=p.parse_args();dataset_dir=a.public/'holdout' if a.split=='holdout-candidate' else a.public;snap=a.public/'knowledge-snapshot.json';digest=hashlib.sha256(snap.read_bytes()).hexdigest()
     documents={d['documentCode']:d for d in read(snap)['documents']}; bodies={}
     for code,d in documents.items():
         data=(a.public/d['path']).read_bytes()
@@ -50,7 +50,7 @@ def main():
             if line.startswith('## '):current=line.split()[1];sections[current]=set()
             elif current and line.strip():sections[current].add(n)
         bodies[code]=sections
-    raw=rows(a.run/'project-raw.jsonl');cases=rows(data/f'{a.split}.cases.jsonl')
+    raw=rows(a.run/'project-raw.jsonl');cases=rows(dataset_dir/f'{a.split}.cases.jsonl')
     full,partial=normalize(raw,documents,bodies,digest)
     spec=importlib.util.spec_from_file_location('scoring',Path(__file__).with_name('score-retrieval.py'))
     scoring=importlib.util.module_from_spec(spec);spec.loader.exec_module(scoring)
@@ -73,7 +73,7 @@ def main():
         'unauthorizedScopeHits':leaks,'retrievalStatuses':dict(collections.Counter(r['retrievalStatus'] for r in raw)),
         'latencyMs':{'p50':times[math.ceil(len(times)*.50)-1],'p95':times[math.ceil(len(times)*.95)-1]},
         'latencyProtocol':'single pass, sequential, includes first query cold effects; no production SLA claim',
-        'facets':facets,'holdout':'NOT_READ_NOT_MODIFIED','answerGeneration':'NOT_RUN',
+        'facets':facets,'split':a.split,'formerHoldoutRead':a.split=='holdout-candidate','answerGeneration':'NOT_RUN',
         'profile':'project native Markdown ingestion + KeywordRetriever + PostgresKeywordChunkSearchAdapter, K=10; no vector/LLM',
         'permissionBoundary':'actual SQL scope filtering, fixed fixture grants; HTTP/principal authorization not exercised'})
     save(a.run/'summary.json',summary);print(json.dumps(summary,ensure_ascii=False))

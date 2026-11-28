@@ -129,6 +129,8 @@ def main():
     finally:
         if copied:
             TARGET.unlink()
+            compiled = ROOT / 'workflow-boot/target/test-classes/io/github/illuseahashmap/workflow/knowledge/Rag400ProjectRetrievalTest.class'
+            compiled.unlink(missing_ok=True)
         if container:
             run(['docker', 'rm', '--force', '--volumes', container])
     # All retrieval finishes before any paid call; no database remains during model evaluation.

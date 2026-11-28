@@ -10,6 +10,7 @@ import io.github.illuseahashmap.knowledge.retrieval.domain.RetrievalRequest;
 import io.github.illuseahashmap.knowledge.retrieval.domain.SourceIndexBinding;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -21,6 +22,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Isolated real PostgreSQL/native ingestion/keyword retrieval measurement; no gold input. */
+@EnabledIfSystemProperty(named = "rag400.input", matches = ".+")
 class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
     static final ObjectMapper JSON = new ObjectMapper();
     static String sha(byte[] bytes) throws Exception {
