@@ -1,0 +1,15 @@
+{
+  "reason": "USER_REQUESTED_STOP_HOLDOUT",
+  "wrapperExitCode": 1,
+  "completedSplits": [
+    "dev",
+    "calibration"
+  ],
+  "excludedFromEvaluation": [
+    "holdout-candidate"
+  ],
+  "holdoutCompletedAnswerRecordsBeforeStop": 41,
+  "holdoutJudgments": 0,
+  "possibleInFlightRequestsAtStop": "Up to 3 requests may have been sent but not recorded; provider billing is authoritative.",
+  "artifactPolicy": "Preserve partial files as interrupted audit evidence, never treat as completed holdout evaluation."
+}

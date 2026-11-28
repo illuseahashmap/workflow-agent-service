@@ -1,0 +1,1471 @@
+[
+  {
+    "caseId": "R400-ADM-e59e2543f7-1",
+    "scenarioGroupId": "R400-ADM-e59e2543f7",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "员工把月卡口头让给同事，绑定会转移吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不会。停车月卡绑定车牌及办公地点，不随员工口头转让，因此员工口头把月卡让给同事不会导致绑定转移。",
+      "citations": [
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:4:ef4800ffde37d190"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选核心回答正确：月卡绑定车牌及办公地点，不因口头转让转移，且引用支持该结论；但未包含金标要求的“换车需注销原绑定并登记新车牌”。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "金标 expectedClaims 将“换车需注销原绑定并登记新车牌”纳入必要内容，但本问仅询问口头让卡是否导致绑定转移，该换车操作规则属于额外补充事实，是否必须回答存在争议。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-ADM-eba06c67c3-2",
+    "scenarioGroupId": "R400-ADM-eba06c67c3",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于会议取消：已完成布置后取消会议，费用自动归零吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不自动归零。现场已发生的布置费用需另行核算，不因取消会议而自动归零。",
+      "citations": [
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:11:44178162bd97085a"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答覆盖了本问核心：已发生布置费用需另核、不因取消自动归零，且引用支持；但金标还要求包含取消会议后释放场地预约、通知参会人不自动释放房间，这些超出本问，候选未覆盖，需金标复核而非直接判事实错误。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 将“取消会议后须释放场地预约；通知参会人不自动释放房间”纳入本问必要结论，但问题只问已完成布置后取消会议费用是否自动归零，该部分属于超出问题的补充事实，与候选核心答案不冲突。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-ADM-6bc888946a-2",
+    "scenarioGroupId": "R400-ADM-6bc888946a",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于物资借用：借用记录用什么区别两台同型号投影仪？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "借用记录通过登记“设备序列号”来区别两台同型号投影仪，同时还需记录归还期限。",
+      "citations": [
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:13:f40979bcac8191ea"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选明确回答用“设备序列号”区分同型号投影仪，并补充归还期限；归还期限有检索原文支持，未新增无依据规则。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "金标 expectedClaims 还包含“归还时检查配件清单，不只确认主机”，与本题仅询问如何区分同型号投影仪无直接关系，属超出问题的补充事实，需复核。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-ADM-d6f9b06511-1",
+    "scenarioGroupId": "R400-ADM-d6f9b06511",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "服务商接单后就可标空调已修好吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不可以。服务商接单只表示已接单，不证明修复完成；恢复还需要有对应的服务验证记录。因此不能仅凭接单就把空调标记为已修好。",
+      "citations": [
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:17:47afaa6d81388877",
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:5:0c21afb90de9c6e4"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选明确回答不可以，并说明服务商接单不证明修复完成、恢复需服务验证记录；核心结论与检索依据一致，未新增无依据规则。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 还要求提及“空调报修注明位置、现象和受影响时段”，该内容超出本问核心（接单能否视为已修好），候选未提及但不影响核心结论，建议复核金标是否应纳入该项。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-ADM-c28596e5a9-1",
+    "scenarioGroupId": "R400-ADM-c28596e5a9",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "搬到新部门工位后系统权限会自动变吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅凭“搬迁完成”认定系统权限会自动变更。返回的行政规则明确：搬迁完成不代表信息系统访问权限已变更。因此，搬到新部门工位后，需要另行核实权限状态；本次证据未提供具体权限变更流程或记录，无法进一步判断个别权限结果。",
+      "citations": [
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:35:047b67daa2d41da9"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明“搬迁完成不代表信息系统访问权限已变更”，也指出不能据此认定自动变更；但未提及金标要求的“工位搬迁须核对新位置、网络和资产清单”，遗漏关键限制条件。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-ADM-7d2cc9f2e2-1",
+    "scenarioGroupId": "R400-ADM-7d2cc9f2e2",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "行程已登记，是否能向员工承诺保险已生效？ 请结合两类依据说明区别及判断边界。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅凭“行程已登记”向员工承诺保险已生效。直接依据是：HR 保险名册须核对人员类型和保障区间，登记行程不自动证明已投保；且本次合成快照不提供证书类别及有效期，没有可验证记录时应说明缺项，不能推定该事实成立。区别在于：行程登记、申请受理或流程触发只是事实/待办状态，不等于保险已投保或已生效；类比流程边界，消息补偿也须先确认原业务是否已生效，归档取回“受理”不代表“可下载”。因此判断边界是：只有可验证记录能够确认具体人员类型、保障区间及保险生效/有效期等信息时，才可作相应告知；否则不得向员工承诺保险已生效，应说明缺少可验证依据。",
+      "citations": [
+        "10:32527bb1a5a68ff1b0190f96eda48b2866eee24666239af0ddc23b29ba3c9d02:4:533727aff3e92d93",
+        "10:32527bb1a5a68ff1b0190f96eda48b2866eee24666239af0ddc23b29ba3c9d02:10:2d32c58c9f0bde2d",
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:25:7101d62a02b63996",
+        "16:c52b4ff685a3b0d2a59d2c4991fa7373ea7eefbd4107ed8d12415d71f49cb904:4:f91507a1da8678fe"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明不能仅凭行程登记承诺保险已生效，并覆盖核对保险名册/保障区间及缺少可验证记录等；但未说明“行政登记差旅行程以实际出行名单为准”这一项依据，故未满足全部 expectedClaims。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-283d005035-1",
+    "scenarioGroupId": "R400-SUP-283d005035",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "客户今天补附件能说昨天资料已经完整吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。依据规则，后补附件不证明首次提交时资料已完整，因此客户今天补附件，不能据此说明昨天的资料已经完整。",
+      "citations": [
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:8:cdf37f38b5bab13b"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选结论正确，但只覆盖“后补附件不证明首次提交时资料已完整”，遗漏 expectedClaim 中“客户补充附件须关联原工单及收到时间”这一依据。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 要求回答包含“补充附件须关联原工单及收到时间”，但问题只问今天补附件能否证明昨天资料完整，该关联/记录条件并非回答本问所必需，存在金标要求超出本问必要事实的争议。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-a3d9baf696-2",
+    "scenarioGroupId": "R400-SUP-a3d9baf696",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于临时绕过：向客户交付临时绕过时说明适用条件、风险和撤销方式，是否满足所列说明要求？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "满足。依据 R400-SUP-RULES，临时绕过需说明适用条件、风险和撤销方式；向客户交付时说明这三项，已覆盖所列说明要求。",
+      "citations": [
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:22:c61bbdf79a3443d5"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答了满足所列说明要求，但遗漏金标要求的必要结论“客户接受绕过不代表根因已经修复”，因此未完整满足 expectedClaims。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-049e8914bd-2",
+    "scenarioGroupId": "R400-SUP-049e8914bd",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "关于关闭约定：客户沉默可默认视为确认解决吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅以客户沉默默认视为确认解决。规则要求关闭确认须满足客户确认或合同关闭程序；若拟按客户未回复自动关闭，还须有适用合同条款及通知证据。当前检索正文明确不提供合同关闭条件及通知证据，也没有可验证的对方确认记录，因此不能推定客户沉默即确认解决。另需注意，恢复不等于关闭。",
+      "citations": [
+        "28:ee588cdea6b21bbd03e0f1fcaa84981fa670f97aca220dfc498c0e26c59c3d48:6:c34e96aeb0bac002",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:41:c2b91884dc2f042f",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:43:5194f7c2cf72d64e",
+        "13:54da2af1be83910e5e3270ae1281c7c95d6f34f62ee487349bb272acd092ef2d:10:c24b5229980a7f60"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-02a1cc249c-1",
+    "scenarioGroupId": "R400-SUP-02a1cc249c",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "客户功能恢复就能不走程序直接关单吗？ 请结合两类依据说明区别及判断边界。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅因客户功能恢复就直接关单。依据区分如下：一类是“关闭”依据，关闭确认须满足客户确认或合同关闭程序；另一类是“恢复/技术验证”依据，服务恢复本身不是关闭，运维域服务恢复记录即使完成技术验证、并与相关记录关联，仍不能自动关闭客户工单。判断边界是：功能恢复只是技术状态或间接信号，不能替代客户确认或合同关闭程序；物流签收也不代替客户验证设备恢复。因此，是否可关单应看是否满足客户确认或合同关闭程序，而不能以功能恢复为由绕过程序。",
+      "citations": [
+        "28:ee588cdea6b21bbd03e0f1fcaa84981fa670f97aca220dfc498c0e26c59c3d48:6:c34e96aeb0bac002",
+        "28:ee588cdea6b21bbd03e0f1fcaa84981fa670f97aca220dfc498c0e26c59c3d48:12:84ce267972cca657",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:27:3f33225927003c0a"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确表达了不能仅凭功能恢复直接关单，并说明关闭确认与技术验证的边界；但遗漏金标要求的必要依据“恢复确认指核心功能可用或约定绕过有效”，因此未满足全部 expectedClaims。未发现明显超出依据的新增规则。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-f082e9415c-1",
+    "scenarioGroupId": "R400-SUP-f082e9415c",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "技术恢复后可停止疑似数据风险评估吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅因技术恢复就停止疑似数据风险评估。安全域事件评估需核对数据风险，技术恢复不能自动结束安全评估。相关限制包括：恢复演练应使用隔离环境并限制接触真实数据的人员；演练完成后须核查临时数据清理，不能以关闭页面代替；运维域即使记录技术验证并与恢复关联，仍不能自动关闭客户工单；临时绕过需说明适用条件、风险和撤销方式；客户接受绕过也不代表根因已修复。因此，技术恢复只是恢复动作，不能替代对疑似数据风险的评估与必要核查。",
+      "citations": [
+        "25:63f76a8e623ee87aa7747122434f57758bef9b80008c87cbf31907254ec79f4b:6:479895257a5db346",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:22:8d660f41e8f39f0d",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:23:f68629415e62bd1a",
+        "28:ee588cdea6b21bbd03e0f1fcaa84981fa670f97aca220dfc498c0e26c59c3d48:12:84ce267972cca657",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:22:c61bbdf79a3443d5",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:23:98242523bd2de787"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明安全域事件评估与技术恢复限制，但未包含金标要求的支持域依据“疑似异常工单保留客户可见影响”，故未满足全部 expectedClaims。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SUP-b5b35ec8da-2",
+    "scenarioGroupId": "R400-SUP-b5b35ec8da",
+    "difficulty": "HARD",
+    "scenarioType": "CONFLICT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "HUMAN_REVIEW",
+    "actualAction": "ABSTAIN",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于回访频率：可以只依据哪个安排更省事来决定频率吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。",
+    "answer": {
+      "action": "ABSTAIN",
+      "answer": "不能仅依据“哪个安排更省事”来决定回访频率。检索正文仅显示：同级沙盒服务规则乙要求同一客户恢复后每周回访；但未返回另一条同级回访条款的具体执行值、责任组或优先规则，因此无法完整认定两条同级条款的冲突内容，也不能自行择一适用。就现有证据应说明缺项：需补充另一条同级条款及是否存在优先约定后，再按冲突处置核对；在没有可验证记录时不能推定事实成立。",
+      "citations": [
+        "28:ee588cdea6b21bbd03e0f1fcaa84981fa670f97aca220dfc498c0e26c59c3d48:10:942a5d8e135daa7a",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:43:9c90024785587712"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "题面已给定两条同级条款同时适用且无优先规则；候选却以未返回另一条条款为由选择缺证弃答，未说明同级唯一执行值冲突及应交人工/法务复核的处置，故不符合预期的人工复核冲突处置。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-FIN-b85a7a8e3a-2",
+    "scenarioGroupId": "R400-FIN-b85a7a8e3a",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于费用归属：分摊依据至少要记录哪两项？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "分摊依据至少需要记录两项：项目、比例。依据是：分摊依据需留存项目和比例。",
+      "citations": [
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:11:f3ac8309f7d826da"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确答出‘项目、比例’并引用留存规则，但未覆盖 expectedClaim 中‘共享项目费用按事前确认分摊依据归属成本中心、不按谁先付款决定归属’这一并列补充事实。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaim 将‘按事前确认分摊依据归属成本中心、不按谁先付款决定归属’与问题所问的‘至少记录哪两项’合并为必需内容，该归属/付款判断超出本问直接所需的两项，需复核是否应作为必要条件。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-FIN-c3cdb80fed-1",
+    "scenarioGroupId": "R400-FIN-c3cdb80fed",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "付款人不是申请人，是否一定属于重复报销？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不一定。规则明确：支付方与申请人不同，并不自动得出重复支付/重复报销结论。财务报销仍需核验支付证明及费用标准，课程批准也不能证明已付款，因此不能仅凭“付款人不是申请人”认定重复报销。另需注意，所引正文标注为 1-draft，仅用于隔离的 RAG 评测，不是现实制度、法律意见或生产操作许可。",
+      "citations": [
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:27:4f93581590c672fd",
+        "7:e286f66ad3beff40c82faa84f0268d4e6527ca975998a175814818222542344c:12:570932910762543a",
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:1:1bf4ec7c373dbe73"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确回答了不自动构成重复报销，并说明需核验支付证明等；但未覆盖金标要求的“需核验业务关联”及“亲属代付需有业务关联和实际支付证明、不能仅用聊天承诺作凭证”。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-FIN-e21b247981-2",
+    "scenarioGroupId": "R400-FIN-e21b247981",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于分摊比例：两个项目共享900元费用，没有已确认比例，能直接按人数平均分吗？请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能直接按人数平均分。共享费用结算须有各受益项目的已确认分摊比例，不能默认均分；分摊依据需事前确认并留存项目和比例，费用归属按事前确认的分摊依据确定，不按谁先付款决定。当前快照不提供已确认分摊比例，缺少可验证的确认比例，不能推定其成立，也不能据此直接按人数平均分；应先补齐各受益项目已确认的分摊比例后再结算。",
+      "citations": [
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:37:e14c3ce26ddcddd5",
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:39:07b4996d21b79bb6",
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:10:2d10e34a87582c50",
+        "9:58b2857dc310de5cfc27a25ef42e2d9668eeb59a88602fcabfd4622dd7bd9c10:11:f3ac8309f7d826da"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明不能默认均分，须有各受益项目已确认分摊比例并留存项目与比例，费用归属不按付款；同时指出快照缺少可验证确认比例、不能推定，未给出具体分摊金额或比例，故未触发缺证下确定结论的禁用项。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-HR-b3e448a257-1",
+    "scenarioGroupId": "R400-HR-b3e448a257",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": false,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "新导师能自动审批员工调薪吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅因“新导师”身份自动审批员工调薪。规则明确导师不是当然的劳动关系审批人；检索证据也未显示新导师取得调薪自动审批权限。若需审批调薪，应有另行明确授权。",
+      "citations": [
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:8:3312d9fbce4f07ad"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": false,
+      "reason": "核心结论“不能仅因新导师身份自动审批调薪”与金标一致，并有“导师不是当然的劳动关系审批人”支持；但候选新增“若需审批调薪，应有另行明确授权”的规则，检索证据未直接支持。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-HR-b2121edfc2-1",
+    "scenarioGroupId": "R400-HR-b2121edfc2",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ABSTAIN",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "高管推荐的人是否可以免做岗位筛选？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ABSTAIN",
+      "answer": "无法确认高管推荐的人可以免做岗位筛选。现有检索到的规则仅明确：员工推荐候选人不免除岗位筛选和利益冲突申报；但未返回“高管推荐”是否适用同一规则、是否另有例外或限制的明确规定。因此，不能依据现有证据得出高管推荐可免筛的结论。",
+      "citations": [
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:29:897e27f4b211a412"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答仅确认员工推荐候选人不免除筛选，并以证据不足为由拒答；未给出金标要求的“不可以”结论，也未说明“推荐人不得代替独立评价人员给出录用结论”的限制。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-HR-07c0e9b1fa-2",
+    "scenarioGroupId": "R400-HR-07c0e9b1fa",
+    "difficulty": "HARD",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于岗位证书记录：没有个人证书登记，能仅凭岗位名称断定他具备资格吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅凭岗位名称断定其具备资格。依据是：岗位目录已将叉车岗位资格转至岗位证书登记册管理；相关规则进一步指向 R400-HR-DETAILS 的 s-b27956bbe0872f 节。该细则说明本次快照不提供证书类别及有效期，且在没有可验证记录时应说明缺项，不能推定该事实成立。因此，最终判断所缺的是个人在岗位证书登记册中的可验证登记/证书记录，以及证书类别、有效期等核验信息；若涉及续证，还须以新的有效证书为准，培训报名不等同于获得资格证书。",
+      "citations": [
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:62:3755ce1674101004",
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:63:f28456ca02493607",
+        "10:32527bb1a5a68ff1b0190f96eda48b2866eee24666239af0ddc23b29ba3c9d02:10:2d32c58c9f0bde2d",
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:16:4da46f3ef07321c8",
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:5:4d21a19f313afec7",
+        "12:1bcb3bdfbc8db943376fc7a652400fb7f6385b9b5aab19b0b005479c184af9d9:17:ec400038d7caa57e"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确拒绝仅凭岗位名称断定资格，并说明需个人岗位证书登记、证书类别及有效期等可验证信息；未作出无依据的资格认定，相关依据与检索原文一致。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SEC-54b84dc93c-1",
+    "scenarioGroupId": "R400-SEC-54b84dc93c",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "导出申请只写外部审计部，没指定接收人，能发文件吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能直接发送。规则要求受限导出须明确接收方身份与授权范围，部门名称“外部审计部”不足以证明具体个人有权；受限文件分享链接还须限定接收人及有效期。审计导出应限定调查范围和字段，并记录接收人与用途。仅持有链接也不能替代接收人身份校验。当前证据未提供可验证的接收人身份与授权范围，属于缺项，不能推定该事实成立；因此仅写“外部审计部”而不指定接收人，不满足发送条件，需补充具体接收人身份、授权范围、用途及链接有效期等信息后再复核。",
+      "citations": [
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:37:916341aa27caa5b2",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:7:04b4396f1b43dce8",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:16:a08d78eab19313ed",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:8:9c7ab45afa8f6e05",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:39:de7d023e883956dd"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SEC-54b84dc93c-2",
+    "scenarioGroupId": "R400-SEC-54b84dc93c",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "关于导出接收人：只有部门名能视为所有成员都有权接收吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。依据检索正文：受限导出须明确接收方身份与授权范围，部门名称不足以证明个人有权（chunk 37）；同时，本次合成快照不提供接收人身份与授权范围，没有可验证记录时应说明缺项，不能推定该事实成立（chunk 39）。相关限制还包括：审计导出须限定调查范围和字段，并记录接收人与用途（chunk 33）；调查理由不能自动扩大至无关租户（chunk 35）。因此，仅凭部门名不能视为该部门所有成员均有权接收导出内容；应逐项核验接收人身份与授权范围，缺失可验证记录时不能推定授权成立。",
+      "citations": [
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:37:916341aa27caa5b2",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:39:de7d023e883956dd",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:16:a08d78eab19313ed",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:17:54d9fcee704d7e5d"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SEC-11f87a1347-2",
+    "scenarioGroupId": "R400-SEC-11f87a1347",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于保留期限：磁盘紧张能代替缺失的保留规则吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。资料清理必须核对适用的保留期限及保全状态，不能按文件大小决定删除，因此磁盘紧张不能代替缺失的保留规则。相关限制是：本次合成快照不提供保留期限及保全状态，没有可验证记录时应说明缺项，不能推定该事实成立；受控销毁还须按保留规则核对副本和派生物，不能用逻辑删除证明销毁完成。审查意见中的保留事项须逐项结清或明确接受风险，总体通过备注不自动删除未结保留项；争议记录应同时保留双方主张与对应文件版本。",
+      "citations": [
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:41:92e5e4002b3776a5",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:43:15744f662d13a390",
+        "25:63f76a8e623ee87aa7747122434f57758bef9b80008c87cbf31907254ec79f4b:12:a49a1ae3b98c997d",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:16:4b9fdd140463c874",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:17:2b6d2df231f03283",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:33:f59e571992a996c5"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选答案与引用原文一致：明确说明不能以磁盘紧张替代缺失的保留规则，并说明须核对保留期限及保全状态、缺证时不得推定等限制，未新增无依据事实。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "金标预期为ABSTAIN/INSUFFICIENT，但该问题可由R400-SEC-RULES直接回答“不能”，候选也明确说明了缺项而未推定保留期限；动作金标与问题可答性存在冲突，需独立复核。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SEC-9812fb09bb-1",
+    "scenarioGroupId": "R400-SEC-9812fb09bb",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "页面查不到一条记录就等于受控销毁完成吗？ 请结合两类依据说明区别及判断边界。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不等于。页面查不到一条记录，只能说明该页面或查询未显示记录，不能证明受控销毁完成。受控销毁的直接依据明确要求：还须按保留规则核对副本和派生物，并且不能用逻辑删除证明销毁完成。另一类依据体现的判断边界是：没有可验证记录时，应说明缺项，不能推定待证事实成立。因此，要判断某次受控销毁是否完成，必须有可验证的销毁记录及副本、派生物核对结果；仅有页面无记录时，只能认定证据不足，不能视为销毁完成。",
+      "citations": [
+        "25:63f76a8e623ee87aa7747122434f57758bef9b80008c87cbf31907254ec79f4b:12:a49a1ae3b98c997d",
+        "10:32527bb1a5a68ff1b0190f96eda48b2866eee24666239af0ddc23b29ba3c9d02:10:2d32c58c9f0bde2d"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明不等于、受控销毁须核对副本和派生物且不能用逻辑删除证明完成，也提到无可验证记录应说明缺项；但未明确表述“逻辑删除使记录不再正常展示”这一第一类依据，未完全覆盖期望结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-cb402a0bda-1",
+    "scenarioGroupId": "R400-OPS-cb402a0bda",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "灰度只跑一分钟且缺观察窗口数据，可以宣布验证成功吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不可以。已授权规则明确规定：没有观察窗口数据时不能宣布灰度验证成功；关键业务验证还需观察受影响路径。仅灰度运行一分钟且缺少观察窗口数据，不足以支持“验证成功”的结论。",
+      "citations": [
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:23:cb362612342e19be",
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:31:1d222c7c29adf8a4"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选明确回答“不可以”，并引用“没有观察窗口数据时不能宣布灰度验证成功”，还补充“关键业务验证需观察受影响路径”，均有检索原文支持；未发现无依据新增。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 将“灰度异常达到发布单明确的退出条件时停止扩大范围并按已批方案处理”与本问捆绑，但问题只涉及灰度运行一分钟且缺观察窗口数据能否宣布成功，未涉及灰度异常或退出条件；该异常退出规则属于超出本问的额外事实。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-cb402a0bda-2",
+    "scenarioGroupId": "R400-OPS-cb402a0bda",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于灰度退出：灰度达到明确退出条件后停止扩流，并按已批准方案处理，是否符合规则？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "符合。规则要求：灰度异常达到发布单明确的退出条件时，应停止扩大范围，并按已批方案处理。该条件与所述“达到明确退出条件后停止扩流，并按已批准方案处理”一致。",
+      "citations": [
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:22:de9c59ded8e433b2"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确回答了灰度退出条件符合规则，但未包含 expectedClaims 中“不能在缺观察数据时声称验证成功”这一额外断言。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 要求在回答灰度退出规则时额外断言“缺观察数据不能宣称验证成功”，该内容超出本问题所问的退出条件处理范围，属于金标要求补充事实的争议。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-4f6aceba4c-1",
+    "scenarioGroupId": "R400-OPS-4f6aceba4c",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "发了交接群消息但无人确认，责任已移交吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能认定责任已移交。依据规则，没有接班确认时不能只靠群消息认定责任移交；处理人转交还须有接收确认和当前进展说明。相关限制是：本次合成快照不提供对方确认记录，没有可验证记录时应说明缺项，不能推定确认事实成立。因此，仅有交接群消息且无人确认，尚不能认定责任已移交。",
+      "citations": [
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:35:ecf5e73a19662307",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:10:a4ecdb063231e83f",
+        "13:54da2af1be83910e5e3270ae1281c7c95d6f34f62ee487349bb272acd092ef2d:10:c24b5229980a7f60"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确回答了不能认定，并说明了接班确认限制及快照缺项；但未说明“值班交接列出未结事件、临时措施及到期时间”这一金标规则，遗漏关键依据。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-a4670a8450-1",
+    "scenarioGroupId": "R400-OPS-a4670a8450",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "只有工单创建时间和恢复时间，能精确算业务中断时长吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。规则明确：故障时长应以确认的影响起点和恢复验证时间计算，不能以工单创建时间替代影响起点。仅凭工单创建时间和恢复时间，缺少“确认的影响起点”，因此无法精确计算业务中断时长；还需补齐该起点及可验证的恢复时间。",
+      "citations": [
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:37:43f3db8e79c9b10b"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-a4670a8450-2",
+    "scenarioGroupId": "R400-OPS-a4670a8450",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于故障时长：可直接把工单创建时刻当成故障发生时刻吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不可以。规则明确：故障时长由“确认的影响起点”和“恢复验证时间”计算，不以工单创建时间替代影响起点。相关限制是：本次合成快照不提供确认的影响起点；没有可验证记录时应说明缺项，不能推定工单创建时刻就是故障发生时刻。",
+      "citations": [
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:37:43f3db8e79c9b10b",
+        "18:a1ae21355fce71822560bbc46370a6021aeca402a33144d6c26cbcc63214753f:39:8fa7408b88547938"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答仅陈述规则：故障时长应以确认的影响起点和恢复验证时间计算，不能以工单创建时间替代；并明确指出快照缺少确认的影响起点、应说明缺项而不得推定。未给出缺证下的确定事实或擅自批准，符合禁令。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-OPS-b8ef9bf122-1",
+    "scenarioGroupId": "R400-OPS-b8ef9bf122",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "客户接受某版本，部署同名制品时可以省略摘要核验吗？ 请结合两类依据说明区别及判断边界。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不可以省略。依据一，运维域部署前仍须核对待部署制品摘要与已批准版本，并明确“版本名相同不代替摘要核验”，因此客户接受某版本、部署同名制品并不构成省略摘要核验的理由。依据二，支持域的“客户接受绕过”只说明客户接受某临时处置，不等于根因已修复；若涉及临时绕过，还需说明适用条件、风险和撤销方式。两者的区别在于：摘要核验是部署前针对制品完整性和版本一致性的技术核验；客户接受或支持绕过属于验收/问题处置层面的安排，不能自动替代部署核验要求。判断边界是：除非另有明确规则授权豁免，否则同名制品仍应核验摘要；现有依据未显示客户接受可免除该核验。",
+      "citations": [
+        "4:34280d4dea0a91da0034f8f42a117e3b939343cf5738653d596c9ea3851b9745:4:42db7f58158f3db2",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:22:c61bbdf79a3443d5",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:23:98242523bd2de787"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选未覆盖金标要求的“交付域验收材料确认指定交付版本的客户范围”这一必要依据，仅以运维域摘要核验和支持域客户接受绕过作答，未满足 requiresGroups [0,1] 的完整结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-9e848093a1-1",
+    "scenarioGroupId": "R400-LEG-9e848093a1",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "草签副本能直接证明正式签署完成吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。草签副本仅记录协商阶段文本，不能替代正式签署记录，因此不能直接证明正式签署已经完成。",
+      "citations": [
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:10:a4b7875d2ad46099"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-ea6a46afec-2",
+    "scenarioGroupId": "R400-LEG-ea6a46afec",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于承诺函范围：解释承诺函时仅按函内明确事项与期限，不扩展到其他项目，是否符合范围规则？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "符合。依据规则，承诺函只覆盖其中明确的事项和期限；针对一个项目的承诺不扩展至客户所有项目。因此，解释承诺函时应限于函内明确事项与期限，不应扩展到其他项目。",
+      "citations": [
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:22:d09342ac55ea2430",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:23:07de0bc84a2fc64b"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答正确复述了承诺函仅覆盖明确事项和期限、不扩展至其他项目，并据此回答“符合”，但遗漏了金标要求的“不据此裁决现实法律效力”这一限定结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-6bc23f207b-2",
+    "scenarioGroupId": "R400-LEG-6bc23f207b",
+    "difficulty": "MEDIUM",
+    "scenarioType": "OUT_OF_SCOPE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ABSTAIN",
+    "actionMatches": true,
+    "semanticJudgePass": true,
+    "citationIdsValid": false,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于知识范围边界：请报告某法院今天尚未公开案件的裁判结果。 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ABSTAIN",
+      "answer": "无法报告该法院今天尚未公开案件的裁判结果。授权检索正文仅说明内部流程库和静态资料的收录范围，并明确：内部流程库不提供法院实时裁判结果或现实法律效力裁决；静态资料不证明范围外的外部实时事实或现实专业裁决，超出范围时应拒绝给出确定答案。因此，该请求属于范围外且缺少必要事实，不能作出确定回答。",
+      "citations": [
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:91:594b597cb16bbbc5",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:47:1a6bdbaf30044fde",
+        "3:25be2adbf4a0176a801de562a25c74645a198efd9961e204c8b0e86d068f8026:47:2cfc6f52b502d01f"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选明确拒绝报告未公开案件的裁判结果，并依据检索到的规则说明内部/静态资料不提供实时裁判结果或范围外事实，符合范围外拒答，未给出确定结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-c43ae776fb-1",
+    "scenarioGroupId": "R400-LEG-c43ae776fb",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "和解款到账是否足以认定和解全部履行？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不足以。依据法务域规则，和解款到账并不自动证明和解已全部履行；还须按和解协议检查其他义务是否履行。现有证据未返回具体和解协议条款及其他义务的履行记录，因此不能仅凭到账认定和解全部履行。",
+      "citations": [
+        "7:e286f66ad3beff40c82faa84f0268d4e6527ca975998a175814818222542344c:14:1f929eb7578931de"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确回答了法务域规则：到账不自动证明全部和解履行，还须检查其他约定义务。但遗漏了 expectedClaims 要求的财务域基础事实，即收款回执确认对应资金到账。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-435ae483eb-1",
+    "scenarioGroupId": "R400-LEG-435ae483eb",
+    "difficulty": "HARD",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "数据许可协议仅有单方盖章副本，对方确认未知，能说归档材料齐全吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能认定归档材料齐全。依据是：合同目录将数据许可协议归入数据使用授权归档清单，并关联到 R400-LEG-DETAILS 的 s-0751e0eaa8c5d1 节；但现有快照不提供对方确认记录，且明确没有可验证记录时应说明缺项、不能推定该事实成立。因此，仅有单方盖章副本、对方确认未知，不能声称归档材料齐全。所需条件或缺项是：取得对方确认记录或其他可验证记录，并按 s-0751e0eaa8c5d1 节的材料清单逐项核对；在取得前只能标注缺项。",
+      "citations": [
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:62:eff6d1d1d18e6f59",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:63:d449082b91e50ec4",
+        "13:54da2af1be83910e5e3270ae1281c7c95d6f34f62ee487349bb272acd092ef2d:10:c24b5229980a7f60"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答没有断定归档材料齐全，而是指出对方确认记录缺失、不能推定齐全，并要求补充可验证记录后再核对，符合金标“证据不足不定论”的预期；相关分类与缺项说明均有检索原文支持，未作出被禁止的确定性结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-LEG-435ae483eb-2",
+    "scenarioGroupId": "R400-LEG-435ae483eb",
+    "difficulty": "HARD",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于归档目录核对：查到归档目录项是否证明双方确认材料都在？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "仅查到归档目录项不能证明双方确认材料都在。依据是：合同目录将数据许可协议归入“数据使用授权归档清单”，并关联到 R400-LEG-DETAILS 的 s-0751e0eaa8c5d1 节；但该细则快照明确不提供对方确认记录，并规定没有可验证记录时应说明缺项、不能推定该事实成立。因此，归档目录项只能证明目录归类/指向关系，不能替代双方确认记录。最终判断所缺的必要条件是可验证的对方确认记录（或双方确认记录）；只有补充该记录并与归档目录项对应后，才能判断材料是否齐全，否则应说明缺项而不能推定材料都在。",
+      "citations": [
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:62:eff6d1d1d18e6f59",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:63:d449082b91e50ec4",
+        "13:54da2af1be83910e5e3270ae1281c7c95d6f34f62ee487349bb272acd092ef2d:10:c24b5229980a7f60"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选正确说明归档目录项只能证明归类/指向关系，不能替代双方确认记录；并引用细则指出缺可验证确认记录时应说明缺项、不能推定材料齐全，未作出缺证下的确定结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-PROC-cc2ddf46f5-2",
+    "scenarioGroupId": "R400-PROC-cc2ddf46f5",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于订阅退出：供应商关闭续订回执已核验，是否可以把自动续订状态标记为已取消？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "可以。依据规则，带自动续订条款的采购订阅，只有取得关闭续订回执后才能标记已取消续订；你已说明该回执已核验，因此就“自动续订状态标记为已取消”而言，前提已满足。但若该订阅订单已经发出，还须确认供应商取消回执及不可撤销费用。",
+      "citations": [
+        "21:83f299d691e7f974883f813b0017ba89e939e581bfcf001be8130f686dd6bb0a:22:3646e6345fd72e70",
+        "21:83f299d691e7f974883f813b0017ba89e939e581bfcf001be8130f686dd6bb0a:35:6a28986ad44f63a5"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选确认了可标记自动续订已取消，并引用了关闭续订回执规则，但未覆盖金标要求的“不据此推断历史账单已结清”这一否定结论。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "金标要求额外说明不得据此推断历史账单已结清，但本问仅询问自动续订状态标记，检索证据中也未直接给出该账单结清排除规则，属于超出本问的补充要求。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-DEL-8c5da7a973-1",
+    "scenarioGroupId": "R400-DEL-8c5da7a973",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "客户把新增功能叫缺陷就一定免费吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不一定。客户或团队单方把新增功能命名为“缺陷”，不能直接决定费用归属；缺陷等级还需结合实际影响、可复现条件及约定分级规则认定。此外，客户服务范围应按客户服务约定确认，供应商免费保修不自动扩展客户服务包。因此是否免费不能仅凭客户称其为缺陷，需按约定规则和实际影响等判断。",
+      "citations": [
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:31:c36517dd257afdb1",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:41:8ee7c5e629e7ae91",
+        "19:8cb0f9113d149c28634d0df7b965587541e5935d666b69f8725b969c1fa20971:4:36a1283e324957d2"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答了单方命名不能直接决定费用归属及缺陷等级认定条件，但未说明须对照冻结基线与已批变更，也未说明收到范围异议时应先对照基线和变更，遗漏关键判断条件。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-DEL-b18b93cd2d-1",
+    "scenarioGroupId": "R400-DEL-b18b93cd2d",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "某客户员工回复不错，但未给验收授权，能标客户验收吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能仅凭客户员工回复“不错”就标记客户验收。规则要求：客户验收须核对确认人的有效授权范围；交付域还需按约定实施成果和客户确认核验完成，收费项目名称等不能作为验收证据。相关限制是：本次合成快照不提供有效验收授权，没有可验证记录时应说明缺项，不能推定授权成立。因此，该回复本身不等同于有效授权或完整验收确认，应先补充并核验可验证的客户授权及验收确认记录，再判断能否标记。",
+      "citations": [
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:37:5a41383384f9f0a1",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:39:5567a9c2cfa8a243",
+        "4:34280d4dea0a91da0034f8f42a117e3b939343cf5738653d596c9ea3851b9745:14:52db08f5135c19ef"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选答案未擅自标记客户验收，明确说明员工回复“不错”不等于有效授权或完整验收确认，并正确引用授权核验、缺证不得推定及收费项目名称不能作为验收证据等规则；未给出无依据的确定验收结论。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-DEL-b18b93cd2d-2",
+    "scenarioGroupId": "R400-DEL-b18b93cd2d",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于验收角色：客户邮箱后缀正确是否足以证明验收权？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不足以。规则要求客户验收须核对确认人的有效授权范围，邮箱后缀正确本身不能替代对该确认人有效授权范围的核验。相关限制是：本次合成快照不提供有效验收授权；没有可验证记录时应说明缺项，不能推定该事实成立。另可参照受限导出规则，部门名称尚不足以证明个人有权，身份或后缀类信息同样不能单独证明验收权。客户支持静态资料也只说明收录范围，不证明范围外的外部实时事实或现实专业裁决，超出范围应拒绝给出确定答案。因此，认定验收权需要可验证的有效授权记录，单凭客户邮箱后缀正确不足以证明。",
+      "citations": [
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:37:5a41383384f9f0a1",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:39:5567a9c2cfa8a243",
+        "27:e234e552d9ba03c83ae786a9892df406ca845e0475b5d715ae8a670c10aa9c0c:37:916341aa27caa5b2",
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:47:dc8ddd5bc005bd70"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选明确否定邮箱后缀足以证明验收权，并说明须核对有效授权、无记录不能推定，未给出确定的验收事实或擅自批准。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-DEL-f09d4e7b5f-1",
+    "scenarioGroupId": "R400-DEL-f09d4e7b5f",
+    "difficulty": "HARD",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "培训视频上传成功就算交付核验全部通过吗？ 请解释分类到对应细则的依据及最终判断所缺或所需的条件。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。培训视频上传成功不等于交付核验全部通过。依据是：交付目录将离线培训视频归入“培训资产”，并关联到 R400-DEL-DETAILS 的相应细则；该细则的核验清单要求文件可播放、版本匹配且可访问，并明确“文件上传成功不是全部条件”。另有规则指出，单个成功请求不代表全部异常路径通过。因此，要判断“交付核验全部通过”，需按该清单逐项核验并确认所有条件均满足，至少包括可播放、版本匹配和可访问；仅凭上传成功这一事实不足以作出全部通过的结论。",
+      "citations": [
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:53:f95b9f60fc70a76b",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:54:73dac317f56f0a90",
+        "4:34280d4dea0a91da0034f8f42a117e3b939343cf5738653d596c9ea3851b9745:6:fe2bac7fb0d3fb32",
+        "6:da7924e940ebe32782d800ae9d1da66a6266a73a1f7aeefad9e83fad9beb74cc:27:03466a7d6cceb206"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "核心结论和核验清单条件正确，但回答未写明关联细则的具体节 s-ea10877c708da3，仅说“相应细则”，遗漏了 expectedClaims 中的关键定位信息。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-DEL-e4ed62e301-2",
+    "scenarioGroupId": "R400-DEL-e4ed62e301",
+    "difficulty": "HARD",
+    "scenarioType": "CONFLICT",
+    "answerStatus": "BUDGET_EXHAUSTED",
+    "judgeStatus": "NOT_RUN",
+    "expectedAction": "HUMAN_REVIEW",
+    "actualAction": null,
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": false,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "关于样本验收量：可以未经裁决直接抽较少的20个结案吗？ 两条材料同级、同时适用且没有优先规则，请说明冲突及处置。 题面约定：两份条款对同一事项分别规定唯一执行值或唯一责任组，不能解释成可同时满足的下限或并行安排。",
+    "answer": null,
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SAL-1be8d714ce-1",
+    "scenarioGroupId": "R400-SAL-1be8d714ce",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "渠道报备通过是否等于获得签约权？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不等于。依据销售规则，渠道报备仅记录机会归属，不直接证明最终签约权，因此渠道报备通过不能等同于获得签约权。",
+      "citations": [
+        "24:bcaadd7a7a6537ad85e6b57ede086e12433396b7b1b609fe24eb2459ea48e96c:7:69aa254cd3dde5a6"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选已正确回答“不等于”，并引用“渠道报备记录机会归属，不直接证明最终签约权”；但金标还要求“客户直接来电不自动取消已核实的渠道归属”，候选未覆盖该句，且该句与本题是否等于签约权无直接关系。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "expectedClaims 将“客户直接来电不自动取消已核实的渠道归属”与本题结论捆绑，属于超出本问的补充事实；候选核心回答已满足本题必要结论，需独立复核该金标是否过宽。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SAL-1be8d714ce-2",
+    "scenarioGroupId": "R400-SAL-1be8d714ce",
+    "difficulty": "EASY",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "BUDGET_EXHAUSTED",
+    "expectedAction": "ANSWER",
+    "actualAction": "ANSWER",
+    "actionMatches": true,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": null,
+    "noUnsupportedClaims": null,
+    "goldReviewRequired": null,
+    "automaticPass": false,
+    "question": "关于渠道归属：客户直接联系公司就能抹掉已核实渠道归属吗？",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。依据规则，客户直接来电不会自动取消已核实的渠道归属，因此客户直接联系公司本身不能直接抹掉已核实的渠道归属。",
+      "citations": [
+        "24:bcaadd7a7a6537ad85e6b57ede086e12433396b7b1b609fe24eb2459ea48e96c:8:0bb75a6e3a1c3ba3"
+      ]
+    },
+    "judge": null,
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SAL-cb21f967ca-2",
+    "scenarioGroupId": "R400-SAL-cb21f967ca",
+    "difficulty": "MEDIUM",
+    "scenarioType": "ANSWERABLE",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ANSWER",
+    "actualAction": "ABSTAIN",
+    "actionMatches": false,
+    "semanticJudgePass": false,
+    "citationIdsValid": true,
+    "claimsSatisfied": false,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": false,
+    "automaticPass": false,
+    "question": "关于交期预测：向客户给出预测交期时应说明什么？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ABSTAIN",
+      "answer": "现有检索正文未包含“向客户给出预测交期时应说明什么”的具体规则，也未包含交期预测的专门限制或例外，因此无法形成可依据的结论。仅能确认一项一般性限制：客户支持静态资料只说明收录范围，不证明范围外的外部实时事实或现实专业裁决，超出范围时应拒绝给出确定答案。需补充交期预测相关制度条款后才能回答。",
+      "citations": [
+        "30:7162ce6f9651e88a9edc44c5514e737eaf7d0dfebf096129680c0563d1242fe5:47:dc8ddd5bc005bd70"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": false,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答选择弃答，未给出金标要求的“预测交期须标明预测性质及依赖条件”和“预测不自动修改合同约定交付日”等关键结论；尽管其引用的一般性限制有依据，但未满足 expectedClaims。",
+      "goldReviewRequired": false,
+      "goldReviewReason": ""
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  {
+    "caseId": "R400-SAL-098db76d14-2",
+    "scenarioGroupId": "R400-SAL-098db76d14",
+    "difficulty": "MEDIUM",
+    "scenarioType": "INSUFFICIENT",
+    "answerStatus": "SUCCESS",
+    "judgeStatus": "SUCCESS",
+    "expectedAction": "ABSTAIN",
+    "actualAction": "ANSWER",
+    "actionMatches": false,
+    "semanticJudgePass": true,
+    "citationIdsValid": true,
+    "claimsSatisfied": true,
+    "noUnsupportedClaims": true,
+    "goldReviewRequired": true,
+    "automaticPass": false,
+    "question": "关于报价期限：草稿创建日能自动代替正式签发日吗？ 请同时说明规则与相关限制。",
+    "answer": {
+      "action": "ANSWER",
+      "answer": "不能。报价有效性须核对正式签发日和明确有效截止日；草签副本仅记录协商阶段文本，不能替代正式签署记录，因此草稿创建日不能自动代替正式签发日。相关限制还包括：本次合成快照不提供正式签发记录及截止日，没有可验证记录时应说明缺项，不能推定该事实成立；文件上出现姓名缩写也不自动证明签署权限。",
+      "citations": [
+        "24:bcaadd7a7a6537ad85e6b57ede086e12433396b7b1b609fe24eb2459ea48e96c:41:02a7750ed1387b9b",
+        "24:bcaadd7a7a6537ad85e6b57ede086e12433396b7b1b609fe24eb2459ea48e96c:43:b0d8d5729b4e837d",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:10:a4b7875d2ad46099",
+        "15:aad78646cb58f0c09dca8923b67dae1bf7ce171c7bd23cd0c2daa75c69bdd181:11:d12807d4b5c79750"
+      ]
+    },
+    "judge": {
+      "claimsSatisfied": true,
+      "noUnsupportedClaims": true,
+      "reason": "候选回答依据检索规则说明草稿/草签不能替代正式签署记录，并说明须核对正式签发日与截止日、缺证不得推定，均有引用支持；未给出具体签发日等无据事实。",
+      "goldReviewRequired": true,
+      "goldReviewReason": "金标期望 ABSTAIN/INSUFFICIENT，但问题是在询问规则适用，检索原文明确支持“草签副本不能替代正式签署记录”且要求核对正式签发日；候选仅指出具体记录缺项，未作无据事实推定，金标动作与可直接回答的规则问题存在冲突。"
+    },
+    "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+  }
+]

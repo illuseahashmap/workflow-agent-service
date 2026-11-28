@@ -1,0 +1,65 @@
+{
+  "split": "calibration",
+  "total": 80,
+  "automaticPass": 59,
+  "semanticJudgePass": 62,
+  "semanticPassActionMismatch": 1,
+  "goldReviewRequired": 8,
+  "answerStatuses": {
+    "SUCCESS": 80
+  },
+  "judgeStatuses": {
+    "SUCCESS": 77,
+    "BUDGET_EXHAUSTED": 3
+  },
+  "usage": {
+    "prompt_tokens": 250798,
+    "completion_tokens": 124221,
+    "total_tokens": 375019
+  },
+  "facets": {
+    "difficulty": {
+      "EASY": {
+        "total": 24,
+        "automaticPass": 17
+      },
+      "MEDIUM": {
+        "total": 32,
+        "automaticPass": 24
+      },
+      "HARD": {
+        "total": 24,
+        "automaticPass": 18
+      }
+    },
+    "scenarioType": {
+      "ANSWERABLE": {
+        "total": 56,
+        "automaticPass": 39
+      },
+      "FORBIDDEN": {
+        "total": 4,
+        "automaticPass": 4
+      },
+      "CONFLICT": {
+        "total": 4,
+        "automaticPass": 3
+      },
+      "OUT_OF_SCOPE": {
+        "total": 4,
+        "automaticPass": 4
+      },
+      "INSUFFICIENT": {
+        "total": 12,
+        "automaticPass": 9
+      }
+    }
+  },
+  "limitations": [
+    "Automatic judge, no independent human adjudication; see manifest for model identities.",
+    "Draft synthetic versioned dataset, not blind holdout or production accuracy.",
+    "Fresh real SQL retrieval plus direct model answers; not platform Agent/LangGraph/MCP/Flowable E2E.",
+    "SQL scope filter tested; no HTTP principal/tenant authorization acceptance.",
+    "No vector, query expansion or model-selected tools. No retries; failed cases remain in denominator."
+  ]
+}

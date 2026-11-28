@@ -1,0 +1,99 @@
+{
+  "sourceCommit": "ef333aa283203813239c392877133b692bdd7e55",
+  "splits": [
+    "dev",
+    "calibration",
+    "holdout-candidate"
+  ],
+  "mode": "keyword-retrieval/direct-model; NOT Agent E2E",
+  "infrastructureDeviation": "User approved native PostgreSQL instead of Docker; disposable databases on loopback local PostgreSQL 17.5; no business table access.",
+  "retrieval": {
+    "dev": "3cdd0e3cf5271a88bcc2f0354d6a0a0add491ac95f83709a07d10761bb48577e",
+    "calibration": "5937572441b55317165f67ddd6a80d846cd072e29f2329686580f7e95da8fcb6",
+    "holdout-candidate": "d15ba7f66fdbacd6d080bb752e1a3b7cdd5997f70c262b541bc3a3325e0ac3c5"
+  },
+  "stages": [
+    {
+      "stage": "offline-data",
+      "exitCode": 0,
+      "elapsedSeconds": 0.41
+    },
+    {
+      "stage": "offline-node",
+      "exitCode": 0,
+      "elapsedSeconds": 0.55
+    },
+    {
+      "stage": "offline-python",
+      "exitCode": 0,
+      "elapsedSeconds": 3.64
+    },
+    {
+      "stage": "retrieval-dev",
+      "exitCode": 0,
+      "elapsedSeconds": 81.02
+    },
+    {
+      "stage": "normalize-dev",
+      "exitCode": 0,
+      "elapsedSeconds": 0.39
+    },
+    {
+      "stage": "retrieval-calibration",
+      "exitCode": 0,
+      "elapsedSeconds": 42.3
+    },
+    {
+      "stage": "normalize-calibration",
+      "exitCode": 0,
+      "elapsedSeconds": 0.36
+    },
+    {
+      "stage": "retrieval-holdout-candidate",
+      "exitCode": 0,
+      "elapsedSeconds": 49.84
+    },
+    {
+      "stage": "normalize-holdout-candidate",
+      "exitCode": 0,
+      "elapsedSeconds": 0.3
+    },
+    {
+      "stage": "live-dev",
+      "exitCode": 0,
+      "elapsedSeconds": 636.62
+    },
+    {
+      "stage": "live-calibration",
+      "exitCode": 0,
+      "elapsedSeconds": 261.8
+    },
+    {
+      "stage": "live-holdout-candidate",
+      "exitCode": 4294967295,
+      "elapsedSeconds": 61.61
+    }
+  ],
+  "exitCode": 1,
+  "datasetFiles": {
+    "calibration.cases.jsonl": "3f214344d5ea65c75cf88f737ff8fdcdb68369e3cbb8a475d0cbf20c9829ee73",
+    "calibration.queries.jsonl": "1633d3309305a3fd3652a82a57927c2a8a666678e3f4e235b7b9b955b417fc73",
+    "dev.cases.jsonl": "f690cdebd65a8c147f56bf9849f40fd50931b087a1ef126767f7b7fd3f164e33",
+    "dev.queries.jsonl": "2ef8f3ab7022a3ae7c91079f8a5cb8f885bdf35fe40c609a582bcee88da2a356",
+    "holdout/holdout-candidate.cases.jsonl": "cb808d36582b733d6ae9b3702f97039532b6a3f89d281ecc788089f6fe857c13",
+    "holdout/holdout-candidate.queries.jsonl": "20e62de62503f0e9ca0cd47c449bdd7e7a6830293b0f52356b23f3fdee26b989",
+    "knowledge-snapshot.json": "68aeb3e6f0edfdecccdd721d1dcd8ef2afad6f9fa1c1234cd152513eeccecabe"
+  },
+  "scriptHashes": {
+    "Rag400ProjectRetrievalTest.java": "69b06d6d8fdaa8c6301754fe63fc5d44ae0a5e0bbd7d6f05f2e3062a443bb738",
+    "normalize-project.py": "6158c25a3be0e37b3c4a1242bedbed4fe206c60c31d8646bc51b1faf4ac58d50",
+    "live-answers.py": "7f9aceb17d9ec83ded908962af6d19af9bc9dccd51b5ed344a30456b5c7eae45",
+    "run-remote.py": "bc935535b3796c9e5c7b569573f525da026baa4772f91a2bfccb5bc8d2f0b037"
+  },
+  "answerMaxTokens": 4096,
+  "judgeMaxTokens": 4096,
+  "workers": 3,
+  "sameModelJudge": true,
+  "model": "deepseek/deepseek-v4-flash",
+  "failureType": "RuntimeError"
+}

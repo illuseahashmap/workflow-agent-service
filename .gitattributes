@@ -1,3 +1,4 @@
 # Evaluation provenance hashes refer to exact artifact bytes.
 docs/quality/artifacts/rag400-live-20261128/** -text
+docs/quality/artifacts/rag400-run-001/** -text
 scripts/rag400/live-answers.py text eol=lf
