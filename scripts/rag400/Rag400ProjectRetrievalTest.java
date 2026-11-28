@@ -38,7 +38,8 @@ class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
         assertThat(queries).hasSize(200);
         withScratchDatabase(url -> {
             Flyway.configure().dataSource(url,databaseUser,databasePassword)
-                .locations("classpath:db/migration/platform","classpath:db/migration/vector").load().migrate();
+                .locations(System.getProperty("rag400.migrationLocations",
+                    "classpath:db/migration/platform,classpath:db/migration/vector").split(",")).load().migrate();
             var ds = new DriverManagerDataSource(url,databaseUser,databasePassword);
             var jdbc = new NamedParameterJdbcTemplate(ds);
             var tx = new TransactionTemplate(new DataSourceTransactionManager(ds));

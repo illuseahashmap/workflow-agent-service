@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "5297c52",
+  "date": "2026-11-28",
+  "database": "isolated disposable PostgreSQL 17.5",
+  "retrievalIntegration": {"tests": 1, "failures": 0, "errors": 0, "skipped": 0},
+  "liveOutputContractTests": {"tests": 7, "failures": 0},
+  "validatorTests": {"tests": 10, "failures": 0},
+  "retrievalScoreTests": {"tests": 8, "failures": 0},
+  "normalizationTests": {"tests": 4, "failures": 0},
+  "publicDataValidation": {"cases": 280, "groups": 140, "documents": 30, "status": "STRUCTURAL_AND_REFERENTIAL_PASS"},
+  "holdoutRead": false,
+  "fullBackendSuiteRun": false,
+  "checkstyleRun": false
+}

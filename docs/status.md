@@ -1,5 +1,7 @@
 # 下一步计划与当前状态
 
+2026-11-28 RAG400 DEV 真实模型分层评测：200 条新鲜项目 SQL 检索，必要章节正文 Top 10 为 176/200；`deepseek/deepseek-v4-flash` 返回完整可解析回答 192/200，同模型语义初评与固定规则自动通过 137/200。另有 30 条回答/评分未完整结束，且存在金标与裁判尺度争议，不作为人工确认准确率。运行未经过 Agent/LangGraph/MCP/Flowable；校准 80 条未调用模型，保留 120 条文件未在本机取得，不能称全 400 条完成。详情与下一步见[真实模型评测](quality/rag400-live-model-20261128.md)。
+
 文档更新时间：2026-11-26。V79 显式路由投影已实现，五种模式沿用原生能力契约，详见[路由专项](quality/graph-route-projection-regression.md)。当前拆分进展：V70 新契约与稳定工具意图、V71 Run 次数预算/持久停止/无模型收尾、V72 重复检测、V73 必要事实清单与循环触发的一次纠偏均已实现。旧版兼容保留，业务版本未切换，完整 G0–G3 仍未完成。随后完成 V74 PLANNED revision 1：显式规划/验收节点和工具条目绑定；V76 随后为显式策略 v2 增加一次安全计划切换，详见[修订记录](quality/graph-plan-revision-regression.md)。V74 实现范围与验证见[Plan 记录](quality/graph-v2-plan-regression.md)。
 
 2026-11-26 路由验收：103 项 Python 与 243 项 Java 联合测试通过，零失败、零跳过；后端构建和 7 组必需基础设施套件门禁通过。保留旧版兼容，业务版本未切换，下一步为 P-17 场景和节点组合验收。详见[路由验收记录](quality/graph-route-projection-regression.md)。

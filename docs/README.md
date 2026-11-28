@@ -12,6 +12,8 @@
 
 ## 支撑资料
 
+- [RAG400 开发集真实模型评测](quality/rag400-live-model-20261128.md)：200 条真实检索与模型回答、自动初评、失败原始记录及校准争议；不是全 400 条或 Agent 全链路验收。
+
 - [API 契约](api/README.md)：机器可读接口契约和兼容性规则，不承担产品路线。
 - [学习知识库](learning/)：用于理解已实现设计的课程材料，不承担当前状态判断。
 - [Agent 协作架构设计](architecture/agent-collaboration-design.md)：长期设计的详细正文。
