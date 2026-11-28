@@ -1,5 +1,7 @@
 # 下一步计划与当前状态
 
+2026-11-28 RAG400 DEV 真实模型分层评测：200 条新鲜项目 SQL 检索，必要章节正文 Top 10 为 176/200；`deepseek/deepseek-v4-flash` 返回完整可解析回答 192/200，同模型语义初评与固定规则自动通过 137/200。另有 30 条回答/评分未完整结束，且存在金标与裁判尺度争议，不作为人工确认准确率。运行未经过 Agent/LangGraph/MCP/Flowable；校准 80 条未调用模型，保留 120 条文件未在本机取得，不能称全 400 条完成。详情与下一步见[真实模型评测](quality/rag400-live-model-20261128.md)。
+
 2026-11-27 集成修复：本集成分支已合并 main 的 V80 与图分支 V81，并增加 V82 版本运行引擎冻结、V83 双人外部终态核销。手动提交/Flowable 使用同一原子路由，暂停/恢复/取消保持 Run 截止时间与单一 Attempt；原生默认兼容。新增真实 TCP 登录—发布—提交—查询验收及非超级用户 RLS 回归。此前“本分支不含 V80”的表述仅适用于历史图分支记录。真实 Provider 已恢复少量验收，曾暴露输出枚举未执行与正常生成未提供 Schema，已修复并增加回归；不能把确定性 P-17 通过等同真实模型通过。当前证据与剩余验收见[集成加固记录](quality/integration-hardening-20261127.md)。
 
 2026-11-27 P-17 收尾修复：图端与原生七场景均 7/7。V81 冻结稳定工具 intent 的物理尝试上限，持久化类型化失败和撤权停止，复用无模型终态/Outbox/Flowable 人工交接；旧版兼容保留。本分支未包含另一项工作的 V80。完整范围与证据见[持久收尾回归](quality/graph-tool-stop-regression.md)。同租户双采购、连续两次压缩与换代恢复已通过确定性模型/JDBC 组合验收，见[组合记录](quality/graph-dual-purchase-recovery-regression.md)。该组合已进一步接入真实 Flowable 提交、认证图派发及生产 Outbox/Inbox，并修复流程变量小数精度损失，见[Flowable 组合记录](quality/graph-dual-purchase-flowable-regression.md)。103 Python/257 Java 联合回归和 31 项兼容回归通过，均无跳过。下一步补齐未知调用对账、多实例故障/负载及真实 Provider/MCP 证据；完整 G1/G2 及业务版本切换仍未完成。

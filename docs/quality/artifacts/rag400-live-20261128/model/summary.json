@@ -1,0 +1,64 @@
+{
+  "total": 200,
+  "automaticPass": 137,
+  "answerStatuses": {
+    "SUCCESS": 192,
+    "INVALID_OUTPUT": 7,
+    "HTTP_ERROR": 1
+  },
+  "judgeStatuses": {
+    "SUCCESS": 170,
+    "INVALID_OUTPUT": 22,
+    "NOT_RUN": 8
+  },
+  "usage": {
+    "prompt_tokens": 589105,
+    "completion_tokens": 228193,
+    "total_tokens": 817298
+  },
+  "facets": {
+    "difficulty": {
+      "EASY": {
+        "total": 60,
+        "automaticPass": 50
+      },
+      "MEDIUM": {
+        "total": 80,
+        "automaticPass": 48
+      },
+      "HARD": {
+        "total": 60,
+        "automaticPass": 39
+      }
+    },
+    "scenarioType": {
+      "ANSWERABLE": {
+        "total": 140,
+        "automaticPass": 104
+      },
+      "INSUFFICIENT": {
+        "total": 30,
+        "automaticPass": 7
+      },
+      "OUT_OF_SCOPE": {
+        "total": 10,
+        "automaticPass": 10
+      },
+      "FORBIDDEN": {
+        "total": 10,
+        "automaticPass": 9
+      },
+      "CONFLICT": {
+        "total": 10,
+        "automaticPass": 7
+      }
+    }
+  },
+  "limitations": [
+    "Same-model automatic judge, no independent human adjudication.",
+    "Draft synthetic DEV set, not holdout or production accuracy.",
+    "Fresh real SQL retrieval plus direct model answers; not platform Agent/LangGraph/MCP/Flowable E2E.",
+    "SQL scope filter tested; no HTTP principal/tenant authorization acceptance.",
+    "No vector, query expansion or model-selected tools. No retries; failed cases remain in denominator."
+  ]
+}
