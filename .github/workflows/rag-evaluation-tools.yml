@@ -1,0 +1,25 @@
+name: RAG evaluation tooling
+on:
+  push:
+    branches: [main, codex/integration-hardening]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  offline-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install uv==0.12.6
+      - run: uv sync --project agent-runtime-langgraph --frozen
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node scripts/rag400/validate.mjs docs/fixtures/knowledge/rag400-v1 docs/fixtures/knowledge/rag400-v1/holdout --no-write
+      - run: node --test scripts/rag400/test-validator.mjs
+      - run: uv run --project agent-runtime-langgraph python -m unittest discover -s scripts/rag400 -p 'test_*.py'

@@ -2,6 +2,8 @@
 
 AI 接手、安装环境、配置和初始化：先读 [本地运行指南](docs/operations/local-development.md)；协作入口为 [AGENTS.md](AGENTS.md)。
 
+本机修改、远端评测及结果回传：[RAG400 远端执行说明](docs/operations/remote-rag-evaluation.md)。完整 400 题已随仓库交付。
+
 Backend for Workflow Agent, an open-source, Java-first enterprise Human-Agent Workflow platform built on Flowable OSS.
 
 ## Baseline

@@ -34,8 +34,12 @@ class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
         var auth = JSON.readTree(input.resolve("auth-fixture.json").toFile());
         var scopes = new ArrayList<String>();
         auth.get("grantedScopes").forEach(s -> scopes.add(s.asText()));
-        var queries = Files.readAllLines(input.resolve("dev.queries.jsonl"), StandardCharsets.UTF_8);
-        assertThat(queries).hasSize(200);
+        var split = System.getProperty("rag400.split", "dev");
+        assertThat(Set.of("dev", "calibration", "holdout-candidate")).contains(split);
+        var queryDir = split.equals("holdout-candidate") ? input.resolve("holdout") : input;
+        var queries = Files.readAllLines(queryDir.resolve(split + ".queries.jsonl"), StandardCharsets.UTF_8);
+        int expected = Map.of("dev", 200, "calibration", 80, "holdout-candidate", 120).get(split);
+        assertThat(queries).hasSize(expected);
         withScratchDatabase(url -> {
             Flyway.configure().dataSource(url,databaseUser,databasePassword)
                 .locations(System.getProperty("rag400.migrationLocations",
@@ -102,7 +106,7 @@ class Rag400ProjectRetrievalTest extends KnowledgeDatabaseFixture {
                     "tenantMapping","rag400-sandbox -> default in disposable PostgreSQL database",
                     "permissionBoundary","actual SQL scope filtering; not HTTP login/principal authorization acceptance",
                     "modelCalled",false,"snapshotSha256",sha(snapshotBytes))));
-            assertThat(raw).hasSize(200);
+            assertThat(raw).hasSize(expected);
         });
     }
 }

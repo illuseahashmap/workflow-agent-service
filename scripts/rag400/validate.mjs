@@ -178,6 +178,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   ensure(publicDir && privateDir, 'Usage: node validate.mjs PUBLIC_DIR PRIVATE_DIR')
   const publicOnly = privateDir === '--public-only'
   const result = audit(resolve(publicDir), publicOnly ? null : resolve(privateDir), publicOnly)
-  writeFileSync(join(publicDir, publicOnly ? 'public-validation-report.json' : 'validation-report.json'), JSON.stringify(result, null, 2) + '\n')
+  if (!process.argv.includes('--no-write'))
+    writeFileSync(join(publicDir, publicOnly ? 'public-validation-report.json' : 'validation-report.json'), JSON.stringify(result, null, 2) + '\n')
   console.log(JSON.stringify(result))
 }

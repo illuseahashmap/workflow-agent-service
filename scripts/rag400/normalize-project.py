@@ -39,7 +39,8 @@ def normalize(raw, documents, bodies, snapshot_hash):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--public',type=Path,required=True);p.add_argument('--run',type=Path,required=True)
-    a=p.parse_args();snap=a.public/'knowledge-snapshot.json';digest=hashlib.sha256(snap.read_bytes()).hexdigest()
+    p.add_argument('--split',choices=['dev','calibration','holdout-candidate'],default='dev')
+    a=p.parse_args();data=a.public/'holdout' if a.split=='holdout-candidate' else a.public;snap=a.public/'knowledge-snapshot.json';digest=hashlib.sha256(snap.read_bytes()).hexdigest()
     documents={d['documentCode']:d for d in read(snap)['documents']}; bodies={}
     for code,d in documents.items():
         data=(a.public/d['path']).read_bytes()
@@ -49,7 +50,7 @@ def main():
             if line.startswith('## '):current=line.split()[1];sections[current]=set()
             elif current and line.strip():sections[current].add(n)
         bodies[code]=sections
-    raw=rows(a.run/'project-raw.jsonl');cases=rows(a.public/'dev.cases.jsonl')
+    raw=rows(a.run/'project-raw.jsonl');cases=rows(data/f'{a.split}.cases.jsonl')
     full,partial=normalize(raw,documents,bodies,digest)
     spec=importlib.util.spec_from_file_location('scoring',Path(__file__).with_name('score-retrieval.py'))
     scoring=importlib.util.module_from_spec(spec);spec.loader.exec_module(scoring)
